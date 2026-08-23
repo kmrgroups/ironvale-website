@@ -9,195 +9,155 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* ---- COLOR ---- */
     --sky:#3FA9E0; --sky-mid:#69C2ED; --sky-light:#A9DDF6; --sky-wash:#EAF6FD; --sky-deep:#1E88C7;
     --navy:#0B2A5B; --navy-deep:#061A3C;
     --gold:#C2932E; --gold-light:#E0B44E; --gold-deep:#8E6A19;
     --chat-a:#7B3FF2; --chat-b:#4B1FA8;
-    --white:#FFFFFF; --paper:#F8FBFE; --ink-mid:#41567E; --ink-soft:#7C8CAB;
-    --line:rgba(11,42,91,0.10); --line-strong:rgba(11,42,91,0.18);
-    --ok:#1F9D6B;
-
-    /* ---- TYPE SCALE (one system, used everywhere) ---- */
-    --font-base:16px;              /* master size — everything scales from this */
-    --title-scale:1;               /* multiplier for big headings */
-    --fs-hero:calc(var(--font-base) * 3.4 * var(--title-scale));
-    --fs-title:calc(var(--font-base) * 2.3 * var(--title-scale));
-    --fs-subtitle:calc(var(--font-base) * 1.05);
-    --fs-card-title:calc(var(--font-base) * 1.125);
-    --fs-body:calc(var(--font-base) * 0.925);
-    --fs-label:calc(var(--font-base) * 0.7);
-    --fs-micro:calc(var(--font-base) * 0.66);
-    --lh-tight:1.08; --lh-normal:1.6;
-
-    /* ---- LAYOUT (admin-adjustable) ---- */
-    --gutter:26px;
-    --section-pad:84px;
-    --card-min:300px;
-    --card-gap:22px;
-    --card-pad:24px;
-    --radius:14px; --radius-sm:9px;
-    --bar-h:78px; --glow:#69C2ED;
-
-    --shadow-sm:0 1px 2px rgba(11,42,91,0.06), 0 8px 20px rgba(11,42,91,0.07);
-    --shadow-md:0 2px 6px rgba(11,42,91,0.08), 0 18px 40px rgba(11,42,91,0.12);
+    --white:#FFF; --paper:#F8FBFE; --ink-mid:#41567E; --ink-soft:#7C8CAB;
+    --line:rgba(11,42,91,.10); --line-strong:rgba(11,42,91,.18); --ok:#1F9D6B;
+    --font-base:16px; --title-scale:1;
+    --fs-hero:calc(var(--font-base)*3.3*var(--title-scale));
+    --fs-title:calc(var(--font-base)*2.25*var(--title-scale));
+    --fs-subtitle:calc(var(--font-base)*1.05);
+    --fs-card-title:calc(var(--font-base)*1.125);
+    --fs-body:calc(var(--font-base)*.925);
+    --fs-label:calc(var(--font-base)*.7);
+    --fs-micro:calc(var(--font-base)*.66);
+    --gutter:26px; --section-pad:84px;
+    --card-min:300px; --card-gap:22px; --card-pad:24px;
+    --media-h:220px; --portrait-h:300px;
+    --radius:14px; --radius-sm:9px; --bar-h:78px; --logo-max:230px; --glow:#69C2ED;
+    --shadow-sm:0 1px 2px rgba(11,42,91,.06),0 8px 20px rgba(11,42,91,.07);
+    --shadow-md:0 2px 6px rgba(11,42,91,.08),0 18px 40px rgba(11,42,91,.12);
     --disp:'Archivo',sans-serif; --body:'Work Sans',sans-serif; --mono:'JetBrains Mono',monospace;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   html{scroll-behavior:smooth;}
-  body{background:var(--white);color:var(--navy);font-family:var(--body);font-size:var(--fs-body);
-    line-height:var(--lh-normal);-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+  body{background:var(--white);color:var(--navy);font-family:var(--body);font-size:var(--fs-body);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
   img,svg{display:block;max-width:100%;}
   a{color:inherit;text-decoration:none;}
   button{font-family:inherit;cursor:pointer;}
-  ::selection{background:rgba(63,169,224,0.25);}
+  ::selection{background:rgba(63,169,224,.25);}
   :focus-visible{outline:2px solid var(--sky-deep);outline-offset:3px;}
-  @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important;}}
-
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important;}}
   .wrap{width:100%;padding:0 var(--gutter);}
 
-  /* ================= TYPOGRAPHY SYSTEM =================
-     Four roles used consistently sitewide:
-       .t-label     small uppercase mono tag  (gold)
-       .t-title     section heading            (navy)
-       .t-subtitle  supporting line under it   (ink-mid)
-       .t-body      normal copy                (ink-mid)
-  ===================================================== */
-  .t-label{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:0.14em;text-transform:uppercase;
-    color:var(--gold);font-weight:600;line-height:1.4;display:block;}
+  .t-label{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600;line-height:1.4;display:block;}
   .t-label.inline{display:inline-flex;align-items:center;gap:9px;}
   .t-label.inline::before{content:'';width:26px;height:2px;border-radius:2px;background:var(--gold);}
-  .t-title{font-family:var(--disp);font-weight:800;letter-spacing:-0.02em;line-height:var(--lh-tight);
-    color:var(--navy);font-size:var(--fs-title);margin-top:12px;}
-  .t-subtitle{font-size:var(--fs-subtitle);color:var(--ink-mid);line-height:var(--lh-normal);margin-top:14px;max-width:62ch;}
-  .t-body{font-size:var(--fs-body);color:var(--ink-mid);line-height:var(--lh-normal);}
-  .t-card-title{font-family:var(--disp);font-weight:700;font-size:var(--fs-card-title);color:var(--navy);
-    letter-spacing:-0.01em;line-height:1.25;}
-  .t-micro{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);letter-spacing:0.06em;}
-  h1,h2,h3{font-family:var(--disp);font-weight:800;letter-spacing:-0.02em;color:var(--navy);}
-
+  .t-title{font-family:var(--disp);font-weight:800;letter-spacing:-.02em;line-height:1.08;color:var(--navy);font-size:var(--fs-title);margin-top:12px;}
+  .t-subtitle{font-size:var(--fs-subtitle);color:var(--ink-mid);margin-top:14px;max-width:62ch;}
+  .t-body{font-size:var(--fs-body);color:var(--ink-mid);}
+  .t-card-title{font-family:var(--disp);font-weight:700;font-size:var(--fs-card-title);color:var(--navy);letter-spacing:-.01em;line-height:1.25;}
+  .t-micro{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);letter-spacing:.06em;}
+  h1,h2,h3{font-family:var(--disp);font-weight:800;letter-spacing:-.02em;color:var(--navy);}
   section{padding:var(--section-pad) 0;}
-  .section-head{max-width:700px;margin-bottom:calc(var(--section-pad) * 0.48);}
+  .section-head{max-width:700px;margin-bottom:calc(var(--section-pad)*.48);}
 
-  /* ---- BUTTONS ---- */
-  .btn{font-family:var(--body);font-weight:600;font-size:var(--fs-body);padding:12px 24px;border-radius:100px;
-    border:1px solid transparent;display:inline-flex;align-items:center;justify-content:center;gap:8px;
-    transition:transform .16s cubic-bezier(.2,.8,.3,1), box-shadow .16s, border-color .2s, color .2s;}
-  .btn-primary{background:linear-gradient(180deg,var(--sky-mid),var(--sky-deep));color:#fff;
-    box-shadow:0 5px 0 var(--navy), 0 12px 22px rgba(11,42,91,.26), inset 0 1px 0 rgba(255,255,255,.4);}
-  .btn-primary:hover{transform:translateY(-3px);box-shadow:0 8px 0 var(--navy), 0 20px 34px rgba(11,42,91,.3);}
+  .btn{font-family:var(--body);font-weight:600;font-size:var(--fs-body);padding:12px 24px;border-radius:100px;border:1px solid transparent;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;
+    transition:transform .16s cubic-bezier(.2,.8,.3,1),box-shadow .16s,border-color .2s,color .2s;}
+  .btn-primary{background:linear-gradient(180deg,var(--sky-mid),var(--sky-deep));color:#fff;box-shadow:0 5px 0 var(--navy),0 12px 22px rgba(11,42,91,.26);}
+  .btn-primary:hover{transform:translateY(-3px);box-shadow:0 8px 0 var(--navy),0 20px 34px rgba(11,42,91,.3);}
   .btn-primary:active{transform:translateY(2px);box-shadow:0 2px 0 var(--navy);}
-  .btn-gold{background:linear-gradient(180deg,var(--gold-light),var(--gold));color:var(--navy-deep);
-    box-shadow:0 5px 0 var(--gold-deep), 0 12px 22px rgba(142,106,25,.3), inset 0 1px 0 rgba(255,255,255,.5);}
-  .btn-gold:hover{transform:translateY(-3px);box-shadow:0 8px 0 var(--gold-deep), 0 20px 34px rgba(142,106,25,.34);}
+  .btn-gold{background:linear-gradient(180deg,var(--gold-light),var(--gold));color:var(--navy-deep);box-shadow:0 5px 0 var(--gold-deep),0 12px 22px rgba(142,106,25,.3);}
+  .btn-gold:hover{transform:translateY(-3px);box-shadow:0 8px 0 var(--gold-deep);}
   .btn-gold:active{transform:translateY(2px);box-shadow:0 2px 0 var(--gold-deep);}
-  .btn-ghost{background:var(--white);color:var(--navy);border-color:var(--line-strong);
-    box-shadow:0 4px 0 rgba(11,42,91,.12), 0 10px 18px rgba(11,42,91,.08);}
-  .btn-ghost:hover{transform:translateY(-3px);border-color:var(--sky-deep);color:var(--sky-deep);box-shadow:0 7px 0 rgba(11,42,91,.14);}
+  .btn-ghost{background:var(--white);color:var(--navy);border-color:var(--line-strong);box-shadow:0 4px 0 rgba(11,42,91,.12);}
+  .btn-ghost:hover{transform:translateY(-3px);border-color:var(--sky-deep);color:var(--sky-deep);}
   .btn-ghost:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(11,42,91,.12);}
 
-  /* ---- HEADER + UNIFORM MENU ---- */
-  header{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
-  .nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 var(--gutter);width:100%;height:var(--bar-h);}
-  .brand{display:flex;align-items:center;gap:12px;min-width:0;height:100%;padding:9px 0;}
+  /* ---- HEADER : three fixed zones, never overlapping ---- */
+  header{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
+  .nav{display:flex;align-items:center;gap:14px;padding:0 var(--gutter);width:100%;height:var(--bar-h);}
+  .brand{display:flex;align-items:center;gap:11px;height:100%;padding:10px 0;flex:0 0 auto;max-width:var(--logo-max);overflow:hidden;}
   .logo-slot{height:100%;display:flex;align-items:center;flex-shrink:0;position:relative;}
-  .logo-slot img{height:100%;width:auto;max-width:340px;object-fit:contain;transform:translateZ(0);
-    -webkit-backface-visibility:hidden;transition:transform .3s cubic-bezier(.2,.8,.3,1), filter .3s;}
-  .logo-glow img{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--glow) 70%,transparent))
-    drop-shadow(0 0 18px color-mix(in srgb,var(--glow) 45%,transparent)) drop-shadow(0 1px 2px rgba(11,42,91,.25));
-    animation:logoPulse 3.6s ease-in-out infinite;}
-  @keyframes logoPulse{
-    0%,100%{filter:drop-shadow(0 0 5px color-mix(in srgb,var(--glow) 55%,transparent)) drop-shadow(0 0 14px color-mix(in srgb,var(--glow) 32%,transparent));}
-    50%{filter:drop-shadow(0 0 10px color-mix(in srgb,var(--glow) 85%,transparent)) drop-shadow(0 0 28px color-mix(in srgb,var(--glow) 55%,transparent));}}
+  .logo-slot img{height:100%;width:auto;max-width:calc(var(--logo-max) - 10px);object-fit:contain;transform:translateZ(0);transition:transform .3s,filter .3s;}
+  .logo-glow img{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--glow) 70%,transparent)) drop-shadow(0 0 18px color-mix(in srgb,var(--glow) 45%,transparent));animation:lg 3.6s ease-in-out infinite;}
+  @keyframes lg{0%,100%{filter:drop-shadow(0 0 5px color-mix(in srgb,var(--glow) 55%,transparent)) drop-shadow(0 0 14px color-mix(in srgb,var(--glow) 30%,transparent));}
+    50%{filter:drop-shadow(0 0 10px color-mix(in srgb,var(--glow) 85%,transparent)) drop-shadow(0 0 26px color-mix(in srgb,var(--glow) 52%,transparent));}}
   .brand:hover .logo-slot img{transform:scale(1.04);}
-  .logo-glow::before{content:'';position:absolute;inset:-18% -10%;border-radius:50%;pointer-events:none;z-index:-1;
-    background:radial-gradient(ellipse at center,color-mix(in srgb,var(--glow) 34%,transparent),transparent 70%);filter:blur(14px);}
+  .logo-glow::before{content:'';position:absolute;inset:-16% -8%;border-radius:50%;pointer-events:none;z-index:-1;
+    background:radial-gradient(ellipse at center,color-mix(in srgb,var(--glow) 32%,transparent),transparent 70%);filter:blur(14px);}
   .logo-fallback{height:100%;aspect-ratio:1/1;border-radius:12px;background:linear-gradient(160deg,var(--sky-mid),var(--navy));
-    display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:20px;color:#fff;font-weight:900;
-    box-shadow:0 4px 0 var(--navy-deep), 0 10px 18px rgba(11,42,91,.25);}
-  .brand-name{font-family:var(--disp);font-weight:900;font-size:calc(var(--font-base)*1.2);color:var(--navy);white-space:nowrap;line-height:1.1;}
-  .brand-suffix{font-family:var(--mono);font-size:var(--fs-micro);color:var(--gold);letter-spacing:.2em;display:block;font-weight:600;white-space:nowrap;}
+    display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:20px;color:#fff;font-weight:900;box-shadow:0 4px 0 var(--navy-deep);}
+  .brand-txt{min-width:0;overflow:hidden;}
+  .brand-name{font-family:var(--disp);font-weight:900;font-size:calc(var(--font-base)*1.15);color:var(--navy);white-space:nowrap;line-height:1.1;display:block;
+    overflow:hidden;text-overflow:ellipsis;}
+  .brand-suffix{font-family:var(--mono);font-size:var(--fs-micro);color:var(--gold);letter-spacing:.18em;display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-  /* every menu button identical width, no truncation */
-  nav.links{display:flex;gap:9px;align-items:center;}
-  nav.links a{font-family:var(--body);font-weight:600;font-size:calc(var(--font-base)*0.82);
-    height:42px;min-width:124px;padding:0 16px;border-radius:100px;
-    display:inline-flex;align-items:center;justify-content:center;text-align:center;white-space:nowrap;
-    background:var(--white);color:var(--navy);border:1px solid var(--line-strong);
-    box-shadow:0 4px 0 rgba(11,42,91,.12), 0 8px 14px rgba(11,42,91,.07);
-    transition:transform .16s cubic-bezier(.2,.8,.3,1), box-shadow .16s, border-color .2s, color .2s;}
-  nav.links a:hover{transform:translateY(-3px);border-color:var(--sky-deep);color:var(--sky-deep);
-    box-shadow:0 7px 0 rgba(11,42,91,.14), 0 14px 22px rgba(11,42,91,.1);}
+  .nav-scroll{flex:1 1 auto;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;}
+  .nav-scroll::-webkit-scrollbar{display:none;}
+  nav.links{display:flex;gap:8px;align-items:center;width:max-content;padding:2px 0;}
+  nav.links a{font-weight:600;font-size:calc(var(--font-base)*.8);height:42px;min-width:118px;padding:0 15px;border-radius:100px;
+    display:inline-flex;align-items:center;justify-content:center;text-align:center;white-space:nowrap;flex:0 0 auto;
+    background:var(--white);color:var(--navy);border:1px solid var(--line-strong);box-shadow:0 4px 0 rgba(11,42,91,.12);
+    transition:transform .16s cubic-bezier(.2,.8,.3,1),box-shadow .16s,border-color .2s,color .2s;}
+  nav.links a:hover{transform:translateY(-3px);border-color:var(--sky-deep);color:var(--sky-deep);box-shadow:0 7px 0 rgba(11,42,91,.14);}
   nav.links a:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(11,42,91,.12);}
+  nav.links a.pipeline{background:var(--navy);color:#fff;border-color:transparent;box-shadow:0 4px 0 var(--navy-deep);}
+  nav.links a.pipeline:hover{color:var(--gold-light);box-shadow:0 7px 0 var(--navy-deep);}
+  .nav-cta{flex:0 0 auto;}
 
   /* ---- HERO ---- */
-  .hero{position:relative;overflow:hidden;padding:calc(var(--section-pad)*0.95) 0 0;background:
-    radial-gradient(1100px 620px at 80% -12%, rgba(63,169,224,.28), transparent 64%),
-    linear-gradient(180deg,var(--sky-wash),var(--white) 72%);}
+  .hero{position:relative;overflow:hidden;padding:calc(var(--section-pad)*.95) 0 0;
+    background:radial-gradient(1100px 620px at 80% -12%,rgba(63,169,224,.28),transparent 64%),linear-gradient(180deg,var(--sky-wash),var(--white) 72%);}
   .hero-bg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.13;}
   .hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.5),var(--white) 92%);}
-  .hero-grid{position:relative;z-index:1;width:100%;padding:0 var(--gutter);display:grid;
-    grid-template-columns:1.05fr .95fr;gap:clamp(28px,4vw,70px);align-items:center;}
-  .hero h1{font-size:var(--fs-hero);line-height:var(--lh-tight);margin:18px 0 20px;max-width:16ch;color:var(--navy-deep);}
+  .hero-grid{position:relative;z-index:1;width:100%;padding:0 var(--gutter);display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(28px,4vw,70px);align-items:center;}
+  .hero h1{font-size:var(--fs-hero);line-height:1.08;margin:18px 0 20px;max-width:16ch;color:var(--navy-deep);}
   .hero .t-subtitle{margin-bottom:32px;max-width:46ch;}
   .hero-ctas{display:flex;gap:14px;flex-wrap:wrap;}
-  .core{position:relative;width:100%;aspect-ratio:1/1;max-width:430px;justify-self:center;display:flex;align-items:center;justify-content:center;}
+  .core{position:relative;width:100%;aspect-ratio:1/1;max-width:420px;justify-self:center;display:flex;align-items:center;justify-content:center;}
   .core-ring{position:absolute;border-radius:50%;border:1px solid var(--line-strong);}
   .core-ring.r1{inset:0;animation:spin 52s linear infinite;}
   .core-ring.r2{inset:15%;animation:spin 34s linear infinite reverse;border-color:rgba(194,147,46,.35);}
   .core-ring.r1::before{content:'';position:absolute;width:10px;height:10px;border-radius:50%;background:var(--sky);top:-5px;left:calc(50% - 5px);box-shadow:0 0 18px var(--sky);}
   .core-ring.r2::before{content:'';position:absolute;width:9px;height:9px;border-radius:50%;background:var(--gold);top:-4.5px;left:calc(50% - 4.5px);box-shadow:0 0 16px var(--gold);}
-  .core-orb{width:46%;height:46%;border-radius:50%;
-    background:radial-gradient(circle at 32% 28%,#fff,var(--sky-mid) 34%,var(--sky-deep) 62%,var(--navy) 100%);
-    box-shadow:0 30px 60px rgba(11,42,91,.35), inset -14px -18px 40px rgba(6,26,60,.4), inset 12px 14px 30px rgba(255,255,255,.4);}
+  .core-orb{width:46%;height:46%;border-radius:50%;background:radial-gradient(circle at 32% 28%,#fff,var(--sky-mid) 34%,var(--sky-deep) 62%,var(--navy) 100%);
+    box-shadow:0 30px 60px rgba(11,42,91,.35),inset -14px -18px 40px rgba(6,26,60,.4),inset 12px 14px 30px rgba(255,255,255,.4);}
   @keyframes spin{to{transform:rotate(360deg);}}
   .core-label{position:absolute;bottom:2%;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.18em;color:var(--ink-soft);}
-
-  .ticker{margin-top:calc(var(--section-pad)*0.6);background:var(--navy);overflow:hidden;position:relative;z-index:1;border-top:3px solid var(--gold);}
-  .ticker-track{display:flex;white-space:nowrap;width:max-content;animation:ticker 28s linear infinite;}
-  @keyframes ticker{from{transform:translateX(0);}to{transform:translateX(-50%);}}
-  .ticker-item{font-family:var(--mono);font-size:var(--fs-label);color:rgba(255,255,255,.85);letter-spacing:.07em;
-    padding:16px 40px;border-right:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:11px;}
+  .ticker{margin-top:calc(var(--section-pad)*.6);background:var(--navy);overflow:hidden;position:relative;z-index:1;border-top:3px solid var(--gold);}
+  .ticker-track{display:flex;white-space:nowrap;width:max-content;animation:tk 28s linear infinite;}
+  @keyframes tk{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  .ticker-item{font-family:var(--mono);font-size:var(--fs-label);color:rgba(255,255,255,.85);letter-spacing:.07em;padding:16px 40px;border-right:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:11px;}
   .ticker-item::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--gold-light);flex-shrink:0;box-shadow:0 0 8px var(--gold-light);}
 
-  /* ---- CARD GRIDS (all share the same sizing vars) ---- */
-  .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--card-min),1fr));gap:var(--card-gap);}
-  .cap-card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
-    box-shadow:var(--shadow-sm);display:flex;flex-direction:column;transition:box-shadow .25s,border-color .25s;}
+  /* ---- CARDS : every media box has a fixed height so uploads can't stretch it ---- */
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--card-min),1fr));gap:var(--card-gap);align-items:start;}
+  .cap-card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;transition:box-shadow .25s,border-color .25s;}
   .cap-card:hover{box-shadow:var(--shadow-md);border-color:var(--line-strong);}
-  .card-media{aspect-ratio:16/10;background:var(--sky-wash);overflow:hidden;}
-  .card-media img{width:100%;height:100%;object-fit:cover;transition:transform .5s;}
+  .card-media{height:var(--media-h);background:var(--sky-wash);overflow:hidden;flex-shrink:0;}
+  .card-media img{width:100%;height:100%;object-fit:cover;object-position:center;transition:transform .5s;}
   .cap-card:hover .card-media img{transform:scale(1.05);}
   .card-media.empty{background:linear-gradient(140deg,var(--sky-mid),var(--navy));display:flex;align-items:center;justify-content:center;}
   .card-media.empty::after{content:'';width:46px;height:46px;border-radius:13px;background:rgba(255,255,255,.22);}
   .cap-body{padding:var(--card-pad);display:flex;flex-direction:column;gap:8px;}
 
   .process{background:var(--sky-wash);}
-  .process-row{display:grid;grid-template-columns:calc(var(--card-min)*0.6) 66px 1fr;gap:26px;align-items:center;
-    padding:22px 0;border-top:1px solid var(--line);}
+  .process-row{display:grid;grid-template-columns:200px 66px 1fr;gap:26px;align-items:center;padding:22px 0;border-top:1px solid var(--line);}
   .process-row:last-child{border-bottom:1px solid var(--line);}
-  .process-media{width:100%;aspect-ratio:3/2;border-radius:var(--radius-sm);overflow:hidden;background:var(--white);border:1px solid var(--line);}
+  .process-media{width:200px;height:130px;border-radius:var(--radius-sm);overflow:hidden;background:var(--white);border:1px solid var(--line);flex-shrink:0;}
   .process-media img{width:100%;height:100%;object-fit:cover;}
   .process-media.empty{background:linear-gradient(140deg,var(--sky-light),var(--sky));}
-  .process-num{font-family:var(--mono);font-size:calc(var(--font-base)*0.95);font-weight:600;color:var(--gold);}
+  .process-num{font-family:var(--mono);font-size:calc(var(--font-base)*.95);font-weight:600;color:var(--gold);}
 
   .stat{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:var(--card-pad);position:relative;overflow:hidden;box-shadow:var(--shadow-sm);}
   .stat::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--sky),var(--gold));}
-  .stat .val{font-family:var(--disp);font-weight:900;font-size:calc(var(--font-base)*2.4*var(--title-scale));letter-spacing:-.03em;color:var(--navy);line-height:1.05;}
+  .stat .val{font-family:var(--disp);font-weight:900;font-size:calc(var(--font-base)*2.3*var(--title-scale));letter-spacing:-.03em;color:var(--navy);line-height:1.05;}
   .stat .lbl{font-family:var(--mono);font-size:var(--fs-label);color:var(--gold);letter-spacing:.07em;margin-top:8px;text-transform:uppercase;font-weight:600;}
 
-  .gallery-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(calc(var(--card-min)*0.72),1fr));
-    grid-auto-rows:calc(var(--card-min)*0.5);gap:var(--card-gap);}
+  .gallery-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(calc(var(--card-min)*.72),1fr));grid-auto-rows:calc(var(--media-h)*.75);gap:var(--card-gap);}
   .gallery-grid .g-item:nth-child(6n+1){grid-column:span 2;grid-row:span 2;}
   .g-item{position:relative;border-radius:var(--radius-sm);overflow:hidden;background:var(--sky-wash);border:1px solid var(--line);box-shadow:var(--shadow-sm);}
   .g-item img{width:100%;height:100%;object-fit:cover;transition:transform .5s;}
   .g-item:hover img{transform:scale(1.06);}
-  .g-item .g-cap{position:absolute;left:0;right:0;bottom:0;padding:14px;background:linear-gradient(0deg,rgba(6,26,60,.9),transparent);
-    color:#fff;font-family:var(--mono);font-size:var(--fs-micro);opacity:0;transition:opacity .3s;}
+  .g-item .g-cap{position:absolute;left:0;right:0;bottom:0;padding:14px;background:linear-gradient(0deg,rgba(6,26,60,.9),transparent);color:#fff;font-family:var(--mono);font-size:var(--fs-micro);opacity:0;transition:opacity .3s;}
   .g-item:hover .g-cap{opacity:1;}
-  .empty-note{color:var(--ink-soft);font-family:var(--mono);font-size:var(--fs-label);padding:30px 0;}
+  .empty-note{color:var(--ink-soft);font-family:var(--mono);font-size:var(--fs-label);padding:26px 0;}
 
-  .ind-card{position:relative;border-radius:var(--radius);overflow:hidden;aspect-ratio:4/3;background:var(--sky-wash);border:1px solid var(--line);box-shadow:var(--shadow-sm);}
+  .ind-card{position:relative;border-radius:var(--radius);overflow:hidden;height:var(--media-h);background:var(--sky-wash);border:1px solid var(--line);box-shadow:var(--shadow-sm);}
   .ind-card img{width:100%;height:100%;object-fit:cover;transition:transform .5s;}
   .ind-card:hover img{transform:scale(1.05);}
   .ind-card.empty{background:linear-gradient(140deg,var(--sky),var(--navy));}
@@ -206,31 +166,27 @@
   .ind-label::after{content:'';display:block;width:32px;height:3px;background:var(--gold);border-radius:2px;margin-top:8px;}
 
   .certs-sec{background:var(--paper);}
-  .cert-card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:var(--card-pad);
-    text-align:center;box-shadow:var(--shadow-sm);border-top:3px solid var(--gold);transition:box-shadow .25s;}
+  .cert-card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:var(--card-pad);text-align:center;box-shadow:var(--shadow-sm);border-top:3px solid var(--gold);transition:box-shadow .25s;}
   .cert-card:hover{box-shadow:var(--shadow-md);}
-  .cert-thumb{height:calc(var(--card-min)*0.3);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
-  .cert-thumb img{max-height:100%;width:auto;max-width:100%;object-fit:contain;}
+  .cert-thumb{height:110px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;overflow:hidden;}
+  .cert-thumb img{max-height:110px;max-width:100%;width:auto;object-fit:contain;}
   .cert-thumb.empty{background:linear-gradient(140deg,var(--sky-wash),var(--sky-light));border-radius:var(--radius-sm);width:100%;}
   .cert-thumb.empty::after{content:'✓';font-family:var(--disp);font-size:32px;color:#fff;font-weight:900;}
 
   .founder-card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow .25s;}
   .founder-card:hover{box-shadow:var(--shadow-md);}
-  .founder-photo{width:100%;aspect-ratio:1/1;background:var(--sky-wash);overflow:hidden;}
-  .founder-photo img{width:100%;height:100%;object-fit:cover;transition:transform .5s;}
+  .founder-photo{width:100%;height:var(--portrait-h);background:var(--sky-wash);overflow:hidden;flex-shrink:0;}
+  .founder-photo img{width:100%;height:100%;object-fit:cover;object-position:center top;transition:transform .5s;}
   .founder-card:hover .founder-photo img{transform:scale(1.04);}
   .founder-photo.empty{background:linear-gradient(150deg,var(--sky),var(--navy));}
   .founder-body{padding:var(--card-pad);display:flex;flex-direction:column;gap:6px;}
   .founder-role{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-weight:600;}
 
   .custom-sec:nth-of-type(even){background:var(--paper);}
-
   .testimonial{background:var(--sky-wash);}
-  .quote-box{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);
-    padding:calc(var(--card-pad)*1.6);box-shadow:var(--shadow-sm);border-top:4px solid var(--gold);}
-  .quote-mark{font-family:var(--disp);font-size:calc(var(--font-base)*4.6);line-height:.45;margin-bottom:14px;display:block;color:var(--gold);}
-  blockquote{font-family:var(--disp);font-size:calc(var(--font-base)*1.75*var(--title-scale));font-weight:600;
-    line-height:1.34;letter-spacing:-.02em;color:var(--navy-deep);max-width:62ch;}
+  .quote-box{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:calc(var(--card-pad)*1.6);box-shadow:var(--shadow-sm);border-top:4px solid var(--gold);}
+  .quote-mark{font-family:var(--disp);font-size:calc(var(--font-base)*4.5);line-height:.45;margin-bottom:14px;display:block;color:var(--gold);}
+  blockquote{font-family:var(--disp);font-size:calc(var(--font-base)*1.7*var(--title-scale));font-weight:600;line-height:1.34;letter-spacing:-.02em;color:var(--navy-deep);max-width:62ch;}
   .quote-attr{margin-top:24px;font-family:var(--mono);font-size:var(--fs-label);color:var(--gold);}
   .quote-attr strong{color:var(--navy);display:block;font-family:var(--body);font-size:var(--fs-body);font-weight:600;margin-bottom:2px;}
 
@@ -245,8 +201,7 @@
   form.rfq{background:var(--white);border-radius:var(--radius);padding:calc(var(--card-pad)*1.35);box-shadow:0 30px 60px rgba(6,26,60,.35);border-top:4px solid var(--gold);}
   form.rfq label{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:7px;margin-top:18px;}
   form.rfq label:first-child{margin-top:0;}
-  form.rfq input,form.rfq textarea{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);
-    color:var(--navy);font-family:var(--body);font-size:var(--fs-body);padding:11px 13px;resize:vertical;}
+  form.rfq input,form.rfq textarea{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);color:var(--navy);font-family:var(--body);font-size:var(--fs-body);padding:11px 13px;resize:vertical;}
   form.rfq input[type=file]{font-family:var(--mono);font-size:var(--fs-micro);padding:10px;}
   form.rfq input:focus,form.rfq textarea:focus{outline:none;border-color:var(--sky-deep);box-shadow:0 0 0 3px rgba(63,169,224,.18);}
   form.rfq button{margin-top:26px;width:100%;}
@@ -256,16 +211,13 @@
 
   .track-box{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:calc(var(--card-pad)*1.3);}
   .track-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;}
-  .track-row input{flex:1;min-width:220px;background:var(--white);border:1px solid var(--line);border-radius:100px;
-    padding:12px 20px;font-family:var(--mono);font-size:var(--fs-body);color:var(--navy);letter-spacing:.06em;text-transform:uppercase;}
-  .track-row input:focus{outline:none;border-color:var(--sky-deep);box-shadow:0 0 0 3px rgba(63,169,224,.16);}
+  .track-row input{flex:1;min-width:220px;background:var(--white);border:1px solid var(--line);border-radius:100px;padding:12px 20px;font-family:var(--mono);font-size:var(--fs-body);color:var(--navy);letter-spacing:.06em;text-transform:uppercase;}
   #track-result{margin-top:26px;display:none;}
   .track-meta{font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-mid);margin-bottom:20px;}
   .track-meta b{color:var(--navy);}
   .pipeline{display:flex;flex-wrap:wrap;}
   .pl-step{flex:1;min-width:130px;position:relative;padding:0 8px;text-align:center;}
-  .pl-dot{width:30px;height:30px;border-radius:50%;margin:0 auto 10px;background:var(--white);border:2px solid var(--line-strong);
-    display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-soft);font-weight:600;position:relative;z-index:1;}
+  .pl-dot{width:30px;height:30px;border-radius:50%;margin:0 auto 10px;background:var(--white);border:2px solid var(--line-strong);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-soft);font-weight:600;position:relative;z-index:1;}
   .pl-step.done .pl-dot{background:linear-gradient(180deg,var(--sky-mid),var(--sky-deep));border-color:transparent;color:#fff;}
   .pl-step.current .pl-dot{background:linear-gradient(180deg,var(--gold-light),var(--gold));border-color:transparent;color:var(--navy-deep);box-shadow:0 0 0 5px rgba(224,180,78,.25);}
   .pl-step::before{content:'';position:absolute;top:15px;left:-50%;width:100%;height:2px;background:var(--line-strong);z-index:0;}
@@ -275,33 +227,23 @@
   .pl-step.done .pl-label,.pl-step.current .pl-label{color:var(--navy);font-weight:600;}
   .track-note{margin-top:22px;padding:16px;border-radius:var(--radius-sm);background:var(--sky-wash);border:1px solid var(--line);font-size:var(--fs-body);color:var(--ink-mid);}
 
-  footer{background:var(--navy-deep);color:rgba(255,255,255,.62);padding:calc(var(--section-pad)*0.55) 0 0;}
+  footer{background:var(--navy-deep);color:rgba(255,255,255,.62);padding:calc(var(--section-pad)*.55) 0 0;}
   .foot-top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:30px;}
   .foot-brand .brand-name{color:#fff;}
   .foot-links{display:flex;gap:9px;flex-wrap:wrap;}
-  .foot-links a{font-size:calc(var(--font-base)*0.78);font-weight:600;height:38px;min-width:112px;padding:0 14px;
-    border-radius:100px;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.82);
-    display:inline-flex;align-items:center;justify-content:center;transition:transform .16s,border-color .2s,color .2s;}
+  .foot-links a{font-size:calc(var(--font-base)*.78);font-weight:600;height:38px;min-width:112px;padding:0 14px;border-radius:100px;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.82);display:inline-flex;align-items:center;justify-content:center;transition:transform .16s,border-color .2s,color .2s;}
   .foot-links a:hover{transform:translateY(-2px);color:#fff;border-color:var(--gold-light);}
-  .foot-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;
-    border-top:1px solid rgba(255,255,255,.12);padding-top:22px;margin-top:32px;font-family:var(--mono);font-size:var(--fs-micro);}
-  .foot-row a{color:rgba(255,255,255,.7);}
+  .foot-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;border-top:1px solid rgba(255,255,255,.12);padding-top:22px;margin-top:32px;font-family:var(--mono);font-size:var(--fs-micro);}
   .kmr-bar{border-top:1px solid rgba(255,255,255,.12);margin-top:20px;padding:18px 0 22px;text-align:center;}
   .kmr-bar a{font-family:var(--mono);font-size:var(--fs-label);color:var(--gold-light);}
   .kmr-bar a span{text-decoration:underline;text-underline-offset:3px;}
 
   /* ---- CHAT ---- */
-  #chat-fab{position:fixed;bottom:26px;left:26px;z-index:100;display:flex;align-items:center;gap:10px;
-    background:linear-gradient(160deg,var(--chat-a),var(--chat-b));color:#fff;border:none;border-radius:100px;
-    padding:14px 22px 14px 18px;font-weight:600;font-size:var(--fs-body);
-    box-shadow:0 5px 0 color-mix(in srgb,var(--chat-b) 70%,black), 0 16px 30px color-mix(in srgb,var(--chat-a) 45%,transparent);
-    transition:transform .2s cubic-bezier(.2,.8,.3,1), box-shadow .2s;}
+  #chat-fab{position:fixed;bottom:26px;left:26px;z-index:100;display:flex;align-items:center;gap:10px;background:linear-gradient(160deg,var(--chat-a),var(--chat-b));color:#fff;border:none;border-radius:100px;padding:14px 22px 14px 18px;font-weight:600;font-size:var(--fs-body);box-shadow:0 5px 0 color-mix(in srgb,var(--chat-b) 70%,black),0 16px 30px color-mix(in srgb,var(--chat-a) 45%,transparent);transition:transform .2s,box-shadow .2s;}
   #chat-fab:hover{transform:translateY(-3px);}
-  #chat-fab:active{transform:translateY(2px);box-shadow:0 2px 0 color-mix(in srgb,var(--chat-b) 70%,black);}
-  #chat-fab .dot{width:9px;height:9px;border-radius:50%;background:#7CF5D0;box-shadow:0 0 10px #7CF5D0;animation:blink 2.2s ease-in-out infinite;}
-  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.35;}}
-  #chat-panel{position:fixed;bottom:26px;left:26px;z-index:101;width:390px;max-width:calc(100vw - 32px);height:min(620px,calc(100vh - 60px));
-    background:var(--white);border-radius:18px;box-shadow:0 30px 70px rgba(20,10,60,.4);display:none;flex-direction:column;overflow:hidden;border:1px solid var(--line);}
+  #chat-fab .dot{width:9px;height:9px;border-radius:50%;background:#7CF5D0;box-shadow:0 0 10px #7CF5D0;animation:bl 2.2s ease-in-out infinite;}
+  @keyframes bl{0%,100%{opacity:1;}50%{opacity:.35;}}
+  #chat-panel{position:fixed;bottom:26px;left:26px;z-index:101;width:390px;max-width:calc(100vw - 32px);height:min(620px,calc(100vh - 60px));background:var(--white);border-radius:18px;box-shadow:0 30px 70px rgba(20,10,60,.4);display:none;flex-direction:column;overflow:hidden;border:1px solid var(--line);}
   #chat-panel.open{display:flex;}
   .chat-head{background:linear-gradient(160deg,var(--chat-a),var(--chat-b));color:#fff;padding:16px 18px;display:flex;align-items:center;gap:12px;}
   .chat-avatar{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;color:#fff;flex-shrink:0;}
@@ -314,21 +256,18 @@
   .msg.bot{background:var(--white);border:1px solid rgba(123,63,242,.16);border-bottom-left-radius:4px;align-self:flex-start;}
   .msg.user{background:linear-gradient(160deg,var(--chat-a),var(--chat-b));color:#fff;border-bottom-right-radius:4px;align-self:flex-end;}
   .msg.typing{display:flex;gap:5px;align-items:center;padding:14px;}
-  .msg.typing i{width:7px;height:7px;border-radius:50%;background:var(--chat-a);display:block;animation:tdot 1.2s infinite;}
+  .msg.typing i{width:7px;height:7px;border-radius:50%;background:var(--chat-a);display:block;animation:td 1.2s infinite;}
   .msg.typing i:nth-child(2){animation-delay:.18s;} .msg.typing i:nth-child(3){animation-delay:.36s;}
-  @keyframes tdot{0%,60%,100%{opacity:.3;}30%{opacity:1;}}
+  @keyframes td{0%,60%,100%{opacity:.3;}30%{opacity:1;}}
   .chat-chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 18px 12px;background:#FAF9FE;}
   .chat-chip{font-family:var(--mono);font-size:var(--fs-micro);padding:8px 13px;border-radius:100px;background:var(--white);border:1px solid rgba(123,63,242,.28);color:var(--chat-b);}
-  .chat-chip:hover{background:rgba(123,63,242,.07);}
   .chat-input-row{display:flex;gap:9px;padding:13px;border-top:1px solid var(--line);background:var(--white);align-items:center;}
   .chat-input-row input{flex:1;border:1px solid rgba(123,63,242,.22);background:#FAF9FE;border-radius:100px;padding:11px 16px;font-family:var(--body);font-size:var(--fs-body);color:var(--navy);}
-  .chat-input-row input:focus{outline:none;border-color:var(--chat-a);}
   .chat-send{width:42px;height:42px;border-radius:50%;border:none;background:linear-gradient(160deg,var(--chat-a),var(--chat-b));color:#fff;flex-shrink:0;box-shadow:0 4px 0 color-mix(in srgb,var(--chat-b) 70%,black);}
   .chat-foot{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);text-align:center;padding:0 0 10px;background:var(--white);}
 
-  /* ================= LOGIN + STAFF AREA ================= */
-  #login-modal{position:fixed;inset:0;z-index:200;background:rgba(6,26,60,.72);backdrop-filter:blur(6px);
-    display:none;align-items:center;justify-content:center;padding:20px;}
+  /* ---- LOGIN / STAFF ---- */
+  #login-modal{position:fixed;inset:0;z-index:200;background:rgba(6,26,60,.72);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px;}
   #login-modal.open{display:flex;}
   .login-card{background:var(--white);border-radius:18px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 40px 80px rgba(6,26,60,.5);}
   .login-head{background:linear-gradient(160deg,var(--sky-deep),var(--navy));color:#fff;padding:26px;border-bottom:3px solid var(--gold);}
@@ -337,65 +276,50 @@
   .login-body{padding:26px;}
   .login-body label{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:7px;margin-top:16px;}
   .login-body label:first-child{margin-top:0;}
-  .login-body input{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);
-    padding:12px 14px;font-family:var(--body);font-size:var(--fs-body);color:var(--navy);}
-  .login-body input:focus{outline:none;border-color:var(--sky-deep);box-shadow:0 0 0 3px rgba(63,169,224,.18);}
+  .login-body input{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;font-family:var(--body);font-size:var(--fs-body);color:var(--navy);}
   .login-body .btn{width:100%;margin-top:22px;}
-  .login-err{display:none;margin-top:14px;font-family:var(--mono);font-size:var(--fs-micro);color:#B03A2E;}
-  .login-cancel{display:block;width:100%;text-align:center;margin-top:14px;background:none;border:none;
-    font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);text-decoration:underline;}
+  .login-err{display:none;margin-top:14px;font-family:var(--mono);font-size:var(--fs-micro);color:#B03A2E;line-height:1.6;}
+  .login-cancel{display:block;width:100%;text-align:center;margin-top:14px;background:none;border:none;font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);text-decoration:underline;}
 
   #staff-page{position:fixed;inset:0;z-index:150;background:var(--paper);overflow-y:auto;display:none;}
   #staff-page.open{display:block;}
-  .staff-bar{position:sticky;top:0;z-index:5;background:var(--navy);color:#fff;padding:0 var(--gutter);height:var(--bar-h);
-    display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:3px solid var(--gold);}
+  .staff-bar{position:sticky;top:0;z-index:5;background:var(--navy);color:#fff;padding:0 var(--gutter);height:var(--bar-h);display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:3px solid var(--gold);}
   .staff-bar h2{color:#fff;font-size:calc(var(--font-base)*1.15);}
-  .staff-bar .t-micro{color:var(--gold-light);}
-  .staff-actions{display:flex;gap:9px;align-items:center;}
-  .staff-actions button{height:40px;padding:0 18px;border-radius:100px;border:1px solid rgba(255,255,255,.25);
-    background:transparent;color:#fff;font-size:calc(var(--font-base)*0.8);font-weight:600;transition:background .2s;}
+  .staff-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;}
+  .staff-actions button{height:40px;padding:0 18px;border-radius:100px;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;font-size:calc(var(--font-base)*.8);font-weight:600;white-space:nowrap;}
   .staff-actions button:hover{background:rgba(255,255,255,.12);}
   .staff-actions button.gold{background:linear-gradient(180deg,var(--gold-light),var(--gold));color:var(--navy-deep);border-color:transparent;}
-  .staff-body{padding:calc(var(--section-pad)*0.4) var(--gutter) 80px;}
+  .staff-body{padding:calc(var(--section-pad)*.4) var(--gutter) 80px;}
   .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:26px;}
   .kpi{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;border-top:3px solid var(--sky);}
   .kpi b{display:block;font-family:var(--disp);font-size:calc(var(--font-base)*1.8);color:var(--navy);line-height:1.1;}
   .kpi span{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);letter-spacing:.08em;text-transform:uppercase;}
-
-  .rfq-card{border:1px solid var(--line);border-left:4px solid var(--sky);border-radius:var(--radius);
-    padding:20px;margin-bottom:16px;background:var(--white);box-shadow:var(--shadow-sm);}
+  .rfq-card{border:1px solid var(--line);border-left:4px solid var(--sky);border-radius:var(--radius);padding:20px;margin-bottom:16px;background:var(--white);box-shadow:var(--shadow-sm);}
   .rfq-ref{font-family:var(--mono);font-size:var(--fs-body);font-weight:600;color:var(--navy);letter-spacing:.06em;}
   .rfq-when{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);}
   .badge{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:100px;font-weight:600;}
-  .badge.s0{background:#EAF6FD;color:var(--sky-deep);}
-  .badge.s1{background:#FFF6E0;color:var(--gold-deep);}
-  .badge.s2{background:#F3EDFF;color:#5B2BB8;}
-  .badge.s3{background:#E6F7F0;color:var(--ok);}
-  .badge.s4{background:#EEF1F6;color:var(--ink-mid);}
+  .badge.s0{background:#EAF6FD;color:var(--sky-deep);} .badge.s1{background:#FFF6E0;color:var(--gold-deep);}
+  .badge.s2{background:#F3EDFF;color:#5B2BB8;} .badge.s3{background:#E6F7F0;color:var(--ok);} .badge.s4{background:#EEF1F6;color:var(--ink-mid);}
   .rfq-detail{font-size:var(--fs-body);color:var(--ink-mid);line-height:1.75;margin:12px 0;}
   .rfq-detail b{color:var(--navy);font-weight:600;}
   .rfq-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
-  .mini-btn{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;
-    padding:9px 15px;border-radius:100px;border:1px solid var(--line-strong);background:var(--white);color:var(--navy);transition:transform .15s,border-color .2s,color .2s;}
-  .mini-btn:hover{transform:translateY(-2px);border-color:var(--sky-deep);color:var(--sky-deep);}
+  .mini-btn{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;padding:9px 15px;border-radius:100px;border:1px solid var(--line-strong);background:var(--white);color:var(--navy);}
+  .mini-btn:hover{border-color:var(--sky-deep);color:var(--sky-deep);}
   .mini-btn.gold{background:linear-gradient(180deg,var(--gold-light),var(--gold));color:var(--navy-deep);border-color:transparent;font-weight:600;}
   .mini-btn.ai{background:linear-gradient(160deg,var(--chat-a),var(--chat-b));color:#fff;border-color:transparent;font-weight:600;}
   .mini-btn.green{background:var(--ok);color:#fff;border-color:transparent;font-weight:600;}
-  .quote-editor textarea{width:100%;min-height:220px;font-family:var(--mono);font-size:var(--fs-micro);line-height:1.7;
-    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px;color:var(--navy);resize:vertical;margin-top:12px;}
+  .quote-editor textarea{width:100%;min-height:220px;font-family:var(--mono);font-size:var(--fs-micro);line-height:1.7;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px;color:var(--navy);resize:vertical;margin-top:12px;}
   .notif-log{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);margin-top:12px;border-top:1px dashed var(--line-strong);padding-top:9px;}
   .status-select{width:100%;margin-top:12px;padding:10px 13px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--white);font-family:var(--mono);font-size:var(--fs-label);color:var(--navy);}
 
-  /* ---- ADMIN DRAWER ---- */
-  #admin-toggle{position:fixed;bottom:26px;right:26px;z-index:100;width:56px;height:56px;border-radius:50%;
-    background:linear-gradient(180deg,var(--sky-mid),var(--navy));border:none;display:flex;align-items:center;justify-content:center;
-    color:#fff;font-size:21px;box-shadow:0 6px 0 var(--navy-deep), 0 16px 30px rgba(11,42,91,.4);transition:transform .2s,box-shadow .2s;}
+  /* ---- ADMIN ---- */
+  #admin-toggle{position:fixed;bottom:26px;right:26px;z-index:100;width:56px;height:56px;border-radius:50%;background:linear-gradient(180deg,var(--sky-mid),var(--navy));border:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:21px;box-shadow:0 6px 0 var(--navy-deep),0 16px 30px rgba(11,42,91,.4);transition:transform .2s;}
   #admin-toggle:hover{transform:translateY(-4px);}
-  #admin-panel{position:fixed;top:0;right:0;height:100%;width:520px;max-width:96vw;background:var(--white);color:var(--navy);z-index:160;
-    transform:translateX(100%);transition:transform .32s ease;box-shadow:-16px 0 60px rgba(11,42,91,.22);display:flex;flex-direction:column;}
+  #admin-panel{position:fixed;top:0;right:0;height:100%;width:520px;max-width:96vw;background:var(--white);color:var(--navy);z-index:160;transform:translateX(100%);transition:transform .32s ease;box-shadow:-16px 0 60px rgba(11,42,91,.22);display:flex;flex-direction:column;}
   #admin-panel.open{transform:translateX(0);}
-  .admin-head{padding:20px 24px;background:var(--navy);color:#fff;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--gold);}
+  .admin-head{padding:18px 22px;background:var(--navy);color:#fff;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--gold);gap:10px;}
   .admin-head h2{font-size:var(--fs-card-title);font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#fff;}
+  .admin-head .pubbtn{height:34px;padding:0 14px;border-radius:100px;border:none;background:linear-gradient(180deg,var(--gold-light),var(--gold));color:var(--navy-deep);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
   .admin-close{background:none;border:none;color:rgba(255,255,255,.8);font-size:20px;}
   .admin-tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto;background:var(--sky-wash);}
   .admin-tab{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;padding:14px 12px;color:var(--ink-soft);border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;}
@@ -404,8 +328,7 @@
   .admin-group{display:none;} .admin-group.active{display:block;}
   .field{margin-bottom:17px;}
   .field label{display:block;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:7px;}
-  .field input[type=text],.field textarea,.field input[type=email],.field input[type=tel],.field input[type=password]{
-    width:100%;background:var(--paper);border:1px solid var(--line);color:var(--navy);padding:10px 12px;font-family:var(--body);font-size:var(--fs-body);border-radius:var(--radius-sm);}
+  .field input[type=text],.field textarea,.field input[type=email],.field input[type=tel],.field input[type=password]{width:100%;background:var(--paper);border:1px solid var(--line);color:var(--navy);padding:10px 12px;font-family:var(--body);font-size:var(--fs-body);border-radius:var(--radius-sm);}
   .field textarea{resize:vertical;min-height:60px;}
   .field input:focus,.field textarea:focus{outline:none;border-color:var(--sky-deep);box-shadow:0 0 0 3px rgba(63,169,224,.18);}
   .field input[type=color]{width:100%;height:38px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:3px;}
@@ -413,7 +336,7 @@
   .range-row{display:flex;align-items:center;gap:12px;}
   .range-row input[type=range]{flex:1;accent-color:var(--sky-deep);}
   .range-val{font-family:var(--mono);font-size:var(--fs-micro);color:var(--navy);min-width:56px;text-align:right;}
-  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);gap:12px;}
   .switch{position:relative;width:42px;height:23px;background:var(--sky-wash);border-radius:100px;border:1px solid var(--line);cursor:pointer;flex-shrink:0;}
   .switch::after{content:'';position:absolute;top:2px;left:2px;width:17px;height:17px;background:var(--ink-soft);border-radius:50%;transition:all .2s;}
   .switch.on{background:linear-gradient(180deg,var(--sky-mid),var(--sky-deep));border-color:transparent;}
@@ -422,9 +345,7 @@
   .list-item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;gap:8px;}
   .list-item-head span{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);letter-spacing:.08em;}
   .item-delete{background:var(--white);border:1px solid var(--line-strong);color:#B03A2E;font-family:var(--mono);font-size:var(--fs-micro);padding:6px 12px;border-radius:100px;letter-spacing:.06em;text-transform:uppercase;}
-  .item-delete:hover{border-color:#B03A2E;}
-  .add-btn{width:100%;border:1px dashed var(--line-strong);background:var(--white);font-family:var(--mono);font-size:var(--fs-micro);
-    padding:14px;border-radius:var(--radius-sm);letter-spacing:.07em;text-transform:uppercase;margin-top:4px;color:var(--navy);font-weight:500;}
+  .add-btn{width:100%;border:1px dashed var(--line-strong);background:var(--white);font-family:var(--mono);font-size:var(--fs-micro);padding:14px;border-radius:var(--radius-sm);letter-spacing:.07em;text-transform:uppercase;margin-top:4px;color:var(--navy);font-weight:500;}
   .add-btn:hover{border-color:var(--gold);color:var(--gold-deep);}
   .add-btn.solid{border-style:solid;border-color:var(--gold);color:var(--gold-deep);background:rgba(224,180,78,.1);}
   .sec-card{border:1px solid var(--line-strong);border-left:3px solid var(--gold);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px;background:var(--sky-wash);}
@@ -435,43 +356,44 @@
   .thumb.placeholder{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;color:var(--ink-soft);border:1px dashed var(--line-strong);}
   .img-upload input[type=file]{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);flex:1;min-width:0;}
   .link-btn{background:none;border:none;color:#B03A2E;font-family:var(--mono);font-size:var(--fs-micro);text-decoration:underline;flex-shrink:0;}
-  .warn-box{background:#FFF6E0;border:1px solid rgba(194,147,46,.4);border-radius:var(--radius-sm);padding:13px;
-    font-size:var(--fs-micro);color:var(--gold-deep);line-height:1.65;margin-bottom:18px;}
-  #save-toast{position:fixed;bottom:96px;right:26px;background:var(--navy);color:#fff;padding:11px 18px;border-radius:100px;
-    font-family:var(--mono);font-size:var(--fs-micro);z-index:210;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;}
+  .info-box{background:var(--sky-wash);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px;font-size:var(--fs-micro);color:var(--ink-mid);line-height:1.7;margin-bottom:18px;}
+  .warn-box{background:#FFF6E0;border:1px solid rgba(194,147,46,.4);border-radius:var(--radius-sm);padding:13px;font-size:var(--fs-micro);color:var(--gold-deep);line-height:1.7;margin-bottom:18px;}
+  #save-toast{position:fixed;bottom:96px;right:26px;background:var(--navy);color:#fff;padding:11px 18px;border-radius:100px;font-family:var(--mono);font-size:var(--fs-micro);z-index:210;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;max-width:70vw;}
   #save-toast.show{opacity:1;transform:translateY(0);}
+  #offline-bar{position:fixed;top:0;left:0;right:0;z-index:250;background:#B03A2E;color:#fff;font-family:var(--mono);font-size:var(--fs-micro);padding:9px 16px;text-align:center;display:none;}
+  #offline-bar.show{display:block;}
 
-  @media (max-width:1240px){ nav.links a:nth-child(n+5){display:none;} }
-  @media (max-width:1000px){ nav.links a:nth-child(n+3){display:none;} }
+  @media (max-width:1100px){:root{--logo-max:180px;}}
   @media (max-width:980px){
     .hero-grid{grid-template-columns:1fr;} .core{order:-1;max-width:240px;}
     .cta-grid{grid-template-columns:1fr;}
-    .process-row{grid-template-columns:150px 46px 1fr;gap:18px;}
+    .process-row{grid-template-columns:150px 46px 1fr;gap:18px;} .process-media{width:150px;height:100px;}
     .gallery-grid .g-item:nth-child(6n+1){grid-column:span 2;grid-row:span 1;}
   }
   @media (max-width:680px){
-    :root{--bar-h:64px;--gutter:16px;--section-pad:56px;}
-    nav.links{display:none;}
-    .process-row{grid-template-columns:1fr;gap:12px;}
+    :root{--bar-h:62px;--gutter:16px;--section-pad:56px;--logo-max:130px;--media-h:180px;--portrait-h:240px;}
+    .nav-scroll{display:none;}
+    .process-row{grid-template-columns:1fr;gap:12px;} .process-media{width:100%;height:190px;}
     .gallery-grid{grid-template-columns:1fr 1fr;}
-    #chat-fab{padding:13px 18px;}
     #chat-panel{bottom:12px;left:12px;right:12px;width:auto;height:calc(100vh - 90px);}
   }
 </style>
 </head>
 <body>
 
+<div id="offline-bar"></div>
+
 <header>
   <div class="nav">
     <a href="#top" class="brand">
       <div class="logo-slot logo-glow" id="logo-wrap"><div class="logo-fallback">I</div></div>
-      <div id="brand-text">
+      <div class="brand-txt" id="brand-text">
         <span class="brand-name" id="d-brand-name">IRONVALE</span>
         <span class="brand-suffix" id="d-brand-suffix">MANUFACTURING</span>
       </div>
     </a>
-    <nav class="links" id="main-nav"></nav>
-    <a href="#contact" class="btn btn-gold" id="d-cta-primary-2">Request a Quote</a>
+    <div class="nav-scroll"><nav class="links" id="main-nav"></nav></div>
+    <a href="#contact" class="btn btn-gold nav-cta" id="d-cta-primary-2">Request a Quote</a>
   </div>
 </header>
 
@@ -496,171 +418,119 @@
     <div class="ticker"><div class="ticker-track" id="ticker-track"></div></div>
   </section>
 
-  <section id="capabilities">
-    <div class="wrap">
-      <div class="section-head"><span class="t-label">What We Do</span><h2 class="t-title" id="d-cap-title">Capabilities</h2></div>
-      <div class="card-grid" id="cap-grid"></div>
-    </div>
-  </section>
+  <section id="capabilities"><div class="wrap">
+    <div class="section-head"><span class="t-label">What We Do</span><h2 class="t-title" id="d-cap-title">Capabilities</h2></div>
+    <div class="card-grid" id="cap-grid"></div></div></section>
 
-  <section class="process" id="process">
-    <div class="wrap">
-      <div class="section-head"><span class="t-label">How We Work</span><h2 class="t-title" id="d-process-title">Process</h2></div>
-      <div id="process-list"></div>
-    </div>
-  </section>
+  <section class="process" id="process"><div class="wrap">
+    <div class="section-head"><span class="t-label">How We Work</span><h2 class="t-title" id="d-process-title">Process</h2></div>
+    <div id="process-list"></div></div></section>
 
-  <section id="stats-section">
-    <div class="wrap"><div class="card-grid" id="stats-grid"></div></div>
-  </section>
+  <section id="stats-section"><div class="wrap"><div class="card-grid" id="stats-grid"></div></div></section>
 
-  <section id="gallery">
-    <div class="wrap">
-      <div class="section-head"><span class="t-label">On the Floor</span><h2 class="t-title" id="d-gallery-title">Gallery</h2></div>
-      <div class="gallery-grid" id="gallery-grid"></div>
-    </div>
-  </section>
+  <section id="gallery"><div class="wrap">
+    <div class="section-head"><span class="t-label">On the Floor</span><h2 class="t-title" id="d-gallery-title">Gallery</h2></div>
+    <div class="gallery-grid" id="gallery-grid"></div></div></section>
 
-  <section id="industries">
-    <div class="wrap">
-      <div class="section-head"><span class="t-label">Who We Serve</span><h2 class="t-title" id="d-industries-title">Industries</h2></div>
-      <div class="card-grid" id="industries-grid"></div>
-    </div>
-  </section>
+  <section id="industries"><div class="wrap">
+    <div class="section-head"><span class="t-label">Who We Serve</span><h2 class="t-title" id="d-industries-title">Industries</h2></div>
+    <div class="card-grid" id="industries-grid"></div></div></section>
 
-  <section class="certs-sec" id="certs-section">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="t-label">Accreditation</span>
-        <h2 class="t-title" id="d-certs-title">Certifications</h2>
-        <p class="t-subtitle" id="d-certs-sub"></p>
-      </div>
-      <div class="card-grid" id="cert-grid"></div>
-    </div>
-  </section>
+  <section class="certs-sec" id="certs-section"><div class="wrap">
+    <div class="section-head"><span class="t-label">Accreditation</span><h2 class="t-title" id="d-certs-title">Certifications</h2>
+      <p class="t-subtitle" id="d-certs-sub"></p></div>
+    <div class="card-grid" id="cert-grid"></div></div></section>
 
-  <section id="founders">
-    <div class="wrap">
-      <div class="section-head"><span class="t-label">Leadership</span><h2 class="t-title" id="d-founders-title">Founders</h2></div>
-      <div class="card-grid" id="founders-grid"></div>
-    </div>
-  </section>
+  <section id="founders"><div class="wrap">
+    <div class="section-head"><span class="t-label">Leadership</span><h2 class="t-title" id="d-founders-title">Founders</h2></div>
+    <div class="card-grid" id="founders-grid"></div></div></section>
 
   <div id="custom-sections"></div>
 
-  <section class="testimonial" id="testimonial-section">
-    <div class="wrap">
-      <div class="quote-box">
-        <span class="quote-mark">"</span>
-        <blockquote id="d-quote-text">Quote</blockquote>
-        <div class="quote-attr"><strong id="d-quote-name">Name</strong><span id="d-quote-role">Role</span></div>
-      </div>
-    </div>
-  </section>
+  <section class="testimonial" id="testimonial-section"><div class="wrap">
+    <div class="quote-box"><span class="quote-mark">"</span>
+      <blockquote id="d-quote-text">Quote</blockquote>
+      <div class="quote-attr"><strong id="d-quote-name">Name</strong><span id="d-quote-role">Role</span></div>
+    </div></div></section>
 
-  <section class="cta" id="contact">
-    <div class="wrap cta-grid">
-      <div>
-        <h2 class="t-title" id="d-contact-title">Contact</h2>
-        <p class="t-subtitle" id="d-contact-sub"></p>
-        <div class="contact-list">
-          <div class="contact-item"><span class="k">Address</span><span id="d-contact-address"></span></div>
-          <div class="contact-item"><span class="k">Phone</span><span id="d-contact-phone"></span></div>
-          <div class="contact-item"><span class="k">Email</span><span id="d-contact-email"></span></div>
-        </div>
+  <section class="cta" id="contact"><div class="wrap cta-grid">
+    <div>
+      <h2 class="t-title" id="d-contact-title">Contact</h2>
+      <p class="t-subtitle" id="d-contact-sub"></p>
+      <div class="contact-list">
+        <div class="contact-item"><span class="k">Address</span><span id="d-contact-address"></span></div>
+        <div class="contact-item"><span class="k">Phone</span><span id="d-contact-phone"></span></div>
+        <div class="contact-item"><span class="k">Email</span><span id="d-contact-email"></span></div>
       </div>
-      <form class="rfq" id="rfq-form">
-        <label>Full Name</label><input type="text" id="rfq-name" required>
-        <label>Company</label><input type="text" id="rfq-company">
-        <label>Email</label><input type="email" id="rfq-email" required>
-        <label>Contact Number</label><input type="tel" id="rfq-phone" placeholder="+91 90000 00000">
-        <label>Project Details</label><textarea id="rfq-message" placeholder="Material, quantity, target tolerance, timeline..."></textarea>
-        <label>Upload Drawing / Spec (optional)</label><input type="file" id="rfq-file" accept=".pdf,.jpg,.jpeg,.png,.dwg,.step,.stp,.zip">
-        <div class="rfq-note">Files under ~1.5MB attach to your request.</div>
-        <button type="submit" class="btn btn-gold">Submit RFQ</button>
-        <div class="rfq-thanks" id="rfq-thanks">
-          <strong id="rfq-ref-out">REF</strong>
-          <span class="t-body">Save this reference — you can check progress in the “Track your RFQ” section below.</span>
-        </div>
-      </form>
     </div>
-  </section>
+    <form class="rfq" id="rfq-form">
+      <label>Full Name</label><input type="text" id="rfq-name" required>
+      <label>Company</label><input type="text" id="rfq-company">
+      <label>Email</label><input type="email" id="rfq-email" required>
+      <label>Contact Number</label><input type="tel" id="rfq-phone" placeholder="+91 90000 00000">
+      <label>Project Details</label><textarea id="rfq-message" placeholder="Material, quantity, target tolerance, timeline..."></textarea>
+      <label>Upload Drawing / Spec (optional)</label><input type="file" id="rfq-file" accept=".pdf,.jpg,.jpeg,.png,.dwg,.step,.stp,.zip">
+      <div class="rfq-note">Files under ~1.5MB attach to your request.</div>
+      <button type="submit" class="btn btn-gold" id="rfq-submit">Submit RFQ</button>
+      <div class="rfq-thanks" id="rfq-thanks"><strong id="rfq-ref-out">REF</strong>
+        <span class="t-body">Save this reference — you can check progress in “Track your RFQ” below.</span></div>
+    </form>
+  </div></section>
 
-  <section id="track">
-    <div class="wrap">
-      <div class="section-head" style="margin-bottom:24px;">
-        <span class="t-label">RFQ Status</span>
-        <h2 class="t-title">Track your RFQ</h2>
-        <p class="t-subtitle">Enter the reference number from your submission to see where your enquiry stands.</p>
-      </div>
-      <div class="track-box">
-        <div class="track-row">
-          <input type="text" id="track-input" placeholder="RFQ-XXXXXX" autocomplete="off">
-          <button class="btn btn-primary" id="track-btn">Check Status</button>
-        </div>
-        <div id="track-result"></div>
-      </div>
-    </div>
-  </section>
+  <section id="track"><div class="wrap">
+    <div class="section-head" style="margin-bottom:24px;">
+      <span class="t-label">RFQ Status</span><h2 class="t-title">Track your RFQ</h2>
+      <p class="t-subtitle">Enter the reference number from your submission to see where your enquiry stands.</p></div>
+    <div class="track-box">
+      <div class="track-row"><input type="text" id="track-input" placeholder="RFQ-XXXXXX" autocomplete="off">
+        <button class="btn btn-primary" id="track-btn">Check Status</button></div>
+      <div id="track-result"></div>
+    </div></div></section>
 </main>
 
 <footer>
   <div class="wrap">
     <div class="foot-top">
-      <div class="foot-brand">
-        <span class="brand-name" id="d-brand-name-2">IRONVALE</span>
-        <p class="t-body" style="max-width:38ch;margin-top:12px;color:rgba(255,255,255,.6);">Precision-machined components for the industries that can't afford to guess.</p>
-      </div>
+      <div class="foot-brand"><span class="brand-name" id="d-brand-name-2">IRONVALE</span>
+        <p class="t-body" style="max-width:38ch;margin-top:12px;color:rgba(255,255,255,.6);">Precision-machined components for the industries that can't afford to guess.</p></div>
       <div class="foot-links" id="foot-links"></div>
     </div>
-    <div class="foot-row">
-      <span id="d-footer-copy">© 2026 Ironvale Manufacturing.</span>
-      <a href="#" id="staff-login-link">STAFF LOGIN →</a>
-    </div>
+    <div class="foot-row"><span id="d-footer-copy">© 2026 Ironvale Manufacturing.</span>
+      <span class="t-micro" id="content-stamp"></span></div>
   </div>
-  <div class="kmr-bar">
-    <a href="https://www.kmr-groups.com" rel="noopener">Powered By KMR Group of Companies — <span>www.kmr-groups.com</span></a>
-  </div>
+  <div class="kmr-bar"><a href="https://www.kmr-groups.com" rel="noopener">Powered By KMR Group of Companies — <span>www.kmr-groups.com</span></a></div>
 </footer>
 
 <button id="chat-fab"><span class="dot"></span><span id="chat-fab-label">Ask our AI assistant</span></button>
-<div id="chat-panel" role="dialog" aria-label="AI assistant">
-  <div class="chat-head">
-    <div class="chat-avatar" id="chat-avatar">A</div>
+<div id="chat-panel">
+  <div class="chat-head"><div class="chat-avatar" id="chat-avatar">A</div>
     <div><h3 id="chat-bot-name">Assistant</h3><div class="status">Online</div></div>
-    <button class="chat-close" id="chat-close" aria-label="Close chat">✕</button>
-  </div>
+    <button class="chat-close" id="chat-close">✕</button></div>
   <div class="chat-log" id="chat-log"></div>
   <div class="chat-chips" id="chat-chips"></div>
-  <div class="chat-input-row">
-    <input type="text" id="chat-input" placeholder="Ask about capabilities, lead times, certifications…" autocomplete="off">
-    <button class="chat-send" id="chat-send" aria-label="Send">➤</button>
-  </div>
+  <div class="chat-input-row"><input type="text" id="chat-input" placeholder="Ask about capabilities, lead times…" autocomplete="off">
+    <button class="chat-send" id="chat-send">➤</button></div>
   <div class="chat-foot">AI assistant — confirm details with our team.</div>
 </div>
 
-<!-- ============ LOGIN ============ -->
 <div id="login-modal">
   <div class="login-card">
-    <div class="login-head"><h2>Staff Sign In</h2><p>RFQ Pipeline &amp; Site Admin</p></div>
+    <div class="login-head"><h2 id="login-title">Staff Sign In</h2><p id="login-sub">RFQ Pipeline &amp; Site Admin</p></div>
     <div class="login-body">
       <label>Username</label><input type="text" id="login-user" autocomplete="username">
       <label>Password</label><input type="password" id="login-pass" autocomplete="current-password">
       <button class="btn btn-primary" id="login-btn">Sign In</button>
-      <div class="login-err" id="login-err">Incorrect username or password.</div>
+      <div class="login-err" id="login-err"></div>
       <button class="login-cancel" id="login-cancel">Cancel</button>
     </div>
   </div>
 </div>
 
-<!-- ============ STAFF PIPELINE PAGE ============ -->
 <div id="staff-page">
   <div class="staff-bar">
-    <div>
-      <h2>RFQ Pipeline</h2>
-      <span class="t-micro" id="staff-brand">IRONVALE</span>
-    </div>
+    <div><h2>RFQ Pipeline</h2><span class="t-micro" id="staff-brand" style="color:var(--gold-light)">IRONVALE</span></div>
     <div class="staff-actions">
+      <button id="staff-refresh">Refresh</button>
       <button id="staff-admin">Site Admin</button>
       <button id="staff-back">View Website</button>
       <button class="gold" id="staff-logout">Sign Out</button>
@@ -669,15 +539,18 @@
   <div class="staff-body">
     <div class="kpi-row" id="kpi-row"></div>
     <div id="rfq-list"></div>
-    <button type="button" class="btn btn-ghost" id="clear-leads" style="margin-top:18px;">Clear All RFQs</button>
   </div>
 </div>
 
-<button id="admin-toggle" title="Admin" aria-label="Admin">⚙</button>
+<button id="admin-toggle" title="Admin">⚙</button>
 <div id="save-toast">SAVED</div>
 
 <div id="admin-panel">
-  <div class="admin-head"><h2>Admin Panel</h2><button class="admin-close" id="admin-close">✕</button></div>
+  <div class="admin-head">
+    <h2>Admin</h2>
+    <button class="pubbtn" id="publish-btn">Publish Changes</button>
+    <button class="admin-close" id="admin-close">✕</button>
+  </div>
   <div class="admin-tabs">
     <button class="admin-tab active" data-tab="design">Design</button>
     <button class="admin-tab" data-tab="layout">Sizing</button>
@@ -694,19 +567,15 @@
     <button class="admin-tab" data-tab="testimonial">Testimonial</button>
     <button class="admin-tab" data-tab="contact">Contact</button>
     <button class="admin-tab" data-tab="notify">Notifications</button>
-    <button class="admin-tab" data-tab="security">Login</button>
+    <button class="admin-tab" data-tab="security">Password</button>
     <button class="admin-tab" data-tab="sections">Sections</button>
   </div>
   <div class="admin-body">
 
     <div class="admin-group active" data-group="design">
-      <div class="field-hint" style="margin-bottom:18px;">All text on the site is built from four styles — Label, Title, Subtitle, and Body. Changing these keeps every section consistent.</div>
-      <div class="field"><label>Base Text Size</label>
-        <div class="range-row"><input type="range" id="rg-fontBase" min="13" max="20" step="0.5"><span class="range-val" id="v-fontBase"></span></div>
-        <div class="field-hint">Everything scales from this — body text, labels, cards.</div></div>
-      <div class="field"><label>Heading Size</label>
-        <div class="range-row"><input type="range" id="rg-titleScale" min="0.7" max="1.4" step="0.05"><span class="range-val" id="v-titleScale"></span></div>
-        <div class="field-hint">Only affects big headings and stat figures.</div></div>
+      <div class="info-box"><b>Changes preview instantly.</b> Press <b>Publish Changes</b> at the top to save them to the database so every visitor, anywhere, sees them.</div>
+      <div class="field"><label>Base Text Size</label><div class="range-row"><input type="range" id="rg-fontBase" min="13" max="20" step=".5"><span class="range-val" id="v-fontBase"></span></div></div>
+      <div class="field"><label>Heading Size</label><div class="range-row"><input type="range" id="rg-titleScale" min=".7" max="1.4" step=".05"><span class="range-val" id="v-titleScale"></span></div></div>
       <div class="field"><label>Sky Blue</label><input type="color" id="in-sky"></div>
       <div class="field"><label>Navy Blue</label><input type="color" id="in-navy"></div>
       <div class="field"><label>Gold</label><input type="color" id="in-gold"></div>
@@ -715,31 +584,26 @@
     </div>
 
     <div class="admin-group" data-group="layout">
-      <div class="field-hint" style="margin-bottom:18px;">Adjust panel and card sizes across the whole site. Every section uses these values, so spacing stays even.</div>
-      <div class="field"><label>Page Side Margin</label>
-        <div class="range-row"><input type="range" id="rg-gutter" min="0" max="120" step="2"><span class="range-val" id="v-gutter"></span></div></div>
-      <div class="field"><label>Section Height / Spacing</label>
-        <div class="range-row"><input type="range" id="rg-sectionPad" min="30" max="160" step="2"><span class="range-val" id="v-sectionPad"></span></div></div>
-      <div class="field"><label>Card Width</label>
-        <div class="range-row"><input type="range" id="rg-cardMin" min="200" max="480" step="10"><span class="range-val" id="v-cardMin"></span></div>
-        <div class="field-hint">Smaller = more cards per row.</div></div>
-      <div class="field"><label>Gap Between Cards</label>
-        <div class="range-row"><input type="range" id="rg-cardGap" min="6" max="48" step="2"><span class="range-val" id="v-cardGap"></span></div></div>
-      <div class="field"><label>Card Inner Padding</label>
-        <div class="range-row"><input type="range" id="rg-cardPad" min="10" max="48" step="2"><span class="range-val" id="v-cardPad"></span></div></div>
-      <div class="field"><label>Corner Roundness</label>
-        <div class="range-row"><input type="range" id="rg-radius" min="0" max="30" step="1"><span class="range-val" id="v-radius"></span></div></div>
-      <div class="field"><label>Header Bar Height</label>
-        <div class="range-row"><input type="range" id="rg-barHeight" min="52" max="140" step="2"><span class="range-val" id="v-barHeight"></span></div>
-        <div class="field-hint">The logo scales to fill this.</div></div>
+      <div class="info-box">Every section uses these values, so spacing stays even sitewide.</div>
+      <div class="field"><label>Page Side Margin</label><div class="range-row"><input type="range" id="rg-gutter" min="0" max="120" step="2"><span class="range-val" id="v-gutter"></span></div></div>
+      <div class="field"><label>Section Spacing</label><div class="range-row"><input type="range" id="rg-sectionPad" min="30" max="160" step="2"><span class="range-val" id="v-sectionPad"></span></div></div>
+      <div class="field"><label>Card Width</label><div class="range-row"><input type="range" id="rg-cardMin" min="200" max="480" step="10"><span class="range-val" id="v-cardMin"></span></div></div>
+      <div class="field"><label>Card Photo Height</label><div class="range-row"><input type="range" id="rg-mediaH" min="120" max="360" step="10"><span class="range-val" id="v-mediaH"></span></div>
+        <div class="field-hint">Applies to capability, industry and gallery photos. Photos crop to fit — they never stretch the card.</div></div>
+      <div class="field"><label>Founder Photo Height</label><div class="range-row"><input type="range" id="rg-portraitH" min="180" max="460" step="10"><span class="range-val" id="v-portraitH"></span></div></div>
+      <div class="field"><label>Gap Between Cards</label><div class="range-row"><input type="range" id="rg-cardGap" min="6" max="48" step="2"><span class="range-val" id="v-cardGap"></span></div></div>
+      <div class="field"><label>Card Inner Padding</label><div class="range-row"><input type="range" id="rg-cardPad" min="10" max="48" step="2"><span class="range-val" id="v-cardPad"></span></div></div>
+      <div class="field"><label>Corner Roundness</label><div class="range-row"><input type="range" id="rg-radius" min="0" max="30" step="1"><span class="range-val" id="v-radius"></span></div></div>
+      <div class="field"><label>Header Bar Height</label><div class="range-row"><input type="range" id="rg-barHeight" min="52" max="140" step="2"><span class="range-val" id="v-barHeight"></span></div></div>
+      <div class="field"><label>Logo Area Width</label><div class="range-row"><input type="range" id="rg-logoMax" min="90" max="420" step="10"><span class="range-val" id="v-logoMax"></span></div>
+        <div class="field-hint">Keeps the logo from crowding the menu.</div></div>
       <button type="button" class="add-btn" id="reset-layout">Reset sizing to defaults</button>
     </div>
 
     <div class="admin-group" data-group="brand">
       <div class="field"><label>Company Name</label><input type="text" id="in-brandName"></div>
       <div class="field"><label>Company Suffix</label><input type="text" id="in-brandSuffix"></div>
-      <div class="field"><label>Logo</label><div class="img-upload" id="logo-upload-wrap"></div>
-        <div class="field-hint">Upload SVG or a 2x–3x PNG for the sharpest result.</div></div>
+      <div class="field"><label>Logo</label><div class="img-upload" id="logo-upload-wrap"></div></div>
       <div class="toggle-row"><span>Glowing halo around logo</span><div class="switch on" id="glow-switch"></div></div>
       <div class="field" style="margin-top:16px;"><label>Glow Color</label><input type="color" id="in-glow"></div>
       <div class="toggle-row"><span>Show company name beside logo</span><div class="switch on" id="brandtext-switch"></div></div>
@@ -758,43 +622,37 @@
 
     <div class="admin-group" data-group="capabilities">
       <div class="field"><label>Section Title</label><input type="text" id="in-capTitle"></div>
-      <div class="field"><label>Menu Button Label</label><input type="text" id="in-capMenu"><div class="field-hint">Keep short — 1 or 2 words.</div></div>
-      <div id="list-capabilities"></div>
-      <button type="button" class="add-btn" id="add-capabilities">+ Add Capability</button>
+      <div class="field"><label>Menu Button Label</label><input type="text" id="in-capMenu"></div>
+      <div id="list-capabilities"></div><button type="button" class="add-btn" id="add-capabilities">+ Add Capability</button>
     </div>
     <div class="admin-group" data-group="process">
       <div class="field"><label>Section Title</label><input type="text" id="in-processTitle"></div>
       <div class="field"><label>Menu Button Label</label><input type="text" id="in-processMenu"></div>
-      <div id="list-process"></div>
-      <button type="button" class="add-btn" id="add-process">+ Add Step</button>
+      <div id="list-process"></div><button type="button" class="add-btn" id="add-process">+ Add Step</button>
     </div>
     <div class="admin-group" data-group="stats">
-      <div id="list-stats"></div>
-      <button type="button" class="add-btn" id="add-stats">+ Add Stat</button>
+      <div id="list-stats"></div><button type="button" class="add-btn" id="add-stats">+ Add Stat</button>
     </div>
     <div class="admin-group" data-group="gallery">
       <div class="field"><label>Section Title</label><input type="text" id="in-galleryTitle"></div>
       <div class="field"><label>Menu Button Label</label><input type="text" id="in-galleryMenu"></div>
-      <div id="list-gallery"></div>
-      <button type="button" class="add-btn" id="add-gallery">+ Add Gallery Image</button>
+      <div id="list-gallery"></div><button type="button" class="add-btn" id="add-gallery">+ Add Gallery Image</button>
     </div>
     <div class="admin-group" data-group="industries">
       <div class="field"><label>Section Title</label><input type="text" id="in-industriesTitle"></div>
-      <div id="list-industries"></div>
-      <button type="button" class="add-btn" id="add-industries">+ Add Industry</button>
+      <div class="field"><label>Menu Button Label</label><input type="text" id="in-industriesMenu"></div>
+      <div id="list-industries"></div><button type="button" class="add-btn" id="add-industries">+ Add Industry</button>
     </div>
     <div class="admin-group" data-group="certs">
       <div class="field"><label>Section Title</label><input type="text" id="in-certsTitle"></div>
       <div class="field"><label>Menu Button Label</label><input type="text" id="in-certsMenu"></div>
       <div class="field"><label>Subtitle</label><textarea id="in-certsSub" rows="2"></textarea></div>
-      <div id="list-certs"></div>
-      <button type="button" class="add-btn" id="add-certs">+ Add Certification</button>
+      <div id="list-certs"></div><button type="button" class="add-btn" id="add-certs">+ Add Certification</button>
     </div>
     <div class="admin-group" data-group="founders">
       <div class="field"><label>Section Title</label><input type="text" id="in-foundersTitle"></div>
       <div class="field"><label>Menu Button Label</label><input type="text" id="in-foundersMenu"></div>
-      <div id="list-founders"></div>
-      <button type="button" class="add-btn" id="add-founders">+ Add Founder</button>
+      <div id="list-founders"></div><button type="button" class="add-btn" id="add-founders">+ Add Founder</button>
     </div>
 
     <div class="admin-group" data-group="chatbot">
@@ -822,24 +680,25 @@
     </div>
 
     <div class="admin-group" data-group="notify">
-      <div class="field"><label>Notify Email (yours)</label><input type="text" id="in-notifyEmail"></div>
-      <div class="field"><label>Notify WhatsApp Number</label><input type="text" id="in-notifyWhatsapp" placeholder="919902009152">
-        <div class="field-hint">Country code + number, digits only.</div></div>
-      <div class="field"><label>Live Site Address</label><input type="text" id="in-siteUrl" placeholder="https://yourcompany.com/index.html">
-        <div class="field-hint">Used to build the “Open RFQ Pipeline” link inside your notification email. Fill this in once the site is hosted online — a link cannot open a file on your own computer.</div></div>
-      <div class="field"><label>Automation Webhook URL</label><input type="text" id="in-webhook"></div>
+      <div class="info-box">Notifications are sent by the server. The email and WhatsApp number below are where new RFQ alerts go.</div>
+      <div class="field"><label>Notify Email</label><input type="text" id="in-notifyEmail"></div>
+      <div class="field"><label>Notify WhatsApp Number</label><input type="text" id="in-notifyWhatsapp" placeholder="919902009152"></div>
+      <div class="field"><label>Live Site Address</label><input type="text" id="in-siteUrl" placeholder="https://ironvale-website.vercel.app">
+        <div class="field-hint">Used for the “Open RFQ Pipeline” link inside your alert email.</div></div>
       <div class="field"><label>Quote Sender Name</label><input type="text" id="in-quoteSender"></div>
       <div class="field"><label>Currency</label><input type="text" id="in-currency"></div>
       <div class="toggle-row"><span>Auto-draft quote with AI on new RFQ</span><div class="switch on" id="autoquote-switch"></div></div>
-      <div class="toggle-row"><span>Also email me each AI draft</span><div class="switch" id="draftmail-switch"></div></div>
-      <div class="field-hint" style="margin-top:14px;">With the draft email off, you get exactly one notification per RFQ — the arrival alert, containing a link straight to the pipeline.</div>
     </div>
 
     <div class="admin-group" data-group="security">
-      <div class="warn-box"><b>Please read.</b> This sign-in keeps ordinary visitors out of your pipeline and admin panel, and it looks professional. But because everything lives in one file, someone technical could read the password from the page source. For real protection, the site needs a server and database — worth doing before you store customer data you'd be unhappy to lose.</div>
-      <div class="field"><label>Username</label><input type="text" id="in-adminUser"></div>
-      <div class="field"><label>Password</label><input type="text" id="in-adminPass"><div class="field-hint">Shown in plain text so you don't lock yourself out.</div></div>
-      <div class="toggle-row"><span>Show “Staff Login” link in footer</span><div class="switch on" id="showlogin-switch"></div></div>
+      <div class="info-box">Your password is stored on the server, hashed — not inside this page. Changing it signs out other devices.</div>
+      <div class="field"><label>Current Username</label><input type="text" id="pw-user"></div>
+      <div class="field"><label>Current Password</label><input type="password" id="pw-old"></div>
+      <div class="field"><label>New Username (optional)</label><input type="text" id="pw-newuser"></div>
+      <div class="field"><label>New Password</label><input type="password" id="pw-new"><div class="field-hint">At least 6 characters.</div></div>
+      <div class="field"><label>Confirm New Password</label><input type="password" id="pw-new2"></div>
+      <button class="btn btn-primary" id="pw-save" style="width:100%;">Change Password</button>
+      <div class="field-hint" id="pw-msg" style="margin-top:12px;"></div>
     </div>
 
     <div class="admin-group" data-group="sections">
@@ -853,6 +712,7 @@
       <div class="toggle-row"><span>Founders</span><div class="switch on" data-toggle="founders"></div></div>
       <div class="toggle-row"><span>Testimonial</span><div class="switch on" data-toggle="testimonial-section"></div></div>
       <div class="toggle-row"><span>RFQ Tracking</span><div class="switch on" data-toggle="track"></div></div>
+      <div class="toggle-row"><span>“RFQ Pipeline” button in menu</span><div class="switch on" id="pipebtn-switch"></div></div>
       <div class="field" style="margin-top:30px;"><label>Your Own Sections</label></div>
       <div id="list-custom"></div>
       <button type="button" class="add-btn solid" id="add-custom">+ Create New Section</button>
@@ -863,170 +723,133 @@
 
 <script>
 (function(){
-  const STORE_KEY="ironvale-site-v9";
+  const API=''; // same origin — the API lives beside this page
   const makeId=()=>'id'+Math.random().toString(36).slice(2,9);
   const slug=s=>'sec-'+String(s||'section').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,30);
   const makeRef=()=>'RFQ-'+Date.now().toString(36).toUpperCase().slice(-4)+Math.random().toString(36).slice(2,4).toUpperCase();
   const STAGES=["Received","Quote Drafted","Awaiting Approval","Approved & Sent","Closed"];
-
-  const LAYOUT_DEFAULTS={fontBase:16,titleScale:1,gutter:26,sectionPad:84,cardMin:300,cardGap:22,cardPad:24,radius:14,barHeight:78};
+  const LAYOUT_DEFAULTS={fontBase:16,titleScale:1,gutter:26,sectionPad:84,cardMin:300,cardGap:22,cardPad:24,
+    mediaH:220,portraitH:300,radius:14,barHeight:78,logoMax:230};
 
   const DEFAULTS=Object.assign({
-    brandName:"IRONVALE", brandSuffix:"MANUFACTURING",
-    sky:"#3FA9E0", navy:"#0B2A5B", gold:"#C2932E", glow:"#69C2ED", chatA:"#7B3FF2", chatB:"#4B1FA8",
-    showBrandText:true, logoGlow:true, logoDataUrl:"", heroBannerDataUrl:"",
+    brandName:"IRONVALE",brandSuffix:"MANUFACTURING",
+    sky:"#3FA9E0",navy:"#0B2A5B",gold:"#C2932E",glow:"#69C2ED",chatA:"#7B3FF2",chatB:"#4B1FA8",
+    showBrandText:true,logoGlow:true,logoDataUrl:"",heroBannerDataUrl:"",showPipeBtn:true,
     footerCopy:"© 2026 Ironvale Manufacturing.",
-
-    adminUser:"admin", adminPass:"ironvale2026", showLoginLink:true,
-
     heroEyebrow:"PRECISION CNC MANUFACTURING",
     heroHeadline:"Tolerances measured in microns. Trust measured in decades.",
     heroSub:"We machine mission-critical components for aerospace, automotive, and medical OEMs — engineered to spec, delivered on time, every time.",
-    ctaPrimary:"Request a Quote", ctaSecondary:"View Capabilities",
+    ctaPrimary:"Request a Quote",ctaSecondary:"View Capabilities",
     ticker:["TOLERANCE ±0.002mm","ISO 9001:2015 CERTIFIED","42 CNC WORK CENTERS","24/7 PRODUCTION FLOOR","98.7% ON-TIME DELIVERY"],
-
-    capTitle:"Manufacturing Capabilities", capMenu:"Capabilities",
+    capTitle:"Manufacturing Capabilities",capMenu:"Capabilities",
     capabilities:[
-      {id:makeId(),img:"",title:"CNC Turning",desc:"High-precision turned components from 2mm to 400mm diameter, single-part to high-volume runs."},
-      {id:makeId(),img:"",title:"5-Axis Milling",desc:"Complex geometries machined in one setup for tighter tolerances and faster turnaround."},
-      {id:makeId(),img:"",title:"Precision Grinding",desc:"Surface, cylindrical, and centerless grinding to sub-micron surface finishes."},
-      {id:makeId(),img:"",title:"Metal Finishing",desc:"Anodizing, passivation, black oxide, and custom coatings under one roof."},
-      {id:makeId(),img:"",title:"Quality Inspection",desc:"CMM, optical comparators, and full first-article inspection reporting."},
-      {id:makeId(),img:"",title:"Prototype to Production",desc:"DFM review and rapid prototyping that scales directly into production tooling."}
-    ],
-    processTitle:"From Print to Part", processMenu:"Process",
+      {id:makeId(),img:"",title:"CNC Turning",desc:"High-precision turned components from 2mm to 400mm diameter."},
+      {id:makeId(),img:"",title:"5-Axis Milling",desc:"Complex geometries machined in one setup for tighter tolerances."},
+      {id:makeId(),img:"",title:"Precision Grinding",desc:"Surface, cylindrical, and centerless grinding to sub-micron finishes."},
+      {id:makeId(),img:"",title:"Metal Finishing",desc:"Anodizing, passivation, black oxide, and custom coatings in-house."},
+      {id:makeId(),img:"",title:"Quality Inspection",desc:"CMM, optical comparators, and full first-article reporting."},
+      {id:makeId(),img:"",title:"Prototype to Production",desc:"DFM review and rapid prototyping that scales into production tooling."}],
+    processTitle:"From Print to Part",processMenu:"Process",
     process:[
-      {id:makeId(),img:"",title:"Design Review",desc:"We review your drawings for manufacturability and flag tolerance or material risks early."},
-      {id:makeId(),img:"",title:"Prototype & DFM",desc:"Rapid prototypes validate fit and function before committing to production tooling."},
-      {id:makeId(),img:"",title:"Precision Machining",desc:"Parts are cut across our CNC turning, milling, and grinding centers to spec."},
-      {id:makeId(),img:"",title:"Inspection & QA",desc:"Every batch is measured against your print with full first-article documentation."},
-      {id:makeId(),img:"",title:"Finishing & Delivery",desc:"Coating, packaging, and on-time dispatch to your line or warehouse."}
-    ],
-    stats:[
-      {id:makeId(),value:"27",label:"Years in Operation"},
-      {id:makeId(),value:"1,200+",label:"Parts Shipped Monthly"},
-      {id:makeId(),value:"±0.002mm",label:"Typical Tolerance"},
-      {id:makeId(),value:"99.1%",label:"First-Pass Yield"}
-    ],
-    galleryTitle:"Gallery", galleryMenu:"Gallery", gallery:[],
-    industriesTitle:"Industries", industriesMenu:"Industries",
-    industries:[
-      {id:makeId(),img:"",label:"Aerospace"},{id:makeId(),img:"",label:"Automotive"},{id:makeId(),img:"",label:"Medical Devices"},
-      {id:makeId(),img:"",label:"Defense"},{id:makeId(),img:"",label:"Energy"},{id:makeId(),img:"",label:"Industrial Automation"}
-    ],
-    certsTitle:"Certifications & Approvals", certsMenu:"Certifications",
+      {id:makeId(),img:"",title:"Design Review",desc:"We review your drawings for manufacturability and flag risks early."},
+      {id:makeId(),img:"",title:"Prototype & DFM",desc:"Rapid prototypes validate fit and function before production tooling."},
+      {id:makeId(),img:"",title:"Precision Machining",desc:"Parts are cut across our turning, milling, and grinding centers."},
+      {id:makeId(),img:"",title:"Inspection & QA",desc:"Every batch is measured against your print with full documentation."},
+      {id:makeId(),img:"",title:"Finishing & Delivery",desc:"Coating, packaging, and on-time dispatch to your line."}],
+    stats:[{id:makeId(),value:"27",label:"Years in Operation"},{id:makeId(),value:"1,200+",label:"Parts Shipped Monthly"},
+      {id:makeId(),value:"±0.002mm",label:"Typical Tolerance"},{id:makeId(),value:"99.1%",label:"First-Pass Yield"}],
+    galleryTitle:"Gallery",galleryMenu:"Gallery",gallery:[],
+    industriesTitle:"Industries",industriesMenu:"Industries",
+    industries:[{id:makeId(),img:"",label:"Aerospace"},{id:makeId(),img:"",label:"Automotive"},{id:makeId(),img:"",label:"Medical Devices"},
+      {id:makeId(),img:"",label:"Defense"},{id:makeId(),img:"",label:"Energy"},{id:makeId(),img:"",label:"Industrial Automation"}],
+    certsTitle:"Certifications & Approvals",certsMenu:"Certifications",
     certsSub:"Audited and certified to the standards our customers' industries require.",
-    certs:[
-      {id:makeId(),img:"",label:"ISO 9001:2015",note:"Quality Management"},
-      {id:makeId(),img:"",label:"AS9100D",note:"Aerospace Standard"},
-      {id:makeId(),img:"",label:"ITAR Registered",note:"Defense Compliance"},
-      {id:makeId(),img:"",label:"IATF 16949",note:"Automotive Quality"}
-    ],
-    foundersTitle:"Founders", foundersMenu:"Leadership",
-    founders:[
-      {id:makeId(),photo:"",name:"Founder Name",role:"Co-Founder & Managing Director",bio:"Add a short bio here."},
-      {id:makeId(),photo:"",name:"Founder Name",role:"Co-Founder & Technical Director",bio:"Add a short bio here."}
-    ],
+    certs:[{id:makeId(),img:"",label:"ISO 9001:2015",note:"Quality Management"},{id:makeId(),img:"",label:"AS9100D",note:"Aerospace Standard"},
+      {id:makeId(),img:"",label:"ITAR Registered",note:"Defense Compliance"},{id:makeId(),img:"",label:"IATF 16949",note:"Automotive Quality"}],
+    foundersTitle:"Founders",foundersMenu:"Leadership",
+    founders:[{id:makeId(),photo:"",name:"Founder Name",role:"Co-Founder & Managing Director",bio:"Add a short bio here."},
+      {id:makeId(),photo:"",name:"Founder Name",role:"Co-Founder & Technical Director",bio:"Add a short bio here."}],
     customSections:[],
-
-    chatEnabled:true, botName:"Ira — AI Assistant", botLauncher:"Ask our AI assistant",
-    botWelcome:"Hi! I'm the AI assistant. Ask me about our machining capabilities, certifications, process, or lead times — or say \"quote\" and I'll take your enquiry.",
+    chatEnabled:true,botName:"Ira — AI Assistant",botLauncher:"Ask our AI assistant",
+    botWelcome:"Hi! I'm the AI assistant. Ask me about our capabilities, certifications, process, or lead times — or say \"quote\".",
     botChips:["What can you machine?","What certifications do you hold?","How does your process work?","I need a quote"],
-    botKnowledge:"", botEndpoint:"",
-
-    notifyEmail:"", notifyWhatsapp:"", webhook:"", siteUrl:"",
-    quoteSender:"Sales Team", currency:"INR", autoQuote:true, draftMail:false,
-
-    quoteText:"Ironvale reworked our supply chain from prototype to production in six weeks. Their tolerance consistency across 40,000-unit runs is the best we've seen from any partner.",
-    quoteName:"Procurement Director", quoteRole:"Tier-1 Automotive OEM",
+    botKnowledge:"",botEndpoint:"",
+    notifyEmail:"",notifyWhatsapp:"",siteUrl:"",quoteSender:"Sales Team",currency:"INR",autoQuote:true,
+    quoteText:"Ironvale reworked our supply chain from prototype to production in six weeks.",
+    quoteName:"Procurement Director",quoteRole:"Tier-1 Automotive OEM",
     contactTitle:"Have a print? Let's talk tolerances.",
-    contactSub:"Send your drawings and we'll respond with a manufacturability review and quote within two business days.",
+    contactSub:"Send your drawings and we'll respond with a quote within two business days.",
     contactAddress:"225 Industrial Estate, Sector 4, Mysuru, KA 570016",
-    contactPhone:"+91 99020 09152", contactEmail:"quotes@ironvale.com",
-
-    sections:{capabilities:true,process:true,"stats-section":true,gallery:true,industries:true,"certs-section":true,founders:true,"testimonial-section":true,track:true},
-    rfqSubmissions:[]
-  }, LAYOUT_DEFAULTS);
+    contactPhone:"+91 99020 09152",contactEmail:"quotes@ironvale.com",
+    sections:{capabilities:true,process:true,"stats-section":true,gallery:true,industries:true,"certs-section":true,founders:true,"testimonial-section":true,track:true}
+  },LAYOUT_DEFAULTS);
 
   let data=JSON.parse(JSON.stringify(DEFAULTS));
-  let authed=false;
+  let token=null, currentUser='', rfqs=[], dirty=false, cloudOK=false;
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const setText=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
+  const toast=(m)=>{const t=document.getElementById('save-toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);};
   function shade(hex,pct){
-    const n=parseInt(String(hex).replace('#',''),16);
-    let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+    const n=parseInt(String(hex).replace('#',''),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
     if(pct>0){r=Math.round(r+(255-r)*pct);g=Math.round(g+(255-g)*pct);b=Math.round(b+(255-b)*pct);}
     else{const p=1+pct;r=Math.round(r*p);g=Math.round(g*p);b=Math.round(b*p);}
     return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');
   }
 
-  /* ---------- NOTIFICATIONS ---------- */
-  const waLink=(n,t)=>`https://wa.me/${String(n||'').replace(/\D/g,'')}?text=${encodeURIComponent(t)}`;
-  const mailLink=(to,s,b)=>`mailto:${encodeURIComponent(to||'')}?subject=${encodeURIComponent(s)}&body=${encodeURIComponent(b)}`;
-  function pipelineLink(){ return data.siteUrl ? data.siteUrl.replace(/#.*$/,'') + '#pipeline' : ''; }
-  function rfqSummaryText(r){
-    return [`New RFQ ${r.ref}`,`Name: ${r.name}`,`Company: ${r.company||'—'}`,`Email: ${r.email}`,
-      `Phone: ${r.phone||'—'}`,`Source: ${r.source}`,`Details: ${r.message||'—'}`,
-      r.fileName?`Attachment: ${r.fileName}`:'', pipelineLink()?`\nOpen pipeline: ${pipelineLink()}`:''].filter(Boolean).join('\n');
+  /* ---------- CLOUD ---------- */
+  async function api(path,opts={}){
+    const o=Object.assign({headers:{'Content-Type':'application/json'}},opts);
+    if(token) o.headers['X-Auth-Token']=token;
+    const res=await fetch(API+path,o);
+    let j={}; try{ j=await res.json(); }catch(e){}
+    if(!res.ok) throw new Error(j.error||('HTTP '+res.status));
+    return j;
   }
-  async function dispatch(event,payload,rec){
-    const stamp=new Date().toLocaleString(); let note;
-    if(data.webhook){
-      try{
-        await fetch(data.webhook,{method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({event,payload:Object.assign({pipelineUrl:pipelineLink()},payload),
-            notifyEmail:data.notifyEmail,notifyWhatsapp:data.notifyWhatsapp,at:stamp})});
-        note=`${stamp} — ${event} sent`;
-      }catch(e){ note=`${stamp} — ${event} failed (${e.message})`; }
-    } else note=`${stamp} — ${event} queued (no webhook set)`;
-    if(rec){ rec.log=rec.log||[]; rec.log.unshift(note); }
-    return note;
+  async function loadContent(){
+    try{
+      const j=await api('/api/content');
+      cloudOK=true;
+      if(j.data && Object.keys(j.data).length){
+        data=Object.assign({},DEFAULTS,j.data);
+        data.sections=Object.assign({},DEFAULTS.sections,j.data.sections||{});
+      }
+      if(j.updatedAt) setText('content-stamp','Content updated '+new Date(j.updatedAt).toLocaleDateString());
+    }catch(e){
+      cloudOK=false;
+      const bar=document.getElementById('offline-bar');
+      bar.textContent='Not connected to the database — showing default content. Changes cannot be published.';
+      bar.classList.add('show');
+    }
   }
+  async function publish(){
+    if(!token){ toast('Sign in first'); return; }
+    const btn=document.getElementById('publish-btn');
+    btn.textContent='Publishing…'; btn.disabled=true;
+    try{
+      await api('/api/content',{method:'POST',body:JSON.stringify({data})});
+      dirty=false; toast('Published — everyone sees this now');
+    }catch(e){ toast('Publish failed: '+e.message); }
+    btn.textContent='Publish Changes'; btn.disabled=false;
+  }
+  function markDirty(){ dirty=true; const b=document.getElementById('publish-btn'); if(b) b.textContent='Publish Changes •'; }
 
   /* ---------- RENDER ---------- */
   function applyVars(){
     const r=document.documentElement.style;
-    r.setProperty('--sky',data.sky);
-    r.setProperty('--sky-mid',shade(data.sky,.18));
-    r.setProperty('--sky-light',shade(data.sky,.45));
-    r.setProperty('--sky-wash',shade(data.sky,.88));
-    r.setProperty('--sky-deep',shade(data.sky,-.2));
-    r.setProperty('--navy',data.navy);
-    r.setProperty('--navy-deep',shade(data.navy,-.35));
-    r.setProperty('--gold',data.gold);
-    r.setProperty('--gold-light',shade(data.gold,.3));
-    r.setProperty('--gold-deep',shade(data.gold,-.3));
-    r.setProperty('--glow',data.glow);
-    r.setProperty('--chat-a',data.chatA);
-    r.setProperty('--chat-b',data.chatB);
-    r.setProperty('--font-base',data.fontBase+'px');
-    r.setProperty('--title-scale',data.titleScale);
-    r.setProperty('--gutter',data.gutter+'px');
-    r.setProperty('--section-pad',data.sectionPad+'px');
-    r.setProperty('--card-min',data.cardMin+'px');
-    r.setProperty('--card-gap',data.cardGap+'px');
-    r.setProperty('--card-pad',data.cardPad+'px');
-    r.setProperty('--radius',data.radius+'px');
-    r.setProperty('--radius-sm',Math.max(2,Math.round(data.radius*0.65))+'px');
-    r.setProperty('--bar-h',data.barHeight+'px');
+    r.setProperty('--sky',data.sky); r.setProperty('--sky-mid',shade(data.sky,.18));
+    r.setProperty('--sky-light',shade(data.sky,.45)); r.setProperty('--sky-wash',shade(data.sky,.88));
+    r.setProperty('--sky-deep',shade(data.sky,-.2)); r.setProperty('--navy',data.navy);
+    r.setProperty('--navy-deep',shade(data.navy,-.35)); r.setProperty('--gold',data.gold);
+    r.setProperty('--gold-light',shade(data.gold,.3)); r.setProperty('--gold-deep',shade(data.gold,-.3));
+    r.setProperty('--glow',data.glow); r.setProperty('--chat-a',data.chatA); r.setProperty('--chat-b',data.chatB);
+    r.setProperty('--font-base',data.fontBase+'px'); r.setProperty('--title-scale',data.titleScale);
+    r.setProperty('--gutter',data.gutter+'px'); r.setProperty('--section-pad',data.sectionPad+'px');
+    r.setProperty('--card-min',data.cardMin+'px'); r.setProperty('--card-gap',data.cardGap+'px');
+    r.setProperty('--card-pad',data.cardPad+'px'); r.setProperty('--media-h',data.mediaH+'px');
+    r.setProperty('--portrait-h',data.portraitH+'px'); r.setProperty('--radius',data.radius+'px');
+    r.setProperty('--radius-sm',Math.max(2,Math.round(data.radius*.65))+'px');
+    r.setProperty('--bar-h',data.barHeight+'px'); r.setProperty('--logo-max',data.logoMax+'px');
   }
-
-  function renderCustomSections(){
-    document.getElementById('custom-sections').innerHTML=data.customSections.map(s=>{
-      const id=s.anchor||slug(s.title);
-      const cards=(s.items||[]).length?(s.items||[]).map(it=>`
-        <div class="cap-card">
-          <div class="card-media ${it.img?'':'empty'}">${it.img?`<img src="${it.img}" alt="${esc(it.title)}">`:''}</div>
-          <div class="cap-body"><h3 class="t-card-title">${esc(it.title)}</h3><p class="t-body">${esc(it.desc)}</p></div></div>`).join('')
-        :'<p class="empty-note">No cards yet.</p>';
-      return `<section class="custom-sec" id="${id}" ${s.visible===false?'style="display:none"':''}>
-        <div class="wrap"><div class="section-head">
-          <span class="t-label">${esc(s.label||'Section')}</span><h2 class="t-title">${esc(s.title)}</h2>
-          ${s.sub?`<p class="t-subtitle">${esc(s.sub)}</p>`:''}</div>
-          <div class="card-grid">${cards}</div></div></section>`;
-    }).join('');
-  }
-
   function navItems(){
     const it=[];
     if(data.sections.capabilities) it.push(['#capabilities',data.capMenu||'Capabilities']);
@@ -1035,227 +858,210 @@
     if(data.sections.industries) it.push(['#industries',data.industriesMenu||'Industries']);
     if(data.sections['certs-section']) it.push(['#certs-section',data.certsMenu||'Certifications']);
     if(data.sections.founders) it.push(['#founders',data.foundersMenu||'Leadership']);
-    data.customSections.forEach(s=>{ if(s.visible!==false) it.push(['#'+(s.anchor||slug(s.title)),(s.menu||s.title||'').slice(0,16)]); });
+    data.customSections.forEach(s=>{if(s.visible!==false) it.push(['#'+(s.anchor||slug(s.title)),(s.menu||s.title||'').slice(0,16)]);});
     if(data.sections.track) it.push(['#track','Track RFQ']);
     it.push(['#contact','Contact']);
     return it;
   }
   function renderNav(){
     const it=navItems();
-    document.getElementById('main-nav').innerHTML=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('');
-    document.getElementById('foot-links').innerHTML=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('');
-    const sl=document.getElementById('staff-login-link');
-    sl.style.display=data.showLoginLink?'':'none';
+    let html=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('');
+    if(data.showPipeBtn) html+=`<a href="#" class="pipeline" id="nav-pipeline">RFQ Pipeline</a>`;
+    document.getElementById('main-nav').innerHTML=html;
+    document.getElementById('foot-links').innerHTML=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('')
+      +`<a href="#" id="foot-pipeline">RFQ Pipeline</a>`;
+    const np=document.getElementById('nav-pipeline');
+    if(np) np.addEventListener('click',e=>{e.preventDefault();requestLogin('pipeline');});
+    const fp=document.getElementById('foot-pipeline');
+    if(fp) fp.addEventListener('click',e=>{e.preventDefault();requestLogin('pipeline');});
   }
-
+  function renderCustomSections(){
+    document.getElementById('custom-sections').innerHTML=data.customSections.map(s=>{
+      const id=s.anchor||slug(s.title);
+      const cards=(s.items||[]).length?(s.items||[]).map(it=>`
+        <div class="cap-card"><div class="card-media ${it.img?'':'empty'}">${it.img?`<img src="${it.img}" alt="${esc(it.title)}">`:''}</div>
+        <div class="cap-body"><h3 class="t-card-title">${esc(it.title)}</h3><p class="t-body">${esc(it.desc)}</p></div></div>`).join('')
+        :'<p class="empty-note">No cards yet.</p>';
+      return `<section class="custom-sec" id="${id}" ${s.visible===false?'style="display:none"':''}><div class="wrap">
+        <div class="section-head"><span class="t-label">${esc(s.label||'Section')}</span><h2 class="t-title">${esc(s.title)}</h2>
+        ${s.sub?`<p class="t-subtitle">${esc(s.sub)}</p>`:''}</div><div class="card-grid">${cards}</div></div></section>`;
+    }).join('');
+  }
   function render(){
     applyVars();
     setText('d-brand-name',data.brandName); setText('d-brand-name-2',data.brandName);
-    setText('staff-brand',data.brandName);
-    setText('d-brand-suffix',data.brandSuffix); setText('d-footer-copy',data.footerCopy);
+    setText('staff-brand',data.brandName); setText('d-brand-suffix',data.brandSuffix);
+    setText('d-footer-copy',data.footerCopy);
     const lw=document.getElementById('logo-wrap');
     lw.classList.toggle('logo-glow',!!data.logoGlow);
-    lw.innerHTML=data.logoDataUrl
-      ?`<img src="${data.logoDataUrl}" alt="${esc(data.brandName)} logo" decoding="async" draggable="false">`
+    lw.innerHTML=data.logoDataUrl?`<img src="${data.logoDataUrl}" alt="logo" decoding="async" draggable="false">`
       :`<div class="logo-fallback">${esc(data.brandName.charAt(0))}</div>`;
     document.getElementById('brand-text').style.display=data.showBrandText?'':'none';
     document.getElementById('hero-bg').style.backgroundImage=data.heroBannerDataUrl?`url('${data.heroBannerDataUrl}')`:'none';
-
     setText('d-hero-eyebrow',data.heroEyebrow); setText('d-hero-headline',data.heroHeadline);
     setText('d-hero-sub',data.heroSub); setText('d-cta-primary',data.ctaPrimary);
     setText('d-cta-primary-2',data.ctaPrimary); setText('d-cta-secondary',data.ctaSecondary);
-
-    document.getElementById('ticker-track').innerHTML=data.ticker.concat(data.ticker)
-      .map(t=>`<span class="ticker-item">${esc(t)}</span>`).join('');
-
+    document.getElementById('ticker-track').innerHTML=data.ticker.concat(data.ticker).map(t=>`<span class="ticker-item">${esc(t)}</span>`).join('');
     setText('d-cap-title',data.capTitle);
     document.getElementById('cap-grid').innerHTML=data.capabilities.map(c=>`
-      <div class="cap-card">
-        <div class="card-media ${c.img?'':'empty'}">${c.img?`<img src="${c.img}" alt="${esc(c.title)}">`:''}</div>
-        <div class="cap-body"><h3 class="t-card-title">${esc(c.title)}</h3><p class="t-body">${esc(c.desc)}</p></div></div>`).join('');
-
+      <div class="cap-card"><div class="card-media ${c.img?'':'empty'}">${c.img?`<img src="${c.img}" alt="${esc(c.title)}">`:''}</div>
+      <div class="cap-body"><h3 class="t-card-title">${esc(c.title)}</h3><p class="t-body">${esc(c.desc)}</p></div></div>`).join('');
     setText('d-process-title',data.processTitle);
     document.getElementById('process-list').innerHTML=data.process.map((p,i)=>`
-      <div class="process-row">
-        <div class="process-media ${p.img?'':'empty'}">${p.img?`<img src="${p.img}" alt="${esc(p.title)}">`:''}</div>
-        <div class="process-num">${String(i+1).padStart(2,'0')}</div>
-        <div><h3 class="t-card-title">${esc(p.title)}</h3><p class="t-body" style="margin-top:6px;">${esc(p.desc)}</p></div></div>`).join('');
-
+      <div class="process-row"><div class="process-media ${p.img?'':'empty'}">${p.img?`<img src="${p.img}" alt="${esc(p.title)}">`:''}</div>
+      <div class="process-num">${String(i+1).padStart(2,'0')}</div>
+      <div><h3 class="t-card-title">${esc(p.title)}</h3><p class="t-body" style="margin-top:6px;">${esc(p.desc)}</p></div></div>`).join('');
     document.getElementById('stats-grid').innerHTML=data.stats.map(s=>`
       <div class="stat"><div class="val">${esc(s.value)}</div><div class="lbl">${esc(s.label)}</div></div>`).join('');
-
     setText('d-gallery-title',data.galleryTitle);
     document.getElementById('gallery-grid').innerHTML=data.gallery.length?data.gallery.map(g=>`
       <div class="g-item">${g.img?`<img src="${g.img}" alt="${esc(g.caption)}">`:''}<div class="g-cap">${esc(g.caption)}</div></div>`).join('')
       :'<p class="empty-note">No gallery images yet.</p>';
-
     setText('d-industries-title',data.industriesTitle);
     document.getElementById('industries-grid').innerHTML=data.industries.map(i=>`
       <div class="ind-card ${i.img?'':'empty'}">${i.img?`<img src="${i.img}" alt="${esc(i.label)}">`:''}
-        <div class="ind-overlay"></div><div class="ind-label">${esc(i.label)}</div></div>`).join('');
-
+      <div class="ind-overlay"></div><div class="ind-label">${esc(i.label)}</div></div>`).join('');
     setText('d-certs-title',data.certsTitle);
-    const cs=document.getElementById('d-certs-sub');
-    cs.textContent=data.certsSub; cs.style.display=data.certsSub?'':'none';
+    const cs=document.getElementById('d-certs-sub'); cs.textContent=data.certsSub; cs.style.display=data.certsSub?'':'none';
     document.getElementById('cert-grid').innerHTML=data.certs.map(c=>`
-      <div class="cert-card">
-        <div class="cert-thumb ${c.img?'':'empty'}">${c.img?`<img src="${c.img}" alt="${esc(c.label)}">`:''}</div>
-        <h3 class="t-card-title">${esc(c.label)}</h3>${c.note?`<span class="t-label" style="margin-top:5px;">${esc(c.note)}</span>`:''}</div>`).join('');
-
+      <div class="cert-card"><div class="cert-thumb ${c.img?'':'empty'}">${c.img?`<img src="${c.img}" alt="${esc(c.label)}">`:''}</div>
+      <h3 class="t-card-title">${esc(c.label)}</h3>${c.note?`<span class="t-label" style="margin-top:5px;">${esc(c.note)}</span>`:''}</div>`).join('');
     setText('d-founders-title',data.foundersTitle);
     document.getElementById('founders-grid').innerHTML=data.founders.map(f=>`
-      <div class="founder-card">
-        <div class="founder-photo ${f.photo?'':'empty'}">${f.photo?`<img src="${f.photo}" alt="${esc(f.name)}">`:''}</div>
-        <div class="founder-body"><h3 class="t-card-title">${esc(f.name)}</h3>
-          <span class="founder-role">${esc(f.role)}</span><p class="t-body">${esc(f.bio)}</p></div></div>`).join('');
-
+      <div class="founder-card"><div class="founder-photo ${f.photo?'':'empty'}">${f.photo?`<img src="${f.photo}" alt="${esc(f.name)}">`:''}</div>
+      <div class="founder-body"><h3 class="t-card-title">${esc(f.name)}</h3><span class="founder-role">${esc(f.role)}</span>
+      <p class="t-body">${esc(f.bio)}</p></div></div>`).join('');
     renderCustomSections();
-
-    setText('d-quote-text','"'+data.quoteText+'"');
-    setText('d-quote-name',data.quoteName); setText('d-quote-role',data.quoteRole);
+    setText('d-quote-text','"'+data.quoteText+'"'); setText('d-quote-name',data.quoteName); setText('d-quote-role',data.quoteRole);
     setText('d-contact-title',data.contactTitle); setText('d-contact-sub',data.contactSub);
     setText('d-contact-address',data.contactAddress); setText('d-contact-phone',data.contactPhone);
     setText('d-contact-email',data.contactEmail);
-
     Object.keys(data.sections).forEach(id=>{
-      const el=document.getElementById(id);
-      if(el) el.style.display=data.sections[id]?'':'none';
-      const sw=document.querySelector(`.switch[data-toggle="${id}"]`);
-      if(sw) sw.classList.toggle('on',!!data.sections[id]);
+      const el=document.getElementById(id); if(el) el.style.display=data.sections[id]?'':'none';
+      const sw=document.querySelector(`.switch[data-toggle="${id}"]`); if(sw) sw.classList.toggle('on',!!data.sections[id]);
     });
-
     document.getElementById('chat-fab').style.display=data.chatEnabled?'':'none';
-    if(!data.chatEnabled) document.getElementById('chat-panel').classList.remove('open');
-    setText('chat-fab-label',data.botLauncher);
-    setText('chat-bot-name',data.botName);
+    setText('chat-fab-label',data.botLauncher); setText('chat-bot-name',data.botName);
     setText('chat-avatar',(data.botName||'A').trim().charAt(0).toUpperCase());
     renderChips(); renderNav();
     document.title=data.brandName+" — Precision Manufacturing";
-    renderRfqAdmin();
   }
 
-  /* ---------- STAFF PIPELINE ---------- */
+  /* ---------- STAFF ---------- */
+  async function loadRfqs(){
+    try{ const j=await api('/api/rfqs'); rfqs=j.rfqs||[]; }
+    catch(e){ rfqs=[]; toast('Could not load RFQs: '+e.message); }
+    renderRfqAdmin();
+  }
+  const waLink=(n,t)=>`https://wa.me/${String(n||'').replace(/\D/g,'')}?text=${encodeURIComponent(t)}`;
+  const mailLink=(to,s,b)=>`mailto:${encodeURIComponent(to||'')}?subject=${encodeURIComponent(s)}&body=${encodeURIComponent(b)}`;
   function renderRfqAdmin(){
-    const kpi=document.getElementById('kpi-row');
-    const host=document.getElementById('rfq-list');
-    if(!host) return;
-    const counts=STAGES.map(s=>data.rfqSubmissions.filter(r=>(r.status||'Received')===s).length);
-    kpi.innerHTML=`<div class="kpi"><b>${data.rfqSubmissions.length}</b><span>Total RFQs</span></div>`+
+    const kpi=document.getElementById('kpi-row'), host=document.getElementById('rfq-list');
+    const counts=STAGES.map(s=>rfqs.filter(r=>(r.status||'Received')===s).length);
+    kpi.innerHTML=`<div class="kpi"><b>${rfqs.length}</b><span>Total RFQs</span></div>`+
       STAGES.map((s,i)=>`<div class="kpi"><b>${counts[i]}</b><span>${s}</span></div>`).join('');
-
-    if(!data.rfqSubmissions.length){ host.innerHTML='<p class="empty-note">No RFQs yet.</p>'; return; }
-    host.innerHTML=data.rfqSubmissions.map((r,i)=>{
+    if(!rfqs.length){host.innerHTML='<p class="empty-note">No RFQs yet.</p>';return;}
+    host.innerHTML=rfqs.map((r,i)=>{
       const si=STAGES.indexOf(r.status||'Received');
-      const notifyText=rfqSummaryText(r);
-      const custBody=(r.quote||'')+`\n\nReference: ${r.ref}\n— ${data.quoteSender||''}`;
+      const cust=(r.quote||'')+`\n\nReference: ${r.ref}\n— ${data.quoteSender||''}`;
       return `<div class="rfq-card">
-        <div class="list-item-head">
-          <div><div class="rfq-ref">${esc(r.ref)}</div><div class="rfq-when">${esc(r.date)} · ${esc(r.source)}</div></div>
-          <span class="badge s${Math.max(0,si)}">${esc(r.status||'Received')}</span>
-        </div>
-        <div class="rfq-detail">
-          <b>${esc(r.name)}</b>${r.company?` · ${esc(r.company)}`:''}<br>
+        <div class="list-item-head"><div><div class="rfq-ref">${esc(r.ref)}</div>
+          <div class="rfq-when">${esc(r.date)} · ${esc(r.source)}</div></div>
+          <span class="badge s${Math.max(0,si)}">${esc(r.status||'Received')}</span></div>
+        <div class="rfq-detail"><b>${esc(r.name)}</b>${r.company?` · ${esc(r.company)}`:''}<br>
           ${esc(r.email)}${r.phone?` · ${esc(r.phone)}`:''}<br>${esc(r.message||'—')}
-          ${r.fileName?`<br>📎 ${r.fileDataUrl?`<a style="color:var(--sky-deep);text-decoration:underline;" href="${r.fileDataUrl}" download="${esc(r.fileName)}">${esc(r.fileName)}</a>`:esc(r.fileName)+' (too large)'}`:''}
-        </div>
+          ${r.fileName?`<br>📎 ${r.fileDataUrl?`<a style="color:var(--sky-deep);text-decoration:underline;" href="${r.fileDataUrl}" download="${esc(r.fileName)}">${esc(r.fileName)}</a>`:esc(r.fileName)}`:''}</div>
         <div class="rfq-actions">
-          <a class="mini-btn" href="${mailLink(data.notifyEmail,'RFQ '+r.ref,notifyText)}">Email me</a>
-          <a class="mini-btn" href="${waLink(data.notifyWhatsapp,notifyText)}">WhatsApp me</a>
           <button class="mini-btn ai" data-act="gen" data-i="${i}">${r.quote?'Regenerate quote':'AI draft quote'}</button>
         </div>
         ${r.quote?`<div class="quote-editor"><textarea class="quote-text" data-i="${i}">${esc(r.quote)}</textarea>
           <div class="rfq-actions">
-            <a class="mini-btn gold" href="${mailLink(r.email,'Quotation '+r.ref+' — '+data.brandName,custBody)}">Email customer</a>
-            <a class="mini-btn gold" href="${waLink(r.phone,custBody)}">WhatsApp customer</a>
-            <button class="mini-btn green" data-act="approve" data-i="${i}">Mark approved &amp; sent</button>
+            <a class="mini-btn gold" href="${mailLink(r.email,'Quotation '+r.ref,cust)}">Email manually</a>
+            <a class="mini-btn gold" href="${waLink(r.phone,cust)}">WhatsApp manually</a>
+            <button class="mini-btn green" data-act="approve" data-i="${i}">Approve &amp; send automatically</button>
           </div></div>`:''}
-        <select class="status-select" data-i="${i}">
-          ${STAGES.map(s=>`<option ${((r.status||'Received')===s)?'selected':''}>${s}</option>`).join('')}
-        </select>
+        <select class="status-select" data-i="${i}">${STAGES.map(s=>`<option ${((r.status||'Received')===s)?'selected':''}>${s}</option>`).join('')}</select>
         ${(r.log&&r.log.length)?`<div class="notif-log">${r.log.slice(0,4).map(l=>`<div>${esc(l)}</div>`).join('')}</div>`:''}
-        <div class="rfq-actions"><button class="item-delete" data-act="del" data-i="${i}">Delete RFQ</button></div>
-      </div>`;
+        <div class="rfq-actions"><button class="item-delete" data-act="del" data-i="${i}">Delete RFQ</button></div></div>`;
     }).join('');
 
-    host.querySelectorAll('.status-select').forEach(sel=>sel.addEventListener('change',()=>{
-      const r=data.rfqSubmissions[+sel.dataset.i]; r.status=sel.value;
-      r.log=r.log||[]; r.log.unshift(`${new Date().toLocaleString()} — status → ${sel.value}`);
-      persist(); renderRfqAdmin();
+    const patch=async(ref,p,extra={})=>{
+      try{ const j=await api('/api/rfqs',{method:'PATCH',body:JSON.stringify(Object.assign({ref,patch:p},extra))});
+        return j.rfq; }catch(e){ toast('Update failed: '+e.message); return null; }
+    };
+    host.querySelectorAll('.status-select').forEach(sel=>sel.addEventListener('change',async()=>{
+      const r=rfqs[+sel.dataset.i];
+      const log=[`${new Date().toLocaleString()} — status → ${sel.value}`].concat(r.log||[]);
+      const u=await patch(r.ref,{status:sel.value,log}); if(u){rfqs[+sel.dataset.i]=u;renderRfqAdmin();}
     }));
+    let qtimer=null;
     host.querySelectorAll('.quote-text').forEach(t=>t.addEventListener('input',()=>{
-      data.rfqSubmissions[+t.dataset.i].quote=t.value; persist();
+      const r=rfqs[+t.dataset.i]; r.quote=t.value;
+      clearTimeout(qtimer); qtimer=setTimeout(()=>patch(r.ref,{quote:t.value}),900);
     }));
     host.querySelectorAll('[data-act="gen"]').forEach(b=>b.addEventListener('click',async()=>{
-      const r=data.rfqSubmissions[+b.dataset.i];
-      b.textContent='Drafting…'; b.disabled=true;
-      r.quote=await generateQuote(r); r.status='Awaiting Approval';
-      r.log=r.log||[]; r.log.unshift(`${new Date().toLocaleString()} — AI quote drafted`);
-      if(data.draftMail) await dispatch('quote_drafted',{ref:r.ref,quote:r.quote},r);
-      persist(); renderRfqAdmin();
+      const r=rfqs[+b.dataset.i]; b.textContent='Drafting…'; b.disabled=true;
+      const q=await generateQuote(r);
+      const log=[`${new Date().toLocaleString()} — AI quote drafted`].concat(r.log||[]);
+      const u=await patch(r.ref,{quote:q,status:'Awaiting Approval',log});
+      if(u){rfqs[+b.dataset.i]=u;} renderRfqAdmin();
     }));
     host.querySelectorAll('[data-act="approve"]').forEach(b=>b.addEventListener('click',async()=>{
-      const r=data.rfqSubmissions[+b.dataset.i];
-      r.status='Approved & Sent'; r.approvedAt=new Date().toLocaleString();
-      r.log=r.log||[]; r.log.unshift(`${r.approvedAt} — approved; customer notified`);
-      await dispatch('quote_approved',{ref:r.ref,quote:r.quote,customer:{name:r.name,email:r.email,phone:r.phone}},r);
-      persist(); renderRfqAdmin();
+      const r=rfqs[+b.dataset.i]; b.textContent='Sending…'; b.disabled=true;
+      const at=new Date().toLocaleString();
+      const log=[`${at} — approved; customer notified`].concat(r.log||[]);
+      const u=await patch(r.ref,{status:'Approved & Sent',approvedAt:at,log},
+        {notifyCustomer:true,notifyEmail:data.notifyEmail,notifyWhatsapp:data.notifyWhatsapp});
+      if(u){rfqs[+b.dataset.i]=u; toast('Quotation sent to customer');} renderRfqAdmin();
     }));
-    host.querySelectorAll('[data-act="del"]').forEach(b=>b.addEventListener('click',()=>{
-      data.rfqSubmissions.splice(+b.dataset.i,1); persist(); renderRfqAdmin();
+    host.querySelectorAll('[data-act="del"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      try{ await api('/api/rfqs',{method:'PATCH',body:JSON.stringify({ref:r.ref,remove:true})});
+        rfqs.splice(+b.dataset.i,1); renderRfqAdmin(); }catch(e){ toast('Delete failed'); }
     }));
   }
 
   /* ---------- AI ---------- */
   function siteContext(){
-    const L=[];
-    L.push(`Company: ${data.brandName} ${data.brandSuffix}`);
-    L.push(`Positioning: ${data.heroHeadline} ${data.heroSub}`);
-    L.push('Capabilities: '+data.capabilities.map(c=>`${c.title} — ${c.desc}`).join(' | '));
-    L.push('Process: '+data.process.map((p,i)=>`${i+1}. ${p.title}: ${p.desc}`).join(' | '));
-    L.push('Key figures: '+data.stats.map(s=>`${s.value} ${s.label}`).join(', '));
-    L.push('Industries: '+data.industries.map(i=>i.label).join(', '));
-    L.push('Certifications: '+data.certs.map(c=>c.label+(c.note?` (${c.note})`:'')).join(', '));
-    data.customSections.forEach(s=>{ if(s.visible!==false) L.push(`${s.title}: `+(s.items||[]).map(i=>`${i.title} — ${i.desc}`).join(' | ')); });
+    const L=[`Company: ${data.brandName} ${data.brandSuffix}`,`Positioning: ${data.heroHeadline} ${data.heroSub}`,
+      'Capabilities: '+data.capabilities.map(c=>`${c.title} — ${c.desc}`).join(' | '),
+      'Process: '+data.process.map((p,i)=>`${i+1}. ${p.title}: ${p.desc}`).join(' | '),
+      'Key figures: '+data.stats.map(s=>`${s.value} ${s.label}`).join(', '),
+      'Industries: '+data.industries.map(i=>i.label).join(', '),
+      'Certifications: '+data.certs.map(c=>c.label+(c.note?` (${c.note})`:'')).join(', ')];
+    data.customSections.forEach(s=>{if(s.visible!==false)L.push(`${s.title}: `+(s.items||[]).map(i=>`${i.title} — ${i.desc}`).join(' | '));});
     L.push(`Contact: ${data.contactAddress}; phone ${data.contactPhone}; email ${data.contactEmail}`);
-    if(data.botKnowledge) L.push('Additional notes: '+data.botKnowledge);
+    if(data.botKnowledge)L.push('Additional notes: '+data.botKnowledge);
     return L.join('\n');
   }
   async function callAI(prompt){
     if(data.botEndpoint){
-      const res=await fetch(data.botEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},
+      const r=await fetch(data.botEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({message:prompt,context:siteContext()})});
-      const j=await res.json(); return j.reply||j.text||j.message||null;
+      const j=await r.json(); return j.reply||j.text||j.message||null;
     }
-    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
-    const j=await res.json();
+    const j=await r.json();
     const out=(j.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('\n').trim();
     return out||null;
   }
   function fallbackQuote(r){
-    return [`QUOTATION — DRAFT (requires review before sending)`,`Reference: ${r.ref}`,
-      `Date: ${new Date().toLocaleDateString()}`,``,
+    return [`QUOTATION — DRAFT (requires review before sending)`,`Reference: ${r.ref}`,`Date: ${new Date().toLocaleDateString()}`,``,
       `To: ${r.name}${r.company?`, ${r.company}`:''}`,`Email: ${r.email}${r.phone?`  |  Phone: ${r.phone}`:''}`,``,
-      `ENQUIRY`,`${r.message||'(to be confirmed)'}`,``,
-      `SCOPE OF SUPPLY`,`1. Manufacturability review against submitted drawing`,
-      `2. Machining per specification`,`3. Dimensional inspection with first-article report`,
-      `4. Standard packing and dispatch`,``,
-      `COMMERCIAL — TO BE COMPLETED BEFORE SENDING`,
-      `Unit price (${data.currency||'INR'}): ________`,`Quantity: ________`,
-      `Tooling / setup charge: ________`,`Total: ________`,``,
-      `Lead time: ________ working days from drawing approval`,`Payment terms: ________`,
-      `Validity: 30 days`,``,
-      `Notes: Pricing subject to final drawing review and confirmed quantities.`,``,
+      `ENQUIRY`,`${r.message||'(to be confirmed)'}`,``,`SCOPE OF SUPPLY`,
+      `1. Manufacturability review against submitted drawing`,`2. Machining per specification`,
+      `3. Dimensional inspection with first-article report`,`4. Standard packing and dispatch`,``,
+      `COMMERCIAL — TO BE COMPLETED BEFORE SENDING`,`Unit price (${data.currency||'INR'}): ________`,
+      `Quantity: ________`,`Tooling / setup: ________`,`Total: ________`,``,
+      `Lead time: ________ working days`,`Payment terms: ________`,`Validity: 30 days`,``,
       `${data.quoteSender||'Sales Team'}`,`${data.brandName} · ${data.contactEmail} · ${data.contactPhone}`].join('\n');
   }
   async function generateQuote(r){
     const prompt=`You are preparing a DRAFT quotation for a precision manufacturing company. Use only the company information given.
-
-Rules:
-- Do NOT invent prices, rates or lead times. Leave labelled blanks (e.g. "Unit price (${data.currency||'INR'}): ________").
-- Base scope of supply on the customer's requirement and the company's real capabilities.
-- Head it "QUOTATION — DRAFT (requires review before sending)".
-- Include reference, date, customer details, enquiry summary, scope, commercial section with blanks, lead time blank, validity, notes, sign-off.
+Rules: do NOT invent prices, rates or lead times — leave labelled blanks (e.g. "Unit price (${data.currency||'INR'}): ________").
+Head it "QUOTATION — DRAFT (requires review before sending)". Include reference, date, customer details, enquiry summary,
+scope of supply, commercial section with blanks, lead time blank, validity, notes, sign-off.
 
 === COMPANY ===
 ${siteContext()}
@@ -1267,10 +1073,9 @@ Company: ${r.company||'—'}
 Email: ${r.email}
 Phone: ${r.phone||'—'}
 Requirement: ${r.message||'—'}
-Attachment: ${r.fileName||'none'}
 
 Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contactEmail}, ${data.contactPhone}`;
-    try{ return (await Promise.race([callAI(prompt),new Promise(r2=>setTimeout(()=>r2(null),20000))]))||fallbackQuote(r); }
+    try{ return (await Promise.race([callAI(prompt),new Promise(x=>setTimeout(()=>x(null),20000))]))||fallbackQuote(r); }
     catch(e){ return fallbackQuote(r); }
   }
 
@@ -1285,361 +1090,300 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   }
   function localAnswer(q){
     const t=q.toLowerCase(),has=(...w)=>w.some(x=>t.includes(x));
-    if(has('track','status','progress','reference')) return 'You can check any RFQ with its reference number in the "Track your RFQ" section on this page.';
-    if(has('quote','rfq','enquir','inquir','pricing','price','cost')) return {startRfq:true};
-    if(has('capab','machin','service','turning','milling','grinding','finish','what do you do'))
-      return 'Here\'s what we do in-house:\n\n'+data.capabilities.map(c=>`• ${c.title} — ${c.desc}`).join('\n');
-    if(has('certif','iso','as9100','iatf','itar','accredit','standard'))
-      return 'We hold:\n\n'+data.certs.map(c=>`• ${c.label}${c.note?` — ${c.note}`:''}`).join('\n');
-    if(has('process','workflow','steps','lead time','turnaround','how long'))
-      return 'Our workflow:\n\n'+data.process.map((p,i)=>`${i+1}. ${p.title} — ${p.desc}`).join('\n');
-    if(has('industr','sector','customers','clients')) return 'We supply: '+data.industries.map(i=>i.label).join(', ')+'.';
-    if(has('contact','address','phone','email','reach','call','located'))
-      return `📍 ${data.contactAddress}\n📞 ${data.contactPhone}\n✉️ ${data.contactEmail}`;
-    if(has('founder','leadership','team','director','owner'))
-      return 'Our leadership:\n\n'+data.founders.map(f=>`• ${f.name} — ${f.role}`).join('\n');
-    if(has('experience','years','capacity','volume')) return 'A few numbers: '+data.stats.map(s=>`${s.value} ${s.label.toLowerCase()}`).join(', ')+'.';
-    if(has('hello','hi','hey','namaste')) return 'Hello! I can help with capabilities, certifications, process, or a quote. What are you working on?';
-    if(data.botKnowledge){
-      const line=data.botKnowledge.split('\n').find(l=>t.split(/\W+/).filter(w=>w.length>4).some(w=>l.toLowerCase().includes(w)));
-      if(line) return line.trim();
-    }
-    return `I can help with capabilities, certifications, process, industries, or contact details — and I can take a quote request. For anything specific: ${data.contactEmail}.`;
+    if(has('track','status','progress','reference')) return 'Check any RFQ with its reference in the "Track your RFQ" section.';
+    if(has('quote','rfq','enquir','pricing','price','cost')) return {startRfq:true};
+    if(has('capab','machin','service','turning','milling','grinding','finish')) return 'Here\'s what we do in-house:\n\n'+data.capabilities.map(c=>`• ${c.title} — ${c.desc}`).join('\n');
+    if(has('certif','iso','as9100','iatf','itar','standard')) return 'We hold:\n\n'+data.certs.map(c=>`• ${c.label}${c.note?` — ${c.note}`:''}`).join('\n');
+    if(has('process','workflow','steps','lead time','how long')) return 'Our workflow:\n\n'+data.process.map((p,i)=>`${i+1}. ${p.title} — ${p.desc}`).join('\n');
+    if(has('industr','sector','customers')) return 'We supply: '+data.industries.map(i=>i.label).join(', ')+'.';
+    if(has('contact','address','phone','email','reach','call')) return `📍 ${data.contactAddress}\n📞 ${data.contactPhone}\n✉️ ${data.contactEmail}`;
+    if(has('founder','leadership','team','director')) return 'Our leadership:\n\n'+data.founders.map(f=>`• ${f.name} — ${f.role}`).join('\n');
+    if(has('hello','hi','hey','namaste')) return 'Hello! I can help with capabilities, certifications, process, or a quote.';
+    return `I can help with capabilities, certifications, process, or a quote request. For anything specific: ${data.contactEmail}.`;
   }
-  const RFQ_STEPS=[{key:'name',q:"Happy to help with a quote. What's your name?"},
-    {key:'company',q:'Which company are you with?'},{key:'email',q:'What email should we send the quote to?'},
-    {key:'phone',q:'And a contact number?'},{key:'message',q:'Last one — briefly describe the part: material, quantity, tolerance, timeline.'}];
+  const RFQ_STEPS=[{key:'name',q:"Happy to help with a quote. What's your name?"},{key:'company',q:'Which company are you with?'},
+    {key:'email',q:'What email should we send the quote to?'},{key:'phone',q:'And a contact number?'},
+    {key:'message',q:'Last one — briefly describe the part: material, quantity, tolerance, timeline.'}];
   async function handleRfqFlow(text){
     if(rfqFlow.step>0) rfqFlow.answers[RFQ_STEPS[rfqFlow.step-1].key]=text;
     if(rfqFlow.step<RFQ_STEPS.length){const q=RFQ_STEPS[rfqFlow.step].q;rfqFlow.step++;return q;}
     const a=rfqFlow.answers;
-    const rec=await intakeRfq({source:'AI Chat',name:a.name||'',company:a.company||'',email:a.email||'',phone:a.phone||'',message:a.message||''});
+    const rec=await submitRfq({source:'AI Chat',name:a.name||'',company:a.company||'',email:a.email||'',phone:a.phone||'',message:a.message||''});
     rfqFlow=null;
-    return `Logged — your reference is ${rec.ref}.\n\nOur team has been notified and will respond within two business days. Track it any time using that reference.`;
+    return rec?`Logged — your reference is ${rec.ref}.\n\nOur team has been notified and will respond within two business days.`
+      :`Sorry — I couldn't submit that. Please email ${data.contactEmail}.`;
   }
   async function sendMessage(){
     const input=document.getElementById('chat-input'),text=input.value.trim();
-    if(!text) return;
-    input.value=''; addMsg(text,'user'); history.push({role:'Visitor',text});
+    if(!text)return; input.value=''; addMsg(text,'user'); history.push({role:'Visitor',text});
     const typing=showTyping();
-    if(rfqFlow){const reply=await handleRfqFlow(text);typing.remove();addMsg(reply,'bot');history.push({role:'Assistant',text:reply});return;}
+    if(rfqFlow){const r=await handleRfqFlow(text);typing.remove();addMsg(r,'bot');history.push({role:'Assistant',text:r});return;}
     const local=localAnswer(text);
-    if(local&&local.startRfq){rfqFlow={step:0,answers:{}};const reply=await handleRfqFlow('');typing.remove();addMsg(reply,'bot');history.push({role:'Assistant',text:reply});return;}
+    if(local&&local.startRfq){rfqFlow={step:0,answers:{}};const r=await handleRfqFlow('');typing.remove();addMsg(r,'bot');return;}
     let reply=null;
     try{
       const prompt=`You are the website assistant for the company below. Answer only from this information, in 2-4 short sentences.\n\n${siteContext()}\n\nConversation:\n${history.slice(-6).map(h=>`${h.role}: ${h.text}`).join('\n')}\nVisitor: ${text}\nAssistant:`;
       reply=await Promise.race([callAI(prompt),new Promise(r=>setTimeout(()=>r(null),12000))]);
     }catch(e){}
-    typing.remove();
-    const fin=reply||local; addMsg(fin,'bot'); history.push({role:'Assistant',text:fin});
+    typing.remove(); const fin=reply||local; addMsg(fin,'bot'); history.push({role:'Assistant',text:fin});
   }
 
-  /* ---------- RFQ INTAKE ---------- */
-  async function intakeRfq(fields){
-    const rec=Object.assign({id:makeId(),ref:makeRef(),date:new Date().toLocaleString(),
-      status:'Received',quote:'',log:[],fileName:'',fileDataUrl:''},fields);
-    data.rfqSubmissions.unshift(rec);
-    rec.log.unshift(`${rec.date} — RFQ received (${rec.source})`);
-    await dispatch('rfq_received',{ref:rec.ref,name:rec.name,company:rec.company,email:rec.email,
-      phone:rec.phone,message:rec.message,file:rec.fileName},rec);
-    if(data.autoQuote){
-      rec.quote=await generateQuote(rec); rec.status='Awaiting Approval';
-      rec.log.unshift(`${new Date().toLocaleString()} — AI quote drafted automatically`);
-      if(data.draftMail) await dispatch('quote_drafted',{ref:rec.ref,quote:rec.quote},rec);
-    }
-    persist(); renderRfqAdmin();
-    return rec;
+  /* ---------- RFQ SUBMIT ---------- */
+  async function submitRfq(fields){
+    const rec=Object.assign({ref:makeRef(),date:new Date().toLocaleString(),status:'Received',quote:'',
+      log:[`${new Date().toLocaleString()} — RFQ received`],fileName:'',fileDataUrl:''},fields);
+    try{
+      await api('/api/rfqs',{method:'POST',body:JSON.stringify({rfq:rec,
+        notifyEmail:data.notifyEmail,notifyWhatsapp:data.notifyWhatsapp,
+        pipelineUrl:(data.siteUrl||location.origin+location.pathname)})});
+      if(data.autoQuote){
+        generateQuote(rec).then(q=>{
+          fetch(API+'/api/rfqs',{method:'PATCH',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({ref:rec.ref,patch:{quote:q,status:'Awaiting Approval'},skipAuth:true})}).catch(()=>{});
+        });
+      }
+      return rec;
+    }catch(e){ toast('Could not submit: '+e.message); return null; }
   }
 
-  /* ---------- TRACKING ---------- */
-  function renderTrack(){
+  /* ---------- TRACK ---------- */
+  async function renderTrack(){
     const ref=document.getElementById('track-input').value.trim().toUpperCase();
-    const box=document.getElementById('track-result');
-    const rec=data.rfqSubmissions.find(r=>r.ref.toUpperCase()===ref);
-    box.style.display='block';
-    if(!rec){box.innerHTML=`<div class="track-note">No RFQ found for <b>${esc(ref||'—')}</b>. Check your reference or contact ${esc(data.contactEmail)}.</div>`;return;}
-    const si=Math.max(0,STAGES.indexOf(rec.status||'Received'));
-    box.innerHTML=`<div class="track-meta">Reference <b>${esc(rec.ref)}</b> · submitted ${esc(rec.date)} · stage <b>${esc(rec.status)}</b></div>
-      <div class="pipeline">${STAGES.map((s,i)=>`<div class="pl-step ${i<si?'done':(i===si?'current':'')}">
-        <div class="pl-dot">${i<si?'✓':i+1}</div><div class="pl-label">${s}</div></div>`).join('')}</div>
-      <div class="track-note">${si===0?'Your enquiry is with our team. We typically respond within two business days.':
-        si===1?'A quotation has been drafted and is under review.':
-        si===2?'Your quotation is with our team for final approval.':
-        si===3?`Approved and sent${rec.approvedAt?` on ${esc(rec.approvedAt)}`:''}. Please check your email and WhatsApp.`:
-        'This enquiry is closed.'}</div>`;
+    const box=document.getElementById('track-result'); box.style.display='block';
+    if(!ref){box.innerHTML='<div class="track-note">Please enter your reference number.</div>';return;}
+    box.innerHTML='<div class="track-note">Checking…</div>';
+    try{
+      const j=await api('/api/rfqs?ref='+encodeURIComponent(ref));
+      const rec=j.rfq, si=Math.max(0,STAGES.indexOf(rec.status||'Received'));
+      box.innerHTML=`<div class="track-meta">Reference <b>${esc(rec.ref)}</b> · submitted ${esc(rec.date)} · stage <b>${esc(rec.status)}</b></div>
+        <div class="pipeline">${STAGES.map((s,i)=>`<div class="pl-step ${i<si?'done':(i===si?'current':'')}">
+          <div class="pl-dot">${i<si?'✓':i+1}</div><div class="pl-label">${s}</div></div>`).join('')}</div>
+        <div class="track-note">${si===0?'Your enquiry is with our team. We typically respond within two business days.':
+          si===1?'A quotation has been drafted and is under review.':si===2?'Your quotation is with our team for final approval.':
+          si===3?`Approved and sent${rec.approvedAt?` on ${esc(rec.approvedAt)}`:''}. Please check your email and WhatsApp.`:
+          'This enquiry is closed.'}</div>`;
+    }catch(e){
+      box.innerHTML=`<div class="track-note">No RFQ found for <b>${esc(ref)}</b>. Check your reference or contact ${esc(data.contactEmail)}.</div>`;
+    }
   }
 
-  /* ---------- ADMIN PLUMBING ---------- */
+  /* ---------- ADMIN FORM ---------- */
   function singleImageField(wrapId,key){
     const wrap=document.getElementById(wrapId);
     wrap.innerHTML=`${data[key]?`<img src="${data[key]}" class="thumb">`:`<div class="thumb placeholder">None</div>`}
-      <input type="file" accept="image/*" id="file-${key}">
-      ${data[key]?`<button type="button" class="link-btn" id="rm-${key}">Remove</button>`:''}`;
+      <input type="file" accept="image/*" id="file-${key}">${data[key]?`<button type="button" class="link-btn" id="rm-${key}">Remove</button>`:''}`;
     document.getElementById(`file-${key}`).addEventListener('change',e=>{
-      const f=e.target.files[0]; if(!f) return;
-      const rd=new FileReader(); rd.onload=()=>{data[key]=rd.result;render();singleImageField(wrapId,key);persist();}; rd.readAsDataURL(f);
+      const f=e.target.files[0]; if(!f)return;
+      const rd=new FileReader(); rd.onload=()=>{data[key]=rd.result;render();singleImageField(wrapId,key);markDirty();}; rd.readAsDataURL(f);
     });
     const rm=document.getElementById(`rm-${key}`);
-    if(rm) rm.addEventListener('click',()=>{data[key]='';render();singleImageField(wrapId,key);persist();});
+    if(rm)rm.addEventListener('click',()=>{data[key]='';render();singleImageField(wrapId,key);markDirty();});
   }
   function itemFieldsHtml(item,idx,fields){
     return fields.map(f=>{
-      if(f.type==='image') return `<div class="field"><label>${f.label}</label><div class="img-upload">
+      if(f.type==='image')return `<div class="field"><label>${f.label}</label><div class="img-upload">
         ${item[f.key]?`<img src="${item[f.key]}" class="thumb">`:`<div class="thumb placeholder">None</div>`}
         <input type="file" accept="image/*" class="li-img" data-idx="${idx}" data-key="${f.key}">
         ${item[f.key]?`<button type="button" class="link-btn li-rm" data-idx="${idx}" data-key="${f.key}">Remove</button>`:''}</div></div>`;
-      if(f.type==='textarea') return `<div class="field"><label>${f.label}</label><textarea class="li-in" data-idx="${idx}" data-key="${f.key}">${esc(item[f.key])}</textarea></div>`;
+      if(f.type==='textarea')return `<div class="field"><label>${f.label}</label><textarea class="li-in" data-idx="${idx}" data-key="${f.key}">${esc(item[f.key])}</textarea></div>`;
       return `<div class="field"><label>${f.label}</label><input type="text" class="li-in" data-idx="${idx}" data-key="${f.key}" value="${esc(item[f.key])}"></div>`;
     }).join('');
   }
   function wireItemEvents(el,items,redraw){
-    el.querySelectorAll(':scope > .list-item .li-in').forEach(i=>i.addEventListener('input',()=>{items[+i.dataset.idx][i.dataset.key]=i.value;render();persist();}));
-    el.querySelectorAll(':scope > .list-item .item-delete').forEach(b=>b.addEventListener('click',()=>{items.splice(+b.dataset.idx,1);redraw();render();persist();}));
+    el.querySelectorAll(':scope > .list-item .li-in').forEach(i=>i.addEventListener('input',()=>{items[+i.dataset.idx][i.dataset.key]=i.value;render();markDirty();}));
+    el.querySelectorAll(':scope > .list-item .item-delete').forEach(b=>b.addEventListener('click',()=>{items.splice(+b.dataset.idx,1);redraw();render();markDirty();}));
     el.querySelectorAll(':scope > .list-item .li-img').forEach(i=>i.addEventListener('change',e=>{
-      const f=e.target.files[0]; if(!f) return;
+      const f=e.target.files[0]; if(!f)return;
       const idx=+i.dataset.idx,key=i.dataset.key,rd=new FileReader();
-      rd.onload=()=>{items[idx][key]=rd.result;redraw();render();persist();}; rd.readAsDataURL(f);}));
-    el.querySelectorAll(':scope > .list-item .li-rm').forEach(b=>b.addEventListener('click',()=>{items[+b.dataset.idx][b.dataset.key]='';redraw();render();persist();}));
+      rd.onload=()=>{items[idx][key]=rd.result;redraw();render();markDirty();}; rd.readAsDataURL(f);}));
+    el.querySelectorAll(':scope > .list-item .li-rm').forEach(b=>b.addEventListener('click',()=>{items[+b.dataset.idx][b.dataset.key]='';redraw();render();markDirty();}));
   }
   function renderList(id,items,fields){
     const el=document.getElementById(id);
-    el.innerHTML=items.map((it,i)=>`<div class="list-item">
-      <div class="list-item-head"><span>#${i+1}</span><button type="button" class="item-delete" data-idx="${i}">Delete</button></div>
-      ${itemFieldsHtml(it,i,fields)}</div>`).join('');
+    el.innerHTML=items.map((it,i)=>`<div class="list-item"><div class="list-item-head"><span>#${i+1}</span>
+      <button type="button" class="item-delete" data-idx="${i}">Delete</button></div>${itemFieldsHtml(it,i,fields)}</div>`).join('');
     wireItemEvents(el,items,()=>renderList(id,items,fields));
   }
   function setupList(id,addId,key,fields,defs){
     renderList(id,data[key],fields);
-    document.getElementById(addId).addEventListener('click',()=>{
-      data[key].push(Object.assign({id:makeId()},defs)); renderList(id,data[key],fields); render(); persist();});
+    document.getElementById(addId).addEventListener('click',()=>{data[key].push(Object.assign({id:makeId()},defs));renderList(id,data[key],fields);render();markDirty();});
   }
-  const CUSTOM_FIELDS=[{key:'img',type:'image',label:'Photo'},{key:'title',type:'text',label:'Card Title'},{key:'desc',type:'textarea',label:'Card Description'}];
+  const CF=[{key:'img',type:'image',label:'Photo'},{key:'title',type:'text',label:'Card Title'},{key:'desc',type:'textarea',label:'Card Description'}];
   function renderCustomAdmin(){
     const host=document.getElementById('list-custom');
-    host.innerHTML=data.customSections.map((s,si)=>`
-      <div class="sec-card">
-        <div class="list-item-head"><span class="sec-card-title">Section ${si+1}</span>
-          <button type="button" class="item-delete sec-delete" data-si="${si}">Delete Section</button></div>
-        <div class="field"><label>Small Label</label><input type="text" class="sec-in" data-si="${si}" data-key="label" value="${esc(s.label)}"></div>
-        <div class="field"><label>Section Title</label><input type="text" class="sec-in" data-si="${si}" data-key="title" value="${esc(s.title)}"></div>
-        <div class="field"><label>Menu Button Label</label><input type="text" class="sec-in" data-si="${si}" data-key="menu" value="${esc(s.menu||'')}"></div>
-        <div class="field"><label>Subtitle</label><textarea class="sec-in" data-si="${si}" data-key="sub">${esc(s.sub||'')}</textarea></div>
-        <div class="toggle-row"><span>Show this section</span><div class="switch ${s.visible===false?'':'on'} sec-vis" data-si="${si}"></div></div>
-        <div class="field" style="margin-top:14px;"><label>Cards</label></div>
-        <div class="sec-items" data-si="${si}">
-          ${(s.items||[]).map((it,ii)=>`<div class="list-item">
-            <div class="list-item-head"><span>#${ii+1}</span><button type="button" class="item-delete" data-idx="${ii}">Delete</button></div>
-            ${itemFieldsHtml(it,ii,CUSTOM_FIELDS)}</div>`).join('')}
-        </div>
-        <button type="button" class="add-btn sec-add-item" data-si="${si}">+ Add Card</button>
-      </div>`).join('')||'<p class="field-hint" style="margin-bottom:12px;">No custom sections yet.</p>';
+    host.innerHTML=data.customSections.map((s,si)=>`<div class="sec-card">
+      <div class="list-item-head"><span class="sec-card-title">Section ${si+1}</span>
+        <button type="button" class="item-delete sec-delete" data-si="${si}">Delete Section</button></div>
+      <div class="field"><label>Small Label</label><input type="text" class="sec-in" data-si="${si}" data-key="label" value="${esc(s.label)}"></div>
+      <div class="field"><label>Section Title</label><input type="text" class="sec-in" data-si="${si}" data-key="title" value="${esc(s.title)}"></div>
+      <div class="field"><label>Menu Button Label</label><input type="text" class="sec-in" data-si="${si}" data-key="menu" value="${esc(s.menu||'')}"></div>
+      <div class="field"><label>Subtitle</label><textarea class="sec-in" data-si="${si}" data-key="sub">${esc(s.sub||'')}</textarea></div>
+      <div class="toggle-row"><span>Show this section</span><div class="switch ${s.visible===false?'':'on'} sec-vis" data-si="${si}"></div></div>
+      <div class="field" style="margin-top:14px;"><label>Cards</label></div>
+      <div class="sec-items" data-si="${si}">${(s.items||[]).map((it,ii)=>`<div class="list-item">
+        <div class="list-item-head"><span>#${ii+1}</span><button type="button" class="item-delete" data-idx="${ii}">Delete</button></div>
+        ${itemFieldsHtml(it,ii,CF)}</div>`).join('')}</div>
+      <button type="button" class="add-btn sec-add-item" data-si="${si}">+ Add Card</button></div>`).join('')
+      ||'<p class="field-hint" style="margin-bottom:12px;">No custom sections yet.</p>';
     host.querySelectorAll('.sec-in').forEach(i=>i.addEventListener('input',()=>{
       const s=data.customSections[+i.dataset.si]; s[i.dataset.key]=i.value;
-      if(i.dataset.key==='title') s.anchor=slug(i.value);
-      render(); persist();}));
-    host.querySelectorAll('.sec-delete').forEach(b=>b.addEventListener('click',()=>{data.customSections.splice(+b.dataset.si,1);renderCustomAdmin();render();persist();}));
+      if(i.dataset.key==='title')s.anchor=slug(i.value); render(); markDirty();}));
+    host.querySelectorAll('.sec-delete').forEach(b=>b.addEventListener('click',()=>{data.customSections.splice(+b.dataset.si,1);renderCustomAdmin();render();markDirty();}));
     host.querySelectorAll('.sec-vis').forEach(sw=>sw.addEventListener('click',()=>{
       const s=data.customSections[+sw.dataset.si]; s.visible=s.visible===false;
-      sw.classList.toggle('on',s.visible!==false); render(); persist();}));
+      sw.classList.toggle('on',s.visible!==false); render(); markDirty();}));
     host.querySelectorAll('.sec-add-item').forEach(b=>b.addEventListener('click',()=>{
       const s=data.customSections[+b.dataset.si]; s.items=s.items||[];
-      s.items.push({id:makeId(),img:'',title:'New Card',desc:''}); renderCustomAdmin(); render(); persist();}));
+      s.items.push({id:makeId(),img:'',title:'New Card',desc:''}); renderCustomAdmin(); render(); markDirty();}));
     host.querySelectorAll('.sec-items').forEach(el=>wireItemEvents(el,data.customSections[+el.dataset.si].items||[],renderCustomAdmin));
   }
-
   const SIMPLE=['brandName','brandSuffix','sky','navy','gold','glow','chatA','chatB','footerCopy',
-    'heroEyebrow','heroHeadline','heroSub','ctaPrimary','ctaSecondary',
-    'capTitle','capMenu','processTitle','processMenu','galleryTitle','galleryMenu','industriesTitle',
-    'certsTitle','certsMenu','certsSub','foundersTitle','foundersMenu',
-    'botName','botLauncher','botWelcome','botKnowledge','botEndpoint',
-    'notifyEmail','notifyWhatsapp','webhook','siteUrl','quoteSender','currency',
-    'adminUser','adminPass',
+    'heroEyebrow','heroHeadline','heroSub','ctaPrimary','ctaSecondary','capTitle','capMenu','processTitle','processMenu',
+    'galleryTitle','galleryMenu','industriesTitle','industriesMenu','certsTitle','certsMenu','certsSub','foundersTitle','foundersMenu',
+    'botName','botLauncher','botWelcome','botKnowledge','botEndpoint','notifyEmail','notifyWhatsapp','siteUrl','quoteSender','currency',
     'quoteText','quoteName','quoteRole','contactTitle','contactSub','contactAddress','contactPhone','contactEmail'];
+  const RANGES=[['fontBase','px'],['titleScale','×'],['gutter','px'],['sectionPad','px'],['cardMin','px'],
+    ['mediaH','px'],['portraitH','px'],['cardGap','px'],['cardPad','px'],['radius','px'],['barHeight','px'],['logoMax','px']];
+  function syncRanges(){RANGES.forEach(([k,u])=>{const rg=document.getElementById('rg-'+k),v=document.getElementById('v-'+k);
+    if(rg)rg.value=data[k]; if(v)v.textContent=data[k]+u;});}
 
-  const RANGES=[['fontBase','px'],['titleScale','×'],['gutter','px'],['sectionPad','px'],
-    ['cardMin','px'],['cardGap','px'],['cardPad','px'],['radius','px'],['barHeight','px']];
-
-  function syncRangeLabels(){
-    RANGES.forEach(([k,unit])=>{
-      const rg=document.getElementById('rg-'+k), v=document.getElementById('v-'+k);
-      if(rg) rg.value=data[k];
-      if(v) v.textContent=data[k]+unit;
-    });
-  }
-
+  let formBuilt=false;
   function fillForm(){
-    SIMPLE.forEach(k=>{const el=document.getElementById('in-'+k); if(el) el.value=data[k];});
+    SIMPLE.forEach(k=>{const el=document.getElementById('in-'+k); if(el)el.value=data[k];});
     document.getElementById('in-ticker').value=data.ticker.join("\n");
     document.getElementById('in-botChips').value=(data.botChips||[]).join("\n");
     document.getElementById('brandtext-switch').classList.toggle('on',!!data.showBrandText);
     document.getElementById('glow-switch').classList.toggle('on',!!data.logoGlow);
     document.getElementById('chat-enable-switch').classList.toggle('on',!!data.chatEnabled);
     document.getElementById('autoquote-switch').classList.toggle('on',!!data.autoQuote);
-    document.getElementById('draftmail-switch').classList.toggle('on',!!data.draftMail);
-    document.getElementById('showlogin-switch').classList.toggle('on',!!data.showLoginLink);
-    syncRangeLabels();
-
+    document.getElementById('pipebtn-switch').classList.toggle('on',!!data.showPipeBtn);
+    document.getElementById('pw-user').value=currentUser||'';
+    syncRanges();
     singleImageField('logo-upload-wrap','logoDataUrl');
     singleImageField('hero-upload-wrap','heroBannerDataUrl');
+    if(formBuilt) return; formBuilt=true;
 
     setupList('list-capabilities','add-capabilities','capabilities',
       [{key:'img',type:'image',label:'Photo'},{key:'title',type:'text',label:'Title'},{key:'desc',type:'textarea',label:'Description'}],{img:'',title:'New Capability',desc:''});
     setupList('list-process','add-process','process',
       [{key:'img',type:'image',label:'Photo'},{key:'title',type:'text',label:'Step Title'},{key:'desc',type:'textarea',label:'Description'}],{img:'',title:'New Step',desc:''});
-    setupList('list-stats','add-stats','stats',
-      [{key:'value',type:'text',label:'Value'},{key:'label',type:'text',label:'Label'}],{value:'0',label:'New Stat'});
-    setupList('list-gallery','add-gallery','gallery',
-      [{key:'img',type:'image',label:'Image'},{key:'caption',type:'text',label:'Caption'}],{img:'',caption:'New photo'});
-    setupList('list-industries','add-industries','industries',
-      [{key:'img',type:'image',label:'Photo'},{key:'label',type:'text',label:'Industry Name'}],{img:'',label:'New Industry'});
-    setupList('list-certs','add-certs','certs',
-      [{key:'img',type:'image',label:'Certificate Photo / Logo'},{key:'label',type:'text',label:'Name'},{key:'note',type:'text',label:'Short Note'}],{img:'',label:'New Certification',note:''});
-    setupList('list-founders','add-founders','founders',
-      [{key:'photo',type:'image',label:'Founder Photo'},{key:'name',type:'text',label:'Name'},{key:'role',type:'text',label:'Role'},{key:'bio',type:'textarea',label:'Bio'}],
-      {photo:'',name:'New Founder',role:'Co-Founder',bio:''});
-
+    setupList('list-stats','add-stats','stats',[{key:'value',type:'text',label:'Value'},{key:'label',type:'text',label:'Label'}],{value:'0',label:'New Stat'});
+    setupList('list-gallery','add-gallery','gallery',[{key:'img',type:'image',label:'Image'},{key:'caption',type:'text',label:'Caption'}],{img:'',caption:'New photo'});
+    setupList('list-industries','add-industries','industries',[{key:'img',type:'image',label:'Photo'},{key:'label',type:'text',label:'Industry Name'}],{img:'',label:'New Industry'});
+    setupList('list-certs','add-certs','certs',[{key:'img',type:'image',label:'Certificate Photo'},{key:'label',type:'text',label:'Name'},{key:'note',type:'text',label:'Short Note'}],{img:'',label:'New Certification',note:''});
+    setupList('list-founders','add-founders','founders',[{key:'photo',type:'image',label:'Founder Photo'},{key:'name',type:'text',label:'Name'},{key:'role',type:'text',label:'Role'},{key:'bio',type:'textarea',label:'Bio'}],{photo:'',name:'New Founder',role:'Co-Founder',bio:''});
     renderCustomAdmin();
     document.getElementById('add-custom').addEventListener('click',()=>{
       const title='New Section '+(data.customSections.length+1);
-      data.customSections.push({id:makeId(),label:'Section',title,menu:'New',sub:'',anchor:slug(title),visible:true,
-        items:[{id:makeId(),img:'',title:'New Card',desc:''}]});
-      renderCustomAdmin(); render(); persist();});
-
-    SIMPLE.forEach(k=>{
-      const el=document.getElementById('in-'+k); if(!el) return;
-      el.addEventListener('input',()=>{data[k]=el.value||(k==='brandName'?DEFAULTS.brandName:'');render();persist();});
-    });
-    document.getElementById('in-ticker').addEventListener('input',function(){data.ticker=this.value.split("\n").map(s=>s.trim()).filter(Boolean);render();persist();});
-    document.getElementById('in-botChips').addEventListener('input',function(){data.botChips=this.value.split("\n").map(s=>s.trim()).filter(Boolean);renderChips();persist();});
-
-    RANGES.forEach(([k,unit])=>{
-      const rg=document.getElementById('rg-'+k); if(!rg) return;
-      rg.addEventListener('input',()=>{
-        data[k]=parseFloat(rg.value);
-        document.getElementById('v-'+k).textContent=data[k]+unit;
-        applyVars(); persist();
-      });
-    });
-    document.getElementById('reset-layout').addEventListener('click',()=>{
-      Object.assign(data,LAYOUT_DEFAULTS); applyVars(); syncRangeLabels(); persist();
-    });
-  }
-
-  let timer=null;
-  function persist(){
-    clearTimeout(timer);
-    timer=setTimeout(async()=>{
-      try{ if(window.storage&&window.storage.set) await window.storage.set(STORE_KEY,JSON.stringify(data)); }catch(e){}
-      const t=document.getElementById('save-toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1500);
-    },600);
-  }
-  async function load(){
-    try{
-      if(window.storage&&window.storage.get){
-        const res=await window.storage.get(STORE_KEY);
-        if(res&&res.value){
-          const p=JSON.parse(res.value);
-          data=Object.assign({},DEFAULTS,p);
-          data.sections=Object.assign({},DEFAULTS.sections,p.sections||{});
-          data.rfqSubmissions=(p.rfqSubmissions||[]).map(r=>Object.assign({ref:makeRef(),status:'Received',quote:'',log:[]},r));
-          data.customSections=p.customSections||[];
-          data.botChips=p.botChips||DEFAULTS.botChips;
-          data.certs=(p.certs||DEFAULTS.certs).map(c=>Object.assign({img:'',note:''},c));
-        }
-      }
-    }catch(e){}
-    render(); fillForm();
-    if(location.hash==='#pipeline') requestLogin('pipeline');
+      data.customSections.push({id:makeId(),label:'Section',title,menu:'New',sub:'',anchor:slug(title),visible:true,items:[{id:makeId(),img:'',title:'New Card',desc:''}]});
+      renderCustomAdmin(); render(); markDirty();});
+    SIMPLE.forEach(k=>{const el=document.getElementById('in-'+k); if(!el)return;
+      el.addEventListener('input',()=>{data[k]=el.value||(k==='brandName'?DEFAULTS.brandName:'');render();markDirty();});});
+    document.getElementById('in-ticker').addEventListener('input',function(){data.ticker=this.value.split("\n").map(s=>s.trim()).filter(Boolean);render();markDirty();});
+    document.getElementById('in-botChips').addEventListener('input',function(){data.botChips=this.value.split("\n").map(s=>s.trim()).filter(Boolean);renderChips();markDirty();});
+    RANGES.forEach(([k,u])=>{const rg=document.getElementById('rg-'+k); if(!rg)return;
+      rg.addEventListener('input',()=>{data[k]=parseFloat(rg.value);document.getElementById('v-'+k).textContent=data[k]+u;applyVars();markDirty();});});
+    document.getElementById('reset-layout').addEventListener('click',()=>{Object.assign(data,LAYOUT_DEFAULTS);applyVars();syncRanges();markDirty();});
   }
 
   /* ---------- AUTH ---------- */
   let pendingTarget=null;
   function requestLogin(target){
-    if(authed){ openTarget(target); return; }
+    if(token){openTarget(target);return;}
     pendingTarget=target;
     document.getElementById('login-err').style.display='none';
     document.getElementById('login-user').value='';
     document.getElementById('login-pass').value='';
+    document.getElementById('login-title').textContent=target==='admin'?'Admin Sign In':'Staff Sign In';
+    document.getElementById('login-sub').textContent=target==='admin'?'Site Admin Panel':'RFQ Pipeline';
     document.getElementById('login-modal').classList.add('open');
     setTimeout(()=>document.getElementById('login-user').focus(),150);
   }
-  function openTarget(t){
+  async function openTarget(t){
     if(t==='pipeline'){
       document.getElementById('staff-page').classList.add('open');
-      document.body.style.overflow='hidden';
-      renderRfqAdmin();
-    } else if(t==='admin'){
-      document.getElementById('admin-panel').classList.add('open');
-    }
+      document.body.style.overflow='hidden'; await loadRfqs();
+    } else { fillForm(); document.getElementById('admin-panel').classList.add('open'); }
   }
-  function doLogin(){
+  async function doLogin(){
     const u=document.getElementById('login-user').value.trim();
     const p=document.getElementById('login-pass').value;
-    if(u===data.adminUser && p===data.adminPass){
-      authed=true;
+    const err=document.getElementById('login-err');
+    err.style.display='none';
+    try{
+      const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'login',user:u,pass:p})});
+      token=j.token; currentUser=j.user;
       document.getElementById('login-modal').classList.remove('open');
       openTarget(pendingTarget||'pipeline');
-    } else {
-      document.getElementById('login-err').style.display='block';
-    }
+    }catch(e){ err.textContent=e.message||'Sign in failed.'; err.style.display='block'; }
   }
   document.getElementById('login-btn').addEventListener('click',doLogin);
   document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
   document.getElementById('login-user').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-pass').focus();});
   document.getElementById('login-cancel').addEventListener('click',()=>{
     document.getElementById('login-modal').classList.remove('open');
-    if(location.hash==='#pipeline') history.replaceState(null,'',location.pathname);
+    if(location.hash==='#pipeline')history.replaceState(null,'',location.pathname);
   });
-  document.getElementById('staff-login-link').addEventListener('click',e=>{e.preventDefault();requestLogin('pipeline');});
   document.getElementById('admin-toggle').addEventListener('click',()=>requestLogin('admin'));
   document.getElementById('staff-admin').addEventListener('click',()=>{
-    document.getElementById('staff-page').classList.remove('open');
-    document.body.style.overflow='';
-    document.getElementById('admin-panel').classList.add('open');
-  });
+    document.getElementById('staff-page').classList.remove('open'); document.body.style.overflow='';
+    fillForm(); document.getElementById('admin-panel').classList.add('open');});
   document.getElementById('staff-back').addEventListener('click',()=>{
-    document.getElementById('staff-page').classList.remove('open');
-    document.body.style.overflow='';
-    if(location.hash==='#pipeline') history.replaceState(null,'',location.pathname);
-  });
+    document.getElementById('staff-page').classList.remove('open'); document.body.style.overflow='';
+    if(location.hash==='#pipeline')history.replaceState(null,'',location.pathname);});
+  document.getElementById('staff-refresh').addEventListener('click',loadRfqs);
   document.getElementById('staff-logout').addEventListener('click',()=>{
-    authed=false;
+    token=null; currentUser=''; rfqs=[];
     document.getElementById('staff-page').classList.remove('open');
     document.getElementById('admin-panel').classList.remove('open');
     document.body.style.overflow='';
-    if(location.hash==='#pipeline') history.replaceState(null,'',location.pathname);
+    if(location.hash==='#pipeline')history.replaceState(null,'',location.pathname);
+    toast('Signed out');});
+  document.getElementById('admin-close').addEventListener('click',()=>{
+    if(dirty && !confirm('You have unpublished changes. Close anyway?'))return;
+    document.getElementById('admin-panel').classList.remove('open');});
+  document.getElementById('publish-btn').addEventListener('click',publish);
+
+  document.getElementById('pw-save').addEventListener('click',async()=>{
+    const msg=document.getElementById('pw-msg');
+    const u=document.getElementById('pw-user').value.trim();
+    const oldP=document.getElementById('pw-old').value;
+    const nu=document.getElementById('pw-newuser').value.trim();
+    const n1=document.getElementById('pw-new').value, n2=document.getElementById('pw-new2').value;
+    if(n1!==n2){msg.textContent='New passwords do not match.';msg.style.color='#B03A2E';return;}
+    try{
+      const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'change',user:u,oldPass:oldP,newUser:nu||u,newPass:n1})});
+      token=j.token; currentUser=j.user;
+      msg.textContent='Password changed. Use the new details next time you sign in.'; msg.style.color='var(--ok)';
+      document.getElementById('pw-old').value=''; document.getElementById('pw-new').value=''; document.getElementById('pw-new2').value='';
+      document.getElementById('pw-user').value=j.user; document.getElementById('pw-newuser').value='';
+    }catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
   });
-  document.getElementById('admin-close').addEventListener('click',()=>document.getElementById('admin-panel').classList.remove('open'));
 
   document.querySelectorAll('.admin-tab').forEach(tab=>tab.addEventListener('click',()=>{
     document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));
     document.querySelectorAll('.admin-group').forEach(g=>g.classList.remove('active'));
     tab.classList.add('active');
-    document.querySelector(`.admin-group[data-group="${tab.dataset.tab}"]`).classList.add('active');
-  }));
+    document.querySelector(`.admin-group[data-group="${tab.dataset.tab}"]`).classList.add('active');}));
   document.querySelectorAll('.switch[data-toggle]').forEach(sw=>sw.addEventListener('click',()=>{
     const k=sw.dataset.toggle; data.sections[k]=!data.sections[k];
-    sw.classList.toggle('on',data.sections[k]); render(); persist();}));
-  const simpleSwitch=(id,key,after)=>document.getElementById(id).addEventListener('click',function(){
-    data[key]=!data[key]; this.classList.toggle('on',data[key]); if(after)after(); persist();});
-  simpleSwitch('brandtext-switch','showBrandText',render);
-  simpleSwitch('glow-switch','logoGlow',render);
-  simpleSwitch('chat-enable-switch','chatEnabled',render);
-  simpleSwitch('autoquote-switch','autoQuote');
-  simpleSwitch('draftmail-switch','draftMail');
-  simpleSwitch('showlogin-switch','showLoginLink',render);
-  document.getElementById('clear-leads').addEventListener('click',()=>{data.rfqSubmissions=[];renderRfqAdmin();persist();});
+    sw.classList.toggle('on',data.sections[k]); render(); markDirty();}));
+  const sSwitch=(id,key,after)=>document.getElementById(id).addEventListener('click',function(){
+    data[key]=!data[key]; this.classList.toggle('on',data[key]); if(after)after(); markDirty();});
+  sSwitch('brandtext-switch','showBrandText',render);
+  sSwitch('glow-switch','logoGlow',render);
+  sSwitch('chat-enable-switch','chatEnabled',render);
+  sSwitch('autoquote-switch','autoQuote');
+  sSwitch('pipebtn-switch','showPipeBtn',render);
 
   document.getElementById('chat-fab').addEventListener('click',()=>{
     document.getElementById('chat-panel').classList.add('open');
     document.getElementById('chat-fab').style.display='none';
     if(!chatLog.children.length){addMsg(data.botWelcome,'bot');history.push({role:'Assistant',text:data.botWelcome});}
-    setTimeout(()=>document.getElementById('chat-input').focus(),200);
-  });
+    setTimeout(()=>document.getElementById('chat-input').focus(),200);});
   document.getElementById('chat-close').addEventListener('click',()=>{
     document.getElementById('chat-panel').classList.remove('open');
-    if(data.chatEnabled) document.getElementById('chat-fab').style.display='';
-  });
+    if(data.chatEnabled)document.getElementById('chat-fab').style.display='';});
   document.getElementById('chat-send').addEventListener('click',sendMessage);
   document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter')sendMessage();});
   document.getElementById('track-btn').addEventListener('click',renderTrack);
@@ -1649,24 +1393,30 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     e.preventDefault();
     const name=document.getElementById('rfq-name').value.trim();
     const email=document.getElementById('rfq-email').value.trim();
-    if(!name||!email) return;
+    if(!name||!email)return;
+    const btn=document.getElementById('rfq-submit'); btn.textContent='Sending…'; btn.disabled=true;
     const base={source:'Form',name,company:document.getElementById('rfq-company').value.trim(),email,
       phone:document.getElementById('rfq-phone').value.trim(),message:document.getElementById('rfq-message').value.trim(),
       fileName:'',fileDataUrl:''};
     const file=document.getElementById('rfq-file').files[0];
     const finish=async()=>{
-      const rec=await intakeRfq(base); e.target.reset();
-      document.getElementById('rfq-ref-out').textContent='Reference: '+rec.ref;
-      document.getElementById('rfq-thanks').style.display='block';
+      const rec=await submitRfq(base);
+      btn.textContent='Submit RFQ'; btn.disabled=false;
+      if(rec){ e.target.reset();
+        document.getElementById('rfq-ref-out').textContent='Reference: '+rec.ref;
+        document.getElementById('rfq-thanks').style.display='block'; }
     };
-    if(file){
-      base.fileName=file.name;
+    if(file){ base.fileName=file.name;
       if(file.size<=1.5*1024*1024){const rd=new FileReader();rd.onload=()=>{base.fileDataUrl=rd.result;finish();};rd.readAsDataURL(file);}
       else finish();
     } else finish();
   });
 
-  load();
+  (async function init(){
+    await loadContent();
+    render();
+    if(location.hash==='#pipeline') requestLogin('pipeline');
+  })();
 })();
 </script>
 </body>

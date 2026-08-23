@@ -37,6 +37,25 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, token: newHash, user: newUser });
     }
 
+    if (action === 'reset') {
+      // Recovery does not require the old password — only the separate recovery
+      // code set as an environment variable when the site was deployed.
+      const recoveryCode = process.env.ADMIN_RECOVERY_CODE || '';
+      if (!recoveryCode) {
+        return res.status(400).json({ ok: false, error: 'Password recovery is not set up for this site. Ask whoever deployed it to add an ADMIN_RECOVERY_CODE setting.' });
+      }
+      if (String(body.recoveryCode || '') !== recoveryCode) {
+        return res.status(401).json({ ok: false, error: 'That recovery code is incorrect.' });
+      }
+      if (!body.newUser || !body.newPass || String(body.newPass).length < 6) {
+        return res.status(400).json({ ok: false, error: 'Enter a username and a password of at least 6 characters.' });
+      }
+      const newUser = String(body.newUser).trim();
+      const newHash = hash(body.newPass);
+      await sql`UPDATE auth SET user_name = ${newUser}, pass_hash = ${newHash} WHERE id = 1`;
+      return res.status(200).json({ ok: true, token: newHash, user: newUser });
+    }
+
     return res.status(400).json({ error: 'Unknown action' });
   } catch (e) {
     console.log('AUTH ERROR:', e.message);

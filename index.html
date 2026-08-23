@@ -69,8 +69,9 @@
 
   /* ---- HEADER : three fixed zones, never overlapping ---- */
   header{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
-  .nav{display:flex;align-items:center;gap:14px;padding:0 var(--gutter);width:100%;height:var(--bar-h);}
-  .brand{display:flex;align-items:center;gap:11px;height:100%;padding:10px 0;flex:0 0 auto;max-width:var(--logo-max);overflow:hidden;}
+  .nav{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px var(--gutter);width:100%;}
+  .nav-top{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;}
+  .brand{display:flex;align-items:center;gap:11px;height:var(--bar-h);padding:6px 0;flex:0 0 auto;max-width:var(--logo-max);overflow:hidden;}
   .logo-slot{height:100%;display:flex;align-items:center;flex-shrink:0;position:relative;}
   .logo-slot img{height:100%;width:auto;max-width:calc(var(--logo-max) - 10px);object-fit:contain;transform:translateZ(0);transition:transform .3s,filter .3s;}
   .logo-glow img{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--glow) 70%,transparent)) drop-shadow(0 0 18px color-mix(in srgb,var(--glow) 45%,transparent));animation:lg 3.6s ease-in-out infinite;}
@@ -86,7 +87,7 @@
     overflow:hidden;text-overflow:ellipsis;}
   .brand-suffix{font-family:var(--mono);font-size:var(--fs-micro);color:var(--gold);letter-spacing:.18em;display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-  .nav-scroll{flex:1 1 auto;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;}
+  .nav-scroll{flex:1 1 100%;width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;}
   .nav-scroll::-webkit-scrollbar{display:none;}
   nav.links{display:flex;gap:8px;align-items:center;width:max-content;padding:2px 0;}
   nav.links a{font-weight:600;font-size:calc(var(--font-base)*.8);height:42px;min-width:118px;padding:0 15px;border-radius:100px;
@@ -118,6 +119,12 @@
     box-shadow:0 30px 60px rgba(11,42,91,.35),inset -14px -18px 40px rgba(6,26,60,.4),inset 12px 14px 30px rgba(255,255,255,.4);}
   @keyframes spin{to{transform:rotate(360deg);}}
   .core-label{position:absolute;bottom:2%;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.18em;color:var(--ink-soft);}
+  .hero-media{width:100%;max-width:480px;justify-self:center;border-radius:var(--radius);overflow:hidden;
+    box-shadow:0 30px 70px rgba(11,42,91,.28);border:1px solid var(--line);background:var(--navy);position:relative;}
+  .hero-media video,.hero-media img{width:100%;height:100%;object-fit:cover;display:block;aspect-ratio:16/10;}
+  .hero-sig-frame{width:100%;max-width:440px;justify-self:center;background:var(--white);border:1px solid var(--line);
+    border-radius:var(--radius);box-shadow:var(--shadow-md);padding:28px;display:flex;align-items:center;justify-content:center;}
+  .hero-sig-frame img{max-width:100%;max-height:260px;object-fit:contain;}
   .ticker{margin-top:calc(var(--section-pad)*.6);background:var(--navy);overflow:hidden;position:relative;z-index:1;border-top:3px solid var(--gold);}
   .ticker-track{display:flex;white-space:nowrap;width:max-content;animation:tk 28s linear infinite;}
   @keyframes tk{from{transform:translateX(0);}to{transform:translateX(-50%);}}
@@ -148,13 +155,13 @@
   .stat .val{font-family:var(--disp);font-weight:900;font-size:calc(var(--font-base)*2.3*var(--title-scale));letter-spacing:-.03em;color:var(--navy);line-height:1.05;}
   .stat .lbl{font-family:var(--mono);font-size:var(--fs-label);color:var(--gold);letter-spacing:.07em;margin-top:8px;text-transform:uppercase;font-weight:600;}
 
-  .gallery-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(calc(var(--card-min)*.72),1fr));grid-auto-rows:calc(var(--media-h)*.75);gap:var(--card-gap);}
-  .gallery-grid .g-item:nth-child(6n+1){grid-column:span 2;grid-row:span 2;}
-  .g-item{position:relative;border-radius:var(--radius-sm);overflow:hidden;background:var(--sky-wash);border:1px solid var(--line);box-shadow:var(--shadow-sm);}
-  .g-item img{width:100%;height:100%;object-fit:cover;transition:transform .5s;}
-  .g-item:hover img{transform:scale(1.06);}
-  .g-item .g-cap{position:absolute;left:0;right:0;bottom:0;padding:14px;background:linear-gradient(0deg,rgba(6,26,60,.9),transparent);color:#fff;font-family:var(--mono);font-size:var(--fs-micro);opacity:0;transition:opacity .3s;}
-  .g-item:hover .g-cap{opacity:1;}
+  .gallery-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--card-min),1fr));gap:var(--card-gap);align-items:start;}
+  .g-item{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow .25s,border-color .25s;}
+  .g-item:hover{box-shadow:var(--shadow-md);border-color:var(--line-strong);}
+  .g-media{height:var(--media-h);background:var(--sky-wash);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .g-media img{width:100%;height:100%;object-fit:contain;transition:transform .4s;}
+  .g-item:hover .g-media img{transform:scale(1.03);}
+  .g-cap{padding:14px var(--card-pad);font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-mid);letter-spacing:.03em;border-top:1px solid var(--line);}
   .empty-note{color:var(--ink-soft);font-family:var(--mono);font-size:var(--fs-label);padding:26px 0;}
 
   .ind-card{position:relative;border-radius:var(--radius);overflow:hidden;height:var(--media-h);background:var(--sky-wash);border:1px solid var(--line);box-shadow:var(--shadow-sm);}
@@ -280,6 +287,15 @@
   .login-body .btn{width:100%;margin-top:22px;}
   .login-err{display:none;margin-top:14px;font-family:var(--mono);font-size:var(--fs-micro);color:#B03A2E;line-height:1.6;}
   .login-cancel{display:block;width:100%;text-align:center;margin-top:14px;background:none;border:none;font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);text-decoration:underline;}
+  .login-forgot{display:block;text-align:right;margin-top:8px;background:none;border:none;font-family:var(--mono);font-size:var(--fs-micro);color:var(--sky-deep);text-decoration:underline;}
+  .pw-wrap{position:relative;}
+  .pw-wrap input{padding-right:44px !important;}
+  .pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:34px;height:34px;border:none;background:none;
+    display:flex;align-items:center;justify-content:center;color:var(--ink-soft);border-radius:50%;}
+  .pw-eye:hover{background:var(--sky-wash);color:var(--sky-deep);}
+  .pw-eye svg{width:18px;height:18px;}
+  #forgot-panel{display:none;}
+  #forgot-panel.open{display:block;}
 
   #staff-page{position:fixed;inset:0;z-index:150;background:var(--paper);overflow-y:auto;display:none;}
   #staff-page.open{display:block;}
@@ -365,17 +381,15 @@
 
   @media (max-width:1100px){:root{--logo-max:180px;}}
   @media (max-width:980px){
-    .hero-grid{grid-template-columns:1fr;} .core{order:-1;max-width:240px;}
+    .hero-grid{grid-template-columns:1fr;} #hero-visual{order:-1;}
     .cta-grid{grid-template-columns:1fr;}
     .process-row{grid-template-columns:150px 46px 1fr;gap:18px;} .process-media{width:150px;height:100px;}
-    .gallery-grid .g-item:nth-child(6n+1){grid-column:span 2;grid-row:span 1;}
   }
   @media (max-width:680px){
     :root{--bar-h:62px;--gutter:16px;--section-pad:56px;--logo-max:130px;--media-h:180px;--portrait-h:240px;}
     .nav-scroll{display:none;}
     .process-row{grid-template-columns:1fr;gap:12px;} .process-media{width:100%;height:190px;}
-    .gallery-grid{grid-template-columns:1fr 1fr;}
-    #chat-panel{bottom:12px;left:12px;right:12px;width:auto;height:calc(100vh - 90px);}
+    .gallery-grid{grid-template-columns:1fr 1fr;}    #chat-panel{bottom:12px;left:12px;right:12px;width:auto;height:calc(100vh - 90px);}
   }
 </style>
 </head>
@@ -385,15 +399,17 @@
 
 <header>
   <div class="nav">
-    <a href="#top" class="brand">
-      <div class="logo-slot logo-glow" id="logo-wrap"><div class="logo-fallback">I</div></div>
-      <div class="brand-txt" id="brand-text">
-        <span class="brand-name" id="d-brand-name">IRONVALE</span>
-        <span class="brand-suffix" id="d-brand-suffix">MANUFACTURING</span>
-      </div>
-    </a>
+    <div class="nav-top">
+      <a href="#top" class="brand">
+        <div class="logo-slot logo-glow" id="logo-wrap"><div class="logo-fallback">I</div></div>
+        <div class="brand-txt" id="brand-text">
+          <span class="brand-name" id="d-brand-name">IRONVALE</span>
+          <span class="brand-suffix" id="d-brand-suffix">MANUFACTURING</span>
+        </div>
+      </a>
+      <a href="#contact" class="btn btn-gold nav-cta" id="d-cta-primary-2">Request a Quote</a>
+    </div>
     <div class="nav-scroll"><nav class="links" id="main-nav"></nav></div>
-    <a href="#contact" class="btn btn-gold nav-cta" id="d-cta-primary-2">Request a Quote</a>
   </div>
 </header>
 
@@ -410,10 +426,7 @@
           <a href="#capabilities" class="btn btn-ghost" id="d-cta-secondary">View Capabilities</a>
         </div>
       </div>
-      <div class="core">
-        <div class="core-ring r1"></div><div class="core-ring r2"></div><div class="core-orb"></div>
-        <div class="core-label">PRECISION ENGINEERED</div>
-      </div>
+      <div id="hero-visual"></div>
     </div>
     <div class="ticker"><div class="ticker-track" id="ticker-track"></div></div>
   </section>
@@ -516,12 +529,26 @@
 <div id="login-modal">
   <div class="login-card">
     <div class="login-head"><h2 id="login-title">Staff Sign In</h2><p id="login-sub">RFQ Pipeline &amp; Site Admin</p></div>
-    <div class="login-body">
+    <div class="login-body" id="login-fields">
       <label>Username</label><input type="text" id="login-user" autocomplete="username">
-      <label>Password</label><input type="password" id="login-pass" autocomplete="current-password">
+      <label>Password</label>
+      <div class="pw-wrap"><input type="password" id="login-pass" autocomplete="current-password"><button type="button" class="pw-eye" data-for="login-pass"></button></div>
+      <button class="login-forgot" id="login-forgot-link">Forgot password?</button>
       <button class="btn btn-primary" id="login-btn">Sign In</button>
       <div class="login-err" id="login-err"></div>
       <button class="login-cancel" id="login-cancel">Cancel</button>
+    </div>
+    <div class="login-body" id="forgot-panel">
+      <div class="field-hint" style="margin-top:0;margin-bottom:14px;">Enter the recovery code your developer set up when the site was deployed (the <code>ADMIN_RECOVERY_CODE</code> value in Vercel), then choose new sign-in details.</div>
+      <label>Recovery Code</label>
+      <div class="pw-wrap"><input type="password" id="forgot-code" autocomplete="off"><button type="button" class="pw-eye" data-for="forgot-code"></button></div>
+      <label>New Username</label><input type="text" id="forgot-user" autocomplete="username">
+      <label>New Password</label>
+      <div class="pw-wrap"><input type="password" id="forgot-pass" autocomplete="new-password"><button type="button" class="pw-eye" data-for="forgot-pass"></button></div>
+      <button class="btn btn-primary" id="forgot-btn">Reset &amp; Sign In</button>
+      <div class="login-err" id="forgot-err"></div>
+      <button class="login-cancel" id="forgot-cancel">Back to sign in</button>
+    </div>
     </div>
   </div>
 </div>
@@ -615,13 +642,32 @@
     </div>
 
     <div class="admin-group" data-group="hero">
-      <div class="field"><label>Hero Banner Image</label><div class="img-upload" id="hero-upload-wrap"></div></div>
+      <div class="field"><label>Hero Banner Image</label><div class="img-upload" id="hero-upload-wrap"></div>
+        <div class="field-hint">Faint background wash behind the hero text — separate from the visual on the right.</div></div>
       <div class="field"><label>Label</label><input type="text" id="in-heroEyebrow"></div>
       <div class="field"><label>Headline</label><textarea id="in-heroHeadline"></textarea></div>
       <div class="field"><label>Subtitle</label><textarea id="in-heroSub"></textarea></div>
       <div class="field"><label>Primary Button</label><input type="text" id="in-ctaPrimary"></div>
       <div class="field"><label>Secondary Button</label><input type="text" id="in-ctaSecondary"></div>
       <div class="field"><label>Ticker Items (one per line)</label><textarea id="in-ticker" rows="5"></textarea></div>
+
+      <div class="field" style="margin-top:26px;"><label>Right-Side Hero Visual</label>
+        <select id="in-heroVisual" style="width:100%;background:var(--paper);border:1px solid var(--line);color:var(--navy);padding:10px 12px;font-family:var(--body);font-size:var(--fs-body);border-radius:var(--radius-sm);">
+          <option value="orb">Animated graphic (default)</option>
+          <option value="video">Promotional video</option>
+          <option value="signature">Company signature / promo image</option>
+        </select>
+      </div>
+
+      <div id="hero-video-fields">
+        <div class="field"><label>Upload Video (short clips only)</label><div class="img-upload" id="hero-video-upload-wrap"></div>
+          <div class="field-hint">Direct upload is limited to about 8 MB — enough for a 10–15 second silent loop at modest quality. For a longer or higher-quality video, use the URL field below instead.</div></div>
+        <div class="field"><label>OR: Video URL</label><input type="text" id="in-heroVideoUrl" placeholder="https://youtube.com/watch?v=... or a direct .mp4 link">
+          <div class="field-hint">A YouTube/Vimeo link or a direct .mp4 URL. Used only if no video is uploaded above.</div></div>
+      </div>
+      <div id="hero-sig-fields">
+        <div class="field"><label>Signature / Promo Image</label><div class="img-upload" id="hero-sig-upload-wrap"></div></div>
+      </div>
     </div>
 
     <div class="admin-group" data-group="capabilities">
@@ -697,10 +743,10 @@
     <div class="admin-group" data-group="security">
       <div class="info-box">Your password is stored on the server, hashed — not inside this page. Changing it signs out other devices.</div>
       <div class="field"><label>Current Username</label><input type="text" id="pw-user"></div>
-      <div class="field"><label>Current Password</label><input type="password" id="pw-old"></div>
+      <div class="field"><label>Current Password</label><div class="pw-wrap"><input type="password" id="pw-old"><button type="button" class="pw-eye" data-for="pw-old"></button></div></div>
       <div class="field"><label>New Username (optional)</label><input type="text" id="pw-newuser"></div>
-      <div class="field"><label>New Password</label><input type="password" id="pw-new"><div class="field-hint">At least 6 characters.</div></div>
-      <div class="field"><label>Confirm New Password</label><input type="password" id="pw-new2"></div>
+      <div class="field"><label>New Password</label><div class="pw-wrap"><input type="password" id="pw-new"><button type="button" class="pw-eye" data-for="pw-new"></button></div><div class="field-hint">At least 6 characters.</div></div>
+      <div class="field"><label>Confirm New Password</label><div class="pw-wrap"><input type="password" id="pw-new2"><button type="button" class="pw-eye" data-for="pw-new2"></button></div></div>
       <button class="btn btn-primary" id="pw-save" style="width:100%;">Change Password</button>
       <div class="field-hint" id="pw-msg" style="margin-top:12px;"></div>
     </div>
@@ -739,6 +785,7 @@
     brandName:"IRONVALE",brandSuffix:"MANUFACTURING",
     sky:"#3FA9E0",navy:"#0B2A5B",gold:"#C2932E",glow:"#69C2ED",chatA:"#7B3FF2",chatB:"#4B1FA8",
     showBrandText:true,logoGlow:true,logoDataUrl:"",heroBannerDataUrl:"",showPipeBtn:true,
+    heroVisual:"orb",heroVideoDataUrl:"",heroVideoUrl:"",heroSignatureImg:"",
     footerCopy:"© 2026 Ironvale Manufacturing.",
     heroEyebrow:"PRECISION CNC MANUFACTURING",
     heroHeadline:"Tolerances measured in microns. Trust measured in decades.",
@@ -863,8 +910,8 @@
     if(!token){ toast('Sign in first'); return; }
     const btn=document.getElementById('publish-btn');
     const bytes=sizeOf(data);
-    if(bytes>3800000){
-      toast('Too large to publish ('+prettySize(bytes)+'). Remove or replace your biggest photos — see the Sizing tab for the total.');
+    if(bytes>16000000){
+      toast('Too large to publish ('+prettySize(bytes)+'). Remove the uploaded video or your biggest photos — see Page Weight in the Sizing tab.');
       return;
     }
     btn.textContent='Publishing…'; btn.disabled=true;
@@ -882,8 +929,8 @@
   function updateSizeReadout(){
     const el=document.getElementById('size-readout'); if(!el) return;
     const b=sizeOf(data);
-    el.textContent='Current page size: '+prettySize(b)+(b>3000000?' — getting large, consider fewer or smaller photos.':' of a 3.8 MB limit.');
-    el.style.color=b>3000000?'#B03A2E':'var(--ink-soft)';
+    el.textContent='Current page size: '+prettySize(b)+(b>12000000?' — getting large, consider a shorter video or fewer photos.':' of a 16 MB limit.');
+    el.style.color=b>12000000?'#B03A2E':'var(--ink-soft)';
   }
   function markDirty(){ dirty=true; const b=document.getElementById('publish-btn'); if(b) b.textContent='Publish Changes •'; }
 
@@ -941,6 +988,32 @@
         ${s.sub?`<p class="t-subtitle">${esc(s.sub)}</p>`:''}</div><div class="card-grid">${cards}</div></div></section>`;
     }).join('');
   }
+  function ytEmbedUrl(u){
+    const m=String(u||'').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{6,})/);
+    if(m) return `https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&loop=1&playlist=${m[1]}&controls=1`;
+    const v=String(u||'').match(/vimeo\.com\/(\d+)/);
+    if(v) return `https://player.vimeo.com/video/${v[1]}?autoplay=1&muted=1&loop=1`;
+    return null;
+  }
+  function renderHeroVisual(){
+    const host=document.getElementById('hero-visual');
+    if(data.heroVisual==='video' && (data.heroVideoDataUrl||data.heroVideoUrl)){
+      if(data.heroVideoDataUrl){
+        host.innerHTML=`<div class="hero-media"><video src="${data.heroVideoDataUrl}" autoplay muted loop playsinline controls></video></div>`;
+      } else {
+        const embed=ytEmbedUrl(data.heroVideoUrl);
+        host.innerHTML=embed
+          ? `<div class="hero-media"><iframe src="${embed}" style="width:100%;aspect-ratio:16/10;border:0;" allow="autoplay;encrypted-media" allowfullscreen></iframe></div>`
+          : `<div class="hero-media"><video src="${esc(data.heroVideoUrl)}" autoplay muted loop playsinline controls></video></div>`;
+      }
+    } else if(data.heroVisual==='signature' && data.heroSignatureImg){
+      host.innerHTML=`<div class="hero-sig-frame"><img src="${data.heroSignatureImg}" alt="${esc(data.brandName)}"></div>`;
+    } else {
+      host.innerHTML=`<div class="core">
+        <div class="core-ring r1"></div><div class="core-ring r2"></div><div class="core-orb"></div>
+        <div class="core-label">PRECISION ENGINEERED</div></div>`;
+    }
+  }
   function render(){
     applyVars();
     setText('d-brand-name',data.brandName); setText('d-brand-name-2',data.brandName);
@@ -952,6 +1025,7 @@
       :`<div class="logo-fallback">${esc(data.brandName.charAt(0))}</div>`;
     document.getElementById('brand-text').style.display=data.showBrandText?'':'none';
     document.getElementById('hero-bg').style.backgroundImage=data.heroBannerDataUrl?`url('${data.heroBannerDataUrl}')`:'none';
+    renderHeroVisual();
     setText('d-hero-eyebrow',data.heroEyebrow); setText('d-hero-headline',data.heroHeadline);
     setText('d-hero-sub',data.heroSub); setText('d-cta-primary',data.ctaPrimary);
     setText('d-cta-primary-2',data.ctaPrimary); setText('d-cta-secondary',data.ctaSecondary);
@@ -969,7 +1043,8 @@
       <div class="stat"><div class="val">${esc(s.value)}</div><div class="lbl">${esc(s.label)}</div></div>`).join('');
     setText('d-gallery-title',data.galleryTitle);
     document.getElementById('gallery-grid').innerHTML=data.gallery.length?data.gallery.map(g=>`
-      <div class="g-item">${g.img?`<img src="${g.img}" alt="${esc(g.caption)}">`:''}<div class="g-cap">${esc(g.caption)}</div></div>`).join('')
+      <div class="g-item"><div class="g-media">${g.img?`<img src="${g.img}" alt="${esc(g.caption)}">`:''}</div>
+      ${g.caption?`<div class="g-cap">${esc(g.caption)}</div>`:''}</div>`).join('')
       :'<p class="empty-note">No gallery images yet.</p>';
     setText('d-industries-title',data.industriesTitle);
     document.getElementById('industries-grid').innerHTML=data.industries.map(i=>`
@@ -1297,7 +1372,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     host.querySelectorAll('.sec-items').forEach(el=>wireItemEvents(el,data.customSections[+el.dataset.si].items||[],renderCustomAdmin));
   }
   const SIMPLE=['brandName','brandSuffix','sky','navy','gold','glow','chatA','chatB','footerCopy',
-    'heroEyebrow','heroHeadline','heroSub','ctaPrimary','ctaSecondary','capTitle','capMenu','processTitle','processMenu',
+    'heroEyebrow','heroHeadline','heroSub','ctaPrimary','ctaSecondary','heroVideoUrl','capTitle','capMenu','processTitle','processMenu',
     'galleryTitle','galleryMenu','industriesTitle','industriesMenu','certsTitle','certsMenu','certsSub','foundersTitle','foundersMenu',
     'botName','botLauncher','botWelcome','botKnowledge','botEndpoint','notifyEmail','notifyWhatsapp','siteUrl','quoteSender','currency',
     'quoteText','quoteName','quoteRole','contactTitle','contactSub','contactAddress','contactPhone','contactEmail'];
@@ -1305,6 +1380,33 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     ['mediaH','px'],['portraitH','px'],['cardGap','px'],['cardPad','px'],['radius','px'],['barHeight','px'],['logoMax','px']];
   function syncRanges(){RANGES.forEach(([k,u])=>{const rg=document.getElementById('rg-'+k),v=document.getElementById('v-'+k);
     if(rg)rg.value=data[k]; if(v)v.textContent=data[k]+u;});}
+
+  function toggleHeroVisualFields(){
+    const v=document.getElementById('hero-video-fields'), s=document.getElementById('hero-sig-fields');
+    if(!v||!s) return;
+    v.style.display=data.heroVisual==='video'?'':'none';
+    s.style.display=data.heroVisual==='signature'?'':'none';
+  }
+  function renderHeroVideoUpload(){
+    const wrap=document.getElementById('hero-video-upload-wrap'); if(!wrap) return;
+    const has=!!data.heroVideoDataUrl;
+    wrap.innerHTML=`${has?`<div class="thumb placeholder" style="border-style:solid;color:var(--sky-deep);">VIDEO</div>`
+      :`<div class="thumb placeholder">None</div>`}
+      <input type="file" accept="video/*" id="file-heroVideo">
+      ${has?`<button type="button" class="link-btn" id="rm-heroVideo">Remove</button>`:''}`;
+    document.getElementById('file-heroVideo').addEventListener('change',e=>{
+      const f=e.target.files[0]; if(!f) return;
+      if(f.size>8*1024*1024){
+        toast('That video is '+prettySize(f.size)+' — too large to store. Upload it to YouTube and paste the link instead.');
+        e.target.value=''; return;
+      }
+      const rd=new FileReader();
+      rd.onload=()=>{ data.heroVideoDataUrl=rd.result; render(); renderHeroVideoUpload(); markDirty(); updateSizeReadout(); };
+      rd.readAsDataURL(f);
+    });
+    const rm=document.getElementById('rm-heroVideo');
+    if(rm) rm.addEventListener('click',()=>{ data.heroVideoDataUrl=''; render(); renderHeroVideoUpload(); markDirty(); updateSizeReadout(); });
+  }
 
   let formBuilt=false;
   function fillForm(){
@@ -1320,8 +1422,16 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     syncRanges();
     singleImageField('logo-upload-wrap','logoDataUrl');
     singleImageField('hero-upload-wrap','heroBannerDataUrl');
+    singleImageField('hero-sig-upload-wrap','heroSignatureImg');
+    document.getElementById('in-heroVisual').value=data.heroVisual;
+    toggleHeroVisualFields();
+    renderHeroVideoUpload();
     updateSizeReadout();
     if(formBuilt) return; formBuilt=true;
+
+    document.getElementById('in-heroVisual').addEventListener('change',function(){
+      data.heroVisual=this.value; toggleHeroVisualFields(); render(); markDirty();
+    });
 
     setupList('list-capabilities','add-capabilities','capabilities',
       [{key:'img',type:'image',label:'Photo'},{key:'title',type:'text',label:'Title'},{key:'desc',type:'textarea',label:'Description'}],{img:'',title:'New Capability',desc:''});
@@ -1346,11 +1456,29 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.getElementById('reset-layout').addEventListener('click',()=>{Object.assign(data,LAYOUT_DEFAULTS);applyVars();syncRanges();markDirty();});
   }
 
+  /* ---------- PASSWORD EYE TOGGLES ---------- */
+  const EYE_OPEN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const EYE_CLOSED='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  document.querySelectorAll('.pw-eye').forEach(btn=>{
+    btn.innerHTML=EYE_CLOSED;
+    btn.addEventListener('click',()=>{
+      const inp=document.getElementById(btn.dataset.for); if(!inp) return;
+      const showing=inp.type==='text';
+      inp.type=showing?'password':'text';
+      btn.innerHTML=showing?EYE_CLOSED:EYE_OPEN;
+    });
+  });
+
   /* ---------- AUTH ---------- */
   let pendingTarget=null;
+  function showLoginFields(){
+    document.getElementById('login-fields').style.display='';
+    document.getElementById('forgot-panel').classList.remove('open');
+  }
   function requestLogin(target){
     if(token){openTarget(target);return;}
     pendingTarget=target;
+    showLoginFields();
     document.getElementById('login-err').style.display='none';
     document.getElementById('login-user').value='';
     document.getElementById('login-pass').value='';
@@ -1384,6 +1512,33 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.getElementById('login-modal').classList.remove('open');
     if(location.hash==='#pipeline')history.replaceState(null,'',location.pathname);
   });
+
+  /* ---------- FORGOT PASSWORD ---------- */
+  document.getElementById('login-forgot-link').addEventListener('click',()=>{
+    document.getElementById('login-fields').style.display='none';
+    document.getElementById('forgot-panel').classList.add('open');
+    document.getElementById('forgot-err').style.display='none';
+    document.getElementById('forgot-code').value='';
+    document.getElementById('forgot-user').value='';
+    document.getElementById('forgot-pass').value='';
+    setTimeout(()=>document.getElementById('forgot-code').focus(),150);
+  });
+  document.getElementById('forgot-cancel').addEventListener('click',showLoginFields);
+  document.getElementById('forgot-btn').addEventListener('click',async()=>{
+    const err=document.getElementById('forgot-err'); err.style.display='none';
+    const code=document.getElementById('forgot-code').value;
+    const nu=document.getElementById('forgot-user').value.trim();
+    const np=document.getElementById('forgot-pass').value;
+    if(!nu||np.length<6){ err.textContent='Enter a username and a password of at least 6 characters.'; err.style.display='block'; return; }
+    try{
+      const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'reset',recoveryCode:code,newUser:nu,newPass:np})});
+      token=j.token; currentUser=j.user;
+      document.getElementById('login-modal').classList.remove('open');
+      toast('Password reset — you are signed in.');
+      openTarget(pendingTarget||'pipeline');
+    }catch(e){ err.textContent=e.message||'Reset failed.'; err.style.display='block'; }
+  });
+
   document.getElementById('admin-toggle').addEventListener('click',()=>requestLogin('admin'));
   document.getElementById('staff-admin').addEventListener('click',()=>{
     document.getElementById('staff-page').classList.remove('open'); document.body.style.overflow='';

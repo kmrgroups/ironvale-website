@@ -685,8 +685,10 @@
       <button type="button" class="add-btn" id="reset-layout">Reset sizing to defaults</button>
       <div class="field" style="margin-top:22px;"><label>Page Weight</label>
         <div class="field-hint" id="size-readout" style="margin-top:0;"></div>
-        <div class="field-hint">Photos are shrunk automatically when you upload them. If this gets close to the limit, replace your largest photos or remove a few gallery images.</div>
+        <div class="field-hint">Photos and video are kept in separate storage, so this number stays small however many you add.</div>
       </div>
+      <button type="button" class="add-btn solid" id="migrate-assets">Re-upload old images to separate storage</button>
+      <div class="field-hint" id="migrate-msg" style="margin-top:10px;"></div>
     </div>
 
     <div class="admin-group" data-group="brand">
@@ -1054,6 +1056,23 @@
   const sizeOf=obj=>new Blob([JSON.stringify(obj)]).size;
   const prettySize=b=>b>1048576?(b/1048576).toFixed(1)+' MB':Math.round(b/1024)+' KB';
 
+  /* Upload a file to its own storage row and return a short link.
+     Keeps the content record small no matter how many photos are added. */
+  async function uploadAsset(dataUrl){
+    if(!token) throw new Error('Sign in first');
+    const r=await fetch(API+'/api/assets',{method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':token},
+      body:JSON.stringify({dataUrl})});
+    let j={}; try{ j=await r.json(); }catch(e){}
+    if(!r.ok||!j.url) throw new Error(j.error||('Upload failed (HTTP '+r.status+')'));
+    return j.url;
+  }
+  async function storeImage(file,maxW,quality){
+    const compressed=await compressImage(file,maxW,quality);
+    try{ return await uploadAsset(compressed); }
+    catch(e){ toast('Upload failed: '+e.message); return compressed; }
+  }
+
   /* ---------- CLOUD ---------- */
   async function api(path,opts={}){
     const o=Object.assign({headers:{'Content-Type':'application/json'}},opts);
@@ -1086,8 +1105,8 @@
     if(!token){ toast('Sign in first'); return; }
     const btn=document.getElementById('publish-btn');
     const bytes=sizeOf(data);
-    if(bytes>16000000){
-      toast('Too large to publish ('+prettySize(bytes)+'). Remove the uploaded video or your biggest photos — see Page Weight in the Sizing tab.');
+    if(bytes>3500000){
+      toast('Content is '+prettySize(bytes)+' — over the 3.5 MB limit. Use “Re-upload old images” in the Sizing tab to move them into separate storage.');
       return;
     }
     btn.textContent='Publishing…'; btn.disabled=true;
@@ -1105,8 +1124,8 @@
   function updateSizeReadout(){
     const el=document.getElementById('size-readout'); if(!el) return;
     const b=sizeOf(data);
-    el.textContent='Current page size: '+prettySize(b)+(b>12000000?' — getting large, consider a shorter video or fewer photos.':' of a 16 MB limit.');
-    el.style.color=b>12000000?'#B03A2E':'var(--ink-soft)';
+    el.textContent='Content record: '+prettySize(b)+' of 3.5 MB'+(b>2500000?' — run “Re-upload old images” below.':' (photos are stored separately, so this stays small).');
+    el.style.color=b>2500000?'#B03A2E':'var(--ink-soft)';
   }
   function markDirty(){ dirty=true; const b=document.getElementById('publish-btn'); if(b) b.textContent='Publish Changes •'; }
 
@@ -1831,10 +1850,11 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
       <input type="file" accept="image/*" id="file-${safe}">${cur?`<button type="button" class="link-btn" id="rm-${safe}">Remove</button>`:''}`;
     document.getElementById(`file-${safe}`).addEventListener('change',async e=>{
       const f=e.target.files[0]; if(!f)return;
-      toast('Optimising image…');
+      toast('Uploading image…');
       const wide=/heroBanner/.test(key)?1600:/logo/i.test(key)?600:500;
-      setPath(key, await compressImage(f, wide, 0.9));
+      setPath(key, await storeImage(f, wide, 0.9));
       render(); singleImageField(wrapId,key); markDirty(); updateSizeReadout();
+      toast('Image uploaded');
     });
     const rm=document.getElementById(`rm-${safe}`);
     if(rm)rm.addEventListener('click',()=>{setPath(key,'');render();singleImageField(wrapId,key);markDirty();updateSizeReadout();});
@@ -1855,9 +1875,9 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     el.querySelectorAll(':scope > .list-item .li-img').forEach(i=>i.addEventListener('change',async e=>{
       const f=e.target.files[0]; if(!f)return;
       const idx=+i.dataset.idx,key=i.dataset.key;
-      toast('Optimising image…');
-      items[idx][key]=await compressImage(f,1100,0.7);
-      redraw(); render(); markDirty(); updateSizeReadout();}));
+      toast('Uploading image…');
+      items[idx][key]=await storeImage(f,1100,0.72);
+      redraw(); render(); markDirty(); updateSizeReadout(); toast('Image uploaded');}));
     el.querySelectorAll(':scope > .list-item .li-rm').forEach(b=>b.addEventListener('click',()=>{items[+b.dataset.idx][b.dataset.key]='';redraw();render();markDirty();}));
   }
   function renderList(id,items,fields){
@@ -1925,12 +1945,17 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
       ${has?`<button type="button" class="link-btn" id="rm-heroVideo">Remove</button>`:''}`;
     document.getElementById('file-heroVideo').addEventListener('change',e=>{
       const f=e.target.files[0]; if(!f) return;
-      if(f.size>8*1024*1024){
-        toast('That video is '+prettySize(f.size)+' — too large to store. Upload it to YouTube and paste the link instead.');
+      if(f.size>6*1024*1024){
+        toast('That video is '+prettySize(f.size)+' — too large. Upload it to YouTube and paste the link instead.');
         e.target.value=''; return;
       }
+      toast('Uploading video…');
       const rd=new FileReader();
-      rd.onload=()=>{ data.heroVideoDataUrl=rd.result; render(); renderHeroVideoUpload(); markDirty(); updateSizeReadout(); };
+      rd.onload=async()=>{
+        try{ data.heroVideoDataUrl=await uploadAsset(rd.result); toast('Video uploaded'); }
+        catch(err){ toast('Upload failed: '+err.message); return; }
+        render(); renderHeroVideoUpload(); markDirty(); updateSizeReadout();
+      };
       rd.readAsDataURL(f);
     });
     const rm=document.getElementById('rm-heroVideo');
@@ -2022,6 +2047,45 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     RANGES.forEach(([k,u])=>{const rg=document.getElementById('rg-'+k); if(!rg)return;
       rg.addEventListener('input',()=>{data[k]=parseFloat(rg.value);document.getElementById('v-'+k).textContent=data[k]+u;applyVars();markDirty();});});
     document.getElementById('reset-layout').addEventListener('click',()=>{Object.assign(data,LAYOUT_DEFAULTS);applyVars();syncRanges();markDirty();});
+
+    document.getElementById('migrate-assets').addEventListener('click',async function(){
+      const msg=document.getElementById('migrate-msg');
+      if(!token){ msg.textContent='Sign in first.'; return; }
+      this.disabled=true; this.textContent='Moving images…';
+      // every place an image can live inside the content record
+      const targets=[];
+      ['logoDataUrl','heroBannerDataUrl','heroSignatureImg','heroVideoDataUrl'].forEach(k=>targets.push([data,k]));
+      ['letterheadLogo','signatureImg','sealImg'].forEach(k=>targets.push([data.company,k]));
+      data.capabilities.forEach(o=>targets.push([o,'img']));
+      data.process.forEach(o=>targets.push([o,'img']));
+      data.gallery.forEach(o=>targets.push([o,'img']));
+      data.industries.forEach(o=>targets.push([o,'img']));
+      data.certs.forEach(o=>targets.push([o,'img']));
+      data.founders.forEach(o=>targets.push([o,'photo']));
+      (data.customSections||[]).forEach(s=>(s.items||[]).forEach(o=>targets.push([o,'img'])));
+
+      let moved=0,failed=0;
+      for(const [obj,key] of targets){
+        const v=obj&&obj[key];
+        if(typeof v!=='string'||!v.startsWith('data:')) continue;
+        try{ obj[key]=await uploadAsset(v); moved++; }
+        catch(e){ failed++; }
+      }
+      updateSizeReadout();
+      if(moved){
+        try{
+          await api('/api/content',{method:'POST',body:JSON.stringify({data})});
+          dirty=false;
+          msg.textContent=`Moved ${moved} file${moved>1?'s':''} into separate storage and published. Content record is now ${prettySize(sizeOf(data))}.`;
+          msg.style.color='var(--ok)';
+        }catch(e){ msg.textContent='Images moved, but publishing failed: '+e.message; msg.style.color='#B03A2E'; }
+      } else {
+        msg.textContent=failed?`Could not move ${failed} file(s).`:'Nothing to move — all images are already stored separately.';
+        msg.style.color=failed?'#B03A2E':'var(--ink-soft)';
+      }
+      render();
+      this.disabled=false; this.textContent='Re-upload old images to separate storage';
+    });
   }
 
   /* ---------- PASSWORD EYE TOGGLES ---------- */

@@ -24,6 +24,12 @@ export async function ensureTables() {
     user_name TEXT NOT NULL,
     pass_hash TEXT NOT NULL
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS assets (
+    id TEXT PRIMARY KEY,
+    mime TEXT NOT NULL,
+    data TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+  )`;
   // seed the first login if none exists
   const rows = await sql`SELECT id FROM auth WHERE id = 1`;
   if (!rows.length) {

@@ -598,6 +598,10 @@
       <div class="field"><label>Logo Area Width</label><div class="range-row"><input type="range" id="rg-logoMax" min="90" max="420" step="10"><span class="range-val" id="v-logoMax"></span></div>
         <div class="field-hint">Keeps the logo from crowding the menu.</div></div>
       <button type="button" class="add-btn" id="reset-layout">Reset sizing to defaults</button>
+      <div class="field" style="margin-top:22px;"><label>Page Weight</label>
+        <div class="field-hint" id="size-readout" style="margin-top:0;"></div>
+        <div class="field-hint">Photos are shrunk automatically when you upload them. If this gets close to the limit, replace your largest photos or remove a few gallery images.</div>
+      </div>
     </div>
 
     <div class="admin-group" data-group="brand">
@@ -796,6 +800,40 @@
     return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');
   }
 
+  /* ---------- IMAGE COMPRESSION ----------
+     Every uploaded picture is resized and re-encoded in the browser before it
+     is stored, so the saved page stays small and loads quickly for visitors. */
+  function compressImage(file,maxW,quality){
+    return new Promise((resolve,reject)=>{
+      const rd=new FileReader();
+      rd.onerror=()=>reject(new Error('Could not read that file'));
+      rd.onload=()=>{
+        const img=new Image();
+        img.onerror=()=>resolve(rd.result); // not an image we can process — keep as is
+        img.onload=()=>{
+          let w=img.naturalWidth,h=img.naturalHeight;
+          if(w>maxW){ h=Math.round(h*(maxW/w)); w=maxW; }
+          const c=document.createElement('canvas'); c.width=w; c.height=h;
+          const ctx=c.getContext('2d');
+          ctx.imageSmoothingQuality='high';
+          ctx.drawImage(img,0,0,w,h);
+          // keep transparency for logos (PNG/SVG), otherwise use JPEG for size
+          const keepAlpha=/png|svg|webp/i.test(file.type);
+          let out;
+          try{
+            out=keepAlpha?c.toDataURL('image/png'):c.toDataURL('image/jpeg',quality);
+            if(keepAlpha && out.length>420000){ out=c.toDataURL('image/jpeg',quality); }
+          }catch(e){ out=rd.result; }
+          resolve(out.length<rd.result.length?out:rd.result);
+        };
+        img.src=rd.result;
+      };
+      rd.readAsDataURL(file);
+    });
+  }
+  const sizeOf=obj=>new Blob([JSON.stringify(obj)]).size;
+  const prettySize=b=>b>1048576?(b/1048576).toFixed(1)+' MB':Math.round(b/1024)+' KB';
+
   /* ---------- CLOUD ---------- */
   async function api(path,opts={}){
     const o=Object.assign({headers:{'Content-Type':'application/json'}},opts);
@@ -824,12 +862,28 @@
   async function publish(){
     if(!token){ toast('Sign in first'); return; }
     const btn=document.getElementById('publish-btn');
+    const bytes=sizeOf(data);
+    if(bytes>3800000){
+      toast('Too large to publish ('+prettySize(bytes)+'). Remove or replace your biggest photos — see the Sizing tab for the total.');
+      return;
+    }
     btn.textContent='Publishing…'; btn.disabled=true;
     try{
       await api('/api/content',{method:'POST',body:JSON.stringify({data})});
       dirty=false; toast('Published — everyone sees this now');
-    }catch(e){ toast('Publish failed: '+e.message); }
+    }catch(e){
+      toast(/413/.test(e.message)
+        ? 'Too large to publish. Replace your biggest photos with smaller ones and try again.'
+        : 'Publish failed: '+e.message);
+    }
     btn.textContent='Publish Changes'; btn.disabled=false;
+    updateSizeReadout();
+  }
+  function updateSizeReadout(){
+    const el=document.getElementById('size-readout'); if(!el) return;
+    const b=sizeOf(data);
+    el.textContent='Current page size: '+prettySize(b)+(b>3000000?' — getting large, consider fewer or smaller photos.':' of a 3.8 MB limit.');
+    el.style.color=b>3000000?'#B03A2E':'var(--ink-soft)';
   }
   function markDirty(){ dirty=true; const b=document.getElementById('publish-btn'); if(b) b.textContent='Publish Changes •'; }
 
@@ -1172,9 +1226,12 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     const wrap=document.getElementById(wrapId);
     wrap.innerHTML=`${data[key]?`<img src="${data[key]}" class="thumb">`:`<div class="thumb placeholder">None</div>`}
       <input type="file" accept="image/*" id="file-${key}">${data[key]?`<button type="button" class="link-btn" id="rm-${key}">Remove</button>`:''}`;
-    document.getElementById(`file-${key}`).addEventListener('change',e=>{
+    document.getElementById(`file-${key}`).addEventListener('change',async e=>{
       const f=e.target.files[0]; if(!f)return;
-      const rd=new FileReader(); rd.onload=()=>{data[key]=rd.result;render();singleImageField(wrapId,key);markDirty();}; rd.readAsDataURL(f);
+      toast('Optimising image…');
+      const isLogo=(key==='logoDataUrl');
+      data[key]=await compressImage(f, isLogo?600:1600, isLogo?0.9:0.72);
+      render(); singleImageField(wrapId,key); markDirty(); updateSizeReadout();
     });
     const rm=document.getElementById(`rm-${key}`);
     if(rm)rm.addEventListener('click',()=>{data[key]='';render();singleImageField(wrapId,key);markDirty();});
@@ -1192,10 +1249,12 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   function wireItemEvents(el,items,redraw){
     el.querySelectorAll(':scope > .list-item .li-in').forEach(i=>i.addEventListener('input',()=>{items[+i.dataset.idx][i.dataset.key]=i.value;render();markDirty();}));
     el.querySelectorAll(':scope > .list-item .item-delete').forEach(b=>b.addEventListener('click',()=>{items.splice(+b.dataset.idx,1);redraw();render();markDirty();}));
-    el.querySelectorAll(':scope > .list-item .li-img').forEach(i=>i.addEventListener('change',e=>{
+    el.querySelectorAll(':scope > .list-item .li-img').forEach(i=>i.addEventListener('change',async e=>{
       const f=e.target.files[0]; if(!f)return;
-      const idx=+i.dataset.idx,key=i.dataset.key,rd=new FileReader();
-      rd.onload=()=>{items[idx][key]=rd.result;redraw();render();markDirty();}; rd.readAsDataURL(f);}));
+      const idx=+i.dataset.idx,key=i.dataset.key;
+      toast('Optimising image…');
+      items[idx][key]=await compressImage(f,1100,0.7);
+      redraw(); render(); markDirty(); updateSizeReadout();}));
     el.querySelectorAll(':scope > .list-item .li-rm').forEach(b=>b.addEventListener('click',()=>{items[+b.dataset.idx][b.dataset.key]='';redraw();render();markDirty();}));
   }
   function renderList(id,items,fields){
@@ -1261,6 +1320,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     syncRanges();
     singleImageField('logo-upload-wrap','logoDataUrl');
     singleImageField('hero-upload-wrap','heroBannerDataUrl');
+    updateSizeReadout();
     if(formBuilt) return; formBuilt=true;
 
     setupList('list-capabilities','add-capabilities','capabilities',

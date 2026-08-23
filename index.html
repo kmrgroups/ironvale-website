@@ -122,6 +122,21 @@
   .hero-media{width:100%;max-width:480px;justify-self:center;border-radius:var(--radius);overflow:hidden;
     box-shadow:0 30px 70px rgba(11,42,91,.28);border:1px solid var(--line);background:var(--navy);position:relative;}
   .hero-media video,.hero-media img{width:100%;height:100%;object-fit:cover;display:block;aspect-ratio:16/10;}
+  .video-cover{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    background:linear-gradient(160deg,rgba(6,26,60,.55),rgba(6,26,60,.8));transition:opacity .35s;}
+  .video-cover.hidden{opacity:0;pointer-events:none;}
+  .play-btn{width:74px;height:74px;border-radius:50%;background:linear-gradient(180deg,var(--gold-light),var(--gold));
+    display:flex;align-items:center;justify-content:center;box-shadow:0 8px 0 var(--gold-deep),0 18px 40px rgba(0,0,0,.4);
+    transition:transform .2s cubic-bezier(.2,.8,.3,1),box-shadow .2s;}
+  .video-cover:hover .play-btn{transform:translateY(-4px);box-shadow:0 12px 0 var(--gold-deep),0 26px 50px rgba(0,0,0,.45);}
+  .play-btn svg{width:28px;height:28px;color:var(--navy-deep);margin-left:4px;}
+  .video-cover span{position:absolute;bottom:22px;font-family:var(--mono);font-size:var(--fs-micro);
+    letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.8);}
+  .video-replay{position:absolute;right:14px;bottom:14px;display:none;align-items:center;gap:7px;
+    background:rgba(6,26,60,.82);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:100px;
+    padding:8px 15px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;}
+  .video-replay.show{display:inline-flex;}
+  .video-replay:hover{background:var(--navy);border-color:var(--gold-light);}
   .hero-sig-frame{width:100%;max-width:440px;justify-self:center;background:var(--white);border:1px solid var(--line);
     border-radius:var(--radius);box-shadow:var(--shadow-md);padding:28px;display:flex;align-items:center;justify-content:center;}
   .hero-sig-frame img{max-width:100%;max-height:260px;object-fit:contain;}
@@ -238,6 +253,19 @@
   .foot-top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:30px;}
   .foot-brand .brand-name{color:#fff;}
   .foot-links{display:flex;gap:9px;flex-wrap:wrap;}
+  .social-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;}
+  .social-btn{width:42px;height:42px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+    border:1px solid rgba(255,255,255,.22);color:rgba(255,255,255,.85);background:rgba(255,255,255,.05);
+    transition:transform .18s cubic-bezier(.2,.8,.3,1),background .2s,border-color .2s,color .2s;}
+  .social-btn svg{width:19px;height:19px;}
+  .social-btn:hover{transform:translateY(-3px);color:#fff;border-color:var(--gold-light);background:rgba(224,180,78,.18);}
+  .contact-social{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px;}
+  .contact-social .social-btn{border-color:rgba(255,255,255,.3);}
+  .map-wrap{margin-top:26px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow-sm);background:var(--sky-wash);}
+  .map-wrap iframe{width:100%;height:300px;border:0;display:block;}
+  .map-link{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-family:var(--mono);font-size:var(--fs-micro);
+    letter-spacing:.06em;text-transform:uppercase;color:var(--gold-light);}
+  .map-link:hover{color:#fff;text-decoration:underline;}
   .foot-links a{font-size:calc(var(--font-base)*.78);font-weight:600;height:38px;min-width:112px;padding:0 14px;border-radius:100px;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.82);display:inline-flex;align-items:center;justify-content:center;transition:transform .16s,border-color .2s,color .2s;}
   .foot-links a:hover{transform:translateY(-2px);color:#fff;border-color:var(--gold-light);}
   .foot-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;border-top:1px solid rgba(255,255,255,.12);padding-top:22px;margin-top:32px;font-family:var(--mono);font-size:var(--fs-micro);}
@@ -475,6 +503,9 @@
         <div class="contact-item"><span class="k">Phone</span><span id="d-contact-phone"></span></div>
         <div class="contact-item"><span class="k">Email</span><span id="d-contact-email"></span></div>
       </div>
+      <div class="contact-social" id="contact-social"></div>
+      <div class="map-wrap" id="map-wrap"></div>
+      <a class="map-link" id="map-link" href="#" rel="noopener">Open in Google Maps →</a>
     </div>
     <form class="rfq" id="rfq-form">
       <label>Full Name</label><input type="text" id="rfq-name" required>
@@ -508,6 +539,7 @@
         <p class="t-body" style="max-width:38ch;margin-top:12px;color:rgba(255,255,255,.6);">Precision-machined components for the industries that can't afford to guess.</p></div>
       <div class="foot-links" id="foot-links"></div>
     </div>
+    <div class="social-row" id="foot-social"></div>
     <div class="foot-row"><span id="d-footer-copy">© 2026 Ironvale Manufacturing.</span>
       <span class="t-micro" id="content-stamp"></span></div>
   </div>
@@ -593,6 +625,7 @@
     <button class="admin-tab" data-tab="chatbot">AI Chatbot</button>
     <button class="admin-tab" data-tab="testimonial">Testimonial</button>
     <button class="admin-tab" data-tab="contact">Contact</button>
+    <button class="admin-tab" data-tab="social">Social &amp; Map</button>
     <button class="admin-tab" data-tab="notify">Notifications</button>
     <button class="admin-tab" data-tab="security">Password</button>
     <button class="admin-tab" data-tab="sections">Sections</button>
@@ -729,6 +762,23 @@
       <div class="field"><label>Email</label><input type="text" id="in-contactEmail"></div>
     </div>
 
+    <div class="admin-group" data-group="social">
+      <div class="info-box">Paste the full address of each page. Leave a field blank to hide that button. Buttons appear in the Contact section and the footer.</div>
+      <div class="field"><label>YouTube</label><input type="text" id="in-soc-youtube" placeholder="https://youtube.com/@yourchannel"></div>
+      <div class="field"><label>Instagram</label><input type="text" id="in-soc-instagram" placeholder="https://instagram.com/yourpage"></div>
+      <div class="field"><label>Facebook</label><input type="text" id="in-soc-facebook" placeholder="https://facebook.com/yourpage"></div>
+      <div class="field"><label>LinkedIn</label><input type="text" id="in-soc-linkedin" placeholder="https://linkedin.com/company/yourcompany"></div>
+      <div class="field"><label>X (Twitter)</label><input type="text" id="in-soc-twitter" placeholder="https://x.com/yourhandle"></div>
+      <div class="field"><label>WhatsApp</label><input type="text" id="in-soc-whatsapp" placeholder="919902009152 or a wa.me link"></div>
+
+      <div class="field" style="margin-top:26px;"><label>Google Map</label></div>
+      <div class="toggle-row"><span>Show map in Contact section</span><div class="switch on" id="showmap-switch"></div></div>
+      <div class="field" style="margin-top:16px;"><label>Map Embed Code or URL</label><textarea id="in-mapEmbed" rows="4" placeholder="Paste the whole &lt;iframe&gt; from Google Maps → Share → Embed a map"></textarea>
+        <div class="field-hint">In Google Maps, search your address → <b>Share</b> → <b>Embed a map</b> → <b>Copy HTML</b>, then paste it here. Pasting just the link also works.</div></div>
+      <div class="field"><label>“Open in Google Maps” Link</label><input type="text" id="in-mapLink" placeholder="https://maps.app.goo.gl/...">
+        <div class="field-hint">From Google Maps → <b>Share</b> → <b>Copy link</b>. Opens the map in the visitor's own maps app.</div></div>
+    </div>
+
     <div class="admin-group" data-group="notify">
       <div class="info-box">Notifications are sent by the server. The email and WhatsApp number below are where new RFQ alerts go.</div>
       <div class="field"><label>Notify Email</label><input type="text" id="in-notifyEmail"></div>
@@ -785,7 +835,9 @@
     brandName:"IRONVALE",brandSuffix:"MANUFACTURING",
     sky:"#3FA9E0",navy:"#0B2A5B",gold:"#C2932E",glow:"#69C2ED",chatA:"#7B3FF2",chatB:"#4B1FA8",
     showBrandText:true,logoGlow:true,logoDataUrl:"",heroBannerDataUrl:"",showPipeBtn:true,
-    heroVisual:"orb",heroVideoDataUrl:"",heroVideoUrl:"",heroSignatureImg:"",
+    heroVisual:"orb",heroVideoDataUrl:"",heroVideoUrl:"",heroSignatureImg:"",heroVideoCaption:"Watch our film",
+    social:{youtube:"",instagram:"",facebook:"",linkedin:"",twitter:"",whatsapp:""},
+    mapEmbed:"",mapLink:"",showMap:true,
     footerCopy:"© 2026 Ironvale Manufacturing.",
     heroEyebrow:"PRECISION CNC MANUFACTURING",
     heroHeadline:"Tolerances measured in microns. Trust measured in decades.",
@@ -896,6 +948,7 @@
       cloudOK=true;
       if(j.data && Object.keys(j.data).length){
         data=Object.assign({},DEFAULTS,j.data);
+        data.social=Object.assign({},DEFAULTS.social,j.data.social||{});
         data.sections=Object.assign({},DEFAULTS.sections,j.data.sections||{});
       }
       if(j.updatedAt) setText('content-stamp','Content updated '+new Date(j.updatedAt).toLocaleDateString());
@@ -990,22 +1043,90 @@
   }
   function ytEmbedUrl(u){
     const m=String(u||'').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{6,})/);
-    if(m) return `https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&loop=1&playlist=${m[1]}&controls=1`;
+    if(m) return `https://www.youtube.com/embed/${m[1]}?rel=0`;
     const v=String(u||'').match(/vimeo\.com\/(\d+)/);
-    if(v) return `https://player.vimeo.com/video/${v[1]}?autoplay=1&muted=1&loop=1`;
+    if(v) return `https://player.vimeo.com/video/${v[1]}`;
     return null;
   }
+  /* ---------- SOCIAL LINKS ---------- */
+  const SOCIAL_ICONS={
+    youtube:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 12s0-3.9-.5-5.7c-.3-1-1-1.8-2-2.1C18.7 3.7 12 3.7 12 3.7s-6.7 0-8.5.5c-1 .3-1.7 1.1-2 2.1C1 8.1 1 12 1 12s0 3.9.5 5.7c.3 1 1 1.8 2 2.1 1.8.5 8.5.5 8.5.5s6.7 0 8.5-.5c1-.3 1.7-1.1 2-2.1.5-1.8.5-5.7.5-5.7zM9.8 15.5v-7l5.8 3.5-5.8 3.5z"/></svg>',
+    instagram:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg>',
+    facebook:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.4v7A10 10 0 0 0 22 12z"/></svg>',
+    linkedin:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.3 18.3H5.7V9.8h2.6v8.5zM7 8.6a1.5 1.5 0 1 1 0-3.1 1.5 1.5 0 0 1 0 3.1zm11.3 9.7h-2.6v-4.1c0-1 0-2.3-1.4-2.3s-1.6 1.1-1.6 2.2v4.2h-2.6V9.8h2.5V11h.1c.3-.7 1.2-1.4 2.5-1.4 2.7 0 3.2 1.8 3.2 4.1v4.6z"/></svg>',
+    twitter:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.2 2H21l-6.5 7.4L22 22h-6l-4.7-6.2L5.9 22H3l7-8L2 2h6.2l4.3 5.7L18.2 2zm-1 18.3h1.6L7 3.6H5.2l12 16.7z"/></svg>',
+    whatsapp:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm5.8 14.2c-.2.7-1.4 1.3-2 1.4-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5-4.5-.2-.2-1.2-1.6-1.2-3 0-1.5.7-2.2 1-2.5.2-.3.6-.4.8-.4h.6c.2 0 .5 0 .7.5l1 2.3c.1.2.1.4 0 .6l-.4.5-.3.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.2 1.4 2.5 1.5.3.1.4.1.6-.1l.9-1c.2-.2.4-.2.6-.1l2.2 1c.3.2.5.2.5.4.1.2.1.8-.1 1.5z"/></svg>'
+  };
+  const SOCIAL_NAMES={youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',linkedin:'LinkedIn',twitter:'X (Twitter)',whatsapp:'WhatsApp'};
+  function normaliseSocialUrl(key,val){
+    let v=String(val||'').trim(); if(!v) return '';
+    if(key==='whatsapp' && /^[\d+\s-]+$/.test(v)) return 'https://wa.me/'+v.replace(/\D/g,'');
+    if(!/^https?:\/\//i.test(v)) v='https://'+v.replace(/^\/+/,'');
+    return v;
+  }
+  function socialHtml(){
+    return Object.keys(SOCIAL_ICONS).map(k=>{
+      const url=normaliseSocialUrl(k,(data.social||{})[k]);
+      if(!url) return '';
+      return `<a class="social-btn" href="${esc(url)}" rel="noopener" aria-label="${SOCIAL_NAMES[k]}" title="${SOCIAL_NAMES[k]}">${SOCIAL_ICONS[k]}</a>`;
+    }).join('');
+  }
+  function renderSocial(){
+    const html=socialHtml();
+    const f=document.getElementById('foot-social'), c=document.getElementById('contact-social');
+    if(f){ f.innerHTML=html; f.style.display=html?'':'none'; }
+    if(c){ c.innerHTML=html; c.style.display=html?'':'none'; }
+  }
+  function renderMap(){
+    const wrap=document.getElementById('map-wrap'), link=document.getElementById('map-link');
+    if(!wrap) return;
+    const raw=String(data.mapEmbed||'').trim();
+    // accept either a full <iframe> paste or a bare URL
+    let src='';
+    const m=raw.match(/src\s*=\s*["']([^"']+)["']/i);
+    if(m) src=m[1]; else if(/^https?:\/\//i.test(raw)) src=raw;
+    if(src && data.showMap!==false){
+      wrap.innerHTML=`<iframe src="${esc(src)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Location map"></iframe>`;
+      wrap.style.display='';
+    } else { wrap.innerHTML=''; wrap.style.display='none'; }
+    if(link){
+      const url=data.mapLink?normaliseSocialUrl('map',data.mapLink):'';
+      link.style.display=url?'':'none';
+      if(url) link.href=url;
+    }
+  }
+
+  const PLAY_ICON='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
   function renderHeroVisual(){
     const host=document.getElementById('hero-visual');
     if(data.heroVisual==='video' && (data.heroVideoDataUrl||data.heroVideoUrl)){
-      if(data.heroVideoDataUrl){
-        host.innerHTML=`<div class="hero-media"><video src="${data.heroVideoDataUrl}" autoplay muted loop playsinline controls></video></div>`;
-      } else {
-        const embed=ytEmbedUrl(data.heroVideoUrl);
-        host.innerHTML=embed
-          ? `<div class="hero-media"><iframe src="${embed}" style="width:100%;aspect-ratio:16/10;border:0;" allow="autoplay;encrypted-media" allowfullscreen></iframe></div>`
-          : `<div class="hero-media"><video src="${esc(data.heroVideoUrl)}" autoplay muted loop playsinline controls></video></div>`;
+      const embed=!data.heroVideoDataUrl ? ytEmbedUrl(data.heroVideoUrl) : null;
+      if(embed){
+        // hosted platforms manage their own play button
+        host.innerHTML=`<div class="hero-media"><iframe src="${embed}" style="width:100%;aspect-ratio:16/10;border:0;" allow="encrypted-media;fullscreen" allowfullscreen></iframe></div>`;
+        return;
       }
+      const src=data.heroVideoDataUrl||esc(data.heroVideoUrl);
+      host.innerHTML=`<div class="hero-media">
+        <video id="hero-video" src="${src}" playsinline preload="metadata"></video>
+        <div class="video-cover" id="video-cover">
+          <div class="play-btn">${PLAY_ICON}</div>
+          <span>${esc(data.heroVideoCaption||'Watch our film')}</span>
+        </div>
+        <button class="video-replay" id="video-replay">${PLAY_ICON} Play again</button>
+      </div>`;
+      const vid=document.getElementById('hero-video');
+      const cover=document.getElementById('video-cover');
+      const replay=document.getElementById('video-replay');
+      cover.addEventListener('click',()=>{
+        cover.classList.add('hidden');
+        replay.classList.remove('show');
+        vid.controls=true; vid.currentTime=0; vid.play();
+      });
+      vid.addEventListener('ended',()=>{ replay.classList.add('show'); });
+      replay.addEventListener('click',()=>{
+        replay.classList.remove('show'); vid.currentTime=0; vid.play();
+      });
     } else if(data.heroVisual==='signature' && data.heroSignatureImg){
       host.innerHTML=`<div class="hero-sig-frame"><img src="${data.heroSignatureImg}" alt="${esc(data.brandName)}"></div>`;
     } else {
@@ -1072,7 +1193,7 @@
     document.getElementById('chat-fab').style.display=data.chatEnabled?'':'none';
     setText('chat-fab-label',data.botLauncher); setText('chat-bot-name',data.botName);
     setText('chat-avatar',(data.botName||'A').trim().charAt(0).toUpperCase());
-    renderChips(); renderNav();
+    renderChips(); renderNav(); renderSocial(); renderMap();
     document.title=data.brandName+" — Precision Manufacturing";
   }
 
@@ -1375,7 +1496,8 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     'heroEyebrow','heroHeadline','heroSub','ctaPrimary','ctaSecondary','heroVideoUrl','capTitle','capMenu','processTitle','processMenu',
     'galleryTitle','galleryMenu','industriesTitle','industriesMenu','certsTitle','certsMenu','certsSub','foundersTitle','foundersMenu',
     'botName','botLauncher','botWelcome','botKnowledge','botEndpoint','notifyEmail','notifyWhatsapp','siteUrl','quoteSender','currency',
-    'quoteText','quoteName','quoteRole','contactTitle','contactSub','contactAddress','contactPhone','contactEmail'];
+    'quoteText','quoteName','quoteRole','contactTitle','contactSub','contactAddress','contactPhone','contactEmail',
+    'mapEmbed','mapLink','heroVideoCaption'];
   const RANGES=[['fontBase','px'],['titleScale','×'],['gutter','px'],['sectionPad','px'],['cardMin','px'],
     ['mediaH','px'],['portraitH','px'],['cardGap','px'],['cardPad','px'],['radius','px'],['barHeight','px'],['logoMax','px']];
   function syncRanges(){RANGES.forEach(([k,u])=>{const rg=document.getElementById('rg-'+k),v=document.getElementById('v-'+k);
@@ -1424,6 +1546,11 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     singleImageField('hero-upload-wrap','heroBannerDataUrl');
     singleImageField('hero-sig-upload-wrap','heroSignatureImg');
     document.getElementById('in-heroVisual').value=data.heroVisual;
+    document.getElementById('showmap-switch').classList.toggle('on',data.showMap!==false);
+    Object.keys(SOCIAL_ICONS).forEach(k=>{
+      const el=document.getElementById('in-soc-'+k);
+      if(el) el.value=(data.social||{})[k]||'';
+    });
     toggleHeroVisualFields();
     renderHeroVideoUpload();
     updateSizeReadout();
@@ -1431,6 +1558,15 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
 
     document.getElementById('in-heroVisual').addEventListener('change',function(){
       data.heroVisual=this.value; toggleHeroVisualFields(); render(); markDirty();
+    });
+    Object.keys(SOCIAL_ICONS).forEach(k=>{
+      const el=document.getElementById('in-soc-'+k); if(!el) return;
+      el.addEventListener('input',()=>{
+        data.social=data.social||{}; data.social[k]=el.value; renderSocial(); markDirty();
+      });
+    });
+    document.getElementById('showmap-switch').addEventListener('click',function(){
+      data.showMap=data.showMap===false; this.classList.toggle('on',data.showMap!==false); renderMap(); markDirty();
     });
 
     setupList('list-capabilities','add-capabilities','capabilities',

@@ -1497,10 +1497,10 @@
       const j=await (await fetch(API+'/api/ai')).json();
       if(j.configured){
         el.className='ai-status on';
-        el.textContent='AI features are active — drawing reading and quote drafting are available.';
+        el.textContent='AI features are active'+(j.provider?' — using '+(j.provider==='gemini'?'Google Gemini (free tier)':'Anthropic Claude'):'')+'. Drawing reading and cost planning are available.';
       } else {
         el.className='ai-status off';
-        el.innerHTML='<b>AI features are switched off.</b> To turn them on, add an <code>ANTHROPIC_API_KEY</code> setting in Vercel and redeploy. Everything else works normally without it.';
+        el.innerHTML='<b>AI features are switched off.</b> Add a <code>GEMINI_API_KEY</code> setting in Vercel (Google\'s free tier) and redeploy. Everything else works normally without it.';
       }
     }catch(e){ el.className=''; el.textContent=''; }
   }
@@ -1633,7 +1633,7 @@ Reply with ONLY a JSON object, no commentary and no code fences:
     let text;
     try{ text=await callAI(EXTRACT_PROMPT,{attachment:att,maxTokens:3000,surfaceError:true}); }
     catch(e){ return {error:e.message}; }
-    if(!text) return {error:'The AI did not return a reading. Check that ANTHROPIC_API_KEY is set in Vercel.'};
+    if(!text) return {error:'The AI did not return a reading. Check that GEMINI_API_KEY is set in Vercel.'};
 
     try{
       const clean=text.replace(/```json|```/g,'').trim();
@@ -1829,7 +1829,7 @@ Reply with ONLY this JSON, no commentary or code fences:
     let text;
     try{ text=await callAI(ROUTE_PROMPT(r,r.extract,qty),{maxTokens:3000,surfaceError:true}); }
     catch(e){ return {error:e.message}; }
-    if(!text) return {error:'No response from AI. Check ANTHROPIC_API_KEY in Vercel.'};
+    if(!text) return {error:'No response from AI. Check GEMINI_API_KEY in Vercel.'};
 
     let p;
     try{

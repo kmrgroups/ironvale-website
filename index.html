@@ -353,7 +353,48 @@
   .mini-btn.ai{background:linear-gradient(160deg,var(--chat-a),var(--chat-b));color:#fff;border-color:transparent;font-weight:600;}
   .mini-btn.green{background:var(--ok);color:#fff;border-color:transparent;font-weight:600;}
   .quote-editor textarea{width:100%;min-height:220px;font-family:var(--mono);font-size:var(--fs-micro);line-height:1.7;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px;color:var(--navy);resize:vertical;margin-top:12px;}
+  .rate-t{width:100%;border-collapse:collapse;font-size:var(--fs-micro);background:var(--white);
+    border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+  .rate-t th{background:var(--navy);color:#fff;text-align:left;font-family:var(--mono);font-size:9px;
+    letter-spacing:.06em;text-transform:uppercase;padding:7px 8px;font-weight:500;}
+  .rate-t td{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--ink-mid);}
+  .rate-t td.r,.rate-t th.r{text-align:right;font-family:var(--mono);}
+  .rate-t tr:last-child td{border-bottom:none;}
+  .rate-t b{color:var(--navy);}
+  .rate-note{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-mid);
+    background:var(--sky-wash);border-radius:6px;padding:10px 12px;margin-bottom:12px;line-height:1.7;}
+  .rate-note b{color:var(--navy);}
+  .mini-rate{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ok);font-weight:600;
+    background:#E6F7F0;border-radius:100px;padding:5px 12px;display:inline-block;margin-top:4px;}
+  .src-tag{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:100px;letter-spacing:.05em;
+    text-transform:uppercase;font-weight:600;background:#EEF1F6;color:var(--ink-mid);display:inline-block;}
+  .src-tag.verified{background:#E6F7F0;color:var(--ok);}
+  .src-tag.ai{background:#F3EDFF;color:#5B2BB8;}
   .qb{margin-top:14px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px;background:var(--paper);}
+  .dx{margin-top:14px;border:1px solid var(--line);border-left:4px solid var(--chat-a);border-radius:var(--radius-sm);padding:16px;background:#FAF9FE;}
+  .dx-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .dx-head b{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--chat-b);}
+  .dx-err{color:#B03A2E;font-size:var(--fs-micro);line-height:1.7;font-family:var(--mono);}
+  .dx-part{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line);}
+  .dx-part span{font-size:var(--fs-micro);color:var(--navy);font-weight:600;}
+  .dx-part i{display:block;font-style:normal;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--ink-soft);font-weight:400;margin-bottom:2px;}
+  .dx-t{width:100%;border-collapse:collapse;font-size:var(--fs-micro);}
+  .dx-t th{text-align:left;font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-soft);padding:5px 6px;border-bottom:1px solid var(--line);font-weight:500;}
+  .dx-t td{padding:6px;border-bottom:1px solid rgba(11,42,91,.06);vertical-align:top;color:var(--ink-mid);}
+  .dx-cat{font-weight:600;color:var(--navy);white-space:nowrap;}
+  .dx-src{font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);}
+  .cf{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:100px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;}
+  .cf-hi{background:#E6F7F0;color:var(--ok);} .cf-md{background:#FFF6E0;color:var(--gold-deep);} .cf-lo{background:#FDECEA;color:#B03A2E;}
+  .dx-crit{margin-top:12px;font-size:var(--fs-micro);color:var(--navy);}
+  .dx-missing{margin-top:12px;background:#FFF6E0;border:1px solid rgba(194,147,46,.35);border-radius:6px;
+    padding:11px 13px;font-size:var(--fs-micro);color:var(--gold-deep);line-height:1.7;}
+  .dx-missing ul{margin:6px 0 0 16px;} .dx-missing li{margin-bottom:2px;}
+  .dx-notes{margin-top:10px;font-size:var(--fs-micro);color:var(--ink-mid);font-style:italic;}
+  .ai-status{font-family:var(--mono);font-size:var(--fs-micro);padding:10px 13px;border-radius:6px;margin-bottom:16px;line-height:1.7;}
+  .ai-status.off{background:#FFF6E0;border:1px solid rgba(194,147,46,.4);color:var(--gold-deep);}
+  .ai-status.on{background:#E6F7F0;border:1px solid rgba(31,157,107,.3);color:var(--ok);}
   .qb h4{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--gold-deep);margin-bottom:12px;}
   .qb-items{width:100%;border-collapse:collapse;font-size:var(--fs-micro);}
   .qb-items th{text-align:left;font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);
@@ -537,7 +578,7 @@
       <label>Contact Number</label><input type="tel" id="rfq-phone" placeholder="+91 90000 00000">
       <label>Project Details</label><textarea id="rfq-message" placeholder="Material, quantity, target tolerance, timeline..."></textarea>
       <label>Upload Drawing / Spec (optional)</label><input type="file" id="rfq-file" accept=".pdf,.jpg,.jpeg,.png,.dwg,.step,.stp,.zip">
-      <div class="rfq-note">Files under ~1.5MB attach to your request.</div>
+      <div class="rfq-note">Drawings up to 3MB. PDF and image drawings can be read automatically by our system.</div>
       <button type="submit" class="btn btn-gold" id="rfq-submit">Submit RFQ</button>
       <div class="rfq-thanks" id="rfq-thanks"><strong id="rfq-ref-out">REF</strong>
         <span class="t-body">Save this reference — you can check progress in “Track your RFQ” below.</span></div>
@@ -619,6 +660,7 @@
     </div>
   </div>
   <div class="staff-body">
+    <div id="ai-status"></div>
     <div class="kpi-row" id="kpi-row"></div>
     <div id="rfq-list"></div>
   </div>
@@ -651,6 +693,10 @@
     <button class="admin-tab" data-tab="social">Social &amp; Map</button>
     <button class="admin-tab" data-tab="company">Company Profile</button>
     <button class="admin-tab" data-tab="quotecfg">Quotation Setup</button>
+    <button class="admin-tab" data-tab="costbase">Cost Base</button>
+    <button class="admin-tab" data-tab="machines">Machines</button>
+    <button class="admin-tab" data-tab="labour">Labour</button>
+    <button class="admin-tab" data-tab="materials">Materials</button>
     <button class="admin-tab" data-tab="notify">Notifications</button>
     <button class="admin-tab" data-tab="security">Password</button>
     <button class="admin-tab" data-tab="sections">Sections</button>
@@ -857,6 +903,48 @@
       <div class="field"><label>Company Seal</label><div class="img-upload" id="co-seal-wrap"></div></div>
     </div>
 
+    <div class="admin-group" data-group="costbase">
+      <div class="info-box">These figures drive every machine hour rate. The values below are worked examples — replace them with your own and every rate recalculates.</div>
+      <div class="field"><label>Working Days per Year</label><input type="text" id="in-cb-workingDays"></div>
+      <div class="field"><label>Shifts per Day</label><input type="text" id="in-cb-shiftsPerDay"></div>
+      <div class="field"><label>Hours per Shift</label><input type="text" id="in-cb-hoursPerShift"></div>
+      <div class="field"><label>Planned Downtime %</label><input type="text" id="in-cb-downtimePct">
+        <div class="field-hint">Maintenance, setup and breakdown. Matters a lot — take care with this one.</div></div>
+      <div class="field"><label>Electricity Tariff (per kWh)</label><input type="text" id="in-cb-powerTariff"></div>
+      <div class="field"><label>Factory Rent per Month</label><input type="text" id="in-cb-factoryRent">
+        <div class="field-hint">Use a notional rent if you own the premises.</div></div>
+      <div class="field"><label>Total Factory Area (sq ft)</label><input type="text" id="in-cb-factoryArea"></div>
+      <div class="field"><label>Factory Overhead per Month</label><input type="text" id="in-cb-factoryOverhead">
+        <div class="field-hint">Supervision, indirect staff, plant consumables, plant admin.</div></div>
+      <div class="field"><label>Administrative Overhead %</label><input type="text" id="in-cb-adminPct"></div>
+      <div class="field"><label>Finance Cost %</label><input type="text" id="in-cb-financePct"></div>
+      <div class="field"><label>Scrap / Rejection %</label><input type="text" id="in-cb-scrapPct"></div>
+      <div class="field"><label>Contingency %</label><input type="text" id="in-cb-contingencyPct"></div>
+      <div class="field"><label>Target Profit Margin %</label><input type="text" id="in-cb-profitPct"></div>
+
+      <div class="field" style="margin-top:26px;"><label>Calculated Rates</label>
+        <div class="field-hint" style="margin-top:0;margin-bottom:10px;">Live result of everything above. Nothing here is estimated by AI.</div></div>
+      <div id="rate-summary"></div>
+    </div>
+
+    <div class="admin-group" data-group="machines">
+      <div class="info-box">Each machine's hour rate is calculated from these figures plus the Cost Base. Rough estimates for salvage value and load factor are fine — they barely move the result.</div>
+      <div id="list-machines"></div>
+      <button type="button" class="add-btn" id="add-machines">+ Add Machine</button>
+    </div>
+
+    <div class="admin-group" data-group="labour">
+      <div class="info-box">Man hour rate = monthly wage × (1 + statutory %) ÷ (paid days × hours per day).</div>
+      <div id="list-labourGrades"></div>
+      <button type="button" class="add-btn" id="add-labourGrades">+ Add Labour Grade</button>
+    </div>
+
+    <div class="admin-group" data-group="materials">
+      <div class="info-box">Your approved material price book. Use <b>Look up current price</b> to have AI search published market prices — it returns the figure with its source and date for you to review before accepting. Prices you have not verified stay marked as such.</div>
+      <div id="list-materials"></div>
+      <button type="button" class="add-btn" id="add-materials">+ Add Material</button>
+    </div>
+
     <div class="admin-group" data-group="quotecfg">
       <div class="info-box">Controls how quotation documents are numbered, priced and worded.</div>
       <div class="field"><label>Quotation Prefix</label><input type="text" id="in-qc-prefix" placeholder="QTN"></div>
@@ -939,6 +1027,38 @@
     heroVisual:"orb",heroVideoDataUrl:"",heroVideoUrl:"",heroSignatureImg:"",heroVideoCaption:"Watch our film",
     social:{youtube:"",instagram:"",facebook:"",linkedin:"",twitter:"",whatsapp:""},
     mapEmbed:"",mapLink:"",showMap:true,
+
+    /* ---- COSTING BASE (edit these with your real figures) ---- */
+    costBase:{
+      workingDays:300, shiftsPerDay:2, hoursPerShift:8, downtimePct:15,
+      powerTariff:8.50, factoryRent:150000, factoryArea:5000,
+      factoryOverhead:400000, adminPct:8, financePct:3, profitPct:15,
+      scrapPct:2, contingencyPct:3
+    },
+    machines:[
+      {id:"m1",name:"VMC-01 (Haas VF-2)",type:"VMC",cost:4500000,lifeYears:10,salvage:400000,
+       kw:15,loadFactor:60,area:120,maintenance:120000,operators:1},
+      {id:"m2",name:"CNC-TURN-01",type:"CNC Turning",cost:2800000,lifeYears:10,salvage:250000,
+       kw:11,loadFactor:60,area:90,maintenance:90000,operators:1},
+      {id:"m3",name:"CYL-GRIND-01",type:"Cylindrical Grinding",cost:1800000,lifeYears:12,salvage:150000,
+       kw:7.5,loadFactor:55,area:80,maintenance:70000,operators:1}
+    ],
+    labourGrades:[
+      {id:"l1",grade:"CNC Operator",wage:28000,statutoryPct:22,paidDays:26,hoursPerDay:8},
+      {id:"l2",grade:"Setter",wage:36000,statutoryPct:22,paidDays:26,hoursPerDay:8},
+      {id:"l3",grade:"Inspector",wage:32000,statutoryPct:22,paidDays:26,hoursPerDay:8},
+      {id:"l4",grade:"Helper",wage:18000,statutoryPct:22,paidDays:26,hoursPerDay:8}
+    ],
+    materials:[
+      {id:"mt1",name:"EN8 Bright Bar",grade:"EN8 / C45",rate:85,unit:"kg",density:7.85,
+       source:"",sourceDate:"",confidence:"Manual"},
+      {id:"mt2",name:"EN24 Alloy Steel",grade:"EN24 / 817M40",rate:145,unit:"kg",density:7.85,
+       source:"",sourceDate:"",confidence:"Manual"},
+      {id:"mt3",name:"Aluminium 6061",grade:"6061-T6",rate:310,unit:"kg",density:2.70,
+       source:"",sourceDate:"",confidence:"Manual"},
+      {id:"mt4",name:"SS 304",grade:"AISI 304",rate:290,unit:"kg",density:8.00,
+       source:"",sourceDate:"",confidence:"Manual"}
+    ],
 
     /* ---- COMPANY PROFILE (drives every generated document) ---- */
     company:{
@@ -1091,6 +1211,10 @@
         data.social=Object.assign({},DEFAULTS.social,j.data.social||{});
         data.company=Object.assign({},DEFAULTS.company,j.data.company||{});
         data.quoteCfg=Object.assign({},DEFAULTS.quoteCfg,j.data.quoteCfg||{});
+        data.costBase=Object.assign({},DEFAULTS.costBase,j.data.costBase||{});
+        data.machines=j.data.machines||DEFAULTS.machines;
+        data.labourGrades=j.data.labourGrades||DEFAULTS.labourGrades;
+        data.materials=j.data.materials||DEFAULTS.materials;
         data.sections=Object.assign({},DEFAULTS.sections,j.data.sections||{});
       }
       if(j.updatedAt) setText('content-stamp','Content updated '+new Date(j.updatedAt).toLocaleDateString());
@@ -1340,6 +1464,19 @@
   }
 
   /* ---------- STAFF ---------- */
+  async function checkAi(){
+    const el=document.getElementById('ai-status'); if(!el) return;
+    try{
+      const j=await (await fetch(API+'/api/ai')).json();
+      if(j.configured){
+        el.className='ai-status on';
+        el.textContent='AI features are active — drawing reading and quote drafting are available.';
+      } else {
+        el.className='ai-status off';
+        el.innerHTML='<b>AI features are switched off.</b> To turn them on, add an <code>ANTHROPIC_API_KEY</code> setting in Vercel and redeploy. Everything else works normally without it.';
+      }
+    }catch(e){ el.className=''; el.textContent=''; }
+  }
   async function loadRfqs(){
     try{ const j=await api('/api/rfqs'); rfqs=j.rfqs||[]; }
     catch(e){ rfqs=[]; toast('Could not load RFQs: '+e.message); }
@@ -1347,6 +1484,205 @@
   }
   const waLink=(n,t)=>`https://wa.me/${String(n||'').replace(/\D/g,'')}?text=${encodeURIComponent(t)}`;
   const mailLink=(to,s,b)=>`mailto:${encodeURIComponent(to||'')}?subject=${encodeURIComponent(s)}&body=${encodeURIComponent(b)}`;
+  /* ================= RATE CALCULATION ENGINE =================
+     Machine hour rates are computed from your own figures — never guessed.
+     Change any input and every rate recalculates. */
+  const CB=()=>data.costBase||{};
+  const num=v=>{const n=parseFloat(v);return isNaN(n)?0:n;};
+
+  function availableHours(){
+    const b=CB();
+    const gross=num(b.workingDays)*num(b.shiftsPerDay)*num(b.hoursPerShift);
+    return gross*(1-num(b.downtimePct)/100);
+  }
+  function totalMachineHours(){
+    return availableHours()*Math.max(1,(data.machines||[]).length);
+  }
+  function machineRate(m){
+    const b=CB(), hrs=availableHours();
+    if(hrs<=0) return {total:0,parts:{},error:'Set working days, shifts and hours first.'};
+    const dep=(num(m.cost)-num(m.salvage))/Math.max(1,num(m.lifeYears))/hrs;
+    const power=num(m.kw)*(num(m.loadFactor)/100)*num(b.powerTariff);
+    const maint=num(m.maintenance)/hrs;
+    const rentPerSqFtMonth=num(b.factoryArea)>0?num(b.factoryRent)/num(b.factoryArea):0;
+    const space=rentPerSqFtMonth*num(m.area)*12/hrs;
+    const oh=totalMachineHours()>0?(num(b.factoryOverhead)*12)/totalMachineHours():0;
+    const parts={depreciation:dep,power,maintenance:maint,space,overhead:oh};
+    return {total:dep+power+maint+space+oh,parts};
+  }
+  function labourRate(l){
+    const hrs=Math.max(1,num(l.paidDays)*num(l.hoursPerDay));
+    return num(l.wage)*(1+num(l.statutoryPct)/100)/hrs;
+  }
+  function defaultLabourRate(){
+    const g=(data.labourGrades||[]).find(x=>/operator/i.test(x.grade))||(data.labourGrades||[])[0];
+    return g?labourRate(g):0;
+  }
+  const rupee=n=>(QC().currencySymbol||'₹')+num(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  function renderRateSummary(){
+    const el=document.getElementById('rate-summary'); if(!el) return;
+    const hrs=availableHours();
+    const rows=(data.machines||[]).map(m=>{
+      const r=machineRate(m);
+      return `<tr><td>${esc(m.name)}</td>
+        <td class="r">${rupee(r.parts.depreciation)}</td>
+        <td class="r">${rupee(r.parts.power)}</td>
+        <td class="r">${rupee(r.parts.maintenance)}</td>
+        <td class="r">${rupee(r.parts.space)}</td>
+        <td class="r">${rupee(r.parts.overhead)}</td>
+        <td class="r"><b>${rupee(r.total)}</b></td></tr>`;
+    }).join('');
+    const lrows=(data.labourGrades||[]).map(l=>
+      `<tr><td>${esc(l.grade)}</td><td class="r"><b>${rupee(labourRate(l))}</b></td></tr>`).join('');
+    el.innerHTML=`
+      <div class="rate-note">Available hours per machine per year: <b>${hrs.toLocaleString(undefined,{maximumFractionDigits:0})}</b>
+      &nbsp;=&nbsp; ${num(CB().workingDays)} days × ${num(CB().shiftsPerDay)} shifts × ${num(CB().hoursPerShift)} hrs
+      × (100 − ${num(CB().downtimePct)}% downtime)</div>
+      <table class="rate-t"><thead><tr><th>Machine</th><th class="r">Deprec.</th><th class="r">Power</th>
+      <th class="r">Maint.</th><th class="r">Space</th><th class="r">O/head</th><th class="r">Rate/hr</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="7" class="t-micro">No machines added.</td></tr>'}</tbody></table>
+      <table class="rate-t" style="margin-top:14px;"><thead><tr><th>Labour Grade</th><th class="r">Rate/hr</th></tr></thead>
+      <tbody>${lrows||'<tr><td colspan="2" class="t-micro">No grades added.</td></tr>'}</tbody></table>`;
+  }
+
+  /* ================= DRAWING READING ENGINE =================
+     Reads a PDF or photographed drawing and extracts customer requirements.
+     Every extracted line carries its source and a confidence rating, and
+     anything not found is listed as missing rather than guessed. */
+  const READABLE=/^(application\/pdf|image\/(jpeg|jpg|png|gif|webp))$/i;
+  const CAD_EXT=/\.(step|stp|iges|igs|dwg|dxf|x_t|sldprt|ipt|catpart|prt)$/i;
+
+  function attachmentFrom(dataUrl){
+    const m=String(dataUrl||'').match(/^data:([^;,]+);base64,(.+)$/);
+    return m?{mime:m[1],b64:m[2]}:null;
+  }
+  async function fetchAttachment(r){
+    // attachments may be stored inline or as a link to separate storage
+    const src=r.fileDataUrl||'';
+    if(!src) return null;
+    if(src.startsWith('data:')) return attachmentFrom(src);
+    try{
+      const res=await fetch(src);
+      const blob=await res.blob();
+      const dataUrl=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(blob);});
+      return attachmentFrom(dataUrl);
+    }catch(e){ return null; }
+  }
+
+  const EXTRACT_PROMPT=`You are a manufacturing estimator reading a customer's engineering drawing.
+
+Extract every requirement you can actually SEE. Inspect the title block, all views,
+section and detail views, dimension callouts, tolerance frames, general notes,
+revision table and any parts list.
+
+RULES — these matter more than completeness:
+- Never guess. If something is not visible or legible, do not invent it.
+- Record exactly what is written, including units and symbols.
+- For each item give the source (e.g. "title block", "general note 3", "dimension callout", "GD&T frame").
+- Give confidence as one of: High, Medium, Low.
+- Anything a quotation would normally need but which is absent goes in "missing".
+
+Reply with ONLY a JSON object, no commentary and no code fences:
+{
+ "part": {"number":"","name":"","drawingNumber":"","revision":""},
+ "requirements":[
+   {"category":"Material|Dimension|Tolerance|GD&T|Surface Finish|Heat Treatment|Surface Treatment|Thread|Quantity|Packaging|Quality|Other",
+    "requirement":"", "source":"", "confidence":"High|Medium|Low"}
+ ],
+ "criticalCharacteristics":[""],
+ "missing":[""],
+ "notes":""
+}`;
+
+  async function readDrawing(r){
+    if(r.fileName && CAD_EXT.test(r.fileName)){
+      return {error:`${r.fileName} is a 3D CAD file. Reading geometry from CAD needs specialist software, so this cannot be analysed here. Ask the customer for a PDF drawing instead.`};
+    }
+    const att=await fetchAttachment(r);
+    if(!att) return {error:'No readable attachment found on this RFQ.'};
+    if(!READABLE.test(att.mime)) return {error:`This file type (${att.mime}) cannot be read. Only PDF and image drawings can be analysed.`};
+
+    let text;
+    try{ text=await callAI(EXTRACT_PROMPT,{attachment:att,maxTokens:3000,surfaceError:true}); }
+    catch(e){ return {error:e.message}; }
+    if(!text) return {error:'The AI did not return a reading. Check that ANTHROPIC_API_KEY is set in Vercel.'};
+
+    try{
+      const clean=text.replace(/```json|```/g,'').trim();
+      const parsed=JSON.parse(clean.slice(clean.indexOf('{'),clean.lastIndexOf('}')+1));
+      parsed.readAt=new Date().toLocaleString();
+      return parsed;
+    }catch(e){ return {error:'Could not understand the AI response.',raw:text}; }
+  }
+
+  const CONF_CLASS=c=>/high/i.test(c)?'cf-hi':/med/i.test(c)?'cf-md':'cf-lo';
+
+  function extractHtml(r,i){
+    const x=r.extract;
+    if(!x) return `<div class="rfq-actions">
+      <button class="mini-btn ai" data-act="read" data-i="${i}">Read drawing with AI</button>
+      ${!r.fileName?`<span class="t-micro" style="align-self:center;">No attachment on this RFQ</span>`:''}</div>`;
+    if(x.error) return `<div class="dx"><div class="dx-err">${esc(x.error)}</div>
+      <div class="rfq-actions"><button class="mini-btn ai" data-act="read" data-i="${i}">Try again</button></div></div>`;
+
+    const p=x.part||{};
+    const rows=(x.requirements||[]).map(q=>`<tr>
+      <td class="dx-cat">${esc(q.category)}</td><td>${esc(q.requirement)}</td>
+      <td class="dx-src">${esc(q.source)}</td>
+      <td><span class="cf ${CONF_CLASS(q.confidence)}">${esc(q.confidence)}</span></td></tr>`).join('')
+      || `<tr><td colspan="4" class="t-micro">Nothing could be read from this drawing.</td></tr>`;
+
+    return `<div class="dx">
+      <div class="dx-head">
+        <b>Drawing reading</b>
+        <span class="t-micro">${esc(x.readAt||'')}</span>
+      </div>
+      ${(p.number||p.name||p.drawingNumber)?`<div class="dx-part">
+        ${p.number?`<span><i>Part No</i>${esc(p.number)}</span>`:''}
+        ${p.name?`<span><i>Name</i>${esc(p.name)}</span>`:''}
+        ${p.drawingNumber?`<span><i>Drawing</i>${esc(p.drawingNumber)}</span>`:''}
+        ${p.revision?`<span><i>Rev</i>${esc(p.revision)}</span>`:''}</div>`:''}
+      <table class="dx-t"><thead><tr><th>Category</th><th>Requirement</th><th>Source</th><th>Conf.</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      ${(x.criticalCharacteristics||[]).filter(Boolean).length?`<div class="dx-crit"><b>Critical characteristics:</b>
+        ${x.criticalCharacteristics.filter(Boolean).map(esc).join(' · ')}</div>`:''}
+      ${(x.missing||[]).filter(Boolean).length?`<div class="dx-missing"><b>Not found on the drawing — needs clarification:</b>
+        <ul>${x.missing.filter(Boolean).map(m=>`<li>${esc(m)}</li>`).join('')}</ul></div>`:''}
+      ${x.notes?`<div class="dx-notes">${esc(x.notes)}</div>`:''}
+      <div class="rfq-actions">
+        <button class="mini-btn" data-act="toquote" data-i="${i}">Use as quotation line</button>
+        ${(x.missing||[]).filter(Boolean).length?`<button class="mini-btn" data-act="clarify" data-i="${i}">Draft clarification email</button>`:''}
+        <button class="mini-btn ai" data-act="read" data-i="${i}">Re-read</button>
+      </div></div>`;
+  }
+
+  function extractSummaryLine(x){
+    const p=x.part||{};
+    const mat=(x.requirements||[]).find(q=>/material/i.test(q.category));
+    const bits=[p.name||p.number||'Component',
+      p.number&&p.name?`Part No ${p.number}`:'',
+      p.drawingNumber?`Dwg ${p.drawingNumber}${p.revision?' Rev '+p.revision:''}`:'',
+      mat?mat.requirement:''].filter(Boolean);
+    return bits.join(' · ');
+  }
+
+  async function draftClarification(r){
+    const x=r.extract||{};
+    const c=CO();
+    const prompt=`Write a short, courteous clarification email from a precision manufacturing supplier to a customer.
+The supplier has reviewed the drawing but needs the following before quoting:
+${(x.missing||[]).map(m=>'- '+m).join('\n')}
+
+Context: enquiry reference ${r.ref}, customer contact ${r.name}${r.company?' at '+r.company:''}.
+Part: ${extractSummaryLine(x)||'as per drawing'}.
+
+Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.quoteSender||'Sales Team'}, ${c.legalName||c.displayName||data.brandName}. Return only the email body.`;
+    const out=await callAI(prompt,{maxTokens:700});
+    return out||`Dear ${r.name},\n\nThank you for enquiry ${r.ref}. Before we can quote, could you please confirm:\n\n${(x.missing||[]).map(m=>'• '+m).join('\n')}\n\nOnce received we will revert with our quotation.\n\nRegards,\n${data.quoteSender||'Sales Team'}\n${c.legalName||data.brandName}`;
+  }
+
+
   /* ================= QUOTATION DOCUMENT ENGINE ================= */
   const CO=()=>data.company||{}, QC=()=>data.quoteCfg||{};
   const money=n=>{
@@ -1585,6 +1921,7 @@
         <div class="rfq-actions">
           <button class="mini-btn ai" data-act="gen" data-i="${i}">${r.quote?'Regenerate quote':'AI draft quote'}</button>
         </div>
+        ${extractHtml(r,i)}
         ${r.quote?`<div class="quote-editor"><textarea class="quote-text" data-i="${i}">${esc(r.quote)}</textarea></div>`:''}
         ${(()=>{const q=r.quoteDoc; if(!q) return '';
           const t=quoteTotals(q);
@@ -1652,6 +1989,41 @@
         ${QC().showTax?`<div><span>${esc(QC().taxLabel||'Tax')} @ ${t.taxPct}%</span><span>${money(t.tax)}</span></div>`:''}
         <div class="grand"><span>Total</span><span>${money(t.grand)}</span></div>`;
     }
+    host.querySelectorAll('[data-act="read"]').forEach(b=>b.addEventListener('click',async()=>{
+      const idx=+b.dataset.i, r=rfqs[idx];
+      b.textContent='Reading drawing…'; b.disabled=true;
+      const x=await readDrawing(r);
+      const log=[`${new Date().toLocaleString()} — drawing read${x.error?' failed':''}`].concat(r.log||[]);
+      const u=await patch(r.ref,{extract:x,log});
+      if(u) rfqs[idx]=u; else { r.extract=x; }
+      renderRfqAdmin();
+    }));
+    host.querySelectorAll('[data-act="toquote"]').forEach(b=>b.addEventListener('click',async()=>{
+      const idx=+b.dataset.i, r=rfqs[idx];
+      const desc=extractSummaryLine(r.extract||{});
+      const qty=((r.extract.requirements||[]).find(q=>/quantity/i.test(q.category))||{}).requirement||'';
+      if(!r.quoteDoc){
+        const doc=blankQuoteDoc(r);
+        doc.number=nextQuoteNumber();
+        doc.items=[{desc,qty:(String(qty).match(/\d[\d,]*/)||[''])[0].replace(/,/g,''),unit:'nos',rate:''}];
+        data.quoteCfg.nextSeq=(parseInt(data.quoteCfg.nextSeq,10)||1)+1;
+        if(token){ try{ await api('/api/content',{method:'POST',body:JSON.stringify({data})}); }catch(e){} }
+        const u=await patch(r.ref,{quoteDoc:doc,status:'Quote Drafted'});
+        if(u) rfqs[idx]=u;
+      } else {
+        r.quoteDoc.items.push({desc,qty:(String(qty).match(/\d[\d,]*/)||[''])[0].replace(/,/g,''),unit:'nos',rate:''});
+        const u=await patch(r.ref,{quoteDoc:r.quoteDoc});
+        if(u) rfqs[idx]=u;
+      }
+      renderRfqAdmin(); toast('Added to the quotation — enter the rate');
+    }));
+    host.querySelectorAll('[data-act="clarify"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      b.textContent='Drafting…'; b.disabled=true;
+      const body=await draftClarification(r);
+      b.textContent='Draft clarification email'; b.disabled=false;
+      window.location.href=mailLink(r.email,`Clarification required — ${r.ref}`,body);
+    }));
     host.querySelectorAll('.qb-add').forEach(b=>b.addEventListener('click',async()=>{
       const r=rfqs[+b.dataset.i];
       r.quoteDoc.items.push({desc:'',qty:'',unit:'nos',rate:''});
@@ -1715,17 +2087,34 @@
     if(data.botKnowledge)L.push('Additional notes: '+data.botKnowledge);
     return L.join('\n');
   }
-  async function callAI(prompt){
+  let aiReady=null;
+  async function callAI(prompt,opts={}){
+    // 1) this site's own AI endpoint (key stays on the server)
+    try{
+      const r=await fetch(API+'/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({prompt,attachment:opts.attachment,system:opts.system,maxTokens:opts.maxTokens})});
+      const j=await r.json();
+      if(j.ok&&j.text){ aiReady=true; return j.text; }
+      if(j.notConfigured){ aiReady=false; }
+      else if(j.error){ aiReady=false; if(opts.surfaceError) throw new Error(j.error); }
+    }catch(e){ if(opts.surfaceError) throw e; }
+    // 2) a custom backend, if one is configured
     if(data.botEndpoint){
-      const r=await fetch(data.botEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({message:prompt,context:siteContext()})});
-      const j=await r.json(); return j.reply||j.text||j.message||null;
+      try{
+        const r=await fetch(data.botEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({message:prompt,context:siteContext()})});
+        const j=await r.json(); const t=j.reply||j.text||j.message;
+        if(t) return t;
+      }catch(e){}
     }
-    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
-    const j=await r.json();
-    const out=(j.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('\n').trim();
-    return out||null;
+    // 3) direct call — works only inside a preview environment
+    try{
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:opts.maxTokens||1500,messages:[{role:"user",content:prompt}]})});
+      const j=await r.json();
+      const out=(j.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('\n').trim();
+      return out||null;
+    }catch(e){ return null; }
   }
   function fallbackQuote(r){
     return [`QUOTATION — DRAFT (requires review before sending)`,`Reference: ${r.ref}`,`Date: ${new Date().toLocaleDateString()}`,``,
@@ -1886,7 +2275,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     }).join('');
   }
   function wireItemEvents(el,items,redraw){
-    el.querySelectorAll(':scope > .list-item .li-in').forEach(i=>i.addEventListener('input',()=>{items[+i.dataset.idx][i.dataset.key]=i.value;render();markDirty();}));
+    el.querySelectorAll(':scope > .list-item .li-in').forEach(i=>i.addEventListener('input',()=>{items[+i.dataset.idx][i.dataset.key]=i.value;render();markDirty();renderRateSummary();}));
     el.querySelectorAll(':scope > .list-item .item-delete').forEach(b=>b.addEventListener('click',()=>{items.splice(+b.dataset.idx,1);redraw();render();markDirty();}));
     el.querySelectorAll(':scope > .list-item .li-img').forEach(i=>i.addEventListener('change',async e=>{
       const f=e.target.files[0]; if(!f)return;
@@ -2051,6 +2440,32 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     setupList('list-industries','add-industries','industries',[{key:'img',type:'image',label:'Photo'},{key:'label',type:'text',label:'Industry Name'}],{img:'',label:'New Industry'});
     setupList('list-certs','add-certs','certs',[{key:'img',type:'image',label:'Certificate Photo'},{key:'label',type:'text',label:'Name'},{key:'note',type:'text',label:'Short Note'}],{img:'',label:'New Certification',note:''});
     setupList('list-founders','add-founders','founders',[{key:'photo',type:'image',label:'Founder Photo'},{key:'name',type:'text',label:'Name'},{key:'role',type:'text',label:'Role'},{key:'bio',type:'textarea',label:'Bio'}],{photo:'',name:'New Founder',role:'Co-Founder',bio:''});
+
+    setupList('list-machines','add-machines','machines',
+      [{key:'name',type:'text',label:'Machine Name / ID'},{key:'type',type:'text',label:'Type'},
+       {key:'cost',type:'text',label:'Purchase Cost'},{key:'lifeYears',type:'text',label:'Expected Life (years)'},
+       {key:'salvage',type:'text',label:'Salvage Value'},{key:'kw',type:'text',label:'Connected Load (kW)'},
+       {key:'loadFactor',type:'text',label:'Average Load Factor %'},{key:'area',type:'text',label:'Floor Space (sq ft)'},
+       {key:'maintenance',type:'text',label:'Annual Maintenance Cost'},{key:'operators',type:'text',label:'Operators per Machine'}],
+      {name:'New Machine',type:'',cost:0,lifeYears:10,salvage:0,kw:0,loadFactor:60,area:0,maintenance:0,operators:1});
+    setupList('list-labourGrades','add-labourGrades','labourGrades',
+      [{key:'grade',type:'text',label:'Grade Name'},{key:'wage',type:'text',label:'Monthly Gross Wage'},
+       {key:'statutoryPct',type:'text',label:'Statutory Add-on %'},
+       {key:'paidDays',type:'text',label:'Paid Days per Month'},{key:'hoursPerDay',type:'text',label:'Working Hours per Day'}],
+      {grade:'New Grade',wage:0,statutoryPct:22,paidDays:26,hoursPerDay:8});
+    setupList('list-materials','add-materials','materials',
+      [{key:'name',type:'text',label:'Material Name'},{key:'grade',type:'text',label:'Grade / Standard'},
+       {key:'rate',type:'text',label:'Rate'},{key:'unit',type:'text',label:'Unit'},
+       {key:'density',type:'text',label:'Density (g/cc)'},
+       {key:'source',type:'text',label:'Price Source'},{key:'sourceDate',type:'text',label:'Price Date'}],
+      {name:'New Material',grade:'',rate:0,unit:'kg',density:7.85,source:'',sourceDate:'',confidence:'Manual'});
+
+    Object.keys(data.costBase).forEach(k=>{
+      const el=document.getElementById('in-cb-'+k); if(!el) return;
+      el.value=data.costBase[k];
+      el.addEventListener('input',()=>{ data.costBase[k]=parseFloat(el.value)||0; renderRateSummary(); markDirty(); });
+    });
+    renderRateSummary();
     renderCustomAdmin();
     document.getElementById('add-custom').addEventListener('click',()=>{
       const title='New Section '+(data.customSections.length+1);
@@ -2138,7 +2553,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   async function openTarget(t){
     if(t==='pipeline'){
       document.getElementById('staff-page').classList.add('open');
-      document.body.style.overflow='hidden'; await loadRfqs();
+      document.body.style.overflow='hidden'; await loadRfqs(); checkAi();
     } else { fillForm(); document.getElementById('admin-panel').classList.add('open'); }
   }
   async function doLogin(){
@@ -2270,8 +2685,8 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
         document.getElementById('rfq-thanks').style.display='block'; }
     };
     if(file){ base.fileName=file.name;
-      if(file.size<=1.5*1024*1024){const rd=new FileReader();rd.onload=()=>{base.fileDataUrl=rd.result;finish();};rd.readAsDataURL(file);}
-      else finish();
+      if(file.size<=3*1024*1024){const rd=new FileReader();rd.onload=()=>{base.fileDataUrl=rd.result;finish();};rd.readAsDataURL(file);}
+      else { toast('That file is over 3MB — please email it to us separately.'); finish(); }
     } else finish();
   });
 

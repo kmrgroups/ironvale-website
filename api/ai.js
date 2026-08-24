@@ -32,16 +32,31 @@ async function askGemini({ prompt, system, attachment, maxTokens }) {
   let lastError = 'No Gemini model responded.';
   for (const model of GEMINI_MODELS) {
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-      model + ':generateContent?key=' + encodeURIComponent(process.env.GEMINI_API_KEY.trim());
+      model + ':generateContent';
+    const key = process.env.GEMINI_API_KEY.trim();
 
+    // Header auth works for both the older AIza... keys and the newer AQ... keys.
     let r, j;
     try {
       r = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key
+        },
         body: JSON.stringify(body)
       });
       j = await r.json();
+
+      // Older keys occasionally need the query-string form instead.
+      if (!r.ok && /API key not valid|invalid authentication|unauthenticated/i.test(JSON.stringify(j))) {
+        r = await fetch(url + '?key=' + encodeURIComponent(key), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        j = await r.json();
+      }
     } catch (e) {
       lastError = e.message;
       continue;

@@ -6,7 +6,7 @@ import { cors, readBody } from './_db.js';
 // Tried in order. If Google retires one, the next is used automatically.
 const GEMINI_MODELS = process.env.GEMINI_MODEL
   ? [process.env.GEMINI_MODEL]
-  : ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'];
+  : ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.5-pro', 'gemini-3.6-flash'];
 const GEMINI_MODEL = GEMINI_MODELS[0];
 const CLAUDE_MODEL = process.env.AI_MODEL || 'claude-sonnet-4-6';
 
@@ -65,7 +65,7 @@ async function askGemini({ prompt, system, attachment, maxTokens }) {
     if (!r.ok) {
       lastError = (j.error && j.error.message) || ('Gemini request failed (' + r.status + ')');
       // a retired or unknown model: quietly try the next one
-      if (/not found|no longer available|not supported|unsupported/i.test(lastError)) {
+      if (/not found|no longer available|not supported|unsupported|denied access|permission|does not have access|not allowed/i.test(lastError)) {
         console.log('Gemini model ' + model + ' unavailable, trying next.');
         continue;
       }

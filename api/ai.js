@@ -3,7 +3,11 @@
 // The key stays on the server and is never sent to the browser.
 import { cors, readBody } from './_db.js';
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+// Tried in order. If Google retires one, the next is used automatically.
+const GEMINI_MODELS = process.env.GEMINI_MODEL
+  ? [process.env.GEMINI_MODEL]
+  : ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'];
+const GEMINI_MODEL = GEMINI_MODELS[0];
 const CLAUDE_MODEL = process.env.AI_MODEL || 'claude-sonnet-4-6';
 
 function provider() {
@@ -25,25 +29,43 @@ async function askGemini({ prompt, system, attachment, maxTokens }) {
   };
   if (system) body.systemInstruction = { parts: [{ text: system }] };
 
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-    GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(process.env.GEMINI_API_KEY.trim());
+  let lastError = 'No Gemini model responded.';
+  for (const model of GEMINI_MODELS) {
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
+      model + ':generateContent?key=' + encodeURIComponent(process.env.GEMINI_API_KEY.trim());
 
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  const j = await r.json();
-  if (!r.ok) {
-    return { ok: false, error: (j.error && j.error.message) || ('Gemini request failed (' + r.status + ')') };
+    let r, j;
+    try {
+      r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      j = await r.json();
+    } catch (e) {
+      lastError = e.message;
+      continue;
+    }
+
+    if (!r.ok) {
+      lastError = (j.error && j.error.message) || ('Gemini request failed (' + r.status + ')');
+      // a retired or unknown model: quietly try the next one
+      if (/not found|no longer available|not supported|unsupported/i.test(lastError)) {
+        console.log('Gemini model ' + model + ' unavailable, trying next.');
+        continue;
+      }
+      return { ok: false, error: lastError };
+    }
+
+    const cand = (j.candidates || [])[0];
+    const text = ((cand && cand.content && cand.content.parts) || [])
+      .map(function (p) { return p.text || ''; }).join('\n').trim();
+    if (!text && cand && cand.finishReason) {
+      return { ok: false, error: 'Gemini stopped early: ' + cand.finishReason };
+    }
+    return { ok: true, text: text, provider: 'gemini', model: model };
   }
-  const cand = (j.candidates || [])[0];
-  const text = ((cand && cand.content && cand.content.parts) || [])
-    .map(function (p) { return p.text || ''; }).join('\n').trim();
-  if (!text && cand && cand.finishReason) {
-    return { ok: false, error: 'Gemini stopped early: ' + cand.finishReason };
-  }
-  return { ok: true, text: text, provider: 'gemini', model: GEMINI_MODEL };
+  return { ok: false, error: lastError };
 }
 
 async function askAnthropic({ prompt, system, attachment, maxTokens }) {

@@ -353,6 +353,33 @@
   .mini-btn.ai{background:linear-gradient(160deg,var(--chat-a),var(--chat-b));color:#fff;border-color:transparent;font-weight:600;}
   .mini-btn.green{background:var(--ok);color:#fff;border-color:transparent;font-weight:600;}
   .quote-editor textarea{width:100%;min-height:220px;font-family:var(--mono);font-size:var(--fs-micro);line-height:1.7;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px;color:var(--navy);resize:vertical;margin-top:12px;}
+  .cs{margin-top:14px;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:var(--radius-sm);padding:16px;background:#FFFDF7;}
+  .cs-sub{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-deep);
+    font-weight:600;margin:14px 0 8px;padding-bottom:5px;border-bottom:1px solid rgba(194,147,46,.3);}
+  .cs-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .cs-row.four{grid-template-columns:repeat(4,1fr);}
+  .cs-row label{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px;}
+  .cs-row input{width:100%;border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:var(--fs-micro);
+    font-family:var(--body);color:var(--navy);background:var(--white);}
+  .cs-row input.num{text-align:right;font-family:var(--mono);}
+  .cs-row input:focus{outline:none;border-color:var(--gold);}
+  .cs-basis{font-size:9.5px;font-family:var(--mono);color:var(--ink-soft);margin-top:6px;font-style:italic;}
+  .cs-t{width:100%;border-collapse:collapse;font-size:var(--fs-micro);margin-top:4px;}
+  .cs-t th{text-align:left;font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink-soft);padding:5px 4px;border-bottom:1px solid var(--line);font-weight:500;}
+  .cs-t td{padding:4px;border-bottom:1px solid rgba(11,42,91,.06);vertical-align:middle;}
+  .cs-t td.c{text-align:center;font-family:var(--mono);color:var(--ink-mid);}
+  .cs-t td.r{text-align:right;font-family:var(--mono);color:var(--navy);font-weight:600;white-space:nowrap;}
+  .cs-t input,.cs-t select{width:100%;border:1px solid var(--line);border-radius:5px;padding:6px 7px;
+    font-size:9.5px;font-family:var(--body);color:var(--navy);background:var(--white);}
+  .cs-t input.num{text-align:right;font-family:var(--mono);}
+  .cs-t input:focus,.cs-t select:focus{outline:none;border-color:var(--gold);}
+  .cs-break{margin-top:16px;border-top:2px solid var(--gold);padding-top:12px;font-family:var(--mono);font-size:var(--fs-micro);}
+  .cs-break div{display:flex;justify-content:space-between;padding:3px 0;color:var(--ink-mid);}
+  .cs-break div.sep{border-top:1px solid var(--line);margin-top:6px;padding-top:8px;color:var(--navy);font-weight:600;}
+  .cs-break div.grand{border-top:2px solid var(--navy);margin-top:8px;padding-top:10px;
+    font-size:var(--fs-body);font-weight:700;color:var(--navy);}
+  .cs-break div.minp{color:var(--ink-soft);font-size:9.5px;}
   .rate-t{width:100%;border-collapse:collapse;font-size:var(--fs-micro);background:var(--white);
     border:1px solid var(--line);border-radius:6px;overflow:hidden;}
   .rate-t th{background:var(--navy);color:#fff;text-align:left;font-family:var(--mono);font-size:9px;
@@ -1683,6 +1710,246 @@ Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.q
   }
 
 
+  /* ================= COSTING ENGINE =================
+     The AI proposes the manufacturing route and time estimates.
+     Every rupee is then calculated from YOUR rate data — the AI never
+     supplies a price. Estimated quantities are flagged as estimates. */
+
+  function machineById(id){ return (data.machines||[]).find(m=>m.id===id)||null; }
+  function labourById(id){ return (data.labourGrades||[]).find(l=>l.id===id)||null; }
+  function materialByName(n){
+    const s=String(n||'').toLowerCase();
+    return (data.materials||[]).find(m=>s.includes(String(m.grade||'').toLowerCase())||
+      s.includes(String(m.name||'').toLowerCase()))||null;
+  }
+  function bestMachineFor(type){
+    const t=String(type||'').toLowerCase();
+    const list=data.machines||[];
+    return list.find(m=>String(m.type||'').toLowerCase().includes(t)||t.includes(String(m.type||'').toLowerCase()))
+      ||list.find(m=>String(m.name||'').toLowerCase().includes(t))||null;
+  }
+
+  function blankCosting(r){
+    return {qty:1,batchQty:1,
+      material:{name:'',grade:'',rate:0,unit:'kg',finishWeight:0,blankWeight:0,scrapRecovery:0},
+      operations:[],specialProcesses:[],
+      toolingPerPart:0,consumablesPerPart:0,packagingPerPart:0,freightPerPart:0,
+      inspectionMinPerPart:0,assumptions:[],aiNotes:'',createdAt:''};
+  }
+
+  function computeCosting(c){
+    const b=CB();
+    const qty=Math.max(1,num(c.qty));
+    const batch=Math.max(1,num(c.batchQty)||qty);
+
+    // --- material ---
+    const blank=num(c.material.blankWeight)||num(c.material.finishWeight);
+    const matGross=blank*num(c.material.rate);
+    const recovery=(blank-num(c.material.finishWeight))*num(c.material.scrapRecovery);
+    const materialCost=Math.max(0,matGross-recovery);
+
+    // --- operations ---
+    let machineCost=0,labourCost=0,setupCost=0,totalCycleMin=0;
+    const ops=(c.operations||[]).map(o=>{
+      const m=machineById(o.machineId);
+      const mr=m?machineRate(m).total:0;
+      const l=labourById(o.labourGradeId);
+      const lr=l?labourRate(l):defaultLabourRate();
+      const cyc=num(o.cycleMin);
+      const setupPerPart=num(o.setupMin)/batch;
+      const mc=(cyc/60)*mr;
+      const lc=((cyc+setupPerPart)/60)*lr*(m?num(m.operators)||1:1);
+      const sc=(setupPerPart/60)*mr;
+      machineCost+=mc; labourCost+=lc; setupCost+=sc; totalCycleMin+=cyc;
+      return Object.assign({},o,{machineName:m?m.name:'(not matched)',machineRate:mr,
+        labourRate:lr,machineCost:mc,labourCost:lc,setupCost:sc,setupPerPart});
+    });
+
+    const inspection=(num(c.inspectionMinPerPart)/60)*
+      (labourById((data.labourGrades||[]).find(l=>/inspect/i.test(l.grade))?.id)?labourRate((data.labourGrades||[]).find(l=>/inspect/i.test(l.grade))):defaultLabourRate());
+    const special=(c.specialProcesses||[]).reduce((t,s)=>t+num(s.ratePerPart),0);
+    const tooling=num(c.toolingPerPart), consumables=num(c.consumablesPerPart);
+    const packaging=num(c.packagingPerPart), freight=num(c.freightPerPart);
+
+    const direct=materialCost+machineCost+labourCost+setupCost+inspection+special+tooling+consumables+packaging+freight;
+    const scrap=direct*num(b.scrapPct)/100;
+    const withScrap=direct+scrap;
+    const admin=withScrap*num(b.adminPct)/100;
+    const finance=withScrap*num(b.financePct)/100;
+    const contingency=withScrap*num(b.contingencyPct)/100;
+    const totalCost=withScrap+admin+finance+contingency;
+    const profit=totalCost*num(b.profitPct)/100;
+    const sellingPrice=totalCost+profit;
+
+    return {qty,batch,ops,materialCost,machineCost,labourCost,setupCost,inspection,special,
+      tooling,consumables,packaging,freight,direct,scrap,admin,finance,contingency,
+      totalCost,profit,sellingPrice,totalCycleMin,
+      minPrice:totalCost*1.03, lineTotal:sellingPrice*qty};
+  }
+
+  const ROUTE_PROMPT=(r,x,qty)=>`You are a manufacturing process planner at a precision machining company.
+Propose the manufacturing route for the component described below.
+
+AVAILABLE MACHINES (use only these; give the exact "type" text so it can be matched):
+${(data.machines||[]).map(m=>`- ${m.name} | type: ${m.type}`).join('\n')||'- none listed'}
+
+LABOUR GRADES AVAILABLE:
+${(data.labourGrades||[]).map(l=>`- ${l.grade}`).join('\n')||'- none listed'}
+
+MATERIALS IN THE PRICE BOOK:
+${(data.materials||[]).map(m=>`- ${m.name} (${m.grade}), density ${m.density} g/cc`).join('\n')||'- none listed'}
+
+COMPONENT:
+${x?JSON.stringify({part:x.part,requirements:x.requirements,critical:x.criticalCharacteristics},null,1):(r.message||'no drawing data')}
+Quantity: ${qty}
+
+RULES — read carefully:
+- Do NOT give any prices, rates or costs. None. Costs are calculated separately from the company's own data.
+- Give realistic cycle and setup times in MINUTES based on the actual features, not round numbers.
+- Choose the optimum route for this component — do not use a fixed sequence.
+- If the material is unclear, recommend a suitable grade and say so in assumptions.
+- Estimate blank and finished weight in kg only if dimensions allow; otherwise leave 0 and note it.
+- List every assumption you had to make.
+
+Reply with ONLY this JSON, no commentary or code fences:
+{
+ "material":{"name":"","grade":"","finishWeight":0,"blankWeight":0,"basis":""},
+ "operations":[
+   {"op":10,"process":"","machineType":"","setupMin":0,"cycleMin":0,"labourGrade":"","notes":"","confidence":"High|Medium|Low"}
+ ],
+ "specialProcesses":[{"name":"","note":""}],
+ "inspectionMinPerPart":0,
+ "assumptions":[""],
+ "notes":""
+}`;
+
+  async function generateCosting(r){
+    const qty=num((r.costing&&r.costing.qty))||num(((r.extract&&r.extract.requirements)||[])
+      .find(q=>/quantity/i.test(q.category))?.requirement?.match(/\d[\d,]*/)?.[0]?.replace(/,/g,''))||1;
+    let text;
+    try{ text=await callAI(ROUTE_PROMPT(r,r.extract,qty),{maxTokens:3000,surfaceError:true}); }
+    catch(e){ return {error:e.message}; }
+    if(!text) return {error:'No response from AI. Check ANTHROPIC_API_KEY in Vercel.'};
+
+    let p;
+    try{
+      const clean=text.replace(/```json|```/g,'').trim();
+      p=JSON.parse(clean.slice(clean.indexOf('{'),clean.lastIndexOf('}')+1));
+    }catch(e){ return {error:'Could not understand the AI route plan.'}; }
+
+    const c=blankCosting(r);
+    c.qty=qty; c.batchQty=qty;
+    const mat=materialByName((p.material&&(p.material.grade||p.material.name))||'');
+    c.material={name:(p.material&&p.material.name)||'',grade:(p.material&&p.material.grade)||'',
+      rate:mat?num(mat.rate):0,unit:mat?mat.unit:'kg',
+      finishWeight:num(p.material&&p.material.finishWeight),
+      blankWeight:num(p.material&&p.material.blankWeight),scrapRecovery:0,
+      matched:!!mat, basis:(p.material&&p.material.basis)||''};
+    c.operations=(p.operations||[]).map((o,i)=>{
+      const m=bestMachineFor(o.machineType);
+      const l=(data.labourGrades||[]).find(g=>String(g.grade||'').toLowerCase()===String(o.labourGrade||'').toLowerCase())
+        ||(data.labourGrades||[]).find(g=>/operator/i.test(g.grade));
+      return {op:o.op||((i+1)*10),process:o.process||'',machineType:o.machineType||'',
+        machineId:m?m.id:'',labourGradeId:l?l.id:'',setupMin:num(o.setupMin),cycleMin:num(o.cycleMin),
+        notes:o.notes||'',confidence:o.confidence||'Medium'};
+    });
+    c.specialProcesses=(p.specialProcesses||[]).filter(s=>s&&s.name)
+      .map(s=>({name:s.name,note:s.note||'',ratePerPart:0}));
+    c.inspectionMinPerPart=num(p.inspectionMinPerPart);
+    c.assumptions=(p.assumptions||[]).filter(Boolean);
+    c.aiNotes=p.notes||'';
+    c.createdAt=new Date().toLocaleString();
+    return c;
+  }
+
+  function costingHtml(r,i){
+    const c=r.costing;
+    if(!c) return `<div class="rfq-actions">
+      <button class="mini-btn ai" data-act="cost" data-i="${i}">Work out cost with AI</button></div>`;
+    if(c.error) return `<div class="cs"><div class="dx-err">${esc(c.error)}</div>
+      <div class="rfq-actions"><button class="mini-btn ai" data-act="cost" data-i="${i}">Try again</button></div></div>`;
+
+    const t=computeCosting(c);
+    const machineOpts=m=>(data.machines||[]).map(x=>
+      `<option value="${x.id}" ${x.id===m?'selected':''}>${esc(x.name)}</option>`).join('');
+    const labourOpts=l=>(data.labourGrades||[]).map(x=>
+      `<option value="${x.id}" ${x.id===l?'selected':''}>${esc(x.grade)}</option>`).join('');
+
+    const opRows=t.ops.map((o,oi)=>`<tr>
+      <td class="c">${esc(o.op)}</td>
+      <td><input class="ci" data-i="${i}" data-oi="${oi}" data-k="process" value="${esc(o.process)}"></td>
+      <td><select class="cm" data-i="${i}" data-oi="${oi}"><option value="">— pick —</option>${machineOpts(o.machineId)}</select></td>
+      <td><select class="cl" data-i="${i}" data-oi="${oi}">${labourOpts(o.labourGradeId)}</select></td>
+      <td><input class="ci num" data-i="${i}" data-oi="${oi}" data-k="setupMin" value="${esc(o.setupMin)}"></td>
+      <td><input class="ci num" data-i="${i}" data-oi="${oi}" data-k="cycleMin" value="${esc(o.cycleMin)}"></td>
+      <td class="r">${rupee(o.machineCost+o.labourCost+o.setupCost)}</td>
+      <td><span class="cf ${CONF_CLASS(o.confidence)}">${esc(o.confidence)}</span></td>
+      <td><button class="qb-del" data-act="delop" data-i="${i}" data-oi="${oi}">×</button></td></tr>`).join('');
+
+    return `<div class="cs">
+      <div class="dx-head"><b>Cost Sheet</b><span class="t-micro">${esc(c.createdAt||'')}</span></div>
+
+      <div class="cs-row">
+        <div><label>Quantity</label><input class="cf-in num" data-i="${i}" data-k="qty" value="${esc(c.qty)}"></div>
+        <div><label>Batch Size</label><input class="cf-in num" data-i="${i}" data-k="batchQty" value="${esc(c.batchQty)}"></div>
+      </div>
+
+      <div class="cs-sub">Material${c.material.matched?'':' — <span style="color:#B03A2E">not found in your price book, enter the rate</span>'}</div>
+      <div class="cs-row four">
+        <div><label>Grade</label><input class="cmat" data-i="${i}" data-k="grade" value="${esc(c.material.grade)}"></div>
+        <div><label>Blank wt (kg)</label><input class="cmat num" data-i="${i}" data-k="blankWeight" value="${esc(c.material.blankWeight)}"></div>
+        <div><label>Finish wt (kg)</label><input class="cmat num" data-i="${i}" data-k="finishWeight" value="${esc(c.material.finishWeight)}"></div>
+        <div><label>Rate / kg</label><input class="cmat num" data-i="${i}" data-k="rate" value="${esc(c.material.rate)}"></div>
+      </div>
+      ${c.material.basis?`<div class="cs-basis">${esc(c.material.basis)}</div>`:''}
+
+      <div class="cs-sub">Process Route</div>
+      <table class="cs-t"><thead><tr><th>Op</th><th>Process</th><th>Machine</th><th>Labour</th>
+        <th>Setup min</th><th>Cycle min</th><th class="r">Cost/pc</th><th>Conf.</th><th></th></tr></thead>
+        <tbody>${opRows||'<tr><td colspan="9" class="t-micro">No operations.</td></tr>'}</tbody></table>
+      <button class="qb-add" data-act="addop" data-i="${i}">+ Add operation</button>
+
+      <div class="cs-row four" style="margin-top:14px;">
+        <div><label>Tooling / pc</label><input class="cf-in num" data-i="${i}" data-k="toolingPerPart" value="${esc(c.toolingPerPart)}"></div>
+        <div><label>Consumables / pc</label><input class="cf-in num" data-i="${i}" data-k="consumablesPerPart" value="${esc(c.consumablesPerPart)}"></div>
+        <div><label>Packaging / pc</label><input class="cf-in num" data-i="${i}" data-k="packagingPerPart" value="${esc(c.packagingPerPart)}"></div>
+        <div><label>Freight / pc</label><input class="cf-in num" data-i="${i}" data-k="freightPerPart" value="${esc(c.freightPerPart)}"></div>
+      </div>
+      ${(c.specialProcesses||[]).length?`<div class="cs-sub">Special Processes — enter your supplier rate per piece</div>
+      <div class="cs-row four">${c.specialProcesses.map((s,si)=>
+        `<div><label>${esc(s.name)}</label><input class="csp num" data-i="${i}" data-si="${si}" value="${esc(s.ratePerPart)}"></div>`).join('')}</div>`:''}
+
+      <div class="cs-break">
+        <div><span>Material</span><span>${rupee(t.materialCost)}</span></div>
+        <div><span>Machine</span><span>${rupee(t.machineCost)}</span></div>
+        <div><span>Labour</span><span>${rupee(t.labourCost)}</span></div>
+        <div><span>Setup (spread over batch)</span><span>${rupee(t.setupCost)}</span></div>
+        <div><span>Inspection</span><span>${rupee(t.inspection)}</span></div>
+        <div><span>Special processes</span><span>${rupee(t.special)}</span></div>
+        <div><span>Tooling + consumables</span><span>${rupee(t.tooling+t.consumables)}</span></div>
+        <div><span>Packaging + freight</span><span>${rupee(t.packaging+t.freight)}</span></div>
+        <div class="sep"><span>Direct cost</span><span>${rupee(t.direct)}</span></div>
+        <div><span>Scrap @ ${num(CB().scrapPct)}%</span><span>${rupee(t.scrap)}</span></div>
+        <div><span>Admin @ ${num(CB().adminPct)}%</span><span>${rupee(t.admin)}</span></div>
+        <div><span>Finance @ ${num(CB().financePct)}%</span><span>${rupee(t.finance)}</span></div>
+        <div><span>Contingency @ ${num(CB().contingencyPct)}%</span><span>${rupee(t.contingency)}</span></div>
+        <div class="sep"><span>Total manufacturing cost</span><span>${rupee(t.totalCost)}</span></div>
+        <div><span>Profit @ ${num(CB().profitPct)}%</span><span>${rupee(t.profit)}</span></div>
+        <div class="grand"><span>Recommended price / piece</span><span>${rupee(t.sellingPrice)}</span></div>
+        <div class="minp"><span>Minimum viable price</span><span>${rupee(t.minPrice)}</span></div>
+        <div class="minp"><span>Total for ${t.qty} pcs</span><span>${rupee(t.lineTotal)}</span></div>
+      </div>
+
+      ${(c.assumptions||[]).length?`<div class="dx-missing"><b>Assumptions made — check these:</b>
+        <ul>${c.assumptions.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>`:''}
+      ${c.aiNotes?`<div class="dx-notes">${esc(c.aiNotes)}</div>`:''}
+
+      <div class="rfq-actions">
+        <button class="mini-btn gold" data-act="costtoquote" data-i="${i}">Put price into quotation</button>
+        <button class="mini-btn ai" data-act="cost" data-i="${i}">Re-plan route</button>
+      </div></div>`;
+  }
+
   /* ================= QUOTATION DOCUMENT ENGINE ================= */
   const CO=()=>data.company||{}, QC=()=>data.quoteCfg||{};
   const money=n=>{
@@ -1922,6 +2189,7 @@ Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.q
           <button class="mini-btn ai" data-act="gen" data-i="${i}">${r.quote?'Regenerate quote':'AI draft quote'}</button>
         </div>
         ${extractHtml(r,i)}
+        ${costingHtml(r,i)}
         ${r.quote?`<div class="quote-editor"><textarea class="quote-text" data-i="${i}">${esc(r.quote)}</textarea></div>`:''}
         ${(()=>{const q=r.quoteDoc; if(!q) return '';
           const t=quoteTotals(q);
@@ -1989,6 +2257,101 @@ Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.q
         ${QC().showTax?`<div><span>${esc(QC().taxLabel||'Tax')} @ ${t.taxPct}%</span><span>${money(t.tax)}</span></div>`:''}
         <div class="grand"><span>Total</span><span>${money(t.grand)}</span></div>`;
     }
+    /* ---- cost sheet ---- */
+    let ctimer=null;
+    const saveCosting=r=>{clearTimeout(ctimer);ctimer=setTimeout(()=>patch(r.ref,{costing:r.costing}),800);};
+    const redrawCard=idx=>{ renderRfqAdmin(); };
+
+    host.querySelectorAll('[data-act="cost"]').forEach(b=>b.addEventListener('click',async()=>{
+      const idx=+b.dataset.i,r=rfqs[idx];
+      b.textContent='Planning route…'; b.disabled=true;
+      const c=await generateCosting(r);
+      const log=[`${new Date().toLocaleString()} — cost sheet ${c.error?'failed':'generated'}`].concat(r.log||[]);
+      const u=await patch(r.ref,{costing:c,log});
+      if(u) rfqs[idx]=u; else r.costing=c;
+      renderRfqAdmin();
+    }));
+    host.querySelectorAll('.ci').forEach(inp=>inp.addEventListener('input',()=>{
+      const r=rfqs[+inp.dataset.i];
+      r.costing.operations[+inp.dataset.oi][inp.dataset.k]=inp.value;
+      saveCosting(r); refreshCost(+inp.dataset.i);
+    }));
+    host.querySelectorAll('.cm').forEach(sel=>sel.addEventListener('change',()=>{
+      const r=rfqs[+sel.dataset.i];
+      r.costing.operations[+sel.dataset.oi].machineId=sel.value;
+      saveCosting(r); renderRfqAdmin();
+    }));
+    host.querySelectorAll('.cl').forEach(sel=>sel.addEventListener('change',()=>{
+      const r=rfqs[+sel.dataset.i];
+      r.costing.operations[+sel.dataset.oi].labourGradeId=sel.value;
+      saveCosting(r); renderRfqAdmin();
+    }));
+    host.querySelectorAll('.cmat').forEach(inp=>inp.addEventListener('input',()=>{
+      const r=rfqs[+inp.dataset.i];
+      r.costing.material[inp.dataset.k]=inp.value;
+      saveCosting(r); refreshCost(+inp.dataset.i);
+    }));
+    host.querySelectorAll('.cf-in').forEach(inp=>inp.addEventListener('input',()=>{
+      const r=rfqs[+inp.dataset.i];
+      r.costing[inp.dataset.k]=inp.value;
+      saveCosting(r); refreshCost(+inp.dataset.i);
+    }));
+    host.querySelectorAll('.csp').forEach(inp=>inp.addEventListener('input',()=>{
+      const r=rfqs[+inp.dataset.i];
+      r.costing.specialProcesses[+inp.dataset.si].ratePerPart=inp.value;
+      saveCosting(r); refreshCost(+inp.dataset.i);
+    }));
+    host.querySelectorAll('[data-act="addop"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      const n=(r.costing.operations.length+1)*10;
+      r.costing.operations.push({op:n,process:'',machineId:'',labourGradeId:'',setupMin:0,cycleMin:0,confidence:'Manual'});
+      await patch(r.ref,{costing:r.costing}); renderRfqAdmin();
+    }));
+    host.querySelectorAll('[data-act="delop"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      r.costing.operations.splice(+b.dataset.oi,1);
+      await patch(r.ref,{costing:r.costing}); renderRfqAdmin();
+    }));
+    host.querySelectorAll('[data-act="costtoquote"]').forEach(b=>b.addEventListener('click',async()=>{
+      const idx=+b.dataset.i,r=rfqs[idx],t=computeCosting(r.costing);
+      const desc=extractSummaryLine(r.extract||{})||r.costing.material.grade||'Machined component';
+      const line={desc,qty:String(t.qty),unit:'nos',rate:t.sellingPrice.toFixed(2)};
+      if(!r.quoteDoc){
+        const doc=blankQuoteDoc(r); doc.number=nextQuoteNumber(); doc.items=[line];
+        data.quoteCfg.nextSeq=(parseInt(data.quoteCfg.nextSeq,10)||1)+1;
+        if(token){ try{ await api('/api/content',{method:'POST',body:JSON.stringify({data})}); }catch(e){} }
+        const u=await patch(r.ref,{quoteDoc:doc,status:'Quote Drafted'}); if(u) rfqs[idx]=u;
+      } else {
+        r.quoteDoc.items.push(line);
+        const u=await patch(r.ref,{quoteDoc:r.quoteDoc}); if(u) rfqs[idx]=u;
+      }
+      renderRfqAdmin(); toast('Price added to the quotation');
+    }));
+    function refreshCost(idx){
+      const card=host.querySelectorAll('.rfq-card')[idx]; if(!card) return;
+      const box=card.querySelector('.cs-break'); if(!box) return;
+      const t=computeCosting(rfqs[idx].costing);
+      box.innerHTML=`
+        <div><span>Material</span><span>${rupee(t.materialCost)}</span></div>
+        <div><span>Machine</span><span>${rupee(t.machineCost)}</span></div>
+        <div><span>Labour</span><span>${rupee(t.labourCost)}</span></div>
+        <div><span>Setup (spread over batch)</span><span>${rupee(t.setupCost)}</span></div>
+        <div><span>Inspection</span><span>${rupee(t.inspection)}</span></div>
+        <div><span>Special processes</span><span>${rupee(t.special)}</span></div>
+        <div><span>Tooling + consumables</span><span>${rupee(t.tooling+t.consumables)}</span></div>
+        <div><span>Packaging + freight</span><span>${rupee(t.packaging+t.freight)}</span></div>
+        <div class="sep"><span>Direct cost</span><span>${rupee(t.direct)}</span></div>
+        <div><span>Scrap @ ${num(CB().scrapPct)}%</span><span>${rupee(t.scrap)}</span></div>
+        <div><span>Admin @ ${num(CB().adminPct)}%</span><span>${rupee(t.admin)}</span></div>
+        <div><span>Finance @ ${num(CB().financePct)}%</span><span>${rupee(t.finance)}</span></div>
+        <div><span>Contingency @ ${num(CB().contingencyPct)}%</span><span>${rupee(t.contingency)}</span></div>
+        <div class="sep"><span>Total manufacturing cost</span><span>${rupee(t.totalCost)}</span></div>
+        <div><span>Profit @ ${num(CB().profitPct)}%</span><span>${rupee(t.profit)}</span></div>
+        <div class="grand"><span>Recommended price / piece</span><span>${rupee(t.sellingPrice)}</span></div>
+        <div class="minp"><span>Minimum viable price</span><span>${rupee(t.minPrice)}</span></div>
+        <div class="minp"><span>Total for ${t.qty} pcs</span><span>${rupee(t.lineTotal)}</span></div>`;
+    }
+
     host.querySelectorAll('[data-act="read"]').forEach(b=>b.addEventListener('click',async()=>{
       const idx=+b.dataset.i, r=rfqs[idx];
       b.textContent='Reading drawing…'; b.disabled=true;

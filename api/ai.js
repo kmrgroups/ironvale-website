@@ -3,11 +3,47 @@
 // The key stays on the server and is never sent to the browser.
 import { cors, readBody } from './_db.js';
 
-// Tried in order. If Google retires one, the next is used automatically.
-const GEMINI_MODELS = process.env.GEMINI_MODEL
-  ? [process.env.GEMINI_MODEL]
-  : ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.5-pro', 'gemini-3.6-flash'];
-const GEMINI_MODEL = GEMINI_MODELS[0];
+// Google restricts older models to projects that already used them, so a model
+// name that works for one key fails for another. Rather than hard-coding names,
+// we ask Google which models THIS key can use and pick the best available.
+let discovered = null;          // cached for the life of the server instance
+
+async function listGeminiModels(key) {
+  if (discovered) return discovered;
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
+      headers: { 'x-goog-api-key': key }
+    });
+    const j = await r.json();
+    if (!r.ok || !j.models) return null;
+
+    const usable = j.models
+      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map(m => String(m.name || '').replace(/^models\//, ''))
+      .filter(n => /^gemini/.test(n) && !/embedding|aqa|image|tts|audio|native|live|thinking-exp/i.test(n));
+
+    // prefer flash (fast + free-tier friendly), newest version number first
+    const score = n => {
+      const ver = parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || '0');
+      let s = ver * 10;
+      if (/flash/.test(n)) s += 5;
+      if (/lite/.test(n)) s -= 2;
+      if (/preview|exp/.test(n)) s -= 4;
+      if (/latest/.test(n)) s += 1;
+      return s;
+    };
+    usable.sort((a, b) => score(b) - score(a));
+    if (usable.length) { discovered = usable; return discovered; }
+    return null;
+  } catch (e) {
+    console.log('Model discovery failed:', e.message);
+    return null;
+  }
+}
+
+// Fallback order if discovery is unavailable.
+const FALLBACK_MODELS = ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'auto';
 const CLAUDE_MODEL = process.env.AI_MODEL || 'claude-sonnet-4-6';
 
 function provider() {
@@ -29,11 +65,15 @@ async function askGemini({ prompt, system, attachment, maxTokens }) {
   };
   if (system) body.systemInstruction = { parts: [{ text: system }] };
 
+  const key = process.env.GEMINI_API_KEY.trim();
+  const candidates = process.env.GEMINI_MODEL
+    ? [process.env.GEMINI_MODEL]
+    : ((await listGeminiModels(key)) || FALLBACK_MODELS);
+
   let lastError = 'No Gemini model responded.';
-  for (const model of GEMINI_MODELS) {
+  for (const model of candidates.slice(0, 4)) {
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
       model + ':generateContent';
-    const key = process.env.GEMINI_API_KEY.trim();
 
     // Header auth works for both the older AIza... keys and the newer AQ... keys.
     let r, j;
@@ -126,7 +166,8 @@ export default async function handler(req, res) {
       alive: true,
       configured: !!p,
       provider: p || 'none',
-      model: p === 'gemini' ? GEMINI_MODEL : (p === 'anthropic' ? CLAUDE_MODEL : null),
+      model: p === 'gemini' ? (process.env.GEMINI_MODEL || 'auto-detected') : (p === 'anthropic' ? CLAUDE_MODEL : null),
+      availableModels: p === 'gemini' ? await listGeminiModels(process.env.GEMINI_API_KEY.trim()) : null,
       note: p
         ? ('AI is active using ' + (p === 'gemini' ? 'Google Gemini' : 'Anthropic Claude') + '.')
         : 'Add GEMINI_API_KEY (free tier) or ANTHROPIC_API_KEY in Vercel to switch AI features on.'

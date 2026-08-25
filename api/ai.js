@@ -23,13 +23,18 @@ async function listGeminiModels(key) {
       .filter(n => /^gemini/.test(n) && !/embedding|aqa|image|tts|audio|native|live|thinking-exp/i.test(n));
 
     // prefer flash (fast + free-tier friendly), newest version number first
+    // Newest models are often restricted to paid accounts, so order by
+    // "most likely to work on a free key" rather than simply newest.
     const score = n => {
       const ver = parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || '0');
-      let s = ver * 10;
-      if (/flash/.test(n)) s += 5;
-      if (/lite/.test(n)) s -= 2;
-      if (/preview|exp/.test(n)) s -= 4;
-      if (/latest/.test(n)) s += 1;
+      let s = 0;
+      if (/flash/.test(n)) s += 40;          // flash tier is the free workhorse
+      if (/lite/.test(n)) s += 8;            // lite is the most permissive
+      if (/latest/.test(n)) s += 6;
+      if (/preview|exp/.test(n)) s -= 25;    // previews usually need billing
+      if (/pro/.test(n)) s -= 15;            // pro is normally paid
+      if (/robotics|computer-use|omni/.test(n)) s -= 60;
+      s += ver;                              // newer breaks ties only
       return s;
     };
     usable.sort((a, b) => score(b) - score(a));
@@ -71,7 +76,8 @@ async function askGemini({ prompt, system, attachment, maxTokens }) {
     : ((await listGeminiModels(key)) || FALLBACK_MODELS);
 
   let lastError = 'No Gemini model responded.';
-  for (const model of candidates.slice(0, 4)) {
+  const attempts = [];
+  for (const model of candidates.slice(0, 12)) {
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
       model + ':generateContent';
 
@@ -105,11 +111,12 @@ async function askGemini({ prompt, system, attachment, maxTokens }) {
     if (!r.ok) {
       lastError = (j.error && j.error.message) || ('Gemini request failed (' + r.status + ')');
       // a retired or unknown model: quietly try the next one
-      if (/not found|no longer available|not supported|unsupported|denied access|permission|does not have access|not allowed/i.test(lastError)) {
-        console.log('Gemini model ' + model + ' unavailable, trying next.');
+      attempts.push(model + ': ' + lastError);
+      if (/not found|no longer available|not supported|unsupported|denied access|permission|does not have access|not allowed|quota|billing|free tier/i.test(lastError)) {
+        console.log('Gemini model ' + model + ' unavailable: ' + lastError);
         continue;
       }
-      return { ok: false, error: lastError };
+      return { ok: false, error: lastError, attempts: attempts };
     }
 
     const cand = (j.candidates || [])[0];
@@ -120,7 +127,7 @@ async function askGemini({ prompt, system, attachment, maxTokens }) {
     }
     return { ok: true, text: text, provider: 'gemini', model: model };
   }
-  return { ok: false, error: lastError };
+  return { ok: false, error: lastError, attempts: attempts };
 }
 
 async function askAnthropic({ prompt, system, attachment, maxTokens }) {

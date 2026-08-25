@@ -2459,7 +2459,15 @@ Reply with ONLY this JSON, no commentary or code fences:
       const j=await r.json();
       if(j.ok&&j.text){ aiReady=true; return j.text; }
       if(j.notConfigured){ aiReady=false; }
-      else if(j.error){ aiReady=false; if(opts.surfaceError) throw new Error(j.error); }
+      else if(j.error){
+        aiReady=false;
+        if(opts.surfaceError){
+          const detail=(j.attempts&&j.attempts.length)
+            ? '\n\nModels tried:\n• '+j.attempts.slice(0,6).join('\n• ')
+            : '';
+          throw new Error(j.error+detail);
+        }
+      }
     }catch(e){ if(opts.surfaceError) throw e; }
     // 2) a custom backend, if one is configured
     if(data.botEndpoint){

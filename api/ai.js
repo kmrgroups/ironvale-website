@@ -1,148 +1,195 @@
-// Server-side AI gateway — supports Google Gemini (free tier) or Anthropic.
-// Whichever key is present is used; Gemini is preferred when both exist.
-// The key stays on the server and is never sent to the browser.
+// Server-side AI gateway.
+// Supports several providers. Whichever key is present is used, in this order:
+//   OPENROUTER_API_KEY  – free, no card, many free vision models
+//   GROQ_API_KEY        – free, no card, fast
+//   GEMINI_API_KEY      – free tier (some accounts are blocked by Google)
+//   ANTHROPIC_API_KEY   – paid, best quality on difficult drawings
+// Keys stay on the server and are never sent to the browser.
 import { cors, readBody } from './_db.js';
 
-// Google restricts older models to projects that already used them, so a model
-// name that works for one key fails for another. Rather than hard-coding names,
-// we ask Google which models THIS key can use and pick the best available.
-let discovered = null;          // cached for the life of the server instance
+const CLAUDE_MODEL = process.env.AI_MODEL || 'claude-sonnet-4-6';
+let cache = {};   // discovered model lists, per provider
 
-async function listGeminiModels(key) {
-  if (discovered) return discovered;
+function providers() {
+  const list = [];
+  if (process.env.OPENROUTER_API_KEY) list.push('openrouter');
+  if (process.env.GROQ_API_KEY) list.push('groq');
+  if (process.env.GEMINI_API_KEY) list.push('gemini');
+  if (process.env.ANTHROPIC_API_KEY) list.push('anthropic');
+  return list;
+}
+
+/* ---------------- OpenRouter (free vision models) ---------------- */
+async function openrouterModels() {
+  if (cache.openrouter) return cache.openrouter;
+  try {
+    const r = await fetch('https://openrouter.ai/api/v1/models');
+    const j = await r.json();
+    const free = (j.data || [])
+      .filter(m => {
+        const p = m.pricing || {};
+        const isFree = String(p.prompt) === '0' && String(p.completion) === '0';
+        const mods = (m.architecture && m.architecture.input_modalities) || [];
+        return isFree && mods.includes('image');
+      })
+      .map(m => m.id);
+    // prefer bigger, well-known vision models
+    const score = id => {
+      let s = 0;
+      if (/llama-4|llama4/i.test(id)) s += 30;
+      if (/qwen.*vl|qwen2\.5-vl|qwen3-vl/i.test(id)) s += 28;
+      if (/gemini/i.test(id)) s += 25;
+      if (/llama-3\.2.*vision/i.test(id)) s += 20;
+      if (/mistral|pixtral/i.test(id)) s += 18;
+      if (/maverick|scout/i.test(id)) s += 5;
+      if (/free/i.test(id)) s += 2;
+      return s;
+    };
+    free.sort((a, b) => score(b) - score(a));
+    if (free.length) { cache.openrouter = free; return free; }
+  } catch (e) { console.log('OpenRouter discovery failed:', e.message); }
+  return [
+    'meta-llama/llama-4-scout:free',
+    'qwen/qwen2.5-vl-72b-instruct:free',
+    'meta-llama/llama-3.2-11b-vision-instruct:free'
+  ];
+}
+
+/* ---------------- Gemini ---------------- */
+async function geminiModels(key) {
+  if (cache.gemini) return cache.gemini;
   try {
     const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
       headers: { 'x-goog-api-key': key }
     });
     const j = await r.json();
     if (!r.ok || !j.models) return null;
-
     const usable = j.models
       .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
       .map(m => String(m.name || '').replace(/^models\//, ''))
-      .filter(n => /^gemini/.test(n) && !/embedding|aqa|image|tts|audio|native|live|thinking-exp/i.test(n));
-
-    // prefer flash (fast + free-tier friendly), newest version number first
-    // Newest models are often restricted to paid accounts, so order by
-    // "most likely to work on a free key" rather than simply newest.
+      .filter(n => /^gemini/.test(n) && !/embedding|aqa|image|tts|audio|native|live|robotics|computer-use/i.test(n));
     const score = n => {
       const ver = parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || '0');
       let s = 0;
-      if (/flash/.test(n)) s += 40;          // flash tier is the free workhorse
-      if (/lite/.test(n)) s += 8;            // lite is the most permissive
+      if (/flash/.test(n)) s += 40;
+      if (/lite/.test(n)) s += 8;
       if (/latest/.test(n)) s += 6;
-      if (/preview|exp/.test(n)) s -= 25;    // previews usually need billing
-      if (/pro/.test(n)) s -= 15;            // pro is normally paid
-      if (/robotics|computer-use|omni/.test(n)) s -= 60;
-      s += ver;                              // newer breaks ties only
-      return s;
+      if (/preview|exp/.test(n)) s -= 25;
+      if (/pro/.test(n)) s -= 15;
+      return s + ver;
     };
     usable.sort((a, b) => score(b) - score(a));
-    if (usable.length) { discovered = usable; return discovered; }
-    return null;
-  } catch (e) {
-    console.log('Model discovery failed:', e.message);
-    return null;
-  }
-}
-
-// Fallback order if discovery is unavailable.
-const FALLBACK_MODELS = ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'auto';
-const CLAUDE_MODEL = process.env.AI_MODEL || 'claude-sonnet-4-6';
-
-function provider() {
-  if (process.env.GEMINI_API_KEY) return 'gemini';
-  if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
+    if (usable.length) { cache.gemini = usable; return usable; }
+  } catch (e) { console.log('Gemini discovery failed:', e.message); }
   return null;
 }
 
-async function askGemini({ prompt, system, attachment, maxTokens }) {
-  const parts = [];
-  if (attachment && attachment.b64 && attachment.mime) {
-    parts.push({ inline_data: { mime_type: attachment.mime, data: attachment.b64 } });
-  }
-  parts.push({ text: prompt });
-
-  const body = {
-    contents: [{ role: 'user', parts }],
-    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 }
-  };
-  if (system) body.systemInstruction = { parts: [{ text: system }] };
-
-  const key = process.env.GEMINI_API_KEY.trim();
-  const candidates = process.env.GEMINI_MODEL
-    ? [process.env.GEMINI_MODEL]
-    : ((await listGeminiModels(key)) || FALLBACK_MODELS);
-
-  let lastError = 'No Gemini model responded.';
-  const attempts = [];
-  for (const model of candidates.slice(0, 12)) {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-      model + ':generateContent';
-
-    // Header auth works for both the older AIza... keys and the newer AQ... keys.
-    let r, j;
-    try {
-      r = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': key
-        },
-        body: JSON.stringify(body)
-      });
-      j = await r.json();
-
-      // Older keys occasionally need the query-string form instead.
-      if (!r.ok && /API key not valid|invalid authentication|unauthenticated/i.test(JSON.stringify(j))) {
-        r = await fetch(url + '?key=' + encodeURIComponent(key), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        j = await r.json();
-      }
-    } catch (e) {
-      lastError = e.message;
-      continue;
+/* ---------------- OpenAI-compatible call (OpenRouter + Groq) ---------------- */
+async function askOpenAICompatible(base, key, models, args, extraHeaders) {
+  const content = [];
+  if (args.attachment && args.attachment.b64 && args.attachment.mime) {
+    if (/^image\//.test(args.attachment.mime)) {
+      content.push({ type: 'image_url',
+        image_url: { url: 'data:' + args.attachment.mime + ';base64,' + args.attachment.b64 } });
+    } else {
+      return { ok: false, error: 'This provider can read image drawings (JPG/PNG) but not PDF. Please upload the drawing as an image.' };
     }
+  }
+  content.push({ type: 'text', text: args.prompt });
 
-    if (!r.ok) {
-      lastError = (j.error && j.error.message) || ('Gemini request failed (' + r.status + ')');
-      // a retired or unknown model: quietly try the next one
-      attempts.push(model + ': ' + lastError);
-      if (/not found|no longer available|not supported|unsupported|denied access|permission|does not have access|not allowed|quota|billing|free tier/i.test(lastError)) {
-        console.log('Gemini model ' + model + ' unavailable: ' + lastError);
+  const messages = [];
+  if (args.system) messages.push({ role: 'system', content: args.system });
+  messages.push({ role: 'user', content: content.length === 1 ? args.prompt : content });
+
+  const attempts = [];
+  let lastError = 'No model responded.';
+  for (const model of models.slice(0, 6)) {
+    try {
+      const r = await fetch(base + '/chat/completions', {
+        method: 'POST',
+        headers: Object.assign({
+          'Authorization': 'Bearer ' + key,
+          'Content-Type': 'application/json'
+        }, extraHeaders || {}),
+        body: JSON.stringify({ model, messages, max_tokens: args.maxTokens, temperature: 0.2 })
+      });
+      const j = await r.json();
+      if (!r.ok) {
+        lastError = (j.error && (j.error.message || j.error)) || ('Request failed (' + r.status + ')');
+        attempts.push(model + ': ' + lastError);
         continue;
       }
-      return { ok: false, error: lastError, attempts: attempts };
+      const text = ((j.choices || [])[0] || {}).message;
+      const out = text && (typeof text.content === 'string' ? text.content
+        : (text.content || []).map(c => c.text || '').join('\n'));
+      if (out && out.trim()) return { ok: true, text: out.trim(), model };
+      lastError = 'Empty response.';
+      attempts.push(model + ': empty response');
+    } catch (e) {
+      lastError = e.message;
+      attempts.push(model + ': ' + e.message);
     }
-
-    const cand = (j.candidates || [])[0];
-    const text = ((cand && cand.content && cand.content.parts) || [])
-      .map(function (p) { return p.text || ''; }).join('\n').trim();
-    if (!text && cand && cand.finishReason) {
-      return { ok: false, error: 'Gemini stopped early: ' + cand.finishReason };
-    }
-    return { ok: true, text: text, provider: 'gemini', model: model };
   }
-  return { ok: false, error: lastError, attempts: attempts };
+  return { ok: false, error: lastError, attempts };
 }
 
-async function askAnthropic({ prompt, system, attachment, maxTokens }) {
-  const content = [];
-  if (attachment && attachment.b64 && attachment.mime) {
-    if (attachment.mime === 'application/pdf') {
-      content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: attachment.b64 } });
-    } else if (/^image\/(jpeg|png|gif|webp)$/.test(attachment.mime)) {
-      content.push({ type: 'image', source: { type: 'base64', media_type: attachment.mime, data: attachment.b64 } });
+/* ---------------- Gemini call ---------------- */
+async function askGemini(args) {
+  const key = process.env.GEMINI_API_KEY.trim();
+  const parts = [];
+  if (args.attachment && args.attachment.b64 && args.attachment.mime) {
+    parts.push({ inline_data: { mime_type: args.attachment.mime, data: args.attachment.b64 } });
+  }
+  parts.push({ text: args.prompt });
+  const body = { contents: [{ role: 'user', parts }],
+    generationConfig: { maxOutputTokens: args.maxTokens, temperature: 0.2 } };
+  if (args.system) body.systemInstruction = { parts: [{ text: args.system }] };
+
+  const candidates = process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL]
+    : ((await geminiModels(key)) || ['gemini-3.5-flash-lite', 'gemini-3.5-flash']);
+
+  const attempts = [];
+  let lastError = 'No Gemini model responded.';
+  for (const model of candidates.slice(0, 8)) {
+    try {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify(body)
+      });
+      const j = await r.json();
+      if (!r.ok) {
+        lastError = (j.error && j.error.message) || ('Gemini failed (' + r.status + ')');
+        attempts.push(model + ': ' + lastError);
+        continue;
+      }
+      const cand = (j.candidates || [])[0];
+      const text = ((cand && cand.content && cand.content.parts) || [])
+        .map(p => p.text || '').join('\n').trim();
+      if (text) return { ok: true, text, model };
+      lastError = 'Gemini returned nothing' + (cand && cand.finishReason ? ' (' + cand.finishReason + ')' : '');
+      attempts.push(model + ': ' + lastError);
+    } catch (e) {
+      lastError = e.message; attempts.push(model + ': ' + e.message);
     }
   }
-  content.push({ type: 'text', text: prompt });
+  return { ok: false, error: lastError, attempts };
+}
 
-  const payload = { model: CLAUDE_MODEL, max_tokens: maxTokens, messages: [{ role: 'user', content: content }] };
-  if (system) payload.system = system;
+/* ---------------- Anthropic call ---------------- */
+async function askAnthropic(args) {
+  const content = [];
+  const a = args.attachment;
+  if (a && a.b64 && a.mime) {
+    if (a.mime === 'application/pdf') {
+      content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: a.b64 } });
+    } else if (/^image\/(jpeg|png|gif|webp)$/.test(a.mime)) {
+      content.push({ type: 'image', source: { type: 'base64', media_type: a.mime, data: a.b64 } });
+    }
+  }
+  content.push({ type: 'text', text: args.prompt });
+  const payload = { model: CLAUDE_MODEL, max_tokens: args.maxTokens, messages: [{ role: 'user', content }] };
+  if (args.system) payload.system = args.system;
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -154,10 +201,28 @@ async function askAnthropic({ prompt, system, attachment, maxTokens }) {
     body: JSON.stringify(payload)
   });
   const j = await r.json();
-  if (!r.ok) return { ok: false, error: (j.error && j.error.message) || ('AI request failed (' + r.status + ')') };
-  const text = (j.content || []).filter(function (c) { return c.type === 'text'; })
-    .map(function (c) { return c.text; }).join('\n').trim();
-  return { ok: true, text: text, provider: 'anthropic', model: CLAUDE_MODEL };
+  if (!r.ok) return { ok: false, error: (j.error && j.error.message) || ('Request failed (' + r.status + ')') };
+  const text = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
+  return { ok: true, text, model: CLAUDE_MODEL };
+}
+
+async function runProvider(name, args) {
+  if (name === 'openrouter') {
+    return askOpenAICompatible('https://openrouter.ai/api/v1',
+      process.env.OPENROUTER_API_KEY.trim(), await openrouterModels(), args,
+      { 'HTTP-Referer': process.env.SITE_URL || 'https://www.elixirtec.com', 'X-Title': 'RFQ Engine' });
+  }
+  if (name === 'groq') {
+    const models = process.env.GROQ_MODEL ? [process.env.GROQ_MODEL]
+      : ['meta-llama/llama-4-scout-17b-16e-instruct',
+         'meta-llama/llama-4-maverick-17b-128e-instruct',
+         'llama-3.2-90b-vision-preview'];
+    return askOpenAICompatible('https://api.groq.com/openai/v1',
+      process.env.GROQ_API_KEY.trim(), models, args, {});
+  }
+  if (name === 'gemini') return askGemini(args);
+  if (name === 'anthropic') return askAnthropic(args);
+  return { ok: false, error: 'Unknown provider' };
 }
 
 export const config = { api: { bodyParser: { sizeLimit: '10mb' } } };
@@ -166,24 +231,20 @@ export default async function handler(req, res) {
   cors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const p = provider();
+  const list = providers();
 
   if (req.method === 'GET') {
-    return res.status(200).json({
-      alive: true,
-      configured: !!p,
-      provider: p || 'none',
-      model: p === 'gemini' ? (process.env.GEMINI_MODEL || 'auto-detected') : (p === 'anthropic' ? CLAUDE_MODEL : null),
-      availableModels: p === 'gemini' ? await listGeminiModels(process.env.GEMINI_API_KEY.trim()) : null,
-      note: p
-        ? ('AI is active using ' + (p === 'gemini' ? 'Google Gemini' : 'Anthropic Claude') + '.')
-        : 'Add GEMINI_API_KEY (free tier) or ANTHROPIC_API_KEY in Vercel to switch AI features on.'
-    });
+    const info = { alive: true, configured: list.length > 0, providers: list };
+    if (list.includes('openrouter')) info.openrouterFreeVisionModels = (await openrouterModels()).slice(0, 8);
+    if (list.includes('gemini')) info.geminiModels = (await geminiModels(process.env.GEMINI_API_KEY.trim()) || []).slice(0, 8);
+    info.note = list.length
+      ? 'AI is active. Providers tried in order: ' + list.join(' → ')
+      : 'Add OPENROUTER_API_KEY (free, no card) in Vercel to switch AI features on.';
+    return res.status(200).json(info);
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
-
-  if (!p) {
+  if (!list.length) {
     return res.status(200).json({ ok: false, notConfigured: true,
       error: 'AI is not configured on this site yet.' });
   }
@@ -203,9 +264,17 @@ export default async function handler(req, res) {
         error: 'This file type (' + args.attachment.mime + ') cannot be read. Only PDF and image drawings can be analysed.' });
     }
 
-    const out = p === 'gemini' ? await askGemini(args) : await askAnthropic(args);
-    if (!out.ok) console.log('AI error:', out.error);
-    return res.status(200).json(out);
+    // try each configured provider until one succeeds
+    const allAttempts = [];
+    for (const name of list) {
+      const out = await runProvider(name, args);
+      if (out.ok) return res.status(200).json({ ok: true, text: out.text, provider: name, model: out.model });
+      allAttempts.push(name + ' → ' + out.error);
+      if (out.attempts) out.attempts.slice(0, 3).forEach(a => allAttempts.push('   ' + a));
+      console.log('Provider ' + name + ' failed: ' + out.error);
+    }
+    return res.status(200).json({ ok: false,
+      error: 'No AI provider could complete the request.', attempts: allAttempts });
 
   } catch (e) {
     console.log('AI HANDLER ERROR:', e.message);

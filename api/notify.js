@@ -44,6 +44,13 @@ export async function sendNotification(event, payload = {}, notifyEmail, notifyW
       `You can track this enquiry on our website using the reference above.`
     ].join('\n');
 
+  } else if (event === 'custom') {
+    // free-form message composed by the site (quotation, clarification, etc.)
+    toEmail = payload.to || '';
+    toWa    = payload.whatsapp || '';
+    subject = payload.subject || 'Message';
+    text    = payload.text || '';
+
   } else {
     return [`unknown event: ${event}`];
   }

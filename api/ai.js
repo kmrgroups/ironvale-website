@@ -66,6 +66,46 @@ async function openrouterModels() {
   ];
 }
 
+/* ---------------- Groq (free, fast) ---------------- */
+async function groqModels(key, needsVision) {
+  const cacheKey = needsVision ? 'groqVision' : 'groqText';
+  if (cache[cacheKey]) return cache[cacheKey];
+  try {
+    const r = await fetch('https://api.groq.com/openai/v1/models', {
+      headers: { 'Authorization': 'Bearer ' + key }
+    });
+    const j = await r.json();
+    let ids = (j.data || []).map(m => m.id).filter(Boolean);
+
+    // drop things that cannot do chat completions
+    ids = ids.filter(id => !/whisper|tts|guard|embed|distil-whisper/i.test(id));
+
+    const looksVision = id => /vision|scout|maverick|llama-4|llama4|vl\b|llava|multimodal/i.test(id);
+    if (needsVision) {
+      const v = ids.filter(looksVision);
+      if (v.length) ids = v;
+    }
+
+    const score = id => {
+      let s = 0;
+      if (/maverick/i.test(id)) s += 40;
+      if (/scout/i.test(id)) s += 35;
+      if (/llama-4|llama4/i.test(id)) s += 30;
+      if (/vision/i.test(id)) s += 25;
+      if (/70b|90b|120b/i.test(id)) s += 15;
+      if (/17b|32b/i.test(id)) s += 10;
+      if (/8b|7b|1b|3b/i.test(id)) s -= 10;
+      if (/preview|deprecated/i.test(id)) s -= 8;
+      if (/instant/i.test(id)) s -= 5;
+      return s;
+    };
+    ids.sort((a, b) => score(b) - score(a));
+    if (ids.length) { cache[cacheKey] = ids; return ids; }
+  } catch (e) { console.log('Groq discovery failed:', e.message); }
+  return ['meta-llama/llama-4-maverick-17b-128e-instruct',
+          'meta-llama/llama-4-scout-17b-16e-instruct'];
+}
+
 /* ---------------- Gemini ---------------- */
 async function geminiModels(key) {
   if (cache.gemini) return cache.gemini;
@@ -224,12 +264,11 @@ async function runProvider(name, args) {
       { 'HTTP-Referer': process.env.SITE_URL || 'https://www.elixirtec.com', 'X-Title': 'RFQ Engine' });
   }
   if (name === 'groq') {
+    const key = cleanKey(process.env.GROQ_API_KEY);
+    const needsVision = !!(args.attachment && args.attachment.b64);
     const models = process.env.GROQ_MODEL ? [process.env.GROQ_MODEL]
-      : ['meta-llama/llama-4-scout-17b-16e-instruct',
-         'meta-llama/llama-4-maverick-17b-128e-instruct',
-         'llama-3.2-90b-vision-preview'];
-    return askOpenAICompatible('https://api.groq.com/openai/v1',
-      cleanKey(process.env.GROQ_API_KEY), models, args, {});
+      : await groqModels(key, needsVision);
+    return askOpenAICompatible('https://api.groq.com/openai/v1', key, models, args, {});
   }
   if (name === 'gemini') return askGemini(args);
   if (name === 'anthropic') return askAnthropic(args);
@@ -258,6 +297,11 @@ export default async function handler(req, res) {
       ANTHROPIC_API_KEY: peek(process.env.ANTHROPIC_API_KEY)
     };
     if (list.includes('openrouter')) info.openrouterFreeVisionModels = (await openrouterModels()).slice(0, 8);
+    if (list.includes('groq')) {
+      const k = cleanKey(process.env.GROQ_API_KEY);
+      info.groqVisionModels = (await groqModels(k, true)).slice(0, 6);
+      info.groqAllModels = (await groqModels(k, false)).slice(0, 10);
+    }
     if (list.includes('gemini')) info.geminiModels = (await geminiModels(cleanKey(process.env.GEMINI_API_KEY)) || []).slice(0, 8);
     info.note = list.length
       ? 'AI is active. Providers tried in order: ' + list.join(' → ')

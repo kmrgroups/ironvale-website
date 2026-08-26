@@ -1864,6 +1864,186 @@ Reply with ONLY this JSON, no commentary or code fences:
     return c;
   }
 
+  /* ---------- INTERNAL COST SHEET (printable) ---------- */
+  function buildCostSheetHtml(r){
+    const c=r.costing, t=computeCosting(c), co=CO(), cfg=QC();
+    const logo=co.letterheadLogo||data.logoDataUrl||'';
+    const x=r.extract||{}, p=x.part||{};
+    const money2=n=>(cfg.currencySymbol||'₹')+num(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+    const opRows=t.ops.map(o=>`<tr>
+      <td class="c">${esc(o.op)}</td><td>${esc(o.process)}</td>
+      <td>${esc(o.machineName)}</td>
+      <td class="r">${money2(o.machineRate)}</td>
+      <td class="r">${num(o.setupMin).toFixed(1)}</td>
+      <td class="r">${num(o.cycleMin).toFixed(2)}</td>
+      <td class="r">${money2(o.machineCost)}</td>
+      <td class="r">${money2(o.labourCost)}</td>
+      <td class="r">${money2(o.setupCost)}</td>
+      <td class="r b">${money2(o.machineCost+o.labourCost+o.setupCost)}</td>
+      <td class="c">${esc(o.confidence||'—')}</td></tr>`).join('')
+      || '<tr><td colspan="11" class="c muted">No operations</td></tr>';
+
+    const reqRows=(x.requirements||[]).map(q=>`<tr>
+      <td>${esc(q.category)}</td><td>${esc(q.requirement)}</td>
+      <td class="src">${esc(q.source)}</td><td class="c">${esc(q.confidence)}</td></tr>`).join('');
+
+    const line=(label,val,cls)=>`<tr class="${cls||''}"><td>${label}</td><td class="r">${money2(val)}</td></tr>`;
+
+    return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Cost Sheet ${esc(r.ref)}</title>
+<style>
+  @page{size:A4;margin:12mm 10mm 14mm;}
+  *{box-sizing:border-box;}
+  body{font-family:'Helvetica Neue',Arial,sans-serif;color:#12233f;font-size:9pt;line-height:1.45;margin:0;}
+  .sheet{max-width:190mm;margin:0 auto;}
+  .stamp{background:#8E1A1A;color:#fff;text-align:center;padding:5px;font-size:8pt;
+    letter-spacing:2pt;text-transform:uppercase;font-weight:700;margin-bottom:10px;border-radius:2px;}
+  .lh{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:2pt solid #0B2A5B;padding-bottom:8px;}
+  .lh img{max-height:48px;max-width:120px;object-fit:contain;}
+  .lh-co{font-size:12pt;font-weight:800;color:#0B2A5B;white-space:nowrap;}
+  .lh-right{text-align:right;font-size:7.5pt;color:#41567E;}
+  h2.title{text-align:center;font-size:12pt;letter-spacing:2pt;color:#0B2A5B;margin:12px 0 3px;}
+  .rule{width:50px;height:2pt;background:#C2932E;margin:0 auto 12px;}
+  .grid{display:flex;gap:12px;margin-bottom:12px;}
+  .box{flex:1;border:.7pt solid #ccd6e5;border-radius:3px;padding:8px 10px;}
+  .box h5{font-size:7pt;letter-spacing:1pt;text-transform:uppercase;color:#8E6A19;margin:0 0 4px;font-weight:700;}
+  .box p{margin:0;font-size:8.5pt;line-height:1.5;}
+  .box b{color:#0B2A5B;}
+  h4{font-size:7.5pt;letter-spacing:1.2pt;text-transform:uppercase;color:#8E6A19;margin:14px 0 5px;
+    border-bottom:.7pt solid #e2e9f2;padding-bottom:3px;}
+  table{width:100%;border-collapse:collapse;font-size:8pt;}
+  th{background:#0B2A5B;color:#fff;text-align:left;padding:5px 5px;font-size:7pt;
+    letter-spacing:.5pt;text-transform:uppercase;font-weight:600;}
+  td{padding:4px 5px;border-bottom:.6pt solid #e2e9f2;vertical-align:top;}
+  td.c,th.c{text-align:center;} td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;}
+  td.b{font-weight:700;color:#0B2A5B;}
+  td.src{font-size:7pt;color:#8894ab;}
+  .muted{color:#8894ab;font-style:italic;}
+  .totals{width:88mm;margin-left:auto;margin-top:8px;}
+  .totals td{padding:3px 5px;border:none;}
+  .totals tr.sep td{border-top:.8pt solid #b9c6d8;padding-top:6px;font-weight:700;color:#0B2A5B;}
+  .totals tr.grand td{border-top:1.6pt solid #0B2A5B;padding-top:7px;font-size:11pt;font-weight:800;color:#0B2A5B;}
+  .totals tr.minp td{color:#8894ab;font-size:7.5pt;}
+  .note{background:#FFF6E0;border:.7pt solid #e0c37a;border-radius:3px;padding:8px 10px;margin-top:10px;font-size:8pt;color:#7a5c14;}
+  .note ul{margin:4px 0 0 14px;} .note li{margin-bottom:2px;}
+  .sign{margin-top:18px;display:flex;justify-content:space-between;gap:20px;}
+  .sign div{flex:1;border-top:.8pt solid #0B2A5B;padding-top:5px;font-size:7.5pt;color:#41567E;text-align:center;}
+  .foot{margin-top:14px;padding-top:6px;border-top:.6pt solid #ccd6e5;font-size:7pt;color:#8894ab;text-align:center;}
+  .noprint{text-align:center;padding:14px;background:#0B2A5B;color:#fff;font-family:Arial;}
+  .noprint button{background:#E0B44E;color:#0B2A5B;border:none;padding:11px 26px;border-radius:100px;font-weight:700;font-size:13px;cursor:pointer;margin:0 5px;}
+  @media print{.noprint{display:none;}}
+</style></head><body>
+<div class="noprint">
+  <button onclick="window.print()">Save as PDF / Print</button>
+  <button onclick="window.close()" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);">Close</button>
+  <div style="font-size:11.5px;opacity:.85;margin-top:10px;line-height:1.6;">
+    In the print dialog: <b>Destination</b> → Save as PDF, then open <b>More settings</b> and untick <b>Headers and footers</b>.
+  </div>
+</div>
+<div class="sheet">
+  <div class="stamp">Internal cost sheet — confidential — not for issue to customer</div>
+  <div class="lh">
+    <div style="display:flex;gap:10px;align-items:center;">
+      ${logo?`<img src="${logo}">`:''}
+      <div class="lh-co">${esc(co.legalName||co.displayName||data.brandName)}</div>
+    </div>
+    <div class="lh-right">Prepared ${new Date().toLocaleString()}<br>By ${esc(data.quoteSender||'Estimating')}</div>
+  </div>
+
+  <h2 class="title">COST SHEET</h2><div class="rule"></div>
+
+  <div class="grid">
+    <div class="box"><h5>Enquiry</h5><p>
+      <b>Ref:</b> ${esc(r.ref)}<br>
+      <b>Customer:</b> ${esc(r.company||r.name||'')}<br>
+      <b>Contact:</b> ${esc(r.name)}${r.email?' · '+esc(r.email):''}<br>
+      <b>Received:</b> ${esc(r.date||'')}</p></div>
+    <div class="box"><h5>Component</h5><p>
+      <b>Part:</b> ${esc(p.name||'—')}<br>
+      <b>Part No:</b> ${esc(p.number||'—')}<br>
+      <b>Drawing:</b> ${esc(p.drawingNumber||'—')}${p.revision?' Rev '+esc(p.revision):''}<br>
+      <b>Material:</b> ${esc(c.material.grade||c.material.name||'—')}</p></div>
+    <div class="box"><h5>Quantity &amp; Batch</h5><p>
+      <b>Order qty:</b> ${t.qty}<br>
+      <b>Batch size:</b> ${t.batch}<br>
+      <b>Total cycle:</b> ${t.totalCycleMin.toFixed(2)} min/pc<br>
+      <b>Blank wt:</b> ${num(c.material.blankWeight).toFixed(3)} kg</p></div>
+  </div>
+
+  ${reqRows?`<h4>Customer Requirements Extracted from Drawing</h4>
+  <table><thead><tr><th style="width:28mm">Category</th><th>Requirement</th>
+    <th style="width:38mm">Source</th><th class="c" style="width:16mm">Conf.</th></tr></thead>
+    <tbody>${reqRows}</tbody></table>`:''}
+
+  <h4>Material</h4>
+  <table><thead><tr><th>Grade / Description</th><th class="r">Blank wt (kg)</th>
+    <th class="r">Finish wt (kg)</th><th class="r">Rate / kg</th><th class="r">Cost / pc</th></tr></thead>
+    <tbody><tr><td>${esc(c.material.grade||c.material.name||'—')}</td>
+    <td class="r">${num(c.material.blankWeight).toFixed(3)}</td>
+    <td class="r">${num(c.material.finishWeight).toFixed(3)}</td>
+    <td class="r">${money2(c.material.rate)}</td>
+    <td class="r b">${money2(t.materialCost)}</td></tr></tbody></table>
+
+  <h4>Process Route &amp; Operation Costing</h4>
+  <table><thead><tr><th class="c" style="width:9mm">Op</th><th>Process</th><th style="width:32mm">Machine</th>
+    <th class="r" style="width:17mm">M/c rate</th><th class="r" style="width:14mm">Setup min</th>
+    <th class="r" style="width:14mm">Cycle min</th><th class="r" style="width:16mm">Machine</th>
+    <th class="r" style="width:16mm">Labour</th><th class="r" style="width:15mm">Setup</th>
+    <th class="r" style="width:17mm">Total/pc</th><th class="c" style="width:14mm">Conf.</th></tr></thead>
+    <tbody>${opRows}</tbody></table>
+
+  <h4>Cost Build-Up</h4>
+  <table class="totals">
+    ${line('Material',t.materialCost)}
+    ${line('Machine',t.machineCost)}
+    ${line('Labour',t.labourCost)}
+    ${line('Setup (spread over batch of '+t.batch+')',t.setupCost)}
+    ${line('Inspection',t.inspection)}
+    ${line('Special processes',t.special)}
+    ${line('Tooling',t.tooling)}
+    ${line('Consumables',t.consumables)}
+    ${line('Packaging',t.packaging)}
+    ${line('Freight',t.freight)}
+    ${line('Direct cost',t.direct,'sep')}
+    ${line('Scrap / rejection @ '+num(CB().scrapPct)+'%',t.scrap)}
+    ${line('Administration @ '+num(CB().adminPct)+'%',t.admin)}
+    ${line('Finance @ '+num(CB().financePct)+'%',t.finance)}
+    ${line('Contingency @ '+num(CB().contingencyPct)+'%',t.contingency)}
+    ${line('Total manufacturing cost',t.totalCost,'sep')}
+    ${line('Profit @ '+num(CB().profitPct)+'%',t.profit)}
+    ${line('Recommended selling price / pc',t.sellingPrice,'grand')}
+    ${line('Minimum viable price / pc',t.minPrice,'minp')}
+    ${line('Order value ('+t.qty+' pcs)',t.lineTotal,'minp')}
+  </table>
+
+  ${((c.assumptions||[]).length||(x.missing||[]).length)?`<div class="note">
+    ${(c.assumptions||[]).length?`<b>Assumptions made during costing — verify before release:</b>
+      <ul>${c.assumptions.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`:''}
+    ${(x.missing||[]).length?`<b style="display:block;margin-top:6px;">Information missing from the drawing:</b>
+      <ul>${x.missing.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`:''}
+  </div>`:''}
+  ${c.aiNotes?`<div class="note" style="background:#EAF6FD;border-color:#a9cbe6;color:#1E4E7A;">${esc(c.aiNotes)}</div>`:''}
+
+  <div class="sign">
+    <div>Estimated by</div><div>Checked by</div><div>Approved by</div>
+  </div>
+
+  <div class="foot">
+    Machine hour rates derived from company cost base · Route and time estimates require engineering verification<br>
+    ${esc(co.legalName||data.brandName)} — internal document, not for circulation outside the company
+  </div>
+</div></body></html>`;
+  }
+
+  function openCostSheetPdf(r){
+    if(!r.costing||r.costing.error){ toast('Work out the cost first.'); return; }
+    const w=window.open('','_blank');
+    if(!w){ toast('Allow pop-ups for this site.'); return; }
+    w.document.write(buildCostSheetHtml(r));
+    w.document.close();
+  }
+
   function costingHtml(r,i){
     const c=r.costing;
     if(!c) return `<div class="rfq-actions">
@@ -1948,6 +2128,7 @@ Reply with ONLY this JSON, no commentary or code fences:
 
       <div class="rfq-actions">
         <button class="mini-btn gold" data-act="costtoquote" data-i="${i}">Put price into quotation</button>
+        <button class="mini-btn" data-act="costpdf" data-i="${i}">Print cost sheet</button>
         <button class="mini-btn ai" data-act="cost" data-i="${i}">Re-plan route</button>
       </div></div>`;
   }
@@ -2313,6 +2494,9 @@ Reply with ONLY this JSON, no commentary or code fences:
       const r=rfqs[+b.dataset.i];
       r.costing.operations.splice(+b.dataset.oi,1);
       await patch(r.ref,{costing:r.costing}); renderRfqAdmin();
+    }));
+    host.querySelectorAll('[data-act="costpdf"]').forEach(b=>b.addEventListener('click',()=>{
+      openCostSheetPdf(rfqs[+b.dataset.i]);
     }));
     host.querySelectorAll('[data-act="costtoquote"]').forEach(b=>b.addEventListener('click',async()=>{
       const idx=+b.dataset.i,r=rfqs[idx],t=computeCosting(r.costing);

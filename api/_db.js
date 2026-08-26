@@ -24,6 +24,11 @@ export async function ensureTables() {
     user_name TEXT NOT NULL,
     pass_hash TEXT NOT NULL
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS secrets (
+    name TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now()
+  )`;
   await sql`CREATE TABLE IF NOT EXISTS assets (
     id TEXT PRIMARY KEY,
     mime TEXT NOT NULL,
@@ -56,3 +61,24 @@ export function cors(res) {
 export function readBody(req) {
   return typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
 }
+
+
+/* Settings entered in the admin panel take priority over Vercel environment
+   variables, so a site can be configured entirely from its own screen. */
+let secretCache = null, secretCacheAt = 0;
+export async function getSecret(name) {
+  const now = Date.now();
+  if (!secretCache || now - secretCacheAt > 30000) {
+    try {
+      await ensureTables();
+      const rows = await sql`SELECT name, value FROM secrets`;
+      secretCache = {};
+      rows.forEach(r => { secretCache[r.name] = r.value; });
+      secretCacheAt = now;
+    } catch (e) { secretCache = secretCache || {}; }
+  }
+  const fromDb = secretCache[name];
+  if (fromDb && String(fromDb).trim()) return String(fromDb).trim();
+  return String(process.env[name] || '').trim();
+}
+export function clearSecretCache() { secretCache = null; }

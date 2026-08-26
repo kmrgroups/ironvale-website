@@ -459,6 +459,37 @@
   .admin-tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto;background:var(--sky-wash);}
   .admin-tab{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;padding:14px 12px;color:var(--ink-soft);border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;}
   .admin-tab.active{color:var(--navy);border-bottom-color:var(--gold);background:var(--white);}
+  .setup-card{border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px;background:var(--white);box-shadow:var(--shadow-sm);}
+  .setup-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px;}
+  .setup-head h3{font-size:var(--fs-card-title);color:var(--navy);}
+  .setup-badge{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+    padding:5px 11px;border-radius:100px;font-weight:600;background:#EEF1F6;color:var(--ink-mid);white-space:nowrap;}
+  .setup-badge.ok{background:#E6F7F0;color:var(--ok);}
+  .setup-badge.warn{background:#FFF6E0;color:var(--gold-deep);}
+  .setup-badge.bad{background:#FDECEA;color:#B03A2E;}
+  .setup-why{font-size:var(--fs-micro);color:var(--ink-mid);margin-bottom:12px;line-height:1.7;}
+  .setup-how{margin:10px 0 14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);}
+  .setup-how summary{cursor:pointer;padding:10px 14px;font-family:var(--mono);font-size:var(--fs-micro);
+    letter-spacing:.05em;text-transform:uppercase;color:var(--sky-deep);font-weight:600;list-style:none;}
+  .setup-how summary::before{content:'▸ ';}
+  .setup-how[open] summary::before{content:'▾ ';}
+  .setup-how ol,.setup-how ul,.setup-how p{font-size:var(--fs-micro);color:var(--ink-mid);line-height:1.85;
+    margin:0 16px 12px 34px;}
+  .setup-how p{margin-left:14px;}
+  .setup-how li{margin-bottom:5px;}
+  .setup-how a{color:var(--sky-deep);text-decoration:underline;}
+  .setup-how code{background:var(--sky-wash);padding:1px 5px;border-radius:3px;font-size:.95em;}
+  .setup-table{width:100%;border-collapse:collapse;font-size:var(--fs-micro);margin:0 14px 12px;}
+  .setup-table th{text-align:left;padding:5px 7px;border-bottom:1px solid var(--line);color:var(--navy);font-weight:600;}
+  .setup-table td{padding:5px 7px;border-bottom:1px solid rgba(11,42,91,.06);color:var(--ink-mid);}
+  .secret-row{display:flex;gap:8px;align-items:center;}
+  .secret-row input{flex:1;}
+  .secret-row .mini-btn{flex:0 0 auto;}
+  .check-list{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;}
+  .check-row{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);gap:14px;}
+  .check-row:last-child{border-bottom:none;}
+  .check-row b{font-size:var(--fs-body);color:var(--navy);display:block;}
+  .check-row span{font-size:var(--fs-micro);color:var(--ink-mid);}
   .admin-body{flex:1;overflow-y:auto;padding:26px clamp(16px,4vw,64px) 70px;}
   .admin-group{display:none;} .admin-group.active{display:block;max-width:1080px;margin:0 auto;}
   @media (min-width:900px){
@@ -710,7 +741,8 @@
     <button class="admin-close" id="admin-close">✕</button>
   </div>
   <div class="admin-tabs">
-    <button class="admin-tab active" data-tab="design">Design</button>
+    <button class="admin-tab active" data-tab="setup">⚙ Setup</button>
+    <button class="admin-tab" data-tab="design">Design</button>
     <button class="admin-tab" data-tab="layout">Sizing</button>
     <button class="admin-tab" data-tab="brand">Brand</button>
     <button class="admin-tab" data-tab="hero">Hero</button>
@@ -737,7 +769,180 @@
   </div>
   <div class="admin-body">
 
-    <div class="admin-group active" data-group="design">
+    <div class="admin-group active" data-group="setup">
+      <div class="info-box"><b>Everything this site needs, in one place.</b> Each step below shows whether it is
+      working, what to do if not, and exactly where to get what you need. Settings saved here are stored in your
+      own database and override anything set elsewhere.</div>
+
+      <div id="setup-checklist"></div>
+
+      <!-- 1. EMAIL -->
+      <div class="setup-card" id="sc-email">
+        <div class="setup-head"><h3>1 · Email notifications</h3><span class="setup-badge" id="badge-email">checking…</span></div>
+        <p class="setup-why">Sends you an alert when an RFQ arrives, and sends quotations to customers.</p>
+
+        <details class="setup-how"><summary>How to get a Resend API key</summary>
+          <ol>
+            <li>Go to <a href="https://resend.com" target="_blank" rel="noopener">resend.com</a> and sign up — it is free for this volume.</li>
+            <li>Left menu → <b>API Keys</b> → <b>Create API Key</b>. Give it any name.</li>
+            <li>Copy the key immediately — it starts <code>re_</code> and is shown only once.</li>
+            <li>Paste it below and press Save.</li>
+          </ol>
+        </details>
+        <div class="field"><label>Resend API Key</label>
+          <div class="secret-row"><input type="password" id="set-RESEND_API_KEY" placeholder="re_...">
+            <button class="mini-btn" data-save="RESEND_API_KEY">Save</button></div>
+          <div class="field-hint" id="cur-RESEND_API_KEY"></div></div>
+
+        <details class="setup-how"><summary>How to send from your own domain</summary>
+          <ol>
+            <li>Resend → <b>Domains</b> → <b>Add Domain</b> → type your company domain.</li>
+            <li>Resend shows two or three DNS records. Copy each with the copy icon — never retype them.</li>
+            <li>Add them where your domain is managed (GoDaddy, Namecheap, Vercel…). Type, Name and Value must match exactly.</li>
+            <li>Back in Resend, press <b>Verify DNS Records</b>. It can take up to an hour.</li>
+            <li>Once it says <b>Verified</b>, set the sender below to an address on that domain.</li>
+          </ol>
+          <p><b>Until the domain is verified</b>, use <code>onboarding@resend.dev</code> — but it only delivers to
+          the address you registered with Resend. Customers will receive nothing.</p>
+        </details>
+        <div class="field"><label>Send emails from</label>
+          <div class="secret-row"><input type="text" id="set-FROM_EMAIL" placeholder="Company Name &lt;sales@yourdomain.com&gt;">
+            <button class="mini-btn" data-save="FROM_EMAIL">Save</button></div>
+          <div class="field-hint" id="cur-FROM_EMAIL"></div></div>
+        <div class="field"><label>Send RFQ alerts to</label>
+          <div class="secret-row"><input type="text" id="set-OWNER_EMAIL" placeholder="you@yourcompany.com">
+            <button class="mini-btn" data-save="OWNER_EMAIL">Save</button></div>
+          <div class="field-hint" id="cur-OWNER_EMAIL"></div></div>
+        <button class="add-btn" id="test-email">Send myself a test email</button>
+        <div class="field-hint" id="test-email-result"></div>
+      </div>
+
+      <!-- 2. AI -->
+      <div class="setup-card" id="sc-ai">
+        <div class="setup-head"><h3>2 · AI features</h3><span class="setup-badge" id="badge-ai">checking…</span></div>
+        <p class="setup-why">Reads customer drawings, plans the process route, and estimates times.
+        Optional — everything else works without it.</p>
+
+        <details class="setup-how"><summary>Which provider should I use?</summary>
+          <table class="setup-table">
+            <tr><th>Provider</th><th>Cost</th><th>Reads PDF?</th><th>Notes</th></tr>
+            <tr><td>Mistral</td><td>Free tier</td><td>No — images only</td><td>Good all-round choice. Phone verification, no card.</td></tr>
+            <tr><td>Groq</td><td>Free</td><td>No — images only</td><td>Very fast. Model availability varies by account.</td></tr>
+            <tr><td>OpenRouter</td><td>Free models</td><td>No — images only</td><td>Wide model choice; some accounts are asked for payment details.</td></tr>
+            <tr><td>Google Gemini</td><td>Free tier</td><td>Yes</td><td>Some accounts are blocked by Google with no clear reason.</td></tr>
+            <tr><td>Anthropic</td><td>Paid, ~2–5¢ per drawing</td><td>Yes</td><td>Best on difficult or hand-marked drawings.</td></tr>
+          </table>
+          <p>Add more than one — the site tries them in order and falls through automatically if one fails.</p>
+        </details>
+
+        <details class="setup-how"><summary>Getting each key</summary>
+          <ul>
+            <li><b>Mistral</b> — <a href="https://console.mistral.ai" target="_blank" rel="noopener">console.mistral.ai</a> → sign up → <b>API Keys</b> → <b>Create new key</b></li>
+            <li><b>Groq</b> — <a href="https://console.groq.com" target="_blank" rel="noopener">console.groq.com</a> → <b>API Keys</b> → <b>Create API Key</b> (starts <code>gsk_</code>)</li>
+            <li><b>OpenRouter</b> — <a href="https://openrouter.ai" target="_blank" rel="noopener">openrouter.ai</a> → avatar → <b>Keys</b> → <b>Create Key</b></li>
+            <li><b>Gemini</b> — <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> → <b>Create API key</b></li>
+            <li><b>Anthropic</b> — <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a> → <b>API Keys</b>, then add billing credit</li>
+          </ul>
+        </details>
+
+        <div class="field"><label>Mistral API Key</label>
+          <div class="secret-row"><input type="password" id="set-MISTRAL_API_KEY">
+            <button class="mini-btn" data-save="MISTRAL_API_KEY">Save</button></div>
+          <div class="field-hint" id="cur-MISTRAL_API_KEY"></div></div>
+        <div class="field"><label>Groq API Key</label>
+          <div class="secret-row"><input type="password" id="set-GROQ_API_KEY">
+            <button class="mini-btn" data-save="GROQ_API_KEY">Save</button></div>
+          <div class="field-hint" id="cur-GROQ_API_KEY"></div></div>
+        <div class="field"><label>OpenRouter API Key</label>
+          <div class="secret-row"><input type="password" id="set-OPENROUTER_API_KEY">
+            <button class="mini-btn" data-save="OPENROUTER_API_KEY">Save</button></div>
+          <div class="field-hint" id="cur-OPENROUTER_API_KEY"></div></div>
+        <div class="field"><label>Google Gemini API Key</label>
+          <div class="secret-row"><input type="password" id="set-GEMINI_API_KEY">
+            <button class="mini-btn" data-save="GEMINI_API_KEY">Save</button></div>
+          <div class="field-hint" id="cur-GEMINI_API_KEY"></div></div>
+        <div class="field"><label>Anthropic API Key (paid)</label>
+          <div class="secret-row"><input type="password" id="set-ANTHROPIC_API_KEY">
+            <button class="mini-btn" data-save="ANTHROPIC_API_KEY">Save</button></div>
+          <div class="field-hint" id="cur-ANTHROPIC_API_KEY"></div></div>
+        <button class="add-btn" id="test-ai">Test the AI connection</button>
+        <div class="field-hint" id="test-ai-result"></div>
+      </div>
+
+      <!-- 3. WHATSAPP -->
+      <div class="setup-card" id="sc-wa">
+        <div class="setup-head"><h3>3 · WhatsApp notifications</h3><span class="setup-badge" id="badge-wa">checking…</span></div>
+        <p class="setup-why">Optional. Sends RFQ alerts to your phone and quotations to customers.
+        Free at this volume, but the Meta setup takes about an hour.</p>
+
+        <details class="setup-how"><summary>Setting up WhatsApp Business API</summary>
+          <ol>
+            <li><a href="https://developers.facebook.com" target="_blank" rel="noopener">developers.facebook.com</a> → <b>My Apps</b> → <b>Create App</b> → type <b>Business</b>.</li>
+            <li>On the dashboard find <b>WhatsApp</b> → <b>Set up</b>.</li>
+            <li>On <b>API Setup</b> copy the <b>temporary access token</b> and the <b>Phone number ID</b>.</li>
+            <li>Click <b>Manage phone number list</b> and add your own mobile as a test recipient.</li>
+            <li>Paste both values below and save.</li>
+          </ol>
+          <p><b>Make the token permanent:</b> business.facebook.com → Settings → Users → System Users →
+          Add (role Admin) → Add Assets → your app → Full control → Generate New Token with
+          <code>whatsapp_business_messaging</code> and <code>whatsapp_business_management</code>.</p>
+          <p><b>The 24-hour rule:</b> Meta only allows free-form messages to someone who messaged you in the
+          last 24 hours. Outside that window an approved template is required — create one under
+          WhatsApp Manager → Message Templates, then put its name below.</p>
+        </details>
+
+        <div class="field"><label>WhatsApp Access Token</label>
+          <div class="secret-row"><input type="password" id="set-WHATSAPP_TOKEN">
+            <button class="mini-btn" data-save="WHATSAPP_TOKEN">Save</button></div>
+          <div class="field-hint" id="cur-WHATSAPP_TOKEN"></div></div>
+        <div class="field"><label>Phone Number ID</label>
+          <div class="secret-row"><input type="text" id="set-WHATSAPP_PHONE_ID">
+            <button class="mini-btn" data-save="WHATSAPP_PHONE_ID">Save</button></div>
+          <div class="field-hint" id="cur-WHATSAPP_PHONE_ID"></div></div>
+        <div class="field"><label>Approved Template Name (optional)</label>
+          <div class="secret-row"><input type="text" id="set-WHATSAPP_TEMPLATE" placeholder="hello_world">
+            <button class="mini-btn" data-save="WHATSAPP_TEMPLATE">Save</button></div>
+          <div class="field-hint" id="cur-WHATSAPP_TEMPLATE"></div></div>
+        <div class="field"><label>Send WhatsApp alerts to</label>
+          <div class="secret-row"><input type="text" id="set-OWNER_WHATSAPP" placeholder="919902009152">
+            <button class="mini-btn" data-save="OWNER_WHATSAPP">Save</button></div>
+          <div class="field-hint" id="cur-OWNER_WHATSAPP">Country code + number, digits only. No + and no spaces.</div></div>
+        <button class="add-btn" id="test-wa2">Send myself a test WhatsApp</button>
+        <div class="field-hint" id="test-wa2-result"></div>
+      </div>
+
+      <!-- 4. HOSTING -->
+      <div class="setup-card" id="sc-host">
+        <div class="setup-head"><h3>4 · Hosting &amp; database</h3><span class="setup-badge" id="badge-db">checking…</span></div>
+        <p class="setup-why">These are the only things that cannot be set from this screen — they must exist
+        before the site can run at all. If you are reading this, they are already working.</p>
+
+        <details class="setup-how"><summary>Deploying this site for another company</summary>
+          <ol>
+            <li><b>GitHub</b> — create a repository, upload <code>index.html</code>, <code>package.json</code> and the <code>api</code> folder.</li>
+            <li><b>Neon</b> — <a href="https://neon.tech" target="_blank" rel="noopener">neon.tech</a> → new project → copy the connection string.</li>
+            <li><b>Vercel</b> — <a href="https://vercel.com" target="_blank" rel="noopener">vercel.com</a> → Add New → Project → import the repository.</li>
+            <li>Before deploying, add three environment variables:
+              <ul><li><code>DATABASE_URL</code> — the Neon connection string</li>
+              <li><code>ADMIN_USER</code> — first sign-in username</li>
+              <li><code>ADMIN_PASS</code> — first sign-in password</li></ul></li>
+            <li>Deploy, open the site, sign in, and set everything else on <b>this screen</b>.</li>
+          </ol>
+          <p>Optionally add <code>ADMIN_RECOVERY_CODE</code> so the Forgot Password option works.</p>
+        </details>
+
+        <div class="field"><label>Live Site Address</label>
+          <div class="secret-row"><input type="text" id="set-SITE_URL" placeholder="https://www.yourcompany.com">
+            <button class="mini-btn" data-save="SITE_URL">Save</button></div>
+          <div class="field-hint">Used to build the “Open RFQ Pipeline” link inside alert emails.</div></div>
+      </div>
+
+      <div class="warn-box" style="margin-top:24px;"><b>A note on where keys are kept.</b> Keys saved here are
+      stored in your database, not in this page, and are never sent to visitors — but anyone with admin access
+      can overwrite them. Use a strong admin password, and change it if someone leaves.</div>
+    </div>
+
+    <div class="admin-group" data-group="design">
       <div class="info-box"><b>Changes preview instantly.</b> Press <b>Publish Changes</b> at the top to save them to the database so every visitor, anywhere, sees them.</div>
       <div class="field"><label>Base Text Size</label><div class="range-row"><input type="range" id="rg-fontBase" min="13" max="20" step=".5"><span class="range-val" id="v-fontBase"></span></div></div>
       <div class="field"><label>Heading Size</label><div class="range-row"><input type="range" id="rg-titleScale" min=".7" max="1.4" step=".05"><span class="range-val" id="v-titleScale"></span></div></div>
@@ -3354,6 +3559,121 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     btn.disabled=false; btn.textContent='Send me a test WhatsApp';
   }
 
+  /* ================= SETUP SCREEN ================= */
+  const SETTING_KEYS=['RESEND_API_KEY','FROM_EMAIL','OWNER_EMAIL','MISTRAL_API_KEY','GROQ_API_KEY',
+    'OPENROUTER_API_KEY','GEMINI_API_KEY','ANTHROPIC_API_KEY','WHATSAPP_TOKEN','WHATSAPP_PHONE_ID',
+    'WHATSAPP_TEMPLATE','OWNER_WHATSAPP','SITE_URL'];
+
+  async function loadSettings(){
+    try{
+      const j=await api('/api/settings');
+      SETTING_KEYS.forEach(k=>{
+        const note=document.getElementById('cur-'+k); if(!note) return;
+        const s=(j.settings||{})[k]||{source:'none',masked:''};
+        if(s.source==='panel') note.innerHTML='<span style="color:var(--ok)">Set here</span> — '+esc(s.masked);
+        else if(s.source==='vercel') note.innerHTML='<span style="color:var(--gold-deep)">From Vercel settings</span> — '+esc(s.masked)+'. Saving here will override it.';
+        else if(!note.textContent) note.innerHTML='<span style="color:var(--ink-soft)">Not set.</span>';
+      });
+    }catch(e){}
+  }
+  async function saveSetting(name,btn){
+    const input=document.getElementById('set-'+name);
+    const note=document.getElementById('cur-'+name);
+    if(!input) return;
+    btn.textContent='Saving…'; btn.disabled=true;
+    try{
+      await api('/api/settings',{method:'POST',body:JSON.stringify({name,value:input.value})});
+      input.value='';
+      if(note) note.innerHTML='<span style="color:var(--ok)">Saved.</span>';
+      toast(name.replace(/_/g,' ')+' saved');
+      setTimeout(()=>{ loadSettings(); runSetupChecks(); },600);
+    }catch(e){ toast('Could not save: '+e.message); }
+    btn.textContent='Save'; btn.disabled=false;
+  }
+
+  function badge(id,state,text){
+    const el=document.getElementById(id); if(!el) return;
+    el.className='setup-badge '+state; el.textContent=text;
+  }
+  async function runSetupChecks(){
+    const list=document.getElementById('setup-checklist');
+    const rows=[];
+    // email + database
+    let n={};
+    try{ n=await (await fetch(API+'/api/notify')).json(); }catch(e){}
+    const c=n.checks||{};
+    const dbOk=c.DATABASE_URL==='present';
+    badge('badge-db',dbOk?'ok':'bad',dbOk?'Connected':'Not connected');
+    rows.push(['Database',dbOk,dbOk?'Content and RFQs are being stored':'Site cannot save anything']);
+
+    const mailKey=c.RESEND_API_KEY==='present', from=c.FROM_EMAIL&&c.FROM_EMAIL!=='MISSING';
+    const testSender=/resend\.dev/i.test(c.FROM_EMAIL||'');
+    if(mailKey&&from&&!testSender){ badge('badge-email','ok','Working'); }
+    else if(mailKey&&from&&testSender){ badge('badge-email','warn','Test sender only'); }
+    else { badge('badge-email','bad','Not set up'); }
+    rows.push(['Email',mailKey&&from&&!testSender,
+      !mailKey?'No Resend API key':(!from?'No sender address':
+      (testSender?'Using onboarding@resend.dev — only reaches your own address, customers get nothing':'Sending from '+c.FROM_EMAIL))]);
+
+    // ai
+    let a={};
+    try{ a=await (await fetch(API+'/api/ai')).json(); }catch(e){}
+    const aiOk=!!a.configured;
+    badge('badge-ai',aiOk?'ok':'warn',aiOk?('Active · '+(a.providers||[]).join(', ')):'Off');
+    rows.push(['AI features',aiOk,aiOk?('Using '+(a.providers||[]).join(' → ')):'Optional — drawing reading and costing are unavailable']);
+
+    // whatsapp
+    const waOk=c.WHATSAPP_TOKEN==='present'&&c.WHATSAPP_PHONE_ID&&c.WHATSAPP_PHONE_ID!=='not set';
+    badge('badge-wa',waOk?'ok':'warn',waOk?'Connected':'Not set up');
+    rows.push(['WhatsApp',waOk,waOk?'Alerts and quotations can be sent by WhatsApp':'Optional — email still works']);
+
+    if(list) list.innerHTML='<div class="check-list">'+rows.map(([name,ok,note])=>
+      `<div class="check-row"><div><b>${esc(name)}</b><span>${esc(note)}</span></div>
+       <span class="setup-badge ${ok?'ok':'warn'}">${ok?'OK':'Action needed'}</span></div>`).join('')+'</div>';
+  }
+
+  async function testEmail(){
+    const out=document.getElementById('test-email-result'), btn=document.getElementById('test-email');
+    btn.disabled=true; btn.textContent='Sending…'; out.textContent='';
+    try{
+      const r=await fetch(API+'/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({event:'custom',payload:{to:(document.getElementById('set-OWNER_EMAIL').value||data.notifyEmail||''),
+          subject:'Test from your RFQ system',
+          text:'If you can read this, email notifications are working.\n\nSent from the Setup screen.'}})});
+      const j=await r.json();
+      const res=(j.results||[]).find(x=>/EMAIL/i.test(x))||'no response';
+      out.textContent=res; out.style.color=/EMAIL SENT/i.test(res)?'var(--ok)':'#B03A2E';
+    }catch(e){ out.textContent=e.message; out.style.color='#B03A2E'; }
+    btn.disabled=false; btn.textContent='Send myself a test email';
+  }
+  async function testAi(){
+    const out=document.getElementById('test-ai-result'), btn=document.getElementById('test-ai');
+    btn.disabled=true; btn.textContent='Testing…'; out.textContent='';
+    try{
+      const r=await fetch(API+'/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({prompt:'Reply with exactly: AI connection working.',maxTokens:30})});
+      const j=await r.json();
+      out.textContent=j.ok?('Working — '+(j.provider||'')+' / '+(j.model||'')):('Failed — '+(j.error||'no response'));
+      out.style.color=j.ok?'var(--ok)':'#B03A2E';
+    }catch(e){ out.textContent=e.message; out.style.color='#B03A2E'; }
+    btn.disabled=false; btn.textContent='Test the AI connection';
+  }
+  async function testWa2(){
+    const out=document.getElementById('test-wa2-result'), btn=document.getElementById('test-wa2');
+    const num=(document.getElementById('set-OWNER_WHATSAPP').value||data.notifyWhatsapp||'').replace(/\D/g,'');
+    if(!num){ out.textContent='Enter your WhatsApp number above and save it first.'; out.style.color='#B03A2E'; return; }
+    btn.disabled=true; btn.textContent='Sending…'; out.textContent='';
+    try{
+      const r=await fetch(API+'/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({event:'custom',payload:{whatsapp:num,
+          text:'Test from your RFQ system. If you can read this, WhatsApp notifications are working.'}})});
+      const j=await r.json();
+      const res=(j.results||[]).find(x=>/WHATSAPP/i.test(x))||'no response';
+      out.textContent=res; out.style.color=/SENT/i.test(res)?'var(--ok)':'#B03A2E';
+    }catch(e){ out.textContent=e.message; out.style.color='#B03A2E'; }
+    btn.disabled=false; btn.textContent='Send myself a test WhatsApp';
+  }
+
   let formBuilt=false;
   function fillForm(){
     SIMPLE.forEach(k=>{const el=document.getElementById('in-'+k); if(el)el.value=data[k];});
@@ -3432,6 +3752,14 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     });
     document.getElementById('wa-test').addEventListener('click',testWhatsapp);
     renderPlantsAdmin();
+
+    // setup screen
+    document.querySelectorAll('[data-save]').forEach(b=>
+      b.addEventListener('click',()=>saveSetting(b.dataset.save,b)));
+    document.getElementById('test-email').addEventListener('click',testEmail);
+    document.getElementById('test-ai').addEventListener('click',testAi);
+    document.getElementById('test-wa2').addEventListener('click',testWa2);
+    loadSettings(); runSetupChecks();
     document.getElementById('tax-switch').addEventListener('click',function(){
       data.quoteCfg.showTax=data.quoteCfg.showTax===false; this.classList.toggle('on',data.quoteCfg.showTax!==false); markDirty();
     });

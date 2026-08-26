@@ -5,7 +5,7 @@
 //   GEMINI_API_KEY      – free tier (some accounts are blocked by Google)
 //   ANTHROPIC_API_KEY   – paid, best quality on difficult drawings
 // Keys stay on the server and are never sent to the browser.
-import { cors, readBody } from './_db.js';
+import { cors, readBody, getSecret } from './_db.js';
 
 const CLAUDE_MODEL = process.env.AI_MODEL || 'claude-sonnet-4-6';
 
@@ -20,13 +20,13 @@ function cleanKey(v) {
 }
 let cache = {};   // discovered model lists, per provider
 
-function providers() {
+async function providers() {
   const list = [];
-  if (process.env.OPENROUTER_API_KEY) list.push('openrouter');
-  if (process.env.MISTRAL_API_KEY) list.push('mistral');
-  if (process.env.GROQ_API_KEY) list.push('groq');
-  if (process.env.GEMINI_API_KEY) list.push('gemini');
-  if (process.env.ANTHROPIC_API_KEY) list.push('anthropic');
+  if (await getSecret('OPENROUTER_API_KEY')) list.push('openrouter');
+  if (await getSecret('MISTRAL_API_KEY')) list.push('mistral');
+  if (await getSecret('GROQ_API_KEY')) list.push('groq');
+  if (await getSecret('GEMINI_API_KEY')) list.push('gemini');
+  if (await getSecret('ANTHROPIC_API_KEY')) list.push('anthropic');
   return list;
 }
 
@@ -191,7 +191,7 @@ async function askOpenAICompatible(base, key, models, args, extraHeaders) {
 
 /* ---------------- Gemini call ---------------- */
 async function askGemini(args) {
-  const key = cleanKey(process.env.GEMINI_API_KEY);
+  const key = cleanKey(await getSecret('GEMINI_API_KEY'));
   const parts = [];
   if (args.attachment && args.attachment.b64 && args.attachment.mime) {
     parts.push({ inline_data: { mime_type: args.attachment.mime, data: args.attachment.b64 } });
@@ -250,7 +250,7 @@ async function askAnthropic(args) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
-      'x-api-key': cleanKey(process.env.ANTHROPIC_API_KEY),
+      'x-api-key': cleanKey(await getSecret('ANTHROPIC_API_KEY')),
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json'
     },
@@ -265,17 +265,17 @@ async function askAnthropic(args) {
 async function runProvider(name, args) {
   if (name === 'openrouter') {
     return askOpenAICompatible('https://openrouter.ai/api/v1',
-      cleanKey(process.env.OPENROUTER_API_KEY), await openrouterModels(), args,
+      cleanKey(await getSecret('OPENROUTER_API_KEY')), await openrouterModels(), args,
       { 'HTTP-Referer': process.env.SITE_URL || 'https://www.elixirtec.com', 'X-Title': 'RFQ Engine' });
   }
   if (name === 'mistral') {
-    const key = cleanKey(process.env.MISTRAL_API_KEY);
+    const key = cleanKey(await getSecret('MISTRAL_API_KEY'));
     const models = process.env.MISTRAL_MODEL ? [process.env.MISTRAL_MODEL]
       : ['pixtral-12b-2409', 'mistral-small-latest', 'pixtral-large-latest', 'mistral-medium-latest'];
     return askOpenAICompatible('https://api.mistral.ai/v1', key, models, args, {});
   }
   if (name === 'groq') {
-    const key = cleanKey(process.env.GROQ_API_KEY);
+    const key = cleanKey(await getSecret('GROQ_API_KEY'));
     const needsVision = !!(args.attachment && args.attachment.b64);
     const models = process.env.GROQ_MODEL ? [process.env.GROQ_MODEL]
       : await groqModels(key, needsVision);
@@ -292,7 +292,7 @@ export default async function handler(req, res) {
   cors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const list = providers();
+  const list = await providers();
 
   if (req.method === 'GET') {
     const info = { alive: true, configured: list.length > 0, providers: list };
@@ -302,19 +302,19 @@ export default async function handler(req, res) {
       return 'length ' + k.length + ', starts "' + k.slice(0, 7) + '"';
     };
     info.keys = {
-      OPENROUTER_API_KEY: peek(process.env.OPENROUTER_API_KEY),
-      MISTRAL_API_KEY: peek(process.env.MISTRAL_API_KEY),
-      GROQ_API_KEY: peek(process.env.GROQ_API_KEY),
-      GEMINI_API_KEY: peek(process.env.GEMINI_API_KEY),
-      ANTHROPIC_API_KEY: peek(process.env.ANTHROPIC_API_KEY)
+      OPENROUTER_API_KEY: peek(await getSecret('OPENROUTER_API_KEY')),
+      MISTRAL_API_KEY: peek(await getSecret('MISTRAL_API_KEY')),
+      GROQ_API_KEY: peek(await getSecret('GROQ_API_KEY')),
+      GEMINI_API_KEY: peek(await getSecret('GEMINI_API_KEY')),
+      ANTHROPIC_API_KEY: peek(await getSecret('ANTHROPIC_API_KEY'))
     };
     if (list.includes('openrouter')) info.openrouterFreeVisionModels = (await openrouterModels()).slice(0, 8);
     if (list.includes('groq')) {
-      const k = cleanKey(process.env.GROQ_API_KEY);
+      const k = cleanKey(await getSecret('GROQ_API_KEY'));
       info.groqVisionModels = (await groqModels(k, true)).slice(0, 6);
       info.groqAllModels = (await groqModels(k, false)).slice(0, 10);
     }
-    if (list.includes('gemini')) info.geminiModels = (await geminiModels(cleanKey(process.env.GEMINI_API_KEY)) || []).slice(0, 8);
+    if (list.includes('gemini')) info.geminiModels = (await geminiModels(cleanKey(await getSecret('GEMINI_API_KEY'))) || []).slice(0, 8);
     info.note = list.length
       ? 'AI is active. Providers tried in order: ' + list.join(' → ')
       : 'Add MISTRAL_API_KEY (free tier, no card) in Vercel to switch AI features on.';

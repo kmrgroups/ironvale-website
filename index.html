@@ -450,7 +450,7 @@
   /* ---- ADMIN ---- */
   #admin-toggle{position:fixed;bottom:26px;right:26px;z-index:100;width:56px;height:56px;border-radius:50%;background:linear-gradient(180deg,var(--sky-mid),var(--navy));border:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:21px;box-shadow:0 6px 0 var(--navy-deep),0 16px 30px rgba(11,42,91,.4);transition:transform .2s;}
   #admin-toggle:hover{transform:translateY(-4px);}
-  #admin-panel{position:fixed;top:0;right:0;height:100%;width:520px;max-width:96vw;background:var(--white);color:var(--navy);z-index:160;transform:translateX(100%);transition:transform .32s ease;box-shadow:-16px 0 60px rgba(11,42,91,.22);display:flex;flex-direction:column;}
+  #admin-panel{position:fixed;inset:0;width:100vw;max-width:100vw;background:var(--white);color:var(--navy);z-index:160;transform:translateX(100%);transition:transform .32s ease;display:flex;flex-direction:column;}
   #admin-panel.open{transform:translateX(0);}
   .admin-head{padding:18px 22px;background:var(--navy);color:#fff;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--gold);gap:10px;}
   .admin-head h2{font-size:var(--fs-card-title);font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#fff;}
@@ -459,8 +459,14 @@
   .admin-tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto;background:var(--sky-wash);}
   .admin-tab{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;padding:14px 12px;color:var(--ink-soft);border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;}
   .admin-tab.active{color:var(--navy);border-bottom-color:var(--gold);background:var(--white);}
-  .admin-body{flex:1;overflow-y:auto;padding:22px 24px 40px;}
-  .admin-group{display:none;} .admin-group.active{display:block;}
+  .admin-body{flex:1;overflow-y:auto;padding:26px clamp(16px,4vw,64px) 70px;}
+  .admin-group{display:none;} .admin-group.active{display:block;max-width:1080px;margin:0 auto;}
+  @media (min-width:900px){
+    .admin-group.active .field{max-width:660px;}
+    .admin-group.active .info-box,.admin-group.active .warn-box{max-width:860px;}
+    .admin-group.active .list-item,.admin-group.active .sec-card{max-width:860px;}
+    .admin-tabs{justify-content:flex-start;padding:0 clamp(8px,2vw,40px);}
+  }
   .field{margin-bottom:17px;}
   .field label{display:block;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:7px;}
   .field input[type=text],.field textarea,.field input[type=email],.field input[type=tel],.field input[type=password]{width:100%;background:var(--paper);border:1px solid var(--line);color:var(--navy);padding:10px 12px;font-family:var(--body);font-size:var(--fs-body);border-radius:var(--radius-sm);}
@@ -594,6 +600,7 @@
         <div class="contact-item"><span class="k">Phone</span><span id="d-contact-phone"></span></div>
         <div class="contact-item"><span class="k">Email</span><span id="d-contact-email"></span></div>
       </div>
+      <div id="public-plants"></div>
       <div class="contact-social" id="contact-social"></div>
       <div class="map-wrap" id="map-wrap"></div>
       <a class="map-link" id="map-link" href="#" rel="noopener">Open in Google Maps →</a>
@@ -765,9 +772,12 @@
     </div>
 
     <div class="admin-group" data-group="brand">
-      <div class="field"><label>Company Name</label><input type="text" id="in-brandName"></div>
+      <div class="info-box">This is the name and logo shown on the <b>website</b>. Documents use the
+      legal name from <b>Company Profile</b> and, by default, this same logo.</div>
+      <div class="field"><label>Company Name (website)</label><input type="text" id="in-brandName"></div>
       <div class="field"><label>Company Suffix</label><input type="text" id="in-brandSuffix"></div>
-      <div class="field"><label>Logo</label><div class="img-upload" id="logo-upload-wrap"></div></div>
+      <div class="field"><label>Logo — used everywhere</label><div class="img-upload" id="logo-upload-wrap"></div>
+        <div class="field-hint">Website header, footer and all PDF documents pull from here.</div></div>
       <div class="toggle-row"><span>Glowing halo around logo</span><div class="switch on" id="glow-switch"></div></div>
       <div class="field" style="margin-top:16px;"><label>Glow Color</label><input type="color" id="in-glow"></div>
       <div class="toggle-row"><span>Show company name beside logo</span><div class="switch on" id="brandtext-switch"></div></div>
@@ -855,11 +865,18 @@
     </div>
 
     <div class="admin-group" data-group="contact">
+      <div class="info-box"><b>Entered once, used everywhere.</b> Address, phone and email come from
+      <b>Company Profile</b> and appear automatically on the website, quotations and cost sheets.
+      Only fill the boxes below if the website should show something <i>different</i> from your
+      registered details — otherwise leave them blank.</div>
       <div class="field"><label>Section Title</label><input type="text" id="in-contactTitle"></div>
       <div class="field"><label>Subtitle</label><textarea id="in-contactSub" rows="3"></textarea></div>
-      <div class="field"><label>Address</label><input type="text" id="in-contactAddress"></div>
-      <div class="field"><label>Phone</label><input type="text" id="in-contactPhone"></div>
-      <div class="field"><label>Email</label><input type="text" id="in-contactEmail"></div>
+      <div class="field"><label>Address <span style="color:var(--ink-soft)">— override</span></label><input type="text" id="in-contactAddress">
+        <div class="field-hint" id="addr-inherit"></div></div>
+      <div class="field"><label>Phone <span style="color:var(--ink-soft)">— override</span></label><input type="text" id="in-contactPhone">
+        <div class="field-hint" id="phone-inherit"></div></div>
+      <div class="field"><label>Email <span style="color:var(--ink-soft)">— override</span></label><input type="text" id="in-contactEmail">
+        <div class="field-hint" id="email-inherit"></div></div>
     </div>
 
     <div class="admin-group" data-group="social">
@@ -1381,6 +1398,14 @@
       return `<a class="social-btn" href="${esc(url)}" rel="noopener" aria-label="${SOCIAL_NAMES[k]}" title="${SOCIAL_NAMES[k]}">${SOCIAL_ICONS[k]}</a>`;
     }).join('');
   }
+  function renderPlantsPublic(){
+    const el=document.getElementById('public-plants'); if(!el) return;
+    const list=plantsForDocuments();
+    el.innerHTML=list.length?`<div class="contact-list" style="margin-top:20px;">`+
+      list.map(p=>`<div class="contact-item"><span class="k">${esc(p.name||'Works')}</span>
+        <span>${esc(plantLine(p).replace(new RegExp('^'+(p.name||'')+',\\s*'),''))}</span></div>`).join('')+
+      `</div>`:'';
+  }
   function renderSocial(){
     const html=socialHtml();
     const f=document.getElementById('foot-social'), c=document.getElementById('contact-social');
@@ -1494,8 +1519,13 @@
     renderCustomSections();
     setText('d-quote-text','"'+data.quoteText+'"'); setText('d-quote-name',data.quoteName); setText('d-quote-role',data.quoteRole);
     setText('d-contact-title',data.contactTitle); setText('d-contact-sub',data.contactSub);
-    setText('d-contact-address',data.contactAddress); setText('d-contact-phone',data.contactPhone);
-    setText('d-contact-email',data.contactEmail);
+    // Company Profile is the master record; the Contact tab only overrides it.
+    const co=CO();
+    const regAddr=companyAddressLines().join(', ');
+    setText('d-contact-address', data.contactAddress || regAddr || '');
+    setText('d-contact-phone', data.contactPhone || co.phone || co.mobile || '');
+    setText('d-contact-email', data.contactEmail || co.rfqEmail || co.email || '');
+    renderPlantsPublic();
     Object.keys(data.sections).forEach(id=>{
       const el=document.getElementById(id); if(el) el.style.display=data.sections[id]?'':'none';
       const sw=document.querySelector(`.switch[data-toggle="${id}"]`); if(sw) sw.classList.toggle('on',!!data.sections[id]);
@@ -1529,6 +1559,26 @@
     renderRfqAdmin();
   }
   const waLink=(n,t)=>`https://wa.me/${String(n||'').replace(/\D/g,'')}?text=${encodeURIComponent(t)}`;
+
+  /* Send through the server so the message actually leaves the building —
+     mailto: only opens the visitor's own mail program, which is why nothing
+     was arriving. */
+  async function sendMessage_(opts){
+    const r=await fetch(API+'/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({event:'custom',payload:{
+        to:opts.email||'',whatsapp:opts.whatsapp||'',
+        subject:opts.subject||'',text:opts.text||''}})});
+    const j=await r.json();
+    return j.results||[];
+  }
+  function readResults(res){
+    const email=(res||[]).find(x=>/EMAIL/i.test(x))||'';
+    const wa=(res||[]).find(x=>/WHATSAPP/i.test(x))||'';
+    return {
+      emailOk:/EMAIL SENT/i.test(email), waOk:/WHATSAPP (SENT|TEMPLATE)/i.test(wa),
+      email, wa
+    };
+  }
   const mailLink=(to,s,b)=>`mailto:${encodeURIComponent(to||'')}?subject=${encodeURIComponent(s)}&body=${encodeURIComponent(b)}`;
   /* ================= RATE CALCULATION ENGINE =================
      Machine hour rates are computed from your own figures — never guessed.
@@ -2596,8 +2646,8 @@ Reply with ONLY this JSON, no commentary or code fences:
           </div>
           <div class="rfq-actions">
             <button class="mini-btn gold" data-act="pdf" data-i="${i}">Open PDF quotation</button>
-            <a class="mini-btn" href="${mailLink(r.email,'Quotation '+(q.number||r.ref)+' — '+(CO().legalName||data.brandName),cust)}">Email customer</a>
-            <a class="mini-btn" href="${waLink(r.phone,cust)}">WhatsApp customer</a>
+            <button class="mini-btn" data-act="mailquote" data-i="${i}">Email customer</button>
+            <button class="mini-btn" data-act="waquote" data-i="${i}">WhatsApp customer</button>
             <button class="mini-btn green" data-act="approve" data-i="${i}">Approve &amp; send automatically</button>
           </div></div>`;})()}
         ${!r.quoteDoc?`<div class="rfq-actions"><button class="mini-btn" data-act="startquote" data-i="${i}">Start quotation document</button></div>`:''}
@@ -2608,6 +2658,7 @@ Reply with ONLY this JSON, no commentary or code fences:
 
     const patch=async(ref,p,extra={})=>{
       try{ const j=await api('/api/rfqs',{method:'PATCH',body:JSON.stringify(Object.assign({ref,patch:p},extra))});
+        if(j.rfq) j.rfq.__notify=j.notify||[];
         return j.rfq; }catch(e){ toast('Update failed: '+e.message); return null; }
     };
     host.querySelectorAll('.status-select').forEach(sel=>sel.addEventListener('change',async()=>{
@@ -2734,6 +2785,30 @@ Reply with ONLY this JSON, no commentary or code fences:
       r.costing.consumables.splice(+b.dataset.ci,1);
       await patch(r.ref,{costing:r.costing}); renderRfqAdmin();
     }));
+    const quoteBody=r=>{
+      const q=r.quoteDoc||{};
+      return (r.quote||'')+`\n\nReference: ${r.ref}${q.number?'\nQuotation No: '+q.number:''}\n— ${data.quoteSender||''}\n${CO().legalName||data.brandName}`;
+    };
+    host.querySelectorAll('[data-act="mailquote"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      if(!r.email){ toast('No customer email on this RFQ'); return; }
+      b.textContent='Sending…'; b.disabled=true;
+      const res=await sendMessage_({email:r.email,
+        subject:'Quotation '+((r.quoteDoc&&r.quoteDoc.number)||r.ref)+' — '+(CO().legalName||data.brandName),
+        text:quoteBody(r)});
+      const s=readResults(res);
+      toast(s.emailOk?('Email sent to '+r.email):('Not sent — '+(s.email||'no response')));
+      b.textContent='Email customer'; b.disabled=false;
+    }));
+    host.querySelectorAll('[data-act="waquote"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      if(!r.phone){ toast('No customer phone on this RFQ'); return; }
+      b.textContent='Sending…'; b.disabled=true;
+      const res=await sendMessage_({whatsapp:r.phone,text:quoteBody(r)});
+      const s=readResults(res);
+      toast(s.waOk?('WhatsApp sent to '+r.phone):('Not sent — '+(s.wa||'WhatsApp not set up yet')));
+      b.textContent='WhatsApp customer'; b.disabled=false;
+    }));
     host.querySelectorAll('[data-act="costpdf"]').forEach(b=>b.addEventListener('click',()=>{
       openCostSheetPdf(rfqs[+b.dataset.i]);
     }));
@@ -2809,10 +2884,19 @@ Reply with ONLY this JSON, no commentary or code fences:
     }));
     host.querySelectorAll('[data-act="clarify"]').forEach(b=>b.addEventListener('click',async()=>{
       const r=rfqs[+b.dataset.i];
+      if(!r.email){ toast('No customer email on this RFQ'); return; }
       b.textContent='Drafting…'; b.disabled=true;
       const body=await draftClarification(r);
+      b.textContent='Sending…';
+      const res=await sendMessage_({email:r.email,
+        subject:`Clarification required — ${r.ref}`, text:body});
+      const s=readResults(res);
+      toast(s.emailOk?('Clarification sent to '+r.email):('Not sent — '+(s.email||'no response')));
+      if(s.emailOk){
+        const log=[`${new Date().toLocaleString()} — clarification email sent`].concat(r.log||[]);
+        const u=await patch(r.ref,{log}); if(u) rfqs[+b.dataset.i]=u;
+      }
       b.textContent='Draft clarification email'; b.disabled=false;
-      window.location.href=mailLink(r.email,`Clarification required — ${r.ref}`,body);
     }));
     host.querySelectorAll('.qb-add').forEach(b=>b.addEventListener('click',async()=>{
       const r=rfqs[+b.dataset.i];
@@ -2855,7 +2939,13 @@ Reply with ONLY this JSON, no commentary or code fences:
       const log=[`${at} — approved; customer notified`].concat(r.log||[]);
       const u=await patch(r.ref,{status:'Approved & Sent',approvedAt:at,log},
         {notifyCustomer:true,notifyEmail:data.notifyEmail,notifyWhatsapp:data.notifyWhatsapp});
-      if(u){rfqs[+b.dataset.i]=u; toast('Quotation sent to customer');} renderRfqAdmin();
+      if(u){
+        rfqs[+b.dataset.i]=u;
+        const s=readResults(u.__notify||[]);
+        toast(s.emailOk ? ('Quotation emailed to '+r.email)
+          : ('Marked approved, but the email did not send — '+(s.email||'check Notifications settings')));
+      }
+      renderRfqAdmin();
     }));
     host.querySelectorAll('[data-act="del"]').forEach(b=>b.addEventListener('click',async()=>{
       const r=rfqs[+b.dataset.i];
@@ -3171,6 +3261,14 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     if(c.useWebsiteLogo!==false) return data.logoDataUrl||c.letterheadLogo||'';
     return c.letterheadLogo||data.logoDataUrl||'';
   }
+  function updateInheritNotes(){
+    const co=CO();
+    const set=(id,val)=>{const el=document.getElementById(id); if(el)
+      el.innerHTML=val?('Currently inherits: <b>'+esc(val)+'</b>'):'<span style="color:#B03A2E">Nothing to inherit — fill in Company Profile.</span>';};
+    set('addr-inherit',companyAddressLines().join(', '));
+    set('phone-inherit',co.phone||co.mobile||'');
+    set('email-inherit',co.rfqEmail||co.email||'');
+  }
   function updateLogoNote(){
     const el=document.getElementById('logo-source-note'); if(!el) return;
     const c=CO(), using=c.useWebsiteLogo!==false;
@@ -3278,6 +3376,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.getElementById('bank-switch').classList.toggle('on',!!data.company.bankShow);
     document.getElementById('uselogo-switch').classList.toggle('on',data.company.useWebsiteLogo!==false);
     updateLogoNote();
+    updateInheritNotes();
     checkWhatsapp();
     document.getElementById('tax-switch').classList.toggle('on',data.quoteCfg.showTax!==false);
     singleImageField('co-logo-wrap','company.letterheadLogo');
@@ -3306,7 +3405,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     });
     Object.keys(data.company).forEach(k=>{
       const el=document.getElementById('in-co-'+k); if(!el) return;
-      el.addEventListener('input',()=>{ data.company[k]=el.value; markDirty(); });
+      el.addEventListener('input',()=>{ data.company[k]=el.value; render(); updateInheritNotes(); markDirty(); });
     });
     Object.keys(data.quoteCfg).forEach(k=>{
       const el=document.getElementById('in-qc-'+k); if(!el) return;

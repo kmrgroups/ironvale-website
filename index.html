@@ -1733,11 +1733,23 @@ Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.q
 
   function blankCosting(r){
     return {qty:1,batchQty:1,
-      material:{name:'',grade:'',rate:0,unit:'kg',finishWeight:0,blankWeight:0,scrapRecovery:0},
+      material:{name:'',grade:'',stockForm:'',stockSize:'',cutLength:'',rate:0,unit:'kg',
+                rateSource:'',rateDate:'',rateConfidence:'Manual',
+                finishWeight:0,blankWeight:0,scrapRecovery:0},
       operations:[],specialProcesses:[],
+      tooling:[],consumables:[],
+      packaging:{method:'',materials:'',costPerPart:0,source:'',basis:''},
+      freight:{method:'',destination:'',costPerPart:0,source:'',basis:''},
       toolingPerPart:0,consumablesPerPart:0,packagingPerPart:0,freightPerPart:0,
       inspectionMinPerPart:0,assumptions:[],aiNotes:'',createdAt:''};
   }
+
+  const SRC_CLASS=s=>/supplier|quote|verified/i.test(s)?'verified':/ai|estimate/i.test(s)?'ai':'';
+  const listCost=arr=>(arr||[]).reduce((t,i)=>{
+    const life=num(i.life);
+    const per=life>0?num(i.unitCost)/life:num(i.costPerPart);
+    return t+(isFinite(per)?per:0);
+  },0);
 
   function computeCosting(c){
     const b=CB();
@@ -1770,8 +1782,14 @@ Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.q
     const inspection=(num(c.inspectionMinPerPart)/60)*
       (labourById((data.labourGrades||[]).find(l=>/inspect/i.test(l.grade))?.id)?labourRate((data.labourGrades||[]).find(l=>/inspect/i.test(l.grade))):defaultLabourRate());
     const special=(c.specialProcesses||[]).reduce((t,s)=>t+num(s.ratePerPart),0);
-    const tooling=num(c.toolingPerPart), consumables=num(c.consumablesPerPart);
-    const packaging=num(c.packagingPerPart), freight=num(c.freightPerPart);
+
+    // itemised lists take priority; the single-figure fields remain as a manual override
+    const toolingList=listCost(c.tooling);
+    const consumList=listCost(c.consumables);
+    const tooling=toolingList>0?toolingList:num(c.toolingPerPart);
+    const consumables=consumList>0?consumList:num(c.consumablesPerPart);
+    const packaging=num(c.packaging&&c.packaging.costPerPart)||num(c.packagingPerPart);
+    const freight=num(c.freight&&c.freight.costPerPart)||num(c.freightPerPart);
 
     const direct=materialCost+machineCost+labourCost+setupCost+inspection+special+tooling+consumables+packaging+freight;
     const scrap=direct*num(b.scrapPct)/100;
@@ -1789,36 +1807,61 @@ Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.q
       minPrice:totalCost*1.03, lineTotal:sellingPrice*qty};
   }
 
-  const ROUTE_PROMPT=(r,x,qty)=>`You are a manufacturing process planner at a precision machining company.
-Propose the manufacturing route for the component described below.
+  const ROUTE_PROMPT=(r,x,qty)=>`You are a manufacturing process planner and estimator at a precision machining company.
+Plan the complete manufacture of the component below.
 
-AVAILABLE MACHINES (use only these; give the exact "type" text so it can be matched):
+AVAILABLE MACHINES (use only these; repeat the exact "type" text so it can be matched):
 ${(data.machines||[]).map(m=>`- ${m.name} | type: ${m.type}`).join('\n')||'- none listed'}
 
-LABOUR GRADES AVAILABLE:
+LABOUR GRADES:
 ${(data.labourGrades||[]).map(l=>`- ${l.grade}`).join('\n')||'- none listed'}
 
-MATERIALS IN THE PRICE BOOK:
-${(data.materials||[]).map(m=>`- ${m.name} (${m.grade}), density ${m.density} g/cc`).join('\n')||'- none listed'}
+MATERIALS IN THE COMPANY PRICE BOOK (rate per kg):
+${(data.materials||[]).map(m=>`- ${m.name} (${m.grade}) ₹${m.rate}/${m.unit}, density ${m.density} g/cc`).join('\n')||'- none listed'}
 
 COMPONENT:
 ${x?JSON.stringify({part:x.part,requirements:x.requirements,critical:x.criticalCharacteristics},null,1):(r.message||'no drawing data')}
-Quantity: ${qty}
+Order quantity: ${qty}
+Customer's stated requirement: ${r.message||'(none given)'}
 
-RULES — read carefully:
-- Do NOT give any prices, rates or costs. None. Costs are calculated separately from the company's own data.
-- Give realistic cycle and setup times in MINUTES based on the actual features, not round numbers.
-- Choose the optimum route for this component — do not use a fixed sequence.
-- If the material is unclear, recommend a suitable grade and say so in assumptions.
-- Estimate blank and finished weight in kg only if dimensions allow; otherwise leave 0 and note it.
-- List every assumption you had to make.
+=== RULES ===
+1. RAW MATERIAL SIZING. Work out the actual stock size needed, not just the grade.
+   State stock form (round bar / hex bar / plate / forging / casting / tube),
+   the size (e.g. "Ø45 mm round bar" or "60 × 40 × 12 mm plate"),
+   and the cut length per piece including facing and parting allowance.
+   Calculate blank weight from that size and the material density. Show your basis.
+2. PRICES. For any price you give, state where it came from in "source":
+   - "Company price book" when the material is in the list above (use that exact rate)
+   - "Market estimate" when you are estimating a typical current market price
+   Never claim a supplier quotation. Mark estimates clearly.
+3. TOOLING. For every operation list the cutting tools, inserts and tool holders needed.
+   Give specification, typical unit cost, and expected tool life in PIECES for this component.
+4. CONSUMABLES. List coolant, cutting oil, deburring media, cleaning agents etc. with cost per piece.
+5. PACKAGING. The customer has not specified packaging. Recommend the lowest-cost packaging
+   that protects this component adequately for the stated quantity — state the method,
+   the materials, and an estimated cost per piece.
+6. FREIGHT. The customer has not specified transport. Recommend the most economical method
+   (surface / courier / part-load) for this quantity and weight, with an estimated cost per piece.
+   Assume dispatch from ${[CO().city,CO().state].filter(Boolean).join(', ')||'our works'}.
+7. TIMES. Give realistic setup and cycle times in MINUTES based on the actual features.
+8. Do NOT price machine time, labour or overhead — those come from the company's own rates.
+9. List every assumption you had to make.
 
 Reply with ONLY this JSON, no commentary or code fences:
 {
- "material":{"name":"","grade":"","finishWeight":0,"blankWeight":0,"basis":""},
+ "material":{"name":"","grade":"","stockForm":"","stockSize":"","cutLength":"",
+             "finishWeight":0,"blankWeight":0,"rate":0,"source":"","basis":""},
  "operations":[
    {"op":10,"process":"","machineType":"","setupMin":0,"cycleMin":0,"labourGrade":"","notes":"","confidence":"High|Medium|Low"}
  ],
+ "tooling":[
+   {"op":10,"item":"","kind":"Tool|Insert|Holder|Gauge","spec":"","unitCost":0,"life":0,"source":"","confidence":"High|Medium|Low"}
+ ],
+ "consumables":[
+   {"item":"","spec":"","costPerPart":0,"source":"","confidence":"High|Medium|Low"}
+ ],
+ "packaging":{"method":"","materials":"","costPerPart":0,"source":"","basis":""},
+ "freight":{"method":"","destination":"","costPerPart":0,"source":"","basis":""},
  "specialProcesses":[{"name":"","note":""}],
  "inspectionMinPerPart":0,
  "assumptions":[""],
@@ -1841,12 +1884,16 @@ Reply with ONLY this JSON, no commentary or code fences:
 
     const c=blankCosting(r);
     c.qty=qty; c.batchQty=qty;
-    const mat=materialByName((p.material&&(p.material.grade||p.material.name))||'');
-    c.material={name:(p.material&&p.material.name)||'',grade:(p.material&&p.material.grade)||'',
-      rate:mat?num(mat.rate):0,unit:mat?mat.unit:'kg',
-      finishWeight:num(p.material&&p.material.finishWeight),
-      blankWeight:num(p.material&&p.material.blankWeight),scrapRecovery:0,
-      matched:!!mat, basis:(p.material&&p.material.basis)||''};
+    const pm=p.material||{};
+    const mat=materialByName(pm.grade||pm.name||'');
+    c.material={name:pm.name||'',grade:pm.grade||'',
+      stockForm:pm.stockForm||'',stockSize:pm.stockSize||'',cutLength:pm.cutLength||'',
+      rate:mat?num(mat.rate):num(pm.rate),unit:mat?mat.unit:'kg',
+      rateSource:mat?('Company price book — '+(mat.name||mat.grade)):(pm.source||'Market estimate'),
+      rateDate:mat&&mat.sourceDate?mat.sourceDate:new Date().toISOString().slice(0,10),
+      rateConfidence:mat?'Verified':'Estimate',
+      finishWeight:num(pm.finishWeight),blankWeight:num(pm.blankWeight),scrapRecovery:0,
+      matched:!!mat, basis:pm.basis||''};
     c.operations=(p.operations||[]).map((o,i)=>{
       const m=bestMachineFor(o.machineType);
       const l=(data.labourGrades||[]).find(g=>String(g.grade||'').toLowerCase()===String(o.labourGrade||'').toLowerCase())
@@ -1855,6 +1902,18 @@ Reply with ONLY this JSON, no commentary or code fences:
         machineId:m?m.id:'',labourGradeId:l?l.id:'',setupMin:num(o.setupMin),cycleMin:num(o.cycleMin),
         notes:o.notes||'',confidence:o.confidence||'Medium'};
     });
+    c.tooling=(p.tooling||[]).filter(t=>t&&t.item).map(t=>({
+      op:t.op||'',item:t.item,kind:t.kind||'Tool',spec:t.spec||'',
+      unitCost:num(t.unitCost),life:num(t.life),
+      source:t.source||'Market estimate',confidence:t.confidence||'Medium'}));
+    c.consumables=(p.consumables||[]).filter(t=>t&&t.item).map(t=>({
+      item:t.item,spec:t.spec||'',costPerPart:num(t.costPerPart),
+      source:t.source||'Market estimate',confidence:t.confidence||'Medium'}));
+    const pk=p.packaging||{}, fr=p.freight||{};
+    c.packaging={method:pk.method||'',materials:pk.materials||'',costPerPart:num(pk.costPerPart),
+      source:pk.source||'Market estimate',basis:pk.basis||''};
+    c.freight={method:fr.method||'',destination:fr.destination||'',costPerPart:num(fr.costPerPart),
+      source:fr.source||'Market estimate',basis:fr.basis||''};
     c.specialProcesses=(p.specialProcesses||[]).filter(s=>s&&s.name)
       .map(s=>({name:s.name,note:s.note||'',ratePerPart:0}));
     c.inspectionMinPerPart=num(p.inspectionMinPerPart);
@@ -1919,6 +1978,8 @@ Reply with ONLY this JSON, no commentary or code fences:
   td.c,th.c{text-align:center;} td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;}
   td.b{font-weight:700;color:#0B2A5B;}
   td.src{font-size:7pt;color:#8894ab;}
+  .src-note{font-size:7.5pt;color:#41567E;background:#f4f7fb;border-radius:3px;padding:5px 8px;margin-top:5px;line-height:1.6;}
+  .src-note b{color:#0B2A5B;}
   .muted{color:#8894ab;font-style:italic;}
   .totals{width:88mm;margin-left:auto;margin-top:8px;}
   .totals td{padding:3px 5px;border:none;}
@@ -1976,14 +2037,19 @@ Reply with ONLY this JSON, no commentary or code fences:
     <th style="width:38mm">Source</th><th class="c" style="width:16mm">Conf.</th></tr></thead>
     <tbody>${reqRows}</tbody></table>`:''}
 
-  <h4>Material</h4>
-  <table><thead><tr><th>Grade / Description</th><th class="r">Blank wt (kg)</th>
-    <th class="r">Finish wt (kg)</th><th class="r">Rate / kg</th><th class="r">Cost / pc</th></tr></thead>
+  <h4>Raw Material</h4>
+  <table><thead><tr><th>Grade</th><th>Stock Form</th><th>Stock Size</th><th>Cut Length</th>
+    <th class="r">Blank kg</th><th class="r">Finish kg</th><th class="r">Rate/kg</th><th class="r">Cost/pc</th></tr></thead>
     <tbody><tr><td>${esc(c.material.grade||c.material.name||'—')}</td>
+    <td>${esc(c.material.stockForm||'—')}</td>
+    <td>${esc(c.material.stockSize||'—')}</td>
+    <td>${esc(c.material.cutLength||'—')}</td>
     <td class="r">${num(c.material.blankWeight).toFixed(3)}</td>
     <td class="r">${num(c.material.finishWeight).toFixed(3)}</td>
     <td class="r">${money2(c.material.rate)}</td>
     <td class="r b">${money2(t.materialCost)}</td></tr></tbody></table>
+  <div class="src-note"><b>Price source:</b> ${esc(c.material.rateSource||'not stated')}${c.material.rateDate?' · '+esc(c.material.rateDate):''}
+    ${c.material.basis?'<br><b>Sizing basis:</b> '+esc(c.material.basis):''}</div>
 
   <h4>Process Route &amp; Operation Costing</h4>
   <table><thead><tr><th class="c" style="width:9mm">Op</th><th>Process</th><th style="width:32mm">Machine</th>
@@ -1992,6 +2058,39 @@ Reply with ONLY this JSON, no commentary or code fences:
     <th class="r" style="width:16mm">Labour</th><th class="r" style="width:15mm">Setup</th>
     <th class="r" style="width:17mm">Total/pc</th><th class="c" style="width:14mm">Conf.</th></tr></thead>
     <tbody>${opRows}</tbody></table>
+
+  ${(c.tooling||[]).length?`<h4>Tooling &amp; Holders</h4>
+  <table><thead><tr><th class="c" style="width:9mm">Op</th><th style="width:38mm">Item</th><th>Specification</th>
+    <th class="r" style="width:18mm">Unit cost</th><th class="r" style="width:16mm">Life (pcs)</th>
+    <th class="r" style="width:17mm">Cost/pc</th><th style="width:30mm">Source</th></tr></thead>
+    <tbody>${c.tooling.map(tl=>`<tr><td class="c">${esc(tl.op||'—')}</td><td>${esc(tl.item)}</td>
+      <td>${esc(tl.spec||'—')}</td><td class="r">${money2(tl.unitCost)}</td>
+      <td class="r">${num(tl.life)||'—'}</td>
+      <td class="r b">${money2(num(tl.life)>0?num(tl.unitCost)/num(tl.life):0)}</td>
+      <td class="src">${esc(tl.source||'—')}</td></tr>`).join('')}
+    <tr><td colspan="5" class="r b">Tooling total per piece</td><td class="r b">${money2(listCost(c.tooling))}</td><td></td></tr>
+    </tbody></table>`:''}
+
+  ${(c.consumables||[]).length?`<h4>Consumables</h4>
+  <table><thead><tr><th style="width:45mm">Item</th><th>Specification</th>
+    <th class="r" style="width:20mm">Cost/pc</th><th style="width:32mm">Source</th></tr></thead>
+    <tbody>${c.consumables.map(cn=>`<tr><td>${esc(cn.item)}</td><td>${esc(cn.spec||'—')}</td>
+      <td class="r b">${money2(cn.costPerPart)}</td><td class="src">${esc(cn.source||'—')}</td></tr>`).join('')}
+    <tr><td colspan="2" class="r b">Consumables total per piece</td><td class="r b">${money2(listCost(c.consumables))}</td><td></td></tr>
+    </tbody></table>`:''}
+
+  ${(c.packaging&&(c.packaging.method||c.packaging.costPerPart))||(c.freight&&(c.freight.method||c.freight.costPerPart))?`
+  <h4>Packaging &amp; Freight</h4>
+  <table><thead><tr><th style="width:24mm">Item</th><th style="width:40mm">Method</th><th>Detail</th>
+    <th class="r" style="width:20mm">Cost/pc</th><th style="width:30mm">Source</th></tr></thead>
+    <tbody>
+    <tr><td><b>Packaging</b></td><td>${esc(c.packaging.method||'—')}</td>
+      <td>${esc(c.packaging.materials||'')}${c.packaging.basis?'<br><span class="src">'+esc(c.packaging.basis)+'</span>':''}</td>
+      <td class="r b">${money2(c.packaging.costPerPart)}</td><td class="src">${esc(c.packaging.source||'—')}</td></tr>
+    <tr><td><b>Freight</b></td><td>${esc(c.freight.method||'—')}</td>
+      <td>${esc(c.freight.destination||'')}${c.freight.basis?'<br><span class="src">'+esc(c.freight.basis)+'</span>':''}</td>
+      <td class="r b">${money2(c.freight.costPerPart)}</td><td class="src">${esc(c.freight.source||'—')}</td></tr>
+    </tbody></table>`:''}
 
   <h4>Cost Build-Up</h4>
   <table class="totals">
@@ -2076,14 +2175,21 @@ Reply with ONLY this JSON, no commentary or code fences:
         <div><label>Batch Size</label><input class="cf-in num" data-i="${i}" data-k="batchQty" value="${esc(c.batchQty)}"></div>
       </div>
 
-      <div class="cs-sub">Material${c.material.matched?'':' — <span style="color:#B03A2E">not found in your price book, enter the rate</span>'}</div>
+      <div class="cs-sub">Raw Material${c.material.matched?'':' — <span style="color:#B03A2E">not in your price book</span>'}</div>
       <div class="cs-row four">
         <div><label>Grade</label><input class="cmat" data-i="${i}" data-k="grade" value="${esc(c.material.grade)}"></div>
+        <div><label>Stock Form</label><input class="cmat" data-i="${i}" data-k="stockForm" value="${esc(c.material.stockForm)}" placeholder="Round bar"></div>
+        <div><label>Stock Size</label><input class="cmat" data-i="${i}" data-k="stockSize" value="${esc(c.material.stockSize)}" placeholder="Ø45 mm"></div>
+        <div><label>Cut Length</label><input class="cmat" data-i="${i}" data-k="cutLength" value="${esc(c.material.cutLength)}" placeholder="62 mm"></div>
+      </div>
+      <div class="cs-row four">
         <div><label>Blank wt (kg)</label><input class="cmat num" data-i="${i}" data-k="blankWeight" value="${esc(c.material.blankWeight)}"></div>
         <div><label>Finish wt (kg)</label><input class="cmat num" data-i="${i}" data-k="finishWeight" value="${esc(c.material.finishWeight)}"></div>
         <div><label>Rate / kg</label><input class="cmat num" data-i="${i}" data-k="rate" value="${esc(c.material.rate)}"></div>
+        <div><label>Price Source</label><input class="cmat" data-i="${i}" data-k="rateSource" value="${esc(c.material.rateSource)}"></div>
       </div>
-      ${c.material.basis?`<div class="cs-basis">${esc(c.material.basis)}</div>`:''}
+      ${c.material.basis?`<div class="cs-basis">Sizing basis: ${esc(c.material.basis)}</div>`:''}
+      ${c.material.rateSource?`<div class="cs-basis"><span class="src-tag ${SRC_CLASS(c.material.rateSource)}">${esc(c.material.rateConfidence||'')}</span> ${esc(c.material.rateSource)}${c.material.rateDate?' · '+esc(c.material.rateDate):''}</div>`:''}
 
       <div class="cs-sub">Process Route</div>
       <table class="cs-t"><thead><tr><th>Op</th><th>Process</th><th>Machine</th><th>Labour</th>
@@ -2091,12 +2197,48 @@ Reply with ONLY this JSON, no commentary or code fences:
         <tbody>${opRows||'<tr><td colspan="9" class="t-micro">No operations.</td></tr>'}</tbody></table>
       <button class="qb-add" data-act="addop" data-i="${i}">+ Add operation</button>
 
-      <div class="cs-row four" style="margin-top:14px;">
-        <div><label>Tooling / pc</label><input class="cf-in num" data-i="${i}" data-k="toolingPerPart" value="${esc(c.toolingPerPart)}"></div>
-        <div><label>Consumables / pc</label><input class="cf-in num" data-i="${i}" data-k="consumablesPerPart" value="${esc(c.consumablesPerPart)}"></div>
-        <div><label>Packaging / pc</label><input class="cf-in num" data-i="${i}" data-k="packagingPerPart" value="${esc(c.packagingPerPart)}"></div>
-        <div><label>Freight / pc</label><input class="cf-in num" data-i="${i}" data-k="freightPerPart" value="${esc(c.freightPerPart)}"></div>
+      <div class="cs-sub">Tooling &amp; Holders — cost per piece = unit cost ÷ tool life</div>
+      <table class="cs-t"><thead><tr><th>Op</th><th>Item</th><th>Specification</th>
+        <th class="r">Unit cost</th><th class="r">Life (pcs)</th><th class="r">Cost/pc</th><th>Source</th><th></th></tr></thead>
+        <tbody>${(c.tooling||[]).map((tl,ti)=>`<tr>
+          <td style="width:38px"><input class="ct" data-i="${i}" data-ti="${ti}" data-k="op" value="${esc(tl.op)}"></td>
+          <td><input class="ct" data-i="${i}" data-ti="${ti}" data-k="item" value="${esc(tl.item)}"></td>
+          <td><input class="ct" data-i="${i}" data-ti="${ti}" data-k="spec" value="${esc(tl.spec)}"></td>
+          <td style="width:74px"><input class="ct num" data-i="${i}" data-ti="${ti}" data-k="unitCost" value="${esc(tl.unitCost)}"></td>
+          <td style="width:64px"><input class="ct num" data-i="${i}" data-ti="${ti}" data-k="life" value="${esc(tl.life)}"></td>
+          <td class="r">${money(num(tl.life)>0?num(tl.unitCost)/num(tl.life):0)}</td>
+          <td style="width:110px"><span class="src-tag ${SRC_CLASS(tl.source)}">${esc(tl.source||'—')}</span></td>
+          <td><button class="qb-del" data-act="deltool" data-i="${i}" data-ti="${ti}">×</button></td></tr>`).join('')
+          ||'<tr><td colspan="8" class="t-micro">No tooling listed.</td></tr>'}</tbody></table>
+      <button class="qb-add" data-act="addtool" data-i="${i}">+ Add tooling item</button>
+
+      <div class="cs-sub">Consumables</div>
+      <table class="cs-t"><thead><tr><th>Item</th><th>Specification</th><th class="r">Cost/pc</th><th>Source</th><th></th></tr></thead>
+        <tbody>${(c.consumables||[]).map((cn,ci)=>`<tr>
+          <td><input class="cc" data-i="${i}" data-ci="${ci}" data-k="item" value="${esc(cn.item)}"></td>
+          <td><input class="cc" data-i="${i}" data-ci="${ci}" data-k="spec" value="${esc(cn.spec)}"></td>
+          <td style="width:74px"><input class="cc num" data-i="${i}" data-ci="${ci}" data-k="costPerPart" value="${esc(cn.costPerPart)}"></td>
+          <td style="width:110px"><span class="src-tag ${SRC_CLASS(cn.source)}">${esc(cn.source||'—')}</span></td>
+          <td><button class="qb-del" data-act="delcons" data-i="${i}" data-ci="${ci}">×</button></td></tr>`).join('')
+          ||'<tr><td colspan="5" class="t-micro">No consumables listed.</td></tr>'}</tbody></table>
+      <button class="qb-add" data-act="addcons" data-i="${i}">+ Add consumable</button>
+
+      <div class="cs-sub">Packaging &amp; Freight — proposed by AI where the customer did not specify</div>
+      <div class="cs-row four">
+        <div><label>Packing Method</label><input class="cpk" data-i="${i}" data-k="method" value="${esc(c.packaging.method)}"></div>
+        <div><label>Packing Materials</label><input class="cpk" data-i="${i}" data-k="materials" value="${esc(c.packaging.materials)}"></div>
+        <div><label>Packing Cost / pc</label><input class="cpk num" data-i="${i}" data-k="costPerPart" value="${esc(c.packaging.costPerPart)}"></div>
+        <div><label>Source</label><input class="cpk" data-i="${i}" data-k="source" value="${esc(c.packaging.source)}"></div>
       </div>
+      ${c.packaging.basis?`<div class="cs-basis">${esc(c.packaging.basis)}</div>`:''}
+      <div class="cs-row four">
+        <div><label>Freight Method</label><input class="cfr" data-i="${i}" data-k="method" value="${esc(c.freight.method)}"></div>
+        <div><label>Destination</label><input class="cfr" data-i="${i}" data-k="destination" value="${esc(c.freight.destination)}"></div>
+        <div><label>Freight Cost / pc</label><input class="cfr num" data-i="${i}" data-k="costPerPart" value="${esc(c.freight.costPerPart)}"></div>
+        <div><label>Source</label><input class="cfr" data-i="${i}" data-k="source" value="${esc(c.freight.source)}"></div>
+      </div>
+      ${c.freight.basis?`<div class="cs-basis">${esc(c.freight.basis)}</div>`:''}
+
       ${(c.specialProcesses||[]).length?`<div class="cs-sub">Special Processes — enter your supplier rate per piece</div>
       <div class="cs-row four">${c.specialProcesses.map((s,si)=>
         `<div><label>${esc(s.name)}</label><input class="csp num" data-i="${i}" data-si="${si}" value="${esc(s.ratePerPart)}"></div>`).join('')}</div>`:''}
@@ -2108,8 +2250,10 @@ Reply with ONLY this JSON, no commentary or code fences:
         <div><span>Setup (spread over batch)</span><span>${rupee(t.setupCost)}</span></div>
         <div><span>Inspection</span><span>${rupee(t.inspection)}</span></div>
         <div><span>Special processes</span><span>${rupee(t.special)}</span></div>
-        <div><span>Tooling + consumables</span><span>${rupee(t.tooling+t.consumables)}</span></div>
-        <div><span>Packaging + freight</span><span>${rupee(t.packaging+t.freight)}</span></div>
+        <div><span>Tooling</span><span>${rupee(t.tooling)}</span></div>
+        <div><span>Consumables</span><span>${rupee(t.consumables)}</span></div>
+        <div><span>Packaging</span><span>${rupee(t.packaging)}</span></div>
+        <div><span>Freight</span><span>${rupee(t.freight)}</span></div>
         <div class="sep"><span>Direct cost</span><span>${rupee(t.direct)}</span></div>
         <div><span>Scrap @ ${num(CB().scrapPct)}%</span><span>${rupee(t.scrap)}</span></div>
         <div><span>Admin @ ${num(CB().adminPct)}%</span><span>${rupee(t.admin)}</span></div>
@@ -2495,6 +2639,48 @@ Reply with ONLY this JSON, no commentary or code fences:
       r.costing.operations.splice(+b.dataset.oi,1);
       await patch(r.ref,{costing:r.costing}); renderRfqAdmin();
     }));
+    host.querySelectorAll('.ct').forEach(inp=>inp.addEventListener('input',()=>{
+      const r=rfqs[+inp.dataset.i];
+      r.costing.tooling[+inp.dataset.ti][inp.dataset.k]=inp.value;
+      saveCosting(r); refreshCost(+inp.dataset.i);
+    }));
+    host.querySelectorAll('.cc').forEach(inp=>inp.addEventListener('input',()=>{
+      const r=rfqs[+inp.dataset.i];
+      r.costing.consumables[+inp.dataset.ci][inp.dataset.k]=inp.value;
+      saveCosting(r); refreshCost(+inp.dataset.i);
+    }));
+    host.querySelectorAll('.cpk').forEach(inp=>inp.addEventListener('input',()=>{
+      const r=rfqs[+inp.dataset.i];
+      r.costing.packaging[inp.dataset.k]=inp.value;
+      saveCosting(r); refreshCost(+inp.dataset.i);
+    }));
+    host.querySelectorAll('.cfr').forEach(inp=>inp.addEventListener('input',()=>{
+      const r=rfqs[+inp.dataset.i];
+      r.costing.freight[inp.dataset.k]=inp.value;
+      saveCosting(r); refreshCost(+inp.dataset.i);
+    }));
+    host.querySelectorAll('[data-act="addtool"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      r.costing.tooling=r.costing.tooling||[];
+      r.costing.tooling.push({op:'',item:'',kind:'Tool',spec:'',unitCost:0,life:0,source:'Manual',confidence:'Manual'});
+      await patch(r.ref,{costing:r.costing}); renderRfqAdmin();
+    }));
+    host.querySelectorAll('[data-act="deltool"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      r.costing.tooling.splice(+b.dataset.ti,1);
+      await patch(r.ref,{costing:r.costing}); renderRfqAdmin();
+    }));
+    host.querySelectorAll('[data-act="addcons"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      r.costing.consumables=r.costing.consumables||[];
+      r.costing.consumables.push({item:'',spec:'',costPerPart:0,source:'Manual',confidence:'Manual'});
+      await patch(r.ref,{costing:r.costing}); renderRfqAdmin();
+    }));
+    host.querySelectorAll('[data-act="delcons"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      r.costing.consumables.splice(+b.dataset.ci,1);
+      await patch(r.ref,{costing:r.costing}); renderRfqAdmin();
+    }));
     host.querySelectorAll('[data-act="costpdf"]').forEach(b=>b.addEventListener('click',()=>{
       openCostSheetPdf(rfqs[+b.dataset.i]);
     }));
@@ -2524,8 +2710,10 @@ Reply with ONLY this JSON, no commentary or code fences:
         <div><span>Setup (spread over batch)</span><span>${rupee(t.setupCost)}</span></div>
         <div><span>Inspection</span><span>${rupee(t.inspection)}</span></div>
         <div><span>Special processes</span><span>${rupee(t.special)}</span></div>
-        <div><span>Tooling + consumables</span><span>${rupee(t.tooling+t.consumables)}</span></div>
-        <div><span>Packaging + freight</span><span>${rupee(t.packaging+t.freight)}</span></div>
+        <div><span>Tooling</span><span>${rupee(t.tooling)}</span></div>
+        <div><span>Consumables</span><span>${rupee(t.consumables)}</span></div>
+        <div><span>Packaging</span><span>${rupee(t.packaging)}</span></div>
+        <div><span>Freight</span><span>${rupee(t.freight)}</span></div>
         <div class="sep"><span>Direct cost</span><span>${rupee(t.direct)}</span></div>
         <div><span>Scrap @ ${num(CB().scrapPct)}%</span><span>${rupee(t.scrap)}</span></div>
         <div><span>Admin @ ${num(CB().adminPct)}%</span><span>${rupee(t.admin)}</span></div>

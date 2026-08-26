@@ -1751,7 +1751,26 @@ Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.q
     return t+(isFinite(per)?per:0);
   },0);
 
+  /* Cost records saved before newer fields existed must still open safely. */
+  function normaliseCosting(c){
+    if(!c||typeof c!=='object') return c;
+    const base=blankCosting({});
+    c.material=Object.assign({},base.material,c.material||{});
+    c.packaging=Object.assign({},base.packaging,c.packaging||{});
+    c.freight=Object.assign({},base.freight,c.freight||{});
+    c.operations=c.operations||[];
+    c.specialProcesses=c.specialProcesses||[];
+    c.tooling=c.tooling||[];
+    c.consumables=c.consumables||[];
+    c.assumptions=c.assumptions||[];
+    // carry any old single-figure packaging/freight into the new structure
+    if(!num(c.packaging.costPerPart)&&num(c.packagingPerPart)) c.packaging.costPerPart=c.packagingPerPart;
+    if(!num(c.freight.costPerPart)&&num(c.freightPerPart)) c.freight.costPerPart=c.freightPerPart;
+    return c;
+  }
+
   function computeCosting(c){
+    c=normaliseCosting(c)||{};
     const b=CB();
     const qty=Math.max(1,num(c.qty));
     const batch=Math.max(1,num(c.batchQty)||qty);
@@ -1925,7 +1944,7 @@ Reply with ONLY this JSON, no commentary or code fences:
 
   /* ---------- INTERNAL COST SHEET (printable) ---------- */
   function buildCostSheetHtml(r){
-    const c=r.costing, t=computeCosting(c), co=CO(), cfg=QC();
+    const c=normaliseCosting(r.costing), t=computeCosting(c), co=CO(), cfg=QC();
     const logo=co.letterheadLogo||data.logoDataUrl||'';
     const x=r.extract||{}, p=x.part||{};
     const money2=n=>(cfg.currencySymbol||'₹')+num(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -2144,7 +2163,7 @@ Reply with ONLY this JSON, no commentary or code fences:
   }
 
   function costingHtml(r,i){
-    const c=r.costing;
+    const c=normaliseCosting(r.costing);
     if(!c) return `<div class="rfq-actions">
       <button class="mini-btn ai" data-act="cost" data-i="${i}">Work out cost with AI</button></div>`;
     if(c.error) return `<div class="cs"><div class="dx-err">${esc(c.error)}</div>
@@ -2502,7 +2521,19 @@ Reply with ONLY this JSON, no commentary or code fences:
     kpi.innerHTML=`<div class="kpi"><b>${rfqs.length}</b><span>Total RFQs</span></div>`+
       STAGES.map((s,i)=>`<div class="kpi"><b>${counts[i]}</b><span>${s}</span></div>`).join('');
     if(!rfqs.length){host.innerHTML='<p class="empty-note">No RFQs yet.</p>';return;}
-    host.innerHTML=rfqs.map((r,i)=>{
+    // one problem record must never blank the whole pipeline
+    const safeCard=(fn,i,r)=>{
+      try{ return fn(); }
+      catch(e){
+        console.error('RFQ card failed',r&&r.ref,e);
+        return `<div class="rfq-card"><div class="rfq-ref">${esc((r&&r.ref)||'RFQ')}</div>
+          <div class="dx-err" style="margin-top:8px;">This RFQ could not be displayed (${esc(e.message)}).
+          Its data is safe — use Delete or re-run the AI steps to rebuild it.</div>
+          <div class="rfq-actions"><button class="mini-btn ai" data-act="cost" data-i="${i}">Re-plan route</button>
+          <button class="item-delete" data-act="del" data-i="${i}">Delete RFQ</button></div></div>`;
+      }
+    };
+    host.innerHTML=rfqs.map((r,i)=>safeCard(()=>{
       const si=STAGES.indexOf(r.status||'Received');
       const cust=(r.quote||'')+`\n\nReference: ${r.ref}\n— ${data.quoteSender||''}`;
       return `<div class="rfq-card">
@@ -2551,7 +2582,7 @@ Reply with ONLY this JSON, no commentary or code fences:
         <select class="status-select" data-i="${i}">${STAGES.map(s=>`<option ${((r.status||'Received')===s)?'selected':''}>${s}</option>`).join('')}</select>
         ${(r.log&&r.log.length)?`<div class="notif-log">${r.log.slice(0,4).map(l=>`<div>${esc(l)}</div>`).join('')}</div>`:''}
         <div class="rfq-actions"><button class="item-delete" data-act="del" data-i="${i}">Delete RFQ</button></div></div>`;
-    }).join('');
+    },i,r)).join('');
 
     const patch=async(ref,p,extra={})=>{
       try{ const j=await api('/api/rfqs',{method:'PATCH',body:JSON.stringify(Object.assign({ref,patch:p},extra))});

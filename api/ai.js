@@ -23,6 +23,7 @@ let cache = {};   // discovered model lists, per provider
 function providers() {
   const list = [];
   if (process.env.OPENROUTER_API_KEY) list.push('openrouter');
+  if (process.env.MISTRAL_API_KEY) list.push('mistral');
   if (process.env.GROQ_API_KEY) list.push('groq');
   if (process.env.GEMINI_API_KEY) list.push('gemini');
   if (process.env.ANTHROPIC_API_KEY) list.push('anthropic');
@@ -80,7 +81,7 @@ async function groqModels(key, needsVision) {
     // drop things that cannot do chat completions
     ids = ids.filter(id => !/whisper|tts|guard|embed|distil-whisper/i.test(id));
 
-    const looksVision = id => /vision|scout|maverick|llama-4|llama4|vl\b|llava|multimodal/i.test(id);
+    const looksVision = id => /vision|scout|maverick|llama-4|llama4|vl\b|llava|multimodal|qwen3|qwen2\.5|compound|pixtral|gemma-3/i.test(id);
     if (needsVision) {
       const v = ids.filter(looksVision);
       if (v.length) ids = v;
@@ -90,6 +91,10 @@ async function groqModels(key, needsVision) {
       let s = 0;
       if (/maverick/i.test(id)) s += 40;
       if (/scout/i.test(id)) s += 35;
+      if (/qwen/i.test(id)) s += 32;
+      if (/compound(?!-mini)/i.test(id)) s += 18;
+      if (/gemma-3/i.test(id)) s += 20;
+      if (/gpt-oss|orpheus|allam|whisper/i.test(id)) s -= 30;
       if (/llama-4|llama4/i.test(id)) s += 30;
       if (/vision/i.test(id)) s += 25;
       if (/70b|90b|120b/i.test(id)) s += 15;
@@ -263,6 +268,12 @@ async function runProvider(name, args) {
       cleanKey(process.env.OPENROUTER_API_KEY), await openrouterModels(), args,
       { 'HTTP-Referer': process.env.SITE_URL || 'https://www.elixirtec.com', 'X-Title': 'RFQ Engine' });
   }
+  if (name === 'mistral') {
+    const key = cleanKey(process.env.MISTRAL_API_KEY);
+    const models = process.env.MISTRAL_MODEL ? [process.env.MISTRAL_MODEL]
+      : ['pixtral-12b-2409', 'mistral-small-latest', 'pixtral-large-latest', 'mistral-medium-latest'];
+    return askOpenAICompatible('https://api.mistral.ai/v1', key, models, args, {});
+  }
   if (name === 'groq') {
     const key = cleanKey(process.env.GROQ_API_KEY);
     const needsVision = !!(args.attachment && args.attachment.b64);
@@ -292,6 +303,7 @@ export default async function handler(req, res) {
     };
     info.keys = {
       OPENROUTER_API_KEY: peek(process.env.OPENROUTER_API_KEY),
+      MISTRAL_API_KEY: peek(process.env.MISTRAL_API_KEY),
       GROQ_API_KEY: peek(process.env.GROQ_API_KEY),
       GEMINI_API_KEY: peek(process.env.GEMINI_API_KEY),
       ANTHROPIC_API_KEY: peek(process.env.ANTHROPIC_API_KEY)
@@ -305,7 +317,7 @@ export default async function handler(req, res) {
     if (list.includes('gemini')) info.geminiModels = (await geminiModels(cleanKey(process.env.GEMINI_API_KEY)) || []).slice(0, 8);
     info.note = list.length
       ? 'AI is active. Providers tried in order: ' + list.join(' → ')
-      : 'Add OPENROUTER_API_KEY (free, no card) in Vercel to switch AI features on.';
+      : 'Add MISTRAL_API_KEY (free tier, no card) in Vercel to switch AI features on.';
     return res.status(200).json(info);
   }
 

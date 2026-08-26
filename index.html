@@ -885,8 +885,9 @@
       <div class="field"><label>Display Name</label><input type="text" id="in-co-displayName"></div>
       <div class="field"><label>Tagline</label><input type="text" id="in-co-tagline"></div>
       <div class="field"><label>Company Registration No.</label><input type="text" id="in-co-regNumber"></div>
-      <div class="field"><label>Letterhead Logo</label><div class="img-upload" id="co-logo-wrap"></div>
-        <div class="field-hint">Leave blank to reuse your website logo.</div></div>
+      <div class="field"><label>Letterhead Logo</label><div class="img-upload" id="co-logo-wrap"></div></div>
+      <div class="toggle-row"><span>Use the website logo on documents</span><div class="switch on" id="uselogo-switch"></div></div>
+      <div class="field-hint" id="logo-source-note" style="margin-top:8px;"></div>
 
       <div class="field" style="margin-top:24px;"><label>Registered Address</label></div>
       <div class="field"><label>Address Line 1</label><input type="text" id="in-co-addr1"></div>
@@ -896,9 +897,11 @@
       <div class="field"><label>Country</label><input type="text" id="in-co-country"></div>
       <div class="field"><label>PIN / ZIP</label><input type="text" id="in-co-pin"></div>
 
-      <div class="field" style="margin-top:24px;"><label>Works / Plant (optional)</label></div>
-      <div class="field"><label>Plant Name</label><input type="text" id="in-co-plantName"></div>
-      <div class="field"><label>Plant Address</label><textarea id="in-co-plantAddr" rows="2"></textarea></div>
+      <div class="field" style="margin-top:24px;"><label>Plants / Works</label>
+        <div class="field-hint" style="margin-top:0;margin-bottom:12px;">Add as many locations as you need. Those marked “show on documents” appear on quotations and cost sheets.</div>
+      </div>
+      <div id="list-plants"></div>
+      <button type="button" class="add-btn" id="add-plants">+ Add Plant</button>
 
       <div class="field" style="margin-top:24px;"><label>Contact</label></div>
       <div class="field"><label>Telephone</label><input type="text" id="in-co-phone"></div>
@@ -998,7 +1001,13 @@
     <div class="admin-group" data-group="notify">
       <div class="info-box">Notifications are sent by the server. The email and WhatsApp number below are where new RFQ alerts go.</div>
       <div class="field"><label>Notify Email</label><input type="text" id="in-notifyEmail"></div>
-      <div class="field"><label>Notify WhatsApp Number</label><input type="text" id="in-notifyWhatsapp" placeholder="919902009152"></div>
+      <div class="field"><label>Notify WhatsApp Number</label><input type="text" id="in-notifyWhatsapp" placeholder="919902009152">
+        <div class="field-hint">Country code + number, digits only. No +, no spaces.</div></div>
+      <div class="field"><label>WhatsApp Status</label>
+        <div class="field-hint" id="wa-status" style="margin-top:0;">Checking…</div>
+        <button type="button" class="add-btn" id="wa-test" style="margin-top:10px;">Send me a test WhatsApp</button>
+        <div class="field-hint" id="wa-test-result" style="margin-top:8px;"></div>
+      </div>
       <div class="field"><label>Live Site Address</label><input type="text" id="in-siteUrl" placeholder="https://ironvale-website.vercel.app">
         <div class="field-hint">Your <b>website</b> address only — the part visitors type. Do not paste an <code>/api/...</code> address here. Used to build the “Open RFQ Pipeline” link in your alert emails.</div></div>
       <div class="field"><label>Quote Sender Name</label><input type="text" id="in-quoteSender"></div>
@@ -1092,6 +1101,8 @@
       legalName:"",displayName:"",tagline:"",regNumber:"",
       addr1:"",addr2:"",city:"",state:"",country:"",pin:"",
       plantName:"",plantAddr:"",
+      plants:[],
+      useWebsiteLogo:true,
       phone:"",mobile:"",email:"",rfqEmail:"",website:"",
       taxLabel:"GSTIN",taxNumber:"",panLabel:"PAN",panNumber:"",iec:"",cin:"",
       bankShow:false,bankName:"",bankBranch:"",bankAccName:"",bankAccNo:"",bankIfsc:"",
@@ -1237,6 +1248,12 @@
         data=Object.assign({},DEFAULTS,j.data);
         data.social=Object.assign({},DEFAULTS.social,j.data.social||{});
         data.company=Object.assign({},DEFAULTS.company,j.data.company||{});
+        data.company.plants=(j.data.company&&j.data.company.plants)||[];
+        // carry an older single-plant entry into the new list
+        if(!data.company.plants.length && (data.company.plantName||data.company.plantAddr)){
+          data.company.plants=[{id:'p1',name:data.company.plantName||'Plant 1',
+            addr:data.company.plantAddr||'',city:'',state:'',pin:'',phone:'',showOnQuote:true}];
+        }
         data.quoteCfg=Object.assign({},DEFAULTS.quoteCfg,j.data.quoteCfg||{});
         data.costBase=Object.assign({},DEFAULTS.costBase,j.data.costBase||{});
         data.machines=j.data.machines||DEFAULTS.machines;
@@ -1945,7 +1962,7 @@ Reply with ONLY this JSON, no commentary or code fences:
   /* ---------- INTERNAL COST SHEET (printable) ---------- */
   function buildCostSheetHtml(r){
     const c=normaliseCosting(r.costing), t=computeCosting(c), co=CO(), cfg=QC();
-    const logo=co.letterheadLogo||data.logoDataUrl||'';
+    const logo=documentLogo();
     const x=r.extract||{}, p=x.part||{};
     const money2=n=>(cfg.currencySymbol||'₹')+num(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 
@@ -2039,6 +2056,10 @@ Reply with ONLY this JSON, no commentary or code fences:
       <b>Customer:</b> ${esc(r.company||r.name||'')}<br>
       <b>Contact:</b> ${esc(r.name)}${r.email?' · '+esc(r.email):''}<br>
       <b>Received:</b> ${esc(r.date||'')}</p></div>
+    <div class="box"><h5>Manufacturing Location</h5><p>
+      ${plantsForDocuments().length
+        ? plantsForDocuments().map(pl=>'<b>'+esc(pl.name||'Works')+'</b><br>'+esc(plantLine(pl).replace(new RegExp('^'+(pl.name||'')+',\\s*'),''))).join('<br><br>')
+        : esc(companyAddressLines().join(', '))}</p></div>
     <div class="box"><h5>Component</h5><p>
       <b>Part:</b> ${esc(p.name||'—')}<br>
       <b>Part No:</b> ${esc(p.number||'—')}<br>
@@ -2340,7 +2361,7 @@ Reply with ONLY this JSON, no commentary or code fences:
 
   function buildQuotationHtml(r){
     const c=CO(), q=r.quoteDoc||blankQuoteDoc(r), t=quoteTotals(q), cfg=QC();
-    const logo=c.letterheadLogo||data.logoDataUrl||'';
+    const logo=documentLogo();
     const addr=companyAddressLines();
     const contactBits=[c.phone&&`Tel: ${esc(c.phone)}`,c.mobile&&`Mob: ${esc(c.mobile)}`,
       (c.rfqEmail||c.email)&&`Email: ${esc(c.rfqEmail||c.email)}`,c.website&&esc(c.website)].filter(Boolean).join(' &nbsp;|&nbsp; ');
@@ -2499,6 +2520,7 @@ Reply with ONLY this JSON, no commentary or code fences:
     ${cfg.confidentiality?esc(cfg.confidentiality)+'<br>':''}
     ${cfg.footerNote?esc(cfg.footerNote)+'<br>':''}
     ${esc(c.legalName||c.displayName||data.brandName)}${addr.length?' · '+esc(addr.join(', ')):''}
+    ${plantsForDocuments().map(pl=>'<br><b>'+esc(pl.name||'Works')+':</b> '+esc(plantLine(pl).replace(new RegExp('^'+(pl.name||'')+',\\s*'),''))).join('')}
   </div>
 </div></body></html>`;
   }
@@ -3143,6 +3165,97 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     if(rm) rm.addEventListener('click',()=>{ data.heroVideoDataUrl=''; render(); renderHeroVideoUpload(); markDirty(); updateSizeReadout(); });
   }
 
+  /* ---------- which logo goes on documents ---------- */
+  function documentLogo(){
+    const c=CO();
+    if(c.useWebsiteLogo!==false) return data.logoDataUrl||c.letterheadLogo||'';
+    return c.letterheadLogo||data.logoDataUrl||'';
+  }
+  function updateLogoNote(){
+    const el=document.getElementById('logo-source-note'); if(!el) return;
+    const c=CO(), using=c.useWebsiteLogo!==false;
+    if(using){
+      el.innerHTML=data.logoDataUrl
+        ? 'Documents use your <b>website logo</b> from the Brand tab. Change it there and quotations follow automatically.'
+        : '<span style="color:#B03A2E">No website logo uploaded yet — upload one in the Brand tab.</span>';
+    } else {
+      el.innerHTML=c.letterheadLogo
+        ? 'Documents use the <b>letterhead logo</b> above, separate from your website logo.'
+        : '<span style="color:#B03A2E">No letterhead logo uploaded — documents will fall back to the website logo.</span>';
+    }
+  }
+
+  /* ---------- plants ---------- */
+  function plantsForDocuments(){
+    return ((CO().plants)||[]).filter(p=>p.showOnQuote!==false&&(p.name||p.addr));
+  }
+  function plantLine(p){
+    return [p.name,p.addr,[p.city,p.state].filter(Boolean).join(', '),p.pin,p.phone]
+      .filter(Boolean).join(', ');
+  }
+  function renderPlantsAdmin(){
+    const host=document.getElementById('list-plants'); if(!host) return;
+    const plants=CO().plants||[];
+    host.innerHTML=plants.map((p,pi)=>`<div class="list-item">
+      <div class="list-item-head"><span>Plant ${pi+1}</span>
+        <button type="button" class="item-delete pl-del" data-pi="${pi}">Delete</button></div>
+      <div class="field"><label>Plant Name</label><input type="text" class="pl-in" data-pi="${pi}" data-k="name" value="${esc(p.name)}" placeholder="Plant 2 — Unit II"></div>
+      <div class="field"><label>Address</label><textarea class="pl-in" data-pi="${pi}" data-k="addr" rows="2">${esc(p.addr)}</textarea></div>
+      <div class="cs-row"><div><label>City</label><input type="text" class="pl-in" data-pi="${pi}" data-k="city" value="${esc(p.city)}"></div>
+        <div><label>State</label><input type="text" class="pl-in" data-pi="${pi}" data-k="state" value="${esc(p.state)}"></div></div>
+      <div class="cs-row" style="margin-top:10px;"><div><label>PIN</label><input type="text" class="pl-in" data-pi="${pi}" data-k="pin" value="${esc(p.pin)}"></div>
+        <div><label>Phone</label><input type="text" class="pl-in" data-pi="${pi}" data-k="phone" value="${esc(p.phone)}"></div></div>
+      <div class="toggle-row"><span>Show on quotations &amp; cost sheets</span>
+        <div class="switch ${p.showOnQuote===false?'':'on'} pl-vis" data-pi="${pi}"></div></div>
+    </div>`).join('')||'<p class="field-hint" style="margin-bottom:12px;">No plants added yet.</p>';
+
+    host.querySelectorAll('.pl-in').forEach(inp=>inp.addEventListener('input',()=>{
+      CO().plants[+inp.dataset.pi][inp.dataset.k]=inp.value; markDirty();
+    }));
+    host.querySelectorAll('.pl-del').forEach(b=>b.addEventListener('click',()=>{
+      CO().plants.splice(+b.dataset.pi,1); renderPlantsAdmin(); markDirty();
+    }));
+    host.querySelectorAll('.pl-vis').forEach(sw=>sw.addEventListener('click',()=>{
+      const p=CO().plants[+sw.dataset.pi];
+      p.showOnQuote=p.showOnQuote===false;
+      sw.classList.toggle('on',p.showOnQuote!==false); markDirty();
+    }));
+  }
+
+  /* ---------- WhatsApp ---------- */
+  async function checkWhatsapp(){
+    const el=document.getElementById('wa-status'); if(!el) return;
+    try{
+      const j=await (await fetch(API+'/api/notify')).json();
+      const ok=j.checks&&j.checks.WHATSAPP_TOKEN==='present'&&j.checks.WHATSAPP_PHONE_ID&&j.checks.WHATSAPP_PHONE_ID!=='not set';
+      if(ok){
+        el.innerHTML='<span style="color:var(--ok)">Connected.</span> New RFQs and approved quotations will be sent by WhatsApp as well as email.';
+      } else {
+        el.innerHTML='<span style="color:var(--gold-deep)">Not set up.</span> Add <code>WHATSAPP_TOKEN</code> and <code>WHATSAPP_PHONE_ID</code> in Vercel — see the WhatsApp guide. Email notifications work regardless.';
+      }
+    }catch(e){ el.textContent='Could not check.'; }
+  }
+  async function testWhatsapp(){
+    const out=document.getElementById('wa-test-result');
+    const btn=document.getElementById('wa-test');
+    const number=(document.getElementById('in-notifyWhatsapp').value||'').replace(/\D/g,'');
+    if(!number){ out.textContent='Enter your WhatsApp number above first.'; out.style.color='#B03A2E'; return; }
+    btn.disabled=true; btn.textContent='Sending…'; out.textContent='';
+    try{
+      const r=await fetch(API+'/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({event:'rfq_received',notifyWhatsapp:number,notifyEmail:'',
+          payload:{ref:'TEST-0001',name:'Test message',company:CO().legalName||data.brandName,
+            email:'—',phone:number,message:'This is a test from your RFQ system. If you can read this, WhatsApp notifications are working.',
+            pipelineUrl:pipelineUrl()}})});
+      const j=await r.json();
+      const wa=(j.results||[]).find(x=>/whatsapp/i.test(x))||'no result';
+      const good=/SENT/i.test(wa);
+      out.textContent=wa;
+      out.style.color=good?'var(--ok)':'#B03A2E';
+    }catch(e){ out.textContent=e.message; out.style.color='#B03A2E'; }
+    btn.disabled=false; btn.textContent='Send me a test WhatsApp';
+  }
+
   let formBuilt=false;
   function fillForm(){
     SIMPLE.forEach(k=>{const el=document.getElementById('in-'+k); if(el)el.value=data[k];});
@@ -3163,6 +3276,9 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     Object.keys(data.company).forEach(k=>{const el=document.getElementById('in-co-'+k); if(el) el.value=data.company[k]||'';});
     Object.keys(data.quoteCfg).forEach(k=>{const el=document.getElementById('in-qc-'+k); if(el) el.value=data.quoteCfg[k];});
     document.getElementById('bank-switch').classList.toggle('on',!!data.company.bankShow);
+    document.getElementById('uselogo-switch').classList.toggle('on',data.company.useWebsiteLogo!==false);
+    updateLogoNote();
+    checkWhatsapp();
     document.getElementById('tax-switch').classList.toggle('on',data.quoteCfg.showTax!==false);
     singleImageField('co-logo-wrap','company.letterheadLogo');
     singleImageField('co-sign-wrap','company.signatureImg');
@@ -3203,6 +3319,20 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.getElementById('bank-switch').addEventListener('click',function(){
       data.company.bankShow=!data.company.bankShow; this.classList.toggle('on',data.company.bankShow); markDirty();
     });
+    document.getElementById('uselogo-switch').addEventListener('click',function(){
+      data.company.useWebsiteLogo=data.company.useWebsiteLogo===false;
+      this.classList.toggle('on',data.company.useWebsiteLogo!==false);
+      updateLogoNote(); markDirty();
+    });
+    document.getElementById('add-plants').addEventListener('click',()=>{
+      data.company.plants=data.company.plants||[];
+      const n=data.company.plants.length+1;
+      data.company.plants.push({id:'p'+Date.now().toString(36),name:'Plant '+n,
+        addr:'',city:'',state:'',pin:'',phone:'',showOnQuote:true});
+      renderPlantsAdmin(); markDirty();
+    });
+    document.getElementById('wa-test').addEventListener('click',testWhatsapp);
+    renderPlantsAdmin();
     document.getElementById('tax-switch').addEventListener('click',function(){
       data.quoteCfg.showTax=data.quoteCfg.showTax===false; this.classList.toggle('on',data.quoteCfg.showTax!==false); markDirty();
     });

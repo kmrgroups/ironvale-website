@@ -42,7 +42,8 @@ export default async function handler(req, res) {
       await sql`INSERT INTO rfqs (ref, data) VALUES (${r.ref}, ${JSON.stringify(r)}::jsonb)
                 ON CONFLICT (ref) DO NOTHING`;
 
-      // notify the owner — never blocks the customer's submission
+      // alert the owner, and acknowledge to the customer
+      // neither is allowed to block the submission itself
       let notifyResult = [];
       try {
         notifyResult = await sendNotification('rfq_received', {
@@ -51,6 +52,17 @@ export default async function handler(req, res) {
           pipelineUrl: body.pipelineUrl || ''
         }, body.notifyEmail, body.notifyWhatsapp);
       } catch (e) { notifyResult = ['notify error: ' + e.message]; }
+
+      if (body.acknowledge !== false) {
+        try {
+          const ack = await sendNotification('rfq_acknowledge', {
+            ref: r.ref, name: r.name, email: r.email, phone: r.phone,
+            message: r.message, company: body.companyName || '',
+            trackUrl: body.trackUrl || ''
+          });
+          notifyResult = notifyResult.concat(ack.map(x => 'ack: ' + x));
+        } catch (e) { notifyResult.push('ack error: ' + e.message); }
+      }
 
       return res.status(200).json({ ok: true, ref: r.ref, notify: notifyResult });
     }

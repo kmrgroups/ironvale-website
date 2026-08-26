@@ -699,6 +699,16 @@
       <div class="login-err" id="login-err"></div>
       <button class="login-cancel" id="login-cancel">Cancel</button>
     </div>
+    <div class="login-body" id="code-panel" style="display:none;">
+      <div class="field-hint" id="code-note" style="margin-top:0;margin-bottom:14px;"></div>
+      <label>6-digit code</label>
+      <input type="text" id="login-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"
+        style="letter-spacing:.5em;text-align:center;font-family:var(--mono);font-size:20px;">
+      <button class="btn btn-primary" id="code-btn">Verify &amp; Sign In</button>
+      <div class="login-err" id="code-err"></div>
+      <button class="login-cancel" id="code-resend">Send the code again</button>
+      <button class="login-cancel" id="code-cancel">Back to sign in</button>
+    </div>
     <div class="login-body" id="forgot-panel">
       <div class="field-hint" style="margin-top:0;margin-bottom:14px;">Enter the recovery code your developer set up when the site was deployed (the <code>ADMIN_RECOVERY_CODE</code> value in Vercel), then choose new sign-in details.</div>
       <label>Recovery Code</label>
@@ -764,7 +774,7 @@
     <button class="admin-tab" data-tab="labour">Labour</button>
     <button class="admin-tab" data-tab="materials">Materials</button>
     <button class="admin-tab" data-tab="notify">Notifications</button>
-    <button class="admin-tab" data-tab="security">Password</button>
+    <button class="admin-tab" data-tab="security">Logins</button>
     <button class="admin-tab" data-tab="sections">Sections</button>
   </div>
   <div class="admin-body">
@@ -872,8 +882,11 @@
       <!-- 3. WHATSAPP -->
       <div class="setup-card" id="sc-wa">
         <div class="setup-head"><h3>3 · WhatsApp notifications</h3><span class="setup-badge" id="badge-wa">checking…</span></div>
-        <p class="setup-why">Optional. Sends RFQ alerts to your phone and quotations to customers.
-        Free at this volume, but the Meta setup takes about an hour.</p>
+        <p class="setup-why"><b>You can skip this entirely.</b> WhatsApp already works without any setup —
+        the buttons in the pipeline open WhatsApp with the message written out, and you press send.
+        One tap. The section below is only for making it fully automatic, which Meta makes deliberately
+        difficult: business verification, number registration, and approved message templates.
+        Email notifications are automatic either way, so most companies never bother with this.</p>
 
         <details class="setup-how"><summary>Setting up WhatsApp Business API</summary>
           <ol>
@@ -1235,10 +1248,21 @@
       <div class="field"><label>Quote Sender Name</label><input type="text" id="in-quoteSender"></div>
       <div class="field"><label>Currency</label><input type="text" id="in-currency"></div>
       <div class="toggle-row"><span>Auto-draft quote with AI on new RFQ</span><div class="switch on" id="autoquote-switch"></div></div>
+      <div class="toggle-row"><span>Send the customer an automatic acknowledgement</span><div class="switch on" id="ack-switch"></div></div>
+      <div class="field-hint" style="margin-top:10px;">The acknowledgement carries their reference number, a tracking link, and a clear
+      note at the bottom saying it was generated automatically and not to reply to it.</div>
     </div>
 
     <div class="admin-group" data-group="security">
-      <div class="info-box">Your password is stored on the server, hashed — not inside this page. Changing it signs out other devices.</div>
+      <div class="info-box"><b>Two kinds of login.</b> <b>Developer</b> reaches everything including this admin panel.
+      <b>Staff</b> can only open the RFQ Pipeline — useful for estimators who should not change site settings.
+      Turn on two-step verification and a 6-digit code is sent by email and WhatsApp at every sign-in.</div>
+
+      <div class="field"><label>Logins</label></div>
+      <div id="user-list"></div>
+      <button type="button" class="add-btn" id="add-user">+ Add a login</button>
+
+      <div class="field" style="margin-top:30px;"><label>Change your own password</label></div>
       <div class="field"><label>Current Username</label><input type="text" id="pw-user"></div>
       <div class="field"><label>Current Password</label><div class="pw-wrap"><input type="password" id="pw-old"><button type="button" class="pw-eye" data-for="pw-old"></button></div></div>
       <div class="field"><label>New Username (optional)</label><input type="text" id="pw-newuser"></div>
@@ -1380,7 +1404,7 @@
     botWelcome:"Hi! I'm the AI assistant. Ask me about our capabilities, certifications, process, or lead times — or say \"quote\".",
     botChips:["What can you machine?","What certifications do you hold?","How does your process work?","I need a quote"],
     botKnowledge:"",botEndpoint:"",
-    notifyEmail:"",notifyWhatsapp:"",siteUrl:"",quoteSender:"Sales Team",currency:"INR",autoQuote:true,
+    notifyEmail:"",notifyWhatsapp:"",siteUrl:"",quoteSender:"Sales Team",currency:"INR",autoQuote:true,autoAcknowledge:true,
     quoteText:"Ironvale reworked our supply chain from prototype to production in six weeks.",
     quoteName:"Procurement Director",quoteRole:"Tier-1 Automotive OEM",
     contactTitle:"Have a print? Let's talk tolerances.",
@@ -2822,6 +2846,7 @@ Reply with ONLY this JSON, no commentary or code fences:
           ${r.fileName?`<br>📎 ${r.fileDataUrl?`<a style="color:var(--sky-deep);text-decoration:underline;" href="${r.fileDataUrl}" download="${esc(r.fileName)}">${esc(r.fileName)}</a>`:esc(r.fileName)}`:''}</div>
         <div class="rfq-actions">
           <button class="mini-btn ai" data-act="gen" data-i="${i}">${r.quote?'Regenerate quote':'AI draft quote'}</button>
+          <button class="mini-btn" data-act="waforward" data-i="${i}">WhatsApp this to my phone</button>
         </div>
         ${extractHtml(r,i)}
         ${costingHtml(r,i)}
@@ -2998,21 +3023,34 @@ Reply with ONLY this JSON, no commentary or code fences:
       const r=rfqs[+b.dataset.i];
       if(!r.email){ toast('No customer email on this RFQ'); return; }
       b.textContent='Sending…'; b.disabled=true;
-      const res=await sendMessage_({email:r.email,
+      const res=await sendMessage_({email:r.email,whatsapp:r.phone,
         subject:'Quotation '+((r.quoteDoc&&r.quoteDoc.number)||r.ref)+' — '+(CO().legalName||data.brandName),
         text:quoteBody(r)});
       const s=readResults(res);
-      toast(s.emailOk?('Email sent to '+r.email):('Not sent — '+(s.email||'no response')));
+      toast(s.emailOk?('Sent to '+r.email+(s.waOk?' and WhatsApp':'')):('Not sent — '+(s.email||'no response')));
       b.textContent='Email customer'; b.disabled=false;
     }));
     host.querySelectorAll('[data-act="waquote"]').forEach(b=>b.addEventListener('click',async()=>{
       const r=rfqs[+b.dataset.i];
       if(!r.phone){ toast('No customer phone on this RFQ'); return; }
+      const body=quoteBody(r);
       b.textContent='Sending…'; b.disabled=true;
-      const res=await sendMessage_({whatsapp:r.phone,text:quoteBody(r)});
+      const res=await sendMessage_({whatsapp:r.phone,text:body});
       const s=readResults(res);
-      toast(s.waOk?('WhatsApp sent to '+r.phone):('Not sent — '+(s.wa||'WhatsApp not set up yet')));
       b.textContent='WhatsApp customer'; b.disabled=false;
+      if(s.waOk){ toast('WhatsApp sent to '+r.phone); return; }
+      // No automatic WhatsApp set up — fall back to one-tap send, which needs no setup at all.
+      toast('Opening WhatsApp — press send');
+      window.open(waLink(r.phone,body),'_blank','noopener');
+    }));
+    host.querySelectorAll('[data-act="waforward"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      const num=(data.notifyWhatsapp||'').replace(/\D/g,'');
+      if(!num){ toast('Set your WhatsApp number in Setup first'); return; }
+      const text=rfqSummaryText(r);
+      const res=await sendMessage_({whatsapp:num,text});
+      if(readResults(res).waOk){ toast('Sent to your WhatsApp'); return; }
+      window.open(waLink(num,text),'_blank','noopener');
     }));
     host.querySelectorAll('[data-act="costpdf"]').forEach(b=>b.addEventListener('click',()=>{
       openCostSheetPdf(rfqs[+b.dataset.i]);
@@ -3093,10 +3131,10 @@ Reply with ONLY this JSON, no commentary or code fences:
       b.textContent='Drafting…'; b.disabled=true;
       const body=await draftClarification(r);
       b.textContent='Sending…';
-      const res=await sendMessage_({email:r.email,
+      const res=await sendMessage_({email:r.email,whatsapp:r.phone,
         subject:`Clarification required — ${r.ref}`, text:body});
       const s=readResults(res);
-      toast(s.emailOk?('Clarification sent to '+r.email):('Not sent — '+(s.email||'no response')));
+      toast(s.emailOk?('Clarification sent to '+r.email+(s.waOk?' and WhatsApp':'')):('Not sent — '+(s.email||'no response')));
       if(s.emailOk){
         const log=[`${new Date().toLocaleString()} — clarification email sent`].concat(r.log||[]);
         const u=await patch(r.ref,{log}); if(u) rfqs[+b.dataset.i]=u;
@@ -3305,7 +3343,10 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     try{
       await api('/api/rfqs',{method:'POST',body:JSON.stringify({rfq:rec,
         notifyEmail:data.notifyEmail,notifyWhatsapp:data.notifyWhatsapp,
-        pipelineUrl:pipelineUrl()})});
+        pipelineUrl:pipelineUrl(),
+        acknowledge:data.autoAcknowledge!==false,
+        companyName:(CO().legalName||CO().displayName||data.brandName),
+        trackUrl:pipelineUrl().replace('#pipeline','#track')})});
       if(data.autoQuote){
         generateQuote(rec).then(q=>{
           fetch(API+'/api/rfqs',{method:'PATCH',headers:{'Content-Type':'application/json'},
@@ -3624,8 +3665,9 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
 
     // whatsapp
     const waOk=c.WHATSAPP_TOKEN==='present'&&c.WHATSAPP_PHONE_ID&&c.WHATSAPP_PHONE_ID!=='not set';
-    badge('badge-wa',waOk?'ok':'warn',waOk?'Connected':'Not set up');
-    rows.push(['WhatsApp',waOk,waOk?'Alerts and quotations can be sent by WhatsApp':'Optional — email still works']);
+    badge('badge-wa',waOk?'ok':'warn',waOk?'Fully automatic':'One-tap mode');
+    rows.push(['WhatsApp',true,waOk?'Messages send automatically'
+      :'Working in one-tap mode — buttons open WhatsApp with the message ready. No setup needed.']);
 
     if(list) list.innerHTML='<div class="check-list">'+rows.map(([name,ok,note])=>
       `<div class="check-row"><div><b>${esc(name)}</b><span>${esc(note)}</span></div>
@@ -3674,6 +3716,66 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     btn.disabled=false; btn.textContent='Send myself a test WhatsApp';
   }
 
+  /* ---------- login management ---------- */
+  async function renderUsers(){
+    const host=document.getElementById('user-list'); if(!host) return;
+    let users=[];
+    try{ const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'listUsers'})}); users=j.users||[]; }
+    catch(e){ host.innerHTML='<p class="field-hint">'+esc(e.message)+'</p>'; return; }
+
+    host.innerHTML=users.map(u=>`<div class="list-item" data-u="${esc(u.username)}">
+      <div class="list-item-head"><span>${u.role==='developer'?'DEVELOPER — full access':'STAFF — pipeline only'}</span>
+        <button type="button" class="item-delete usr-del" data-u="${esc(u.username)}">Delete</button></div>
+      <div class="cs-row">
+        <div><label>Username</label><input type="text" class="usr" data-u="${esc(u.username)}" data-k="username" value="${esc(u.username)}"></div>
+        <div><label>Role</label>
+          <select class="usr" data-u="${esc(u.username)}" data-k="role" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option value="staff" ${u.role==='staff'?'selected':''}>Staff — RFQ Pipeline only</option>
+            <option value="developer" ${u.role==='developer'?'selected':''}>Developer — everything</option>
+          </select></div>
+      </div>
+      <div class="cs-row" style="margin-top:10px;">
+        <div><label>Code email</label><input type="text" class="usr" data-u="${esc(u.username)}" data-k="email" value="${esc(u.email||'')}"></div>
+        <div><label>Code WhatsApp</label><input type="text" class="usr" data-u="${esc(u.username)}" data-k="whatsapp" value="${esc(u.whatsapp||'')}" placeholder="919902009152"></div>
+      </div>
+      <div class="cs-row" style="margin-top:10px;">
+        <div><label>New password (leave blank to keep)</label><input type="password" class="usr" data-u="${esc(u.username)}" data-k="password" value=""></div>
+        <div><label>&nbsp;</label>
+          <div class="toggle-row" style="border:none;padding:4px 0;">
+            <span style="font-size:var(--fs-micro);">Two-step code at sign-in</span>
+            <div class="switch ${u.twofa?'on':''} usr-2fa" data-u="${esc(u.username)}"></div></div></div>
+      </div>
+      <button type="button" class="mini-btn gold usr-save" data-u="${esc(u.username)}" style="margin-top:10px;">Save this login</button>
+    </div>`).join('')||'<p class="field-hint">No logins found.</p>';
+
+    host.querySelectorAll('.usr-2fa').forEach(sw=>sw.addEventListener('click',()=>sw.classList.toggle('on')));
+    host.querySelectorAll('.usr-save').forEach(b=>b.addEventListener('click',async()=>{
+      const key=b.dataset.u, box=host.querySelector(`.list-item[data-u="${CSS.escape(key)}"]`);
+      const get=k=>{const el=box.querySelector(`[data-k="${k}"]`); return el?el.value:'';};
+      b.textContent='Saving…'; b.disabled=true;
+      try{
+        await api('/api/auth',{method:'POST',body:JSON.stringify({action:'saveUser',
+          username:key,role:get('role'),email:get('email'),whatsapp:get('whatsapp'),
+          password:get('password'),twofa:box.querySelector('.usr-2fa').classList.contains('on')})});
+        // a username change is applied under the old key, then reloaded
+        const newName=get('username').trim();
+        if(newName&&newName!==key){
+          await api('/api/auth',{method:'POST',body:JSON.stringify({action:'saveUser',
+            username:newName,role:get('role'),email:get('email'),whatsapp:get('whatsapp'),
+            password:get('password')||'changeme123',twofa:box.querySelector('.usr-2fa').classList.contains('on')})});
+          await api('/api/auth',{method:'POST',body:JSON.stringify({action:'deleteUser',username:key})});
+        }
+        toast('Login saved'); renderUsers();
+      }catch(e){ toast(e.message); }
+      b.textContent='Save this login'; b.disabled=false;
+    }));
+    host.querySelectorAll('.usr-del').forEach(b=>b.addEventListener('click',async()=>{
+      if(!confirm('Delete the login "'+b.dataset.u+'"?')) return;
+      try{ await api('/api/auth',{method:'POST',body:JSON.stringify({action:'deleteUser',username:b.dataset.u})});
+        toast('Login removed'); renderUsers(); }catch(e){ toast(e.message); }
+    }));
+  }
+
   let formBuilt=false;
   function fillForm(){
     SIMPLE.forEach(k=>{const el=document.getElementById('in-'+k); if(el)el.value=data[k];});
@@ -3683,6 +3785,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.getElementById('glow-switch').classList.toggle('on',!!data.logoGlow);
     document.getElementById('chat-enable-switch').classList.toggle('on',!!data.chatEnabled);
     document.getElementById('autoquote-switch').classList.toggle('on',!!data.autoQuote);
+    document.getElementById('ack-switch').classList.toggle('on',data.autoAcknowledge!==false);
     document.getElementById('pipebtn-switch').classList.toggle('on',!!data.showPipeBtn);
     document.getElementById('pw-user').value=currentUser||'';
     syncRanges();
@@ -3759,7 +3862,18 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.getElementById('test-email').addEventListener('click',testEmail);
     document.getElementById('test-ai').addEventListener('click',testAi);
     document.getElementById('test-wa2').addEventListener('click',testWa2);
-    loadSettings(); runSetupChecks();
+    document.getElementById('ack-switch').addEventListener('click',function(){
+      data.autoAcknowledge=data.autoAcknowledge===false;
+      this.classList.toggle('on',data.autoAcknowledge!==false); markDirty();
+    });
+    document.getElementById('add-user').addEventListener('click',async()=>{
+      const name=prompt('Username for the new login:'); if(!name) return;
+      const pass=prompt('Password (at least 6 characters):'); if(!pass||pass.length<6){ toast('Password too short'); return; }
+      try{ await api('/api/auth',{method:'POST',body:JSON.stringify({action:'saveUser',
+        username:name.trim(),password:pass,role:'staff',twofa:false})});
+        toast('Login created'); renderUsers(); }catch(e){ toast(e.message); }
+    });
+    loadSettings(); runSetupChecks(); renderUsers();
     document.getElementById('tax-switch').addEventListener('click',function(){
       data.quoteCfg.showTax=data.quoteCfg.showTax===false; this.classList.toggle('on',data.quoteCfg.showTax!==false); markDirty();
     });
@@ -3874,6 +3988,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   function requestLogin(target){
     if(token){openTarget(target);return;}
     pendingTarget=target;
+    showPanel('login');
     showLoginFields();
     document.getElementById('login-err').style.display='none';
     document.getElementById('login-user').value='';
@@ -3887,7 +4002,26 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     if(t==='pipeline'){
       document.getElementById('staff-page').classList.add('open');
       document.body.style.overflow='hidden'; await loadRfqs(); checkAi();
-    } else { fillForm(); document.getElementById('admin-panel').classList.add('open'); }
+      const sa=document.getElementById('staff-admin');
+      if(sa) sa.style.display=(currentRole==='developer')?'':'none';
+    } else {
+      if(currentRole && currentRole!=='developer'){
+        toast('That login can only open the RFQ Pipeline.');
+        document.getElementById('staff-page').classList.add('open');
+        document.body.style.overflow='hidden'; await loadRfqs(); return;
+      }
+      fillForm(); document.getElementById('admin-panel').classList.add('open');
+    }
+  }
+  let currentRole='', pendingUser='';
+  function showPanel(which){
+    ['login-fields','code-panel','forgot-panel'].forEach(id=>{
+      const el=document.getElementById(id); if(!el) return;
+      if(id==='forgot-panel') el.classList.toggle('open',which==='forgot');
+      else el.style.display=(which===id.replace('-panel','').replace('login-fields','login'))?'':'none';
+    });
+    document.getElementById('login-fields').style.display=(which==='login')?'':'none';
+    document.getElementById('code-panel').style.display=(which==='code')?'':'none';
   }
   async function doLogin(){
     const u=document.getElementById('login-user').value.trim();
@@ -3896,12 +4030,42 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     err.style.display='none';
     try{
       const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'login',user:u,pass:p})});
-      token=j.token; currentUser=j.user;
+      if(j.needCode){
+        pendingUser=j.user;
+        document.getElementById('code-note').textContent=j.note||'A code has been sent to you.';
+        document.getElementById('login-code').value='';
+        document.getElementById('code-err').style.display='none';
+        showPanel('code');
+        setTimeout(()=>document.getElementById('login-code').focus(),150);
+        return;
+      }
+      token=j.token; currentUser=j.user; currentRole=j.role||'';
       document.getElementById('login-modal').classList.remove('open');
       openTarget(pendingTarget||'pipeline');
     }catch(e){ err.textContent=e.message||'Sign in failed.'; err.style.display='block'; }
   }
+  async function doVerifyCode(){
+    const err=document.getElementById('code-err'); err.style.display='none';
+    const code=document.getElementById('login-code').value.trim();
+    try{
+      const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'verifyCode',user:pendingUser,code})});
+      token=j.token; currentUser=j.user; currentRole=j.role||'';
+      document.getElementById('login-modal').classList.remove('open');
+      showPanel('login');
+      openTarget(pendingTarget||'pipeline');
+    }catch(e){ err.textContent=e.message||'Could not verify.'; err.style.display='block'; }
+  }
   document.getElementById('login-btn').addEventListener('click',doLogin);
+  document.getElementById('code-btn').addEventListener('click',doVerifyCode);
+  document.getElementById('login-code').addEventListener('keydown',e=>{if(e.key==='Enter')doVerifyCode();});
+  document.getElementById('code-cancel').addEventListener('click',()=>showPanel('login'));
+  document.getElementById('code-resend').addEventListener('click',async function(){
+    this.textContent='Sending…';
+    try{ await api('/api/auth',{method:'POST',body:JSON.stringify({action:'resendCode',user:pendingUser})});
+      document.getElementById('code-note').textContent='A new code has been sent.'; }
+    catch(e){ document.getElementById('code-err').textContent=e.message; document.getElementById('code-err').style.display='block'; }
+    this.textContent='Send the code again';
+  });
   document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
   document.getElementById('login-user').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-pass').focus();});
   document.getElementById('login-cancel').addEventListener('click',()=>{

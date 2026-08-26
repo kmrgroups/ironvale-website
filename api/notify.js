@@ -1,10 +1,10 @@
 // Sends email (Resend) and WhatsApp (Meta Cloud API).
 // Used by rfqs.js, and also reachable directly as a webhook at /api/notify.
-import { cors, readBody } from './_db.js';
+import { cors, readBody, getSecret } from './_db.js';
 
 export async function sendNotification(event, payload = {}, notifyEmail, notifyWhatsapp) {
-  const ownerEmail = notifyEmail || process.env.OWNER_EMAIL || '';
-  const ownerWa    = notifyWhatsapp || process.env.OWNER_WHATSAPP || '';
+  const ownerEmail = notifyEmail || (await getSecret('OWNER_EMAIL')) || '';
+  const ownerWa    = notifyWhatsapp || (await getSecret('OWNER_WHATSAPP')) || '';
   const pipeline   = payload.pipelineUrl || '';
   const results    = [];
 
@@ -44,6 +44,33 @@ export async function sendNotification(event, payload = {}, notifyEmail, notifyW
       `You can track this enquiry on our website using the reference above.`
     ].join('\n');
 
+  } else if (event === 'rfq_acknowledge') {
+    // automatic reply to the customer, clearly marked as machine-generated
+    toEmail = payload.email || '';
+    toWa    = payload.phone || '';
+    subject = `We have received your enquiry — ${payload.ref}`;
+    text = [
+      `Dear ${payload.name || 'Sir/Madam'},`,
+      ``,
+      `Thank you for your enquiry. It has been received and logged.`,
+      ``,
+      `Reference:  ${payload.ref}`,
+      `Received:   ${new Date().toLocaleString()}`,
+      payload.message ? `\nYour requirement:\n${payload.message}` : '',
+      ``,
+      `Our estimating team is reviewing it and will respond with a quotation`,
+      `or any clarification we need.`,
+      payload.trackUrl ? `\nYou can check progress at any time using your reference:\n${payload.trackUrl}` : '',
+      ``,
+      payload.company ? `${payload.company}` : '',
+      ``,
+      `———————————————————————————————`,
+      `This acknowledgement was generated automatically by our system.`,
+      `Please do not reply to this message — a member of our team will`,
+      `contact you directly.`,
+      `———————————————————————————————`
+    ].filter(l => l !== '').join('\n');
+
   } else if (event === 'custom') {
     // free-form message composed by the site (quotation, clarification, etc.)
     toEmail = payload.to || '';
@@ -58,18 +85,18 @@ export async function sendNotification(event, payload = {}, notifyEmail, notifyW
   // ---- EMAIL ----
   if (!toEmail) {
     results.push('EMAIL SKIPPED: no recipient.');
-  } else if (!process.env.RESEND_API_KEY || !process.env.FROM_EMAIL) {
-    results.push('EMAIL SKIPPED: RESEND_API_KEY or FROM_EMAIL missing.');
+  } else if (!(await getSecret('RESEND_API_KEY')) || !(await getSecret('FROM_EMAIL'))) {
+    results.push('EMAIL SKIPPED: Resend API key or sender address not set — open Setup in the admin panel.');
   } else {
     try {
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY.trim()}`,
+          'Authorization': `Bearer ${await getSecret('RESEND_API_KEY')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: process.env.FROM_EMAIL.trim(),
+          from: await getSecret('FROM_EMAIL'),
           to: [toEmail.trim()],
           subject, text
         })
@@ -81,11 +108,12 @@ export async function sendNotification(event, payload = {}, notifyEmail, notifyW
   }
 
   // ---- WHATSAPP ----
-  if (toWa && process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_ID) {
+  const waToken = await getSecret('WHATSAPP_TOKEN'), waPhone = await getSecret('WHATSAPP_PHONE_ID');
+  if (toWa && waToken && waPhone) {
     const digits = String(toWa).replace(/\D/g, '');
-    const url = `https://graph.facebook.com/v21.0/${process.env.WHATSAPP_PHONE_ID}/messages`;
+    const url = `https://graph.facebook.com/v21.0/${waPhone}/messages`;
     const headers = {
-      'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN.trim()}`,
+      'Authorization': `Bearer ${waToken}`,
       'Content-Type': 'application/json'
     };
     try {
@@ -98,7 +126,7 @@ export async function sendNotification(event, payload = {}, notifyEmail, notifyW
       });
       let raw = await r.text();
       if (!r.ok) {
-        const tpl = process.env.WHATSAPP_TEMPLATE || 'hello_world';
+        const tpl = (await getSecret('WHATSAPP_TEMPLATE')) || 'hello_world';
         r = await fetch(url, {
           method: 'POST', headers,
           body: JSON.stringify({
@@ -130,11 +158,11 @@ export default async function handler(req, res) {
       alive: true,
       checks: {
         DATABASE_URL: process.env.DATABASE_URL ? 'present' : 'MISSING',
-        RESEND_API_KEY: process.env.RESEND_API_KEY ? 'present' : 'MISSING',
-        FROM_EMAIL: process.env.FROM_EMAIL || 'MISSING',
-        OWNER_EMAIL: process.env.OWNER_EMAIL || 'not set',
-        WHATSAPP_TOKEN: process.env.WHATSAPP_TOKEN ? 'present' : 'not set',
-        WHATSAPP_PHONE_ID: process.env.WHATSAPP_PHONE_ID || 'not set'
+        RESEND_API_KEY: (await getSecret('RESEND_API_KEY')) ? 'present' : 'MISSING',
+        FROM_EMAIL: (await getSecret('FROM_EMAIL')) || 'MISSING',
+        OWNER_EMAIL: (await getSecret('OWNER_EMAIL')) || 'not set',
+        WHATSAPP_TOKEN: (await getSecret('WHATSAPP_TOKEN')) ? 'present' : 'not set',
+        WHATSAPP_PHONE_ID: (await getSecret('WHATSAPP_PHONE_ID')) || 'not set'
       }
     });
   }

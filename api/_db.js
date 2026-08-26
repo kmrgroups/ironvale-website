@@ -24,6 +24,21 @@ export async function ensureTables() {
     user_name TEXT NOT NULL,
     pass_hash TEXT NOT NULL
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS users (
+    username TEXT PRIMARY KEY,
+    pass_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'staff',
+    email TEXT DEFAULT '',
+    whatsapp TEXT DEFAULT '',
+    twofa BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now()
+  )`;
+  await sql`CREATE TABLE IF NOT EXISTS login_codes (
+    username TEXT PRIMARY KEY,
+    code_hash TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    tries INT DEFAULT 0
+  )`;
   await sql`CREATE TABLE IF NOT EXISTS secrets (
     name TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -36,20 +51,46 @@ export async function ensureTables() {
     created_at TIMESTAMPTZ DEFAULT now()
   )`;
   // seed the first login if none exists
-  const rows = await sql`SELECT id FROM auth WHERE id = 1`;
+  const rows = await sql`SELECT id, user_name, pass_hash FROM auth WHERE id = 1`;
   if (!rows.length) {
     const u = process.env.ADMIN_USER || 'admin';
     const p = process.env.ADMIN_PASS || 'changeme123';
     await sql`INSERT INTO auth (id, user_name, pass_hash) VALUES (1, ${u}, ${hash(p)})`;
   }
+
+  // move the original single login into the new users table, as developer
+  const uCount = await sql`SELECT count(*)::int AS n FROM users`;
+  if (!uCount[0] || uCount[0].n === 0) {
+    const legacy = (await sql`SELECT user_name, pass_hash FROM auth WHERE id = 1`)[0];
+    if (legacy) {
+      await sql`INSERT INTO users (username, pass_hash, role, twofa)
+                VALUES (${legacy.user_name}, ${legacy.pass_hash}, 'developer', false)
+                ON CONFLICT (username) DO NOTHING`;
+    }
+    // a separate pipeline-only login, so staff never reach the admin panel
+    const sp = process.env.STAFF_PASS || 'pipeline123';
+    await sql`INSERT INTO users (username, pass_hash, role, twofa)
+              VALUES ('staff', ${hash(sp)}, 'staff', false)
+              ON CONFLICT (username) DO NOTHING`;
+  }
   ready = true;
 }
 
-export async function checkToken(token) {
-  if (!token) return false;
+export async function tokenUser(token) {
+  if (!token) return null;
   await ensureTables();
-  const rows = await sql`SELECT pass_hash FROM auth WHERE id = 1`;
-  return rows.length > 0 && rows[0].pass_hash === token;
+  const rows = await sql`SELECT username, role FROM users WHERE pass_hash = ${token}`;
+  if (rows.length) return rows[0];
+  // legacy single-login fallback
+  const old = await sql`SELECT user_name FROM auth WHERE id = 1 AND pass_hash = ${token}`;
+  return old.length ? { username: old[0].user_name, role: 'developer' } : null;
+}
+export async function checkToken(token) {
+  return !!(await tokenUser(token));
+}
+export async function checkRole(token, roles) {
+  const u = await tokenUser(token);
+  return u && roles.includes(u.role) ? u : null;
 }
 
 export function cors(res) {

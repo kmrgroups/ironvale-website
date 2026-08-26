@@ -8,6 +8,16 @@
 import { cors, readBody } from './_db.js';
 
 const CLAUDE_MODEL = process.env.AI_MODEL || 'claude-sonnet-4-6';
+
+// Keys pasted from a website often carry invisible whitespace, quotes or a
+// stray "Bearer " prefix. Clean all of that before use.
+function cleanKey(v) {
+  return String(v || '')
+    .replace(/[\r\n\t]/g, '')
+    .replace(/^["'\s]+|["'\s]+$/g, '')
+    .replace(/^Bearer\s+/i, '')
+    .trim();
+}
 let cache = {};   // discovered model lists, per provider
 
 function providers() {
@@ -36,13 +46,14 @@ async function openrouterModels() {
     // prefer bigger, well-known vision models
     const score = id => {
       let s = 0;
-      if (/llama-4|llama4/i.test(id)) s += 30;
-      if (/qwen.*vl|qwen2\.5-vl|qwen3-vl/i.test(id)) s += 28;
-      if (/gemini/i.test(id)) s += 25;
+      if (/qwen.*vl/i.test(id)) s += 40;              // strong at documents
+      if (/llama-4|llama4|maverick|scout/i.test(id)) s += 35;
+      if (/gemini/i.test(id)) s += 30;
+      if (/pixtral|mistral/i.test(id)) s += 25;
       if (/llama-3\.2.*vision/i.test(id)) s += 20;
-      if (/mistral|pixtral/i.test(id)) s += 18;
-      if (/maverick|scout/i.test(id)) s += 5;
-      if (/free/i.test(id)) s += 2;
+      if (/intern|glm|minicpm/i.test(id)) s += 10;
+      if (/\b(7b|8b|small|mini|tiny|nano)\b/i.test(id)) s -= 12;  // too small for drawings
+      if (/note|inkling|preview/i.test(id)) s -= 15;   // experimental
       return s;
     };
     free.sort((a, b) => score(b) - score(a));
@@ -135,7 +146,7 @@ async function askOpenAICompatible(base, key, models, args, extraHeaders) {
 
 /* ---------------- Gemini call ---------------- */
 async function askGemini(args) {
-  const key = process.env.GEMINI_API_KEY.trim();
+  const key = cleanKey(process.env.GEMINI_API_KEY);
   const parts = [];
   if (args.attachment && args.attachment.b64 && args.attachment.mime) {
     parts.push({ inline_data: { mime_type: args.attachment.mime, data: args.attachment.b64 } });
@@ -194,7 +205,7 @@ async function askAnthropic(args) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
-      'x-api-key': process.env.ANTHROPIC_API_KEY.trim(),
+      'x-api-key': cleanKey(process.env.ANTHROPIC_API_KEY),
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json'
     },
@@ -209,7 +220,7 @@ async function askAnthropic(args) {
 async function runProvider(name, args) {
   if (name === 'openrouter') {
     return askOpenAICompatible('https://openrouter.ai/api/v1',
-      process.env.OPENROUTER_API_KEY.trim(), await openrouterModels(), args,
+      cleanKey(process.env.OPENROUTER_API_KEY), await openrouterModels(), args,
       { 'HTTP-Referer': process.env.SITE_URL || 'https://www.elixirtec.com', 'X-Title': 'RFQ Engine' });
   }
   if (name === 'groq') {
@@ -218,7 +229,7 @@ async function runProvider(name, args) {
          'meta-llama/llama-4-maverick-17b-128e-instruct',
          'llama-3.2-90b-vision-preview'];
     return askOpenAICompatible('https://api.groq.com/openai/v1',
-      process.env.GROQ_API_KEY.trim(), models, args, {});
+      cleanKey(process.env.GROQ_API_KEY), models, args, {});
   }
   if (name === 'gemini') return askGemini(args);
   if (name === 'anthropic') return askAnthropic(args);
@@ -235,8 +246,19 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     const info = { alive: true, configured: list.length > 0, providers: list };
+    const peek = v => {
+      const k = cleanKey(v);
+      if (!k) return 'not set';
+      return 'length ' + k.length + ', starts "' + k.slice(0, 7) + '"';
+    };
+    info.keys = {
+      OPENROUTER_API_KEY: peek(process.env.OPENROUTER_API_KEY),
+      GROQ_API_KEY: peek(process.env.GROQ_API_KEY),
+      GEMINI_API_KEY: peek(process.env.GEMINI_API_KEY),
+      ANTHROPIC_API_KEY: peek(process.env.ANTHROPIC_API_KEY)
+    };
     if (list.includes('openrouter')) info.openrouterFreeVisionModels = (await openrouterModels()).slice(0, 8);
-    if (list.includes('gemini')) info.geminiModels = (await geminiModels(process.env.GEMINI_API_KEY.trim()) || []).slice(0, 8);
+    if (list.includes('gemini')) info.geminiModels = (await geminiModels(cleanKey(process.env.GEMINI_API_KEY)) || []).slice(0, 8);
     info.note = list.length
       ? 'AI is active. Providers tried in order: ' + list.join(' → ')
       : 'Add OPENROUTER_API_KEY (free, no card) in Vercel to switch AI features on.';

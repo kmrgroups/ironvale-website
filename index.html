@@ -1497,12 +1497,12 @@
       const j=await (await fetch(API+'/api/ai')).json();
       if(j.configured){
         el.className='ai-status on';
-        const names={openrouter:'OpenRouter (free)',groq:'Groq (free)',gemini:'Google Gemini',anthropic:'Anthropic Claude'};
+        const names={openrouter:'OpenRouter (free)',mistral:'Mistral (free)',groq:'Groq (free)',gemini:'Google Gemini',anthropic:'Anthropic Claude'};
         const shown=(j.providers||[]).map(p=>names[p]||p).join(' → ');
         el.textContent='AI features are active'+(shown?' — '+shown:'')+'. Drawing reading and cost planning are available.';
       } else {
         el.className='ai-status off';
-        el.innerHTML='<b>AI features are switched off.</b> Add an <code>OPENROUTER_API_KEY</code> setting in Vercel (free, no card needed) and redeploy. Everything else works normally without it.';
+        el.innerHTML='<b>AI features are switched off.</b> Add a <code>MISTRAL_API_KEY</code> setting in Vercel (free tier, no card needed) and redeploy. Everything else works normally without it.';
       }
     }catch(e){ el.className=''; el.textContent=''; }
   }

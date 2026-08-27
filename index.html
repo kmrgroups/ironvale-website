@@ -464,6 +464,11 @@
   .admin-head h2{font-size:var(--fs-card-title);font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#fff;}
   .admin-head .pubbtn{height:34px;padding:0 14px;border-radius:100px;border:none;background:linear-gradient(180deg,var(--gold-light),var(--gold));color:var(--navy-deep);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
   .admin-close{background:none;border:none;color:rgba(255,255,255,.8);font-size:20px;}
+  .admin-groups-bar{display:flex;gap:6px;padding:14px clamp(16px,4vw,60px) 0;background:var(--navy);flex-wrap:wrap;}
+  .admin-grp{font-family:var(--mono);font-size:12px;letter-spacing:.04em;padding:10px 18px;border-radius:100px 100px 0 0;
+    color:rgba(255,255,255,.55);background:rgba(255,255,255,.06);border:none;border-bottom:3px solid transparent;font-weight:600;}
+  .admin-grp:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.1);}
+  .admin-grp.active{color:var(--navy);background:var(--sky-wash);border-bottom-color:var(--gold);}
   .admin-tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto;background:var(--sky-wash);}
   .admin-tab{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;padding:14px 12px;color:var(--ink-soft);border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;}
   .admin-tab.active{color:var(--navy);border-bottom-color:var(--gold);background:var(--white);}
@@ -778,33 +783,39 @@
     <button class="pubbtn" id="publish-btn">Publish Changes</button>
     <button class="admin-close" id="admin-close">✕</button>
   </div>
+  <div class="admin-groups-bar">
+    <button class="admin-grp active" data-grp="setup">🚀 Setup</button>
+    <button class="admin-grp" data-grp="company">🏢 Company</button>
+    <button class="admin-grp" data-grp="website">🎨 Website</button>
+    <button class="admin-grp" data-grp="quoting">💰 Quoting &amp; Costing</button>
+  </div>
   <div class="admin-tabs">
-    <button class="admin-tab active" data-tab="setup">⚙ Setup</button>
-    <button class="admin-tab" data-tab="design">Design</button>
-    <button class="admin-tab" data-tab="layout">Sizing</button>
-    <button class="admin-tab" data-tab="brand">Brand</button>
-    <button class="admin-tab" data-tab="hero">Hero</button>
-    <button class="admin-tab" data-tab="capabilities">Capabilities</button>
-    <button class="admin-tab" data-tab="process">Process</button>
-    <button class="admin-tab" data-tab="stats">Stats</button>
-    <button class="admin-tab" data-tab="gallery">Gallery</button>
-    <button class="admin-tab" data-tab="industries">Industries</button>
-    <button class="admin-tab" data-tab="certs">Certifications</button>
-    <button class="admin-tab" data-tab="founders">Founders</button>
-    <button class="admin-tab" data-tab="chatbot">AI Chatbot</button>
-    <button class="admin-tab" data-tab="testimonial">Testimonial</button>
-    <button class="admin-tab" data-tab="contact">Contact</button>
-    <button class="admin-tab" data-tab="social">Social &amp; Map</button>
-    <button class="admin-tab" data-tab="company">Company Profile</button>
-    <button class="admin-tab" data-tab="quotecfg">Quotation Setup</button>
-    <button class="admin-tab" data-tab="costbase">Cost Base</button>
-    <button class="admin-tab" data-tab="machines">Machines</button>
-    <button class="admin-tab" data-tab="labour">Labour</button>
-    <button class="admin-tab" data-tab="materials">Materials</button>
-    <button class="admin-tab" data-tab="notify">Notifications</button>
-    <button class="admin-tab" data-tab="security">Logins</button>
-    <button class="admin-tab" data-tab="sections">Sections</button>
-    <button class="admin-tab" data-tab="deploy">📦 Deploy for a Client</button>
+    <button class="admin-tab active" data-tab="setup" data-grp="setup">⚙ Setup</button>
+    <button class="admin-tab" data-tab="deploy" data-grp="setup">📦 Deploy for a Client</button>
+    <button class="admin-tab" data-tab="company" data-grp="company">Company Profile</button>
+    <button class="admin-tab" data-tab="social" data-grp="company">Social &amp; Map</button>
+    <button class="admin-tab" data-tab="notify" data-grp="company">Notifications</button>
+    <button class="admin-tab" data-tab="security" data-grp="company">Logins</button>
+    <button class="admin-tab" data-tab="design" data-grp="website">Design</button>
+    <button class="admin-tab" data-tab="layout" data-grp="website">Sizing</button>
+    <button class="admin-tab" data-tab="brand" data-grp="website">Brand</button>
+    <button class="admin-tab" data-tab="hero" data-grp="website">Hero</button>
+    <button class="admin-tab" data-tab="capabilities" data-grp="website">Capabilities</button>
+    <button class="admin-tab" data-tab="process" data-grp="website">Process</button>
+    <button class="admin-tab" data-tab="stats" data-grp="website">Stats</button>
+    <button class="admin-tab" data-tab="gallery" data-grp="website">Gallery</button>
+    <button class="admin-tab" data-tab="industries" data-grp="website">Industries</button>
+    <button class="admin-tab" data-tab="certs" data-grp="website">Certifications</button>
+    <button class="admin-tab" data-tab="founders" data-grp="website">Founders</button>
+    <button class="admin-tab" data-tab="chatbot" data-grp="website">AI Chatbot</button>
+    <button class="admin-tab" data-tab="testimonial" data-grp="website">Testimonial</button>
+    <button class="admin-tab" data-tab="contact" data-grp="website">Contact</button>
+    <button class="admin-tab" data-tab="sections" data-grp="website">Sections</button>
+    <button class="admin-tab" data-tab="quotecfg" data-grp="quoting">Quotation Setup</button>
+    <button class="admin-tab" data-tab="costbase" data-grp="quoting">Cost Base</button>
+    <button class="admin-tab" data-tab="machines" data-grp="quoting">Machines</button>
+    <button class="admin-tab" data-tab="labour" data-grp="quoting">Labour</button>
+    <button class="admin-tab" data-tab="materials" data-grp="quoting">Materials</button>
   </div>
   <div class="admin-body">
 
@@ -1114,16 +1125,20 @@
     <div class="admin-group" data-group="contact">
       <div class="info-box"><b>Entered once, used everywhere.</b> Address, phone and email come from
       <b>Company Profile</b> and appear automatically on the website, quotations and cost sheets.
-      Only fill the boxes below if the website should show something <i>different</i> from your
-      registered details — otherwise leave them blank.</div>
+      You do not need to enter them again here.</div>
       <div class="field"><label>Section Title</label><input type="text" id="in-contactTitle"></div>
       <div class="field"><label>Subtitle</label><textarea id="in-contactSub" rows="3"></textarea></div>
+
+      <div class="toggle-row" style="margin-top:20px;"><span>Show different contact details on the website than Company Profile</span>
+        <div class="switch" id="contact-override-switch"></div></div>
+      <div id="contact-override-fields" style="display:none;margin-top:16px;">
       <div class="field"><label>Address <span style="color:var(--ink-soft)">— override</span></label><input type="text" id="in-contactAddress">
         <div class="field-hint" id="addr-inherit"></div></div>
       <div class="field"><label>Phone <span style="color:var(--ink-soft)">— override</span></label><input type="text" id="in-contactPhone">
         <div class="field-hint" id="phone-inherit"></div></div>
       <div class="field"><label>Email <span style="color:var(--ink-soft)">— override</span></label><input type="text" id="in-contactEmail">
         <div class="field-hint" id="email-inherit"></div></div>
+      </div>
     </div>
 
     <div class="admin-group" data-group="social">
@@ -4159,6 +4174,11 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.getElementById('uselogo-switch').classList.toggle('on',data.company.useWebsiteLogo!==false);
     updateLogoNote();
     updateInheritNotes();
+    (function(){
+      const hasOverride=!!(data.contactAddress||data.contactPhone||data.contactEmail);
+      document.getElementById('contact-override-switch').classList.toggle('on',hasOverride);
+      document.getElementById('contact-override-fields').style.display=hasOverride?'':'none';
+    })();
     checkWhatsapp();
     document.getElementById('tax-switch').classList.toggle('on',data.quoteCfg.showTax!==false);
     singleImageField('co-logo-wrap','company.letterheadLogo');
@@ -4196,6 +4216,18 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
         data.quoteCfg[k]=numeric.includes(k)?(parseFloat(el.value)||0):el.value;
         markDirty();
       });
+    });
+    document.getElementById('contact-override-switch').addEventListener('click',function(){
+      const showing=this.classList.toggle('on');
+      document.getElementById('contact-override-fields').style.display=showing?'':'none';
+      if(!showing){
+        // clearing the toggle clears the overrides, so Company Profile takes over cleanly
+        ['contactAddress','contactPhone','contactEmail'].forEach(k=>{ data[k]=''; });
+        document.getElementById('in-contactAddress').value='';
+        document.getElementById('in-contactPhone').value='';
+        document.getElementById('in-contactEmail').value='';
+        render(); markDirty();
+      }
     });
     document.getElementById('bank-switch').addEventListener('click',function(){
       data.company.bankShow=!data.company.bankShow; this.classList.toggle('on',data.company.bankShow); markDirty();
@@ -4508,11 +4540,32 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     }catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
   });
 
+  document.querySelectorAll('.admin-grp').forEach(grp=>grp.addEventListener('click',()=>{
+    document.querySelectorAll('.admin-grp').forEach(g=>g.classList.remove('active'));
+    grp.classList.add('active');
+    const gid=grp.dataset.grp;
+    const tabsInGroup=[...document.querySelectorAll('.admin-tab')].filter(t=>t.dataset.grp===gid);
+    tabsInGroup.forEach(t=>t.style.display='');
+    document.querySelectorAll('.admin-tab').forEach(t=>{ if(t.dataset.grp!==gid) t.style.display='none'; });
+    // keep the current tab if it already belongs to this group, otherwise open the first one
+    const currentlyActive=document.querySelector('.admin-tab.active');
+    if(!currentlyActive || currentlyActive.dataset.grp!==gid) tabsInGroup[0].click();
+  }));
   document.querySelectorAll('.admin-tab').forEach(tab=>tab.addEventListener('click',()=>{
     document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));
     document.querySelectorAll('.admin-group').forEach(g=>g.classList.remove('active'));
     tab.classList.add('active');
-    document.querySelector(`.admin-group[data-group="${tab.dataset.tab}"]`).classList.add('active');}));
+    document.querySelector(`.admin-group[data-group="${tab.dataset.tab}"]`).classList.add('active');
+    // keep the group bar in sync if a tab was opened directly
+    const grp=document.querySelector(`.admin-grp[data-grp="${tab.dataset.grp}"]`);
+    if(grp && !grp.classList.contains('active')){
+      document.querySelectorAll('.admin-grp').forEach(g=>g.classList.remove('active'));
+      grp.classList.add('active');
+      document.querySelectorAll('.admin-tab').forEach(t=>{ t.style.display=(t.dataset.grp===tab.dataset.grp)?'':'none'; });
+    }
+  }));
+  // start with only the Setup group's tabs visible
+  document.querySelectorAll('.admin-tab').forEach(t=>{ if(t.dataset.grp!=='setup') t.style.display='none'; });
   document.querySelectorAll('.switch[data-toggle]').forEach(sw=>sw.addEventListener('click',()=>{
     const k=sw.dataset.toggle; data.sections[k]=!data.sections[k];
     sw.classList.toggle('on',data.sections[k]); render(); markDirty();}));

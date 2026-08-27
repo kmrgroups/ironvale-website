@@ -338,7 +338,15 @@
   .kpi{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;border-top:3px solid var(--sky);}
   .kpi b{display:block;font-family:var(--disp);font-size:calc(var(--font-base)*1.8);color:var(--navy);line-height:1.1;}
   .kpi span{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);letter-spacing:.08em;text-transform:uppercase;}
-  .rfq-card{border:1px solid var(--line);border-left:4px solid var(--sky);border-radius:var(--radius);padding:20px;margin-bottom:16px;background:var(--white);box-shadow:var(--shadow-sm);}
+  .rfq-card{border:1px solid var(--line);border-left:4px solid var(--sky);border-radius:var(--radius);margin-bottom:10px;background:var(--white);box-shadow:var(--shadow-sm);overflow:hidden;transition:box-shadow .2s,border-color .2s;}
+  .rfq-card.open{border-left-color:var(--gold);box-shadow:var(--shadow-md);}
+  .rfq-summary{padding:16px 20px;cursor:pointer;user-select:none;}
+  .rfq-summary:hover{background:var(--paper);}
+  .rfq-summary-right{display:flex;align-items:center;gap:12px;}
+  .rfq-chevron{font-size:14px;color:var(--ink-soft);width:16px;text-align:center;}
+  .rfq-card.open .rfq-chevron{color:var(--gold-deep);}
+  .rfq-body{padding:0 20px 20px;border-top:1px solid var(--line);}
+  .rfq-body>*:first-child{margin-top:16px;}
   .rfq-ref{font-family:var(--mono);font-size:var(--fs-body);font-weight:600;color:var(--navy);letter-spacing:.06em;}
   .rfq-when{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);}
   .badge{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:100px;font-weight:600;}
@@ -1167,7 +1175,8 @@
       <div class="field"><label>Website</label><input type="text" id="in-co-website"></div>
 
       <div class="field" style="margin-top:24px;"><label>Statutory</label></div>
-      <div class="field"><label>Tax Label</label><input type="text" id="in-co-taxLabel" placeholder="GSTIN / VAT No. / Tax ID"></div>
+      <div class="field"><label>Tax Registration Label</label><input type="text" id="in-co-taxLabel" placeholder="GSTIN / VAT No. / Tax ID">
+        <div class="field-hint">Labels your registration number below, e.g. "GSTIN: 29ABCDE1234F1Z5" on the letterhead.</div></div>
       <div class="field"><label>Tax Number</label><input type="text" id="in-co-taxNumber"></div>
       <div class="field"><label>Second ID Label</label><input type="text" id="in-co-panLabel" placeholder="PAN"></div>
       <div class="field"><label>Second ID Number</label><input type="text" id="in-co-panNumber"></div>
@@ -1243,7 +1252,8 @@
       <div class="field"><label>Currency Symbol</label><input type="text" id="in-qc-currencySymbol" placeholder="₹"></div>
       <div class="field"><label>Validity (days)</label><input type="text" id="in-qc-validityDays"></div>
       <div class="toggle-row"><span>Show tax line on quotations</span><div class="switch on" id="tax-switch"></div></div>
-      <div class="field" style="margin-top:16px;"><label>Tax Label</label><input type="text" id="in-qc-taxLabel" placeholder="GST"></div>
+      <div class="field" style="margin-top:16px;"><label>Tax Rate Label (on quotations)</label><input type="text" id="in-qc-taxLabel" placeholder="GST">
+        <div class="field-hint">Labels the tax percentage line on quotations, e.g. "GST @ 18%".</div></div>
       <div class="field"><label>Tax Percent</label><input type="text" id="in-qc-taxPercent" placeholder="18"></div>
       <div class="field"><label>Payment Terms</label><textarea id="in-qc-paymentTerms" rows="2"></textarea></div>
       <div class="field"><label>Delivery Terms</label><textarea id="in-qc-deliveryTerms" rows="2"></textarea></div>
@@ -1266,8 +1276,8 @@
       </div>
       <div class="field"><label>Live Site Address</label><input type="text" id="in-siteUrl" placeholder="https://ironvale-website.vercel.app">
         <div class="field-hint">Your <b>website</b> address only — the part visitors type. Do not paste an <code>/api/...</code> address here. Used to build the “Open RFQ Pipeline” link in your alert emails.</div></div>
-      <div class="field"><label>Quote Sender Name</label><input type="text" id="in-quoteSender"></div>
-      <div class="field"><label>Currency</label><input type="text" id="in-currency"></div>
+      <div class="field"><label>Quote Sender Name</label><input type="text" id="in-quoteSender">
+        <div class="field-hint">Currency is set once, in <b>Quotation Setup → Currency Code</b> — it applies here and on every document.</div></div>
       <div class="toggle-row"><span>Auto-draft quote with AI on new RFQ</span><div class="switch on" id="autoquote-switch"></div></div>
       <div class="toggle-row"><span>Send the customer an automatic acknowledgement</span><div class="switch on" id="ack-switch"></div></div>
       <div class="field-hint" style="margin-top:10px;">The acknowledgement carries their reference number, a tracking link, and a clear
@@ -1642,7 +1652,7 @@
   },LAYOUT_DEFAULTS);
 
   let data=JSON.parse(JSON.stringify(DEFAULTS));
-  let token=null, currentUser='', rfqs=[], dirty=false, cloudOK=false;
+  let token=null, currentUser='', rfqs=[], dirty=false, cloudOK=false, expandedRfq=null;
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const setText=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
   const toast=(m)=>{const t=document.getElementById('save-toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);};
@@ -3124,12 +3134,17 @@ Reply with ONLY this JSON, no commentary or code fences:
     host.innerHTML=rfqs.map((r,i)=>safeCard(()=>{
       const si=STAGES.indexOf(r.status||'Received');
       const cust=(r.quote||'')+`\n\nReference: ${r.ref}\n— ${data.quoteSender||''}`;
-      return `<div class="rfq-card">
-        <div class="list-item-head"><div><div class="rfq-ref">${esc(r.ref)}</div>
-          <div class="rfq-when">${esc(r.date)} · ${esc(r.source)}</div></div>
-          <span class="badge s${Math.max(0,si)}">${esc(r.status||'Received')}</span></div>
-        <div class="rfq-detail"><b>${esc(r.name)}</b>${r.company?` · ${esc(r.company)}`:''}<br>
-          ${esc(r.email)}${r.phone?` · ${esc(r.phone)}`:''}<br>${esc(r.message||'—')}
+      const open=expandedRfq===r.ref;
+      return `<div class="rfq-card ${open?'open':''}" data-ref="${esc(r.ref)}">
+        <div class="list-item-head rfq-summary" data-toggle="${esc(r.ref)}">
+          <div><div class="rfq-ref">${esc(r.ref)}</div>
+          <div class="rfq-when">${esc(r.name)}${r.company?' · '+esc(r.company):''} · ${esc(r.date)}</div></div>
+          <div class="rfq-summary-right">
+            <span class="badge s${Math.max(0,si)}">${esc(r.status||'Received')}</span>
+            <span class="rfq-chevron">${open?'▾':'▸'}</span>
+          </div></div>
+        <div class="rfq-body" style="display:${open?'block':'none'};">
+        <div class="rfq-detail">${esc(r.email)}${r.phone?` · ${esc(r.phone)}`:''}<br>${esc(r.message||'—')}
           ${r.fileName?`<br>📎 ${r.fileDataUrl?`<a style="color:var(--sky-deep);text-decoration:underline;" href="${r.fileDataUrl}" download="${esc(r.fileName)}">${esc(r.fileName)}</a>`:esc(r.fileName)}`:''}</div>
         <div class="rfq-actions">
           <button class="mini-btn ai" data-act="gen" data-i="${i}">${r.quote?'Regenerate quote':'AI draft quote'}</button>
@@ -3170,8 +3185,19 @@ Reply with ONLY this JSON, no commentary or code fences:
         ${!r.quoteDoc?`<div class="rfq-actions"><button class="mini-btn" data-act="startquote" data-i="${i}">Start quotation document</button></div>`:''}
         <select class="status-select" data-i="${i}">${STAGES.map(s=>`<option ${((r.status||'Received')===s)?'selected':''}>${s}</option>`).join('')}</select>
         ${(r.log&&r.log.length)?`<div class="notif-log">${r.log.slice(0,4).map(l=>`<div>${esc(l)}</div>`).join('')}</div>`:''}
-        <div class="rfq-actions"><button class="item-delete" data-act="del" data-i="${i}">Delete RFQ</button></div></div>`;
+        <div class="rfq-actions"><button class="item-delete" data-act="del" data-i="${i}">Delete RFQ</button></div>
+        </div></div>`;
     },i,r)).join('');
+
+    host.querySelectorAll('[data-toggle]').forEach(row=>row.addEventListener('click',(e)=>{
+      const ref=row.dataset.toggle;
+      expandedRfq = (expandedRfq===ref) ? null : ref;
+      renderRfqAdmin();
+      if(expandedRfq){
+        const card=host.querySelector(`.rfq-card[data-ref="${CSS.escape(expandedRfq)}"]`);
+        if(card) card.scrollIntoView({behavior:'smooth',block:'start'});
+      }
+    }));
 
     const patch=async(ref,p,extra={})=>{
       try{ const j=await api('/api/rfqs',{method:'PATCH',body:JSON.stringify(Object.assign({ref,patch:p},extra))});
@@ -3560,14 +3586,14 @@ Reply with ONLY this JSON, no commentary or code fences:
       `ENQUIRY`,`${r.message||'(to be confirmed)'}`,``,`SCOPE OF SUPPLY`,
       `1. Manufacturability review against submitted drawing`,`2. Machining per specification`,
       `3. Dimensional inspection with first-article report`,`4. Standard packing and dispatch`,``,
-      `COMMERCIAL — TO BE COMPLETED BEFORE SENDING`,`Unit price (${data.currency||'INR'}): ________`,
+      `COMMERCIAL — TO BE COMPLETED BEFORE SENDING`,`Unit price (${(data.quoteCfg&&data.quoteCfg.currency)||'INR'}): ________`,
       `Quantity: ________`,`Tooling / setup: ________`,`Total: ________`,``,
       `Lead time: ________ working days`,`Payment terms: ________`,`Validity: 30 days`,``,
       `${data.quoteSender||'Sales Team'}`,`${data.brandName} · ${data.contactEmail} · ${data.contactPhone}`].join('\n');
   }
   async function generateQuote(r){
     const prompt=`You are preparing a DRAFT quotation for a precision manufacturing company. Use only the company information given.
-Rules: do NOT invent prices, rates or lead times — leave labelled blanks (e.g. "Unit price (${data.currency||'INR'}): ________").
+Rules: do NOT invent prices, rates or lead times — leave labelled blanks (e.g. "Unit price (${(data.quoteCfg&&data.quoteCfg.currency)||'INR'}): ________").
 Head it "QUOTATION — DRAFT (requires review before sending)". Include reference, date, customer details, enquiry summary,
 scope of supply, commercial section with blanks, lead time blank, validity, notes, sign-off.
 
@@ -3768,7 +3794,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   const SIMPLE=['brandName','brandSuffix','sky','navy','gold','glow','chatA','chatB','footerCopy',
     'heroEyebrow','heroHeadline','heroSub','ctaPrimary','ctaSecondary','heroVideoUrl','capTitle','capMenu','processTitle','processMenu',
     'galleryTitle','galleryMenu','industriesTitle','industriesMenu','certsTitle','certsMenu','certsSub','foundersTitle','foundersMenu',
-    'botName','botLauncher','botWelcome','botKnowledge','botEndpoint','notifyEmail','notifyWhatsapp','siteUrl','quoteSender','currency',
+    'botName','botLauncher','botWelcome','botKnowledge','botEndpoint','notifyEmail','notifyWhatsapp','siteUrl','quoteSender',
     'quoteText','quoteName','quoteRole','contactTitle','contactSub','contactAddress','contactPhone','contactEmail',
     'mapEmbed','mapLink','heroVideoCaption'];
   const RANGES=[['fontBase','px'],['titleScale','×'],['gutter','px'],['sectionPad','px'],['cardMin','px'],

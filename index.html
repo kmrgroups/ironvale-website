@@ -326,6 +326,7 @@
   #forgot-panel.open{display:block;}
 
   #staff-page{position:fixed;inset:0;z-index:150;background:var(--paper);overflow-y:auto;display:none;}
+  #ppc-page{position:fixed;inset:0;z-index:150;background:var(--paper);overflow-y:auto;display:none;}
   #staff-page.open{display:block;}
   .staff-bar{position:sticky;top:0;z-index:5;background:var(--navy);color:#fff;padding:0 var(--gutter);height:var(--bar-h);display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:3px solid var(--gold);}
   .staff-bar h2{color:#fff;font-size:calc(var(--font-base)*1.15);}
@@ -345,6 +346,21 @@
   .rfq-summary-right{display:flex;align-items:center;gap:12px;}
   .rfq-chevron{font-size:14px;color:var(--ink-soft);width:16px;text-align:center;}
   .rfq-card.open .rfq-chevron{color:var(--gold-deep);}
+  .part-card{border:1px solid var(--line);border-left:4px solid var(--sky);border-radius:var(--radius);margin-bottom:10px;background:var(--white);overflow:hidden;}
+  .part-card.open{border-left-color:var(--gold);}
+  .part-summary{padding:14px 18px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+  .part-summary:hover{background:var(--paper);}
+  .part-body{padding:0 18px 18px;border-top:1px solid var(--line);}
+  .part-body>*:first-child{margin-top:16px;}
+  .feas-banner{border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:16px;font-family:var(--mono);}
+  .feas-banner.go{background:#E6F7F0;border:1px solid rgba(31,157,107,.35);}
+  .feas-banner.no{background:#FDECEA;border:1px solid rgba(176,58,46,.35);}
+  .feas-banner.unk{background:var(--sky-wash);border:1px solid var(--line);}
+  .feas-title{font-size:15px;font-weight:700;letter-spacing:.03em;margin-bottom:6px;}
+  .feas-banner.go .feas-title{color:var(--ok);} .feas-banner.no .feas-title{color:#B03A2E;} .feas-banner.unk .feas-title{color:var(--ink-mid);}
+  .feas-line{font-size:var(--fs-micro);color:var(--ink-mid);line-height:1.8;}
+  .order-badge{font-family:var(--mono);font-size:9.5px;padding:4px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;}
+  .order-badge.go{background:#E6F7F0;color:var(--ok);} .order-badge.no{background:#FDECEA;color:#B03A2E;} .order-badge.unk{background:var(--sky-wash);color:var(--ink-mid);}
   .rfq-body{padding:0 20px 20px;border-top:1px solid var(--line);}
   .rfq-body>*:first-child{margin-top:16px;}
   .rfq-ref{font-family:var(--mono);font-size:var(--fs-body);font-weight:600;color:var(--navy);letter-spacing:.06em;}
@@ -774,6 +790,44 @@
   </div>
 </div>
 
+<div id="ppc-page">
+  <div class="staff-bar">
+    <div><h2>Production Planning</h2><span class="t-micro" id="ppc-brand" style="color:var(--gold-light)">IRONVALE</span></div>
+    <div class="staff-actions">
+      <button id="ppc-refresh">Refresh</button>
+      <button id="ppc-admin">Site Admin</button>
+      <button id="ppc-back">View Website</button>
+      <button class="gold" id="ppc-logout">Sign Out</button>
+    </div>
+  </div>
+  <div class="staff-body">
+    <div class="warn-box" style="margin-bottom:18px;">This planner calculates net requirement, material needs and machine
+      capacity from your own Part, BOM and Routing data, and schedules backward from the delivery date. It does not
+      optimise across multiple orders sharing a machine, and cycle times are only as accurate as what you enter —
+      treat the feasibility result as a strong estimate, not a guarantee.</div>
+    <div class="kpi-row" id="ppc-kpi-row"></div>
+    <div class="qb" style="margin-bottom:18px;">
+      <h4>New Customer Order</h4>
+      <div class="cs-row four">
+        <div><label>Customer</label><input type="text" id="npo-customer"></div>
+        <div><label>PO Number</label><input type="text" id="npo-ponum"></div>
+        <div><label>Part</label><select id="npo-part" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div>
+        <div><label>Priority</label>
+          <select id="npo-priority" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option>Normal</option><option>High</option><option>Urgent</option>
+          </select></div>
+      </div>
+      <div class="cs-row" style="margin-top:10px;">
+        <div><label>PO Quantity</label><input type="text" id="npo-qty" class="num"></div>
+        <div><label>Required Delivery Date</label><input type="date" id="npo-delivery"></div>
+      </div>
+      <button class="mini-btn gold" id="npo-create" style="margin-top:12px;">Create Order</button>
+      <div class="field-hint" id="npo-msg" style="margin-top:8px;"></div>
+    </div>
+    <div id="ppc-list"></div>
+  </div>
+</div>
+
 <button id="admin-toggle" title="Admin">⚙</button>
 <div id="save-toast">SAVED</div>
 
@@ -788,6 +842,7 @@
     <button class="admin-grp" data-grp="company">🏢 Company</button>
     <button class="admin-grp" data-grp="website">🎨 Website</button>
     <button class="admin-grp" data-grp="quoting">💰 Quoting &amp; Costing</button>
+    <button class="admin-grp" data-grp="ppc">🏭 Production Planning</button>
   </div>
   <div class="admin-tabs">
     <button class="admin-tab active" data-tab="setup" data-grp="setup">⚙ Setup</button>
@@ -816,6 +871,7 @@
     <button class="admin-tab" data-tab="machines" data-grp="quoting">Machines</button>
     <button class="admin-tab" data-tab="labour" data-grp="quoting">Labour</button>
     <button class="admin-tab" data-tab="materials" data-grp="quoting">Materials</button>
+    <button class="admin-tab" data-tab="parts" data-grp="ppc">Parts, BOM &amp; Routing</button>
   </div>
   <div class="admin-body">
 
@@ -1255,6 +1311,15 @@
       <button type="button" class="add-btn" id="add-materials">+ Add Material</button>
     </div>
 
+    <div class="admin-group" data-group="parts">
+      <div class="info-box"><b>Nothing in Production Planning works without this.</b> Each part needs its bill of
+      material (what it's made from) and its routing (which operations, on which machines) before an order for it
+      can be planned. Link BOM materials to your <b>Materials</b> price book and routing machines to your
+      <b>Machines</b> list — the planner reads its rates and capacity from there.</div>
+      <div id="parts-list"></div>
+      <button type="button" class="add-btn" id="add-part">+ Add Part</button>
+    </div>
+
     <div class="admin-group" data-group="quotecfg">
       <div class="info-box">Controls how quotation documents are numbered, priced and worded.</div>
       <div class="field"><label>Quotation Prefix</label><input type="text" id="in-qc-prefix" placeholder="QTN"></div>
@@ -1536,6 +1601,7 @@
       <div class="toggle-row"><span>Testimonial</span><div class="switch on" data-toggle="testimonial-section"></div></div>
       <div class="toggle-row"><span>RFQ Tracking</span><div class="switch on" data-toggle="track"></div></div>
       <div class="toggle-row"><span>“RFQ Pipeline” button in menu</span><div class="switch on" id="pipebtn-switch"></div></div>
+      <div class="toggle-row"><span>“Production Planning” button in menu</span><div class="switch on" id="ppcbtn-switch"></div></div>
       <div class="field" style="margin-top:30px;"><label>Your Own Sections</label></div>
       <div id="list-custom"></div>
       <button type="button" class="add-btn solid" id="add-custom">+ Create New Section</button>
@@ -1557,7 +1623,7 @@
   const DEFAULTS=Object.assign({
     brandName:"IRONVALE",brandSuffix:"MANUFACTURING",
     sky:"#3FA9E0",navy:"#0B2A5B",gold:"#C2932E",glow:"#69C2ED",chatA:"#7B3FF2",chatB:"#4B1FA8",
-    showBrandText:true,logoGlow:true,logoDataUrl:"",heroBannerDataUrl:"",showPipeBtn:true,
+    showBrandText:true,logoGlow:true,logoDataUrl:"",heroBannerDataUrl:"",showPipeBtn:true,showPPCBtn:true,
     heroVisual:"orb",heroVideoDataUrl:"",heroVideoUrl:"",heroSignatureImg:"",heroVideoCaption:"Watch our film",
     social:{youtube:"",instagram:"",facebook:"",linkedin:"",twitter:"",whatsapp:""},
     mapEmbed:"",mapLink:"",showMap:true,
@@ -1584,15 +1650,17 @@
       {id:"l4",grade:"Helper",wage:18000,statutoryPct:22,paidDays:26,hoursPerDay:8}
     ],
     materials:[
-      {id:"mt1",name:"EN8 Bright Bar",grade:"EN8 / C45",rate:85,unit:"kg",density:7.85,
+      {id:"mt1",name:"EN8 Bright Bar",grade:"EN8 / C45",rate:85,unit:"kg",density:7.85,leadTimeDays:7,
        source:"",sourceDate:"",confidence:"Manual"},
-      {id:"mt2",name:"EN24 Alloy Steel",grade:"EN24 / 817M40",rate:145,unit:"kg",density:7.85,
+      {id:"mt2",name:"EN24 Alloy Steel",grade:"EN24 / 817M40",rate:145,unit:"kg",density:7.85,leadTimeDays:10,
        source:"",sourceDate:"",confidence:"Manual"},
-      {id:"mt3",name:"Aluminium 6061",grade:"6061-T6",rate:310,unit:"kg",density:2.70,
+      {id:"mt3",name:"Aluminium 6061",grade:"6061-T6",rate:310,unit:"kg",density:2.70,leadTimeDays:7,
        source:"",sourceDate:"",confidence:"Manual"},
-      {id:"mt4",name:"SS 304",grade:"AISI 304",rate:290,unit:"kg",density:8.00,
+      {id:"mt4",name:"SS 304",grade:"AISI 304",rate:290,unit:"kg",density:8.00,leadTimeDays:10,
        source:"",sourceDate:"",confidence:"Manual"}
     ],
+    /* ---- PPC: Part Master, each with its own BOM and Routing ---- */
+    parts:[],
 
     /* ---- COMPANY PROFILE (drives every generated document) ---- */
     company:{
@@ -1668,6 +1736,7 @@
 
   let data=JSON.parse(JSON.stringify(DEFAULTS));
   let token=null, currentUser='', rfqs=[], dirty=false, cloudOK=false, expandedRfq=null;
+  let poOrders=[], expandedOrder=null;
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const setText=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
   const toast=(m)=>{const t=document.getElementById('save-toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);};
@@ -1757,6 +1826,7 @@
         data.machines=j.data.machines||DEFAULTS.machines;
         data.labourGrades=j.data.labourGrades||DEFAULTS.labourGrades;
         data.materials=j.data.materials||DEFAULTS.materials;
+        data.parts=j.data.parts||DEFAULTS.parts;
         data.sections=Object.assign({},DEFAULTS.sections,j.data.sections||{});
       }
       if(j.updatedAt) setText('content-stamp','Content updated '+new Date(j.updatedAt).toLocaleDateString());
@@ -1829,13 +1899,18 @@
     const it=navItems();
     let html=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('');
     if(data.showPipeBtn) html+=`<a href="#" class="pipeline" id="nav-pipeline">RFQ Pipeline</a>`;
+    if(data.showPPCBtn) html+=`<a href="#" class="pipeline" id="nav-ppc">Production Planning</a>`;
     document.getElementById('main-nav').innerHTML=html;
     document.getElementById('foot-links').innerHTML=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('')
-      +`<a href="#" id="foot-pipeline">RFQ Pipeline</a>`;
+      +`<a href="#" id="foot-pipeline">RFQ Pipeline</a><a href="#" id="foot-ppc">Production Planning</a>`;
     const np=document.getElementById('nav-pipeline');
     if(np) np.addEventListener('click',e=>{e.preventDefault();requestLogin('pipeline');});
     const fp=document.getElementById('foot-pipeline');
     if(fp) fp.addEventListener('click',e=>{e.preventDefault();requestLogin('pipeline');});
+    const nq=document.getElementById('nav-ppc');
+    if(nq) nq.addEventListener('click',e=>{e.preventDefault();requestLogin('ppc');});
+    const fq=document.getElementById('foot-ppc');
+    if(fq) fq.addEventListener('click',e=>{e.preventDefault();requestLogin('ppc');});
   }
   function renderCustomSections(){
     document.getElementById('custom-sections').innerHTML=data.customSections.map(s=>{
@@ -2039,6 +2114,122 @@
     catch(e){ rfqs=[]; toast('Could not load RFQs: '+e.message); }
     renderRfqAdmin();
   }
+  async function loadOrders(){
+    try{ const j=await api('/api/orders'); poOrders=j.orders||[]; }
+    catch(e){ poOrders=[]; toast('Could not load orders: '+e.message); }
+    renderPpcAdmin();
+  }
+  function newOrderRef(){ return 'PO-'+Date.now().toString(36).toUpperCase(); }
+
+  function feasBanner(plan){
+    if(plan.error) return `<div class="feas-banner unk"><div class="feas-title">Cannot plan this order</div>
+      <div class="feas-line">${esc(plan.error)}</div></div>`;
+    if(plan.feasible===null) return `<div class="feas-banner unk"><div class="feas-title">⚪ NO DELIVERY DATE SET</div>
+      <div class="feas-line">Earliest possible completion: <b>${fmtDate(plan.earliest)}</b>
+      (${plan.totalLeadDays} days from today — ${plan.materialLeadDays} days material lead time
+      + ${plan.productionDays} days production)</div></div>`;
+    if(plan.feasible) return `<div class="feas-banner go"><div class="feas-title">🟢 DELIVERY FEASIBLE</div>
+      <div class="feas-line">Required by: <b>${fmtDate(plan.delivery)}</b> · Planned completion: <b>${fmtDate(plan.earliest)}</b>
+      · Buffer: <b>${plan.bufferDays} day${plan.bufferDays===1?'':'s'}</b></div></div>`;
+    return `<div class="feas-banner no"><div class="feas-title">🔴 DELIVERY NOT FEASIBLE</div>
+      <div class="feas-line">Required by: <b>${fmtDate(plan.delivery)}</b> · Earliest possible: <b>${fmtDate(plan.earliest)}</b>
+      · Delay: <b>${Math.abs(plan.bufferDays)} day${Math.abs(plan.bufferDays)===1?'':'s'} late</b></div>
+      <div class="feas-line">Reason: ${plan.totalLeadDays-((plan.delivery-new Date())/86400000)>0
+        ?'insufficient lead time — '+plan.materialLeadDays+' days material + '+plan.productionDays+' days production exceeds time remaining':'see operation days below'}</div>
+      <div class="feas-line">To recover: reduce batch/setup time, split across an alternate machine, add a shift,
+      or expedite the longest-lead material below.</div></div>`;
+  }
+
+  function renderPpcAdmin(){
+    const kpi=document.getElementById('ppc-kpi-row'), host=document.getElementById('ppc-list');
+    if(!kpi||!host) return;
+    let go=0,no=0,unk=0;
+    poOrders.forEach(o=>{ const pl=planOrder(o); if(pl.error||pl.feasible===null) unk++; else if(pl.feasible) go++; else no++; });
+    kpi.innerHTML=`<div class="kpi"><b>${poOrders.length}</b><span>Total Orders</span></div>
+      <div class="kpi"><b>${go}</b><span>On Track</span></div>
+      <div class="kpi"><b>${no}</b><span>At Risk</span></div>
+      <div class="kpi"><b>${unk}</b><span>Needs Data</span></div>`;
+
+    if(!poOrders.length){ host.innerHTML='<p class="empty-note">No orders yet — create one above.</p>'; return; }
+
+    host.innerHTML=poOrders.map((o,i)=>{
+      const part=partById(o.partId);
+      const plan=planOrder(o);
+      const open=expandedOrder===o.ref;
+      const badgeClass=plan.error||plan.feasible===null?'unk':(plan.feasible?'go':'no');
+      const badgeText=plan.error?'No Data':plan.feasible===null?'No Date':(plan.feasible?'On Track':'At Risk');
+
+      const opRows=(plan.opRows||[]).map(r=>`<tr>
+        <td class="c">${esc(r.op)}</td><td>${esc(r.process)}</td><td>${esc(r.machineName)}</td>
+        <td class="r">${r.reqHours.toFixed(1)}</td><td class="r">${r.days}</td>
+        <td class="r">${fmtDate(r.plannedStart)}</td><td class="r">${fmtDate(r.plannedFinish)}</td></tr>`).join('')
+        ||'<tr><td colspan="7" class="t-micro">No routing for this part.</td></tr>';
+
+      const bomRows=(plan.bomLines||[]).map(b=>`<tr>
+        <td>${esc(b.material)}${b.matched?'':' <span style="color:#B03A2E">(not in price book)</span>'}</td>
+        <td class="r">${b.reqQty.toFixed(2)}</td><td>${esc(b.unit)}</td>
+        <td class="r">${b.leadDays}</td><td class="r">${rupee(b.cost)}</td></tr>`).join('')
+        ||'<tr><td colspan="5" class="t-micro">No BOM for this part.</td></tr>';
+
+      return `<div class="rfq-card ${open?'open':''}" data-ref="${esc(o.ref)}">
+        <div class="list-item-head rfq-summary" data-toggle-order="${esc(o.ref)}">
+          <div><div class="rfq-ref">${esc(o.ref)} — ${esc(o.customer)}</div>
+          <div class="rfq-when">${esc(part?part.partNo:'(part removed)')} · Qty ${esc(o.qty)} · Due ${fmtDate(o.deliveryDate)} · ${esc(o.priority||'Normal')} priority</div></div>
+          <div class="rfq-summary-right"><span class="order-badge ${badgeClass}">${badgeText}</span>
+          <span class="rfq-chevron">${open?'▾':'▸'}</span></div></div>
+        <div class="rfq-body" style="display:${open?'block':'none'};">
+          ${feasBanner(plan)}
+          ${!plan.error?`
+          <div class="cs-sub">Net Production Requirement</div>
+          <div class="feas-line" style="margin-bottom:14px;">PO Qty <b>${plan.po}</b> + Safety Stock <b>${plan.safety}</b>
+            − FG on Hand <b>${plan.fg}</b> − WIP <b>${plan.wip}</b> = <b>Net Requirement: ${plan.net}</b></div>
+
+          <div class="cs-sub">Bill of Material — Required for ${plan.net} pcs</div>
+          <table class="cs-t"><thead><tr><th>Material</th><th class="r">Qty Reqd</th><th>Unit</th>
+            <th class="r">Lead (days)</th><th class="r">Est. Cost</th></tr></thead><tbody>${bomRows}</tbody></table>
+
+          <div class="cs-sub">Operations — Backward Scheduled from Delivery Date</div>
+          <table class="cs-t"><thead><tr><th class="c">Op</th><th>Process</th><th>Machine</th>
+            <th class="r">Hours Reqd</th><th class="r">Days</th><th class="r">Start</th><th class="r">Finish</th></tr></thead>
+            <tbody>${opRows}</tbody></table>
+          ${plan.unassigned?'<div class="dx-missing" style="margin-top:10px;"><b>One or more operations has no matching machine.</b> Check the Machine Type text in this part\'s Routing matches a Type in your Machines list.</div>':''}
+
+          <div class="feas-line" style="margin-top:14px;">Material required on site by <b>${fmtDate(plan.materialRequiredBy)}</b>
+          → purchase order should be released by <b>${fmtDate(plan.poReleaseDate)}</b>
+          (${plan.materialLeadDays} days supplier lead time).</div>
+          `:''}
+
+          <select class="status-select" data-i="${i}" id="ord-status-${i}">
+            ${['Planned','Released','In Production','Completed','Dispatched'].map(s=>`<option ${((o.status||'Planned')===s)?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <div class="rfq-actions"><button class="item-delete" data-act="delorder" data-i="${i}">Delete Order</button></div>
+        </div></div>`;
+    }).join('');
+
+    host.querySelectorAll('[data-toggle-order]').forEach(row=>row.addEventListener('click',()=>{
+      const ref=row.dataset.toggleOrder;
+      expandedOrder=(expandedOrder===ref)?null:ref;
+      renderPpcAdmin();
+      if(expandedOrder){
+        const card=host.querySelector(`.rfq-card[data-ref="${CSS.escape(expandedOrder)}"]`);
+        if(card) card.scrollIntoView({behavior:'smooth',block:'start'});
+      }
+    }));
+    host.querySelectorAll('.status-select').forEach(sel=>sel.addEventListener('change',async()=>{
+      const o=poOrders[+sel.dataset.i];
+      try{ const j=await api('/api/orders',{method:'PATCH',body:JSON.stringify({ref:o.ref,patch:{status:sel.value}})});
+        if(j.order) poOrders[+sel.dataset.i]=j.order; toast('Status updated'); }
+      catch(e){ toast('Could not update: '+e.message); }
+    }));
+    host.querySelectorAll('[data-act="delorder"]').forEach(b=>b.addEventListener('click',async()=>{
+      const o=poOrders[+b.dataset.i];
+      if(!confirm('Delete order '+o.ref+'?')) return;
+      try{ await api('/api/orders',{method:'PATCH',body:JSON.stringify({ref:o.ref,remove:true})});
+        poOrders.splice(+b.dataset.i,1); if(expandedOrder===o.ref) expandedOrder=null; renderPpcAdmin(); toast('Order deleted'); }
+      catch(e){ toast('Could not delete: '+e.message); }
+    }));
+  }
+
   const waLink=(n,t)=>`https://wa.me/${String(n||'').replace(/\D/g,'')}?text=${encodeURIComponent(t)}`;
 
   /* Send through the server so the message actually leaves the building —
@@ -2279,6 +2470,225 @@ Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.q
     return list.find(m=>String(m.type||'').toLowerCase().includes(t)||t.includes(String(m.type||'').toLowerCase()))
       ||list.find(m=>String(m.name||'').toLowerCase().includes(t))||null;
   }
+
+  /* ================= PRODUCTION PLANNING (PPC) ENGINE =================
+     Net requirement, BOM explosion, capacity and backward scheduling are
+     plain arithmetic from your own Machines/Labour/Materials/Cost Base data
+     — nothing here is an AI guess. AI is only used, optionally, to draft a
+     starting BOM and routing for a new part, which you then check and edit.
+     This is a rule-based planner, not a true finite-capacity optimiser:
+     it does not yet net multiple orders against shared machine time. */
+
+  function partById(id){ return (data.parts||[]).find(p=>p.id===id)||null; }
+  function blankPart(){
+    return {id:'pt'+Date.now().toString(36),partNo:'',custPartNo:'',description:'',
+      drawingNo:'',drawingRev:'',safetyStockQty:0,fgQty:0,wipQty:0,
+      bom:[],routing:[]};
+  }
+  function availableHoursPerDay(){
+    const b=CB();
+    return num(b.shiftsPerDay)*num(b.hoursPerShift)*(1-num(b.downtimePct)/100);
+  }
+
+  const BOM_ROUTING_PROMPT=(part)=>`You are a manufacturing process planner. Draft a starting bill of material
+and process routing for the component below. This is a first draft the estimator will check and correct —
+be realistic, not exhaustive.
+
+PART: ${part.description||part.partNo} (${part.partNo})
+${part.drawingNo?`Drawing: ${part.drawingNo} Rev ${part.drawingRev||''}`:'No drawing reference given.'}
+
+MATERIALS IN THE PRICE BOOK:
+${(data.materials||[]).map(m=>`- ${m.name} (${m.grade})`).join('\n')||'- none listed'}
+
+MACHINES AVAILABLE (give the exact "type" text so it can be matched):
+${(data.machines||[]).map(m=>`- ${m.name} | type: ${m.type}`).join('\n')||'- none listed'}
+
+Reply with ONLY this JSON, no commentary or code fences:
+{
+ "bom":[{"material":"","qtyPerPart":0,"unit":"kg","scrapPct":0}],
+ "routing":[{"op":10,"process":"","machineType":"","cycleMin":0,"setupMin":0,"batchSize":0}]
+}`;
+
+  async function draftPartBomRouting(part){
+    let text;
+    try{ text=await callAI(BOM_ROUTING_PROMPT(part),{maxTokens:1500,surfaceError:true}); }
+    catch(e){ toast('AI draft failed: '+e.message); return; }
+    if(!text){ toast('No response from AI.'); return; }
+    try{
+      const clean=text.replace(/```json|```/g,'').trim();
+      const p=JSON.parse(clean.slice(clean.indexOf('{'),clean.lastIndexOf('}')+1));
+      part.bom=(p.bom||[]).map(b=>({material:b.material||'',qtyPerPart:num(b.qtyPerPart),unit:b.unit||'kg',scrapPct:num(b.scrapPct)}));
+      part.routing=(p.routing||[]).map((o,i)=>{
+        const m=bestMachineFor(o.machineType);
+        return {op:o.op||((i+1)*10),process:o.process||'',machineId:m?m.id:'',machineType:o.machineType||'',
+          cycleMin:num(o.cycleMin),setupMin:num(o.setupMin),batchSize:num(o.batchSize)};
+      });
+      toast('AI draft added — check every line before using it.');
+    }catch(e){ toast('Could not understand the AI response.'); }
+  }
+
+  /* ---- the planning calculation itself: pure arithmetic on your own data ---- */
+  function planOrder(order){
+    const part=partById(order.partId);
+    if(!part) return {error:'This order\'s part no longer exists.'};
+
+    const po=num(order.qty), safety=num(part.safetyStockQty), fg=num(part.fgQty), wip=num(part.wipQty);
+    const net=Math.max(0, po+safety-fg-wip);
+
+    const bomLines=(part.bom||[]).map(b=>{
+      const mat=materialByName(b.material);
+      const rate=mat?num(mat.rate):0;
+      const leadDays=mat?num(mat.leadTimeDays):0;
+      const reqQty=net*num(b.qtyPerPart)/Math.max(0.01,1-num(b.scrapPct)/100);
+      return {material:b.material,unit:b.unit,matched:!!mat,rate,leadDays,reqQty,cost:reqQty*rate};
+    });
+    const materialLeadDays=bomLines.length?Math.max(0,...bomLines.map(b=>b.leadDays)):0;
+
+    const hoursPerDay=Math.max(0.1,availableHoursPerDay());
+    const opRows=(part.routing||[]).map(o=>{
+      const m=machineById(o.machineId)||bestMachineFor(o.machineType);
+      const rate=m?machineRate(m).total:0;
+      const batch=Math.max(1,num(o.batchSize)||net);
+      const reqHours=net*(num(o.cycleMin)/60) + (num(o.setupMin)/60)*Math.ceil(net/batch);
+      const days=Math.max(1,Math.ceil(reqHours/hoursPerDay));
+      return {op:o.op,process:o.process,machineName:m?m.name:'(unassigned — check Routing)',
+        machineId:m?m.id:'',reqHours,days};
+    });
+    const productionDays=opRows.reduce((t,o)=>t+o.days,0);
+    const totalLeadDays=materialLeadDays+productionDays;
+
+    const today=new Date(); today.setHours(0,0,0,0);
+    const earliest=new Date(today); earliest.setDate(earliest.getDate()+totalLeadDays);
+    const delivery=order.deliveryDate?new Date(order.deliveryDate):null;
+    const feasible=delivery?(earliest<=delivery):null;
+    const bufferDays=delivery?Math.round((delivery-earliest)/86400000):null;
+
+    // backward schedule: work back from the delivery date (or today+lead time if no date given)
+    const scheduleEnd=delivery&&feasible!==false?new Date(delivery):new Date(earliest);
+    let cursor=new Date(scheduleEnd);
+    const scheduled=[...opRows].reverse().map(o=>{
+      const finish=new Date(cursor);
+      cursor.setDate(cursor.getDate()-o.days);
+      const start=new Date(cursor);
+      return Object.assign({},o,{plannedStart:start,plannedFinish:finish});
+    }).reverse();
+    const materialRequiredBy=new Date(cursor);
+    const poReleaseDate=new Date(materialRequiredBy); poReleaseDate.setDate(poReleaseDate.getDate()-materialLeadDays);
+
+    return {net,po,safety,fg,wip,bomLines,materialLeadDays,opRows:scheduled,productionDays,
+      totalLeadDays,earliest,delivery,feasible,bufferDays,materialRequiredBy,poReleaseDate,
+      unassigned:opRows.some(o=>!o.machineId)};
+  }
+
+  function fmtDate(d){ return d?new Date(d).toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'}):'—'; }
+
+  /* ---- Parts, BOM & Routing admin editor ---- */
+  let expandedPart=null;
+  function renderPartsAdmin(){
+    const host=document.getElementById('parts-list'); if(!host) return;
+    const parts=data.parts||[];
+    host.innerHTML=parts.map((p,i)=>{
+      const open=expandedPart===p.id;
+      const bomOk=(p.bom||[]).length>0, routeOk=(p.routing||[]).length>0;
+      return `<div class="part-card ${open?'open':''}">
+        <div class="part-summary" data-toggle-part="${p.id}">
+          <div><b>${esc(p.partNo||'(no part number)')}</b>${p.description?' — '+esc(p.description):''}
+            <div class="t-micro" style="margin-top:2px;">${bomOk?'BOM set':'<span style="color:#B03A2E">No BOM</span>'} ·
+            ${routeOk?'Routing set':'<span style="color:#B03A2E">No routing</span>'}</div></div>
+          <span class="rfq-chevron">${open?'▾':'▸'}</span></div>
+        <div class="part-body" style="display:${open?'block':'none'};">
+          <div class="cs-row four">
+            <div><label>Part Number</label><input class="pt-in" data-i="${i}" data-k="partNo" value="${esc(p.partNo)}"></div>
+            <div><label>Customer Part No.</label><input class="pt-in" data-i="${i}" data-k="custPartNo" value="${esc(p.custPartNo)}"></div>
+            <div><label>Drawing No.</label><input class="pt-in" data-i="${i}" data-k="drawingNo" value="${esc(p.drawingNo)}"></div>
+            <div><label>Revision</label><input class="pt-in" data-i="${i}" data-k="drawingRev" value="${esc(p.drawingRev)}"></div>
+          </div>
+          <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;"><label>Description</label>
+            <input class="pt-in" data-i="${i}" data-k="description" value="${esc(p.description)}"></div></div>
+          <div class="cs-row four" style="margin-top:10px;">
+            <div><label>Safety Stock Qty</label><input class="pt-in num" data-i="${i}" data-k="safetyStockQty" value="${esc(p.safetyStockQty)}"></div>
+            <div><label>Finished Goods on Hand</label><input class="pt-in num" data-i="${i}" data-k="fgQty" value="${esc(p.fgQty)}"></div>
+            <div><label>WIP Qty</label><input class="pt-in num" data-i="${i}" data-k="wipQty" value="${esc(p.wipQty)}"></div>
+            <div style="align-self:end;"><button class="mini-btn ai pt-ai" data-i="${i}">AI draft BOM &amp; routing</button></div>
+          </div>
+
+          <div class="cs-sub">Bill of Material</div>
+          <table class="cs-t"><thead><tr><th>Material</th><th class="r">Qty/pc</th><th>Unit</th><th class="r">Scrap %</th><th></th></tr></thead>
+            <tbody>${(p.bom||[]).map((b,bi)=>`<tr>
+              <td><input class="bm-in" data-i="${i}" data-bi="${bi}" data-k="material" value="${esc(b.material)}" placeholder="e.g. EN8 / C45"></td>
+              <td style="width:64px"><input class="bm-in num" data-i="${i}" data-bi="${bi}" data-k="qtyPerPart" value="${esc(b.qtyPerPart)}"></td>
+              <td style="width:56px"><input class="bm-in" data-i="${i}" data-bi="${bi}" data-k="unit" value="${esc(b.unit)}"></td>
+              <td style="width:64px"><input class="bm-in num" data-i="${i}" data-bi="${bi}" data-k="scrapPct" value="${esc(b.scrapPct)}"></td>
+              <td><button class="qb-del" data-act="delbomline" data-i="${i}" data-bi="${bi}">×</button></td></tr>`).join('')
+              ||'<tr><td colspan="5" class="t-micro">No BOM lines yet.</td></tr>'}</tbody></table>
+          <button class="qb-add" data-act="addbomline" data-i="${i}">+ Add BOM line</button>
+
+          <div class="cs-sub">Routing</div>
+          <table class="cs-t"><thead><tr><th style="width:44px">Op</th><th>Process</th><th>Machine Type</th>
+            <th class="r">Cycle min</th><th class="r">Setup min</th><th class="r">Batch</th><th></th></tr></thead>
+            <tbody>${(p.routing||[]).map((o,oi)=>`<tr>
+              <td><input class="rt-in" data-i="${i}" data-oi="${oi}" data-k="op" value="${esc(o.op)}"></td>
+              <td><input class="rt-in" data-i="${i}" data-oi="${oi}" data-k="process" value="${esc(o.process)}"></td>
+              <td><input class="rt-in" data-i="${i}" data-oi="${oi}" data-k="machineType" value="${esc(o.machineType)}" placeholder="matches Machines → Type"></td>
+              <td style="width:64px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="cycleMin" value="${esc(o.cycleMin)}"></td>
+              <td style="width:64px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="setupMin" value="${esc(o.setupMin)}"></td>
+              <td style="width:60px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="batchSize" value="${esc(o.batchSize)}"></td>
+              <td><button class="qb-del" data-act="delroute" data-i="${i}" data-oi="${oi}">×</button></td></tr>`).join('')
+              ||'<tr><td colspan="7" class="t-micro">No routing steps yet.</td></tr>'}</tbody></table>
+          <button class="qb-add" data-act="addroute" data-i="${i}">+ Add routing step</button>
+
+          <div class="rfq-actions" style="margin-top:16px;">
+            <button class="item-delete pt-del" data-i="${i}">Delete Part</button>
+          </div>
+        </div></div>`;
+    }).join('')||'<p class="field-hint">No parts yet — add one to start planning production for it.</p>';
+
+    host.querySelectorAll('[data-toggle-part]').forEach(row=>row.addEventListener('click',()=>{
+      const id=row.dataset.togglePart;
+      expandedPart=(expandedPart===id)?null:id;
+      renderPartsAdmin();
+    }));
+    host.querySelectorAll('.pt-in').forEach(inp=>inp.addEventListener('input',()=>{
+      data.parts[+inp.dataset.i][inp.dataset.k]=inp.value; markDirty();
+    }));
+    host.querySelectorAll('.bm-in').forEach(inp=>inp.addEventListener('input',()=>{
+      data.parts[+inp.dataset.i].bom[+inp.dataset.bi][inp.dataset.k]=inp.value; markDirty();
+    }));
+    host.querySelectorAll('.rt-in').forEach(inp=>inp.addEventListener('input',()=>{
+      const p=data.parts[+inp.dataset.i], row=p.routing[+inp.dataset.oi];
+      row[inp.dataset.k]=inp.value;
+      if(inp.dataset.k==='machineType'){ const m=bestMachineFor(inp.value); row.machineId=m?m.id:''; }
+      markDirty();
+    }));
+    host.querySelectorAll('[data-act="addbomline"]').forEach(b=>b.addEventListener('click',()=>{
+      data.parts[+b.dataset.i].bom.push({material:'',qtyPerPart:0,unit:'kg',scrapPct:0});
+      markDirty(); renderPartsAdmin();
+    }));
+    host.querySelectorAll('[data-act="delbomline"]').forEach(b=>b.addEventListener('click',()=>{
+      data.parts[+b.dataset.i].bom.splice(+b.dataset.bi,1); markDirty(); renderPartsAdmin();
+    }));
+    host.querySelectorAll('[data-act="addroute"]').forEach(b=>b.addEventListener('click',()=>{
+      const p=data.parts[+b.dataset.i];
+      p.routing.push({op:(p.routing.length+1)*10,process:'',machineType:'',machineId:'',cycleMin:0,setupMin:0,batchSize:0});
+      markDirty(); renderPartsAdmin();
+    }));
+    host.querySelectorAll('[data-act="delroute"]').forEach(b=>b.addEventListener('click',()=>{
+      data.parts[+b.dataset.i].routing.splice(+b.dataset.oi,1); markDirty(); renderPartsAdmin();
+    }));
+    host.querySelectorAll('.pt-del').forEach(b=>b.addEventListener('click',()=>{
+      if(!confirm('Delete this part? Orders that reference it will no longer be plannable.')) return;
+      data.parts.splice(+b.dataset.i,1); markDirty(); renderPartsAdmin();
+    }));
+    host.querySelectorAll('.pt-ai').forEach(b=>b.addEventListener('click',async()=>{
+      const p=data.parts[+b.dataset.i];
+      b.textContent='Drafting…'; b.disabled=true;
+      await draftPartBomRouting(p);
+      b.textContent='AI draft BOM & routing'; b.disabled=false;
+      markDirty(); renderPartsAdmin();
+    }));
+  }
+
+
 
   function blankCosting(r){
     return {qty:1,batchQty:1,
@@ -4161,6 +4571,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.getElementById('autoquote-switch').classList.toggle('on',!!data.autoQuote);
     document.getElementById('ack-switch').classList.toggle('on',data.autoAcknowledge!==false);
     document.getElementById('pipebtn-switch').classList.toggle('on',!!data.showPipeBtn);
+    document.getElementById('ppcbtn-switch').classList.toggle('on',!!data.showPPCBtn);
     document.getElementById('pw-user').value=currentUser||'';
     syncRanges();
     singleImageField('logo-upload-wrap','logoDataUrl');
@@ -4299,6 +4710,13 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
        {key:'source',type:'text',label:'Price Source'},{key:'sourceDate',type:'text',label:'Price Date'}],
       {name:'New Material',grade:'',rate:0,unit:'kg',density:7.85,source:'',sourceDate:'',confidence:'Manual'});
 
+    renderPartsAdmin();
+    document.getElementById('add-part').addEventListener('click',()=>{
+      data.parts=data.parts||[];
+      const p=blankPart(); data.parts.push(p);
+      expandedPart=p.id; markDirty(); renderPartsAdmin();
+    });
+
     Object.keys(data.costBase).forEach(k=>{
       const el=document.getElementById('in-cb-'+k); if(!el) return;
       el.value=data.costBase[k];
@@ -4402,6 +4820,11 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
       document.getElementById('staff-page').classList.add('open');
       document.body.style.overflow='hidden'; await loadRfqs(); checkAi();
       const sa=document.getElementById('staff-admin');
+      if(sa) sa.style.display=(currentRole==='developer')?'':'none';
+    } else if(t==='ppc'){
+      document.getElementById('ppc-page').classList.add('open');
+      document.body.style.overflow='hidden'; await loadOrders(); refreshPartDropdown();
+      const sa=document.getElementById('ppc-admin');
       if(sa) sa.style.display=(currentRole==='developer')?'':'none';
     } else {
       if(currentRole!=='developer'){
@@ -4519,6 +4942,53 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.body.style.overflow='';
     if(location.hash==='#pipeline')history.replaceState(null,'',location.pathname);
     toast('Signed out');});
+  document.getElementById('ppc-admin').addEventListener('click',()=>{
+    document.getElementById('ppc-page').classList.remove('open'); document.body.style.overflow='';
+    fillForm(); document.getElementById('admin-panel').classList.add('open');});
+  document.getElementById('ppc-back').addEventListener('click',()=>{
+    document.getElementById('ppc-page').classList.remove('open'); document.body.style.overflow='';
+    if(location.hash==='#ppc')history.replaceState(null,'',location.pathname);});
+  document.getElementById('ppc-refresh').addEventListener('click',loadOrders);
+  function refreshPartDropdown(){
+    const sel=document.getElementById('npo-part'); if(!sel) return;
+    const parts=data.parts||[];
+    sel.innerHTML=parts.length
+      ? parts.map(p=>`<option value="${p.id}">${esc(p.partNo||'(unnamed)')}${p.description?' — '+esc(p.description):''}</option>`).join('')
+      : '<option value="">No parts set up yet — add one in Admin → Production Planning</option>';
+  }
+  document.getElementById('npo-create').addEventListener('click',async function(){
+    const customer=document.getElementById('npo-customer').value.trim();
+    const ponum=document.getElementById('npo-ponum').value.trim();
+    const partId=document.getElementById('npo-part').value;
+    const qty=document.getElementById('npo-qty').value;
+    const delivery=document.getElementById('npo-delivery').value;
+    const priority=document.getElementById('npo-priority').value;
+    const msg=document.getElementById('npo-msg');
+    msg.textContent='';
+    if(!customer||!partId||!qty){ msg.textContent='Customer, part and quantity are required.'; msg.style.color='#B03A2E'; return; }
+    const order={ref:newOrderRef(),customer,poNumber:ponum,partId,qty:parseFloat(qty)||0,
+      deliveryDate:delivery||'',priority,status:'Planned',createdAt:new Date().toISOString()};
+    this.disabled=true; this.textContent='Creating…';
+    try{
+      await api('/api/orders',{method:'POST',body:JSON.stringify({order})});
+      poOrders.unshift(order);
+      expandedOrder=order.ref;
+      renderPpcAdmin();
+      document.getElementById('npo-customer').value='';
+      document.getElementById('npo-ponum').value='';
+      document.getElementById('npo-qty').value='';
+      document.getElementById('npo-delivery').value='';
+      msg.textContent='Order '+order.ref+' created.'; msg.style.color='var(--ok)';
+    }catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false; this.textContent='Create Order';
+  });
+  document.getElementById('ppc-logout').addEventListener('click',()=>{
+    token=null; currentUser=''; poOrders=[];
+    document.getElementById('ppc-page').classList.remove('open');
+    document.getElementById('admin-panel').classList.remove('open');
+    document.body.style.overflow='';
+    if(location.hash==='#ppc')history.replaceState(null,'',location.pathname);
+    toast('Signed out');});
   document.getElementById('admin-close').addEventListener('click',()=>{
     if(dirty && !confirm('You have unpublished changes. Close anyway?'))return;
     document.getElementById('admin-panel').classList.remove('open');});
@@ -4576,6 +5046,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   sSwitch('chat-enable-switch','chatEnabled',render);
   sSwitch('autoquote-switch','autoQuote');
   sSwitch('pipebtn-switch','showPipeBtn',render);
+  sSwitch('ppcbtn-switch','showPPCBtn',render);
 
   document.getElementById('chat-fab').addEventListener('click',()=>{
     document.getElementById('chat-panel').classList.add('open');
@@ -4617,6 +5088,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     await loadContent();
     render();
     if(location.hash==='#pipeline') requestLogin('pipeline');
+    if(location.hash==='#ppc') requestLogin('ppc');
   })();
 })();
 </script>

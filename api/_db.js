@@ -19,6 +19,11 @@ export async function ensureTables() {
     data JSONB NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now()
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS ppc_orders (
+    ref TEXT PRIMARY KEY,
+    data JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+  )`;
   await sql`CREATE TABLE IF NOT EXISTS auth (
     id INT PRIMARY KEY DEFAULT 1,
     user_name TEXT NOT NULL,

@@ -74,7 +74,7 @@ export async function sendNotification(event, payload = {}, notifyEmail, notifyW
   } else if (event === 'custom') {
     // free-form message composed by the site (quotation, clarification, etc.)
     toEmail = payload.to || '';
-    toWa    = payload.whatsapp || '';
+    toWa    = payload.whatsapp || ownerWa || '';
     subject = payload.subject || 'Message';
     text    = payload.text || '';
 
@@ -125,8 +125,18 @@ export async function sendNotification(event, payload = {}, notifyEmail, notifyW
         })
       });
       let raw = await r.text();
+      const idOf = txt => {
+        try { const j = JSON.parse(txt); return (j.messages && j.messages[0] && j.messages[0].id) || ''; }
+        catch (e) { return ''; }
+      };
+      const waIdOf = txt => {
+        try { const j = JSON.parse(txt); return (j.contacts && j.contacts[0] && j.contacts[0].wa_id) || ''; }
+        catch (e) { return ''; }
+      };
+
       if (!r.ok) {
         const tpl = (await getSecret('WHATSAPP_TEMPLATE')) || 'hello_world';
+        console.log('WhatsApp free-form refused, trying template ' + tpl + ':', raw);
         r = await fetch(url, {
           method: 'POST', headers,
           body: JSON.stringify({
@@ -135,9 +145,16 @@ export async function sendNotification(event, payload = {}, notifyEmail, notifyW
           })
         });
         raw = await r.text();
-        results.push(r.ok ? `WHATSAPP TEMPLATE SENT to ${digits}` : `WHATSAPP FAILED: ${raw}`);
+        results.push(r.ok
+          ? `WHATSAPP TEMPLATE "${tpl}" SENT to ${digits} (delivered to ${waIdOf(raw) || '?'}, id ${idOf(raw) || '?'})`
+          : `WHATSAPP FAILED: ${raw}`);
       } else {
-        results.push(`WHATSAPP SENT to ${digits}`);
+        const delivered = waIdOf(raw);
+        const mismatch = delivered && delivered !== digits;
+        results.push(`WHATSAPP SENT to ${digits}`
+          + (delivered ? ` — Meta delivered to ${delivered}${mismatch ? ' (DIFFERENT NUMBER — check the recipient you registered)' : ''}` : '')
+          + ` — id ${idOf(raw) || '?'}`);
+        console.log('WhatsApp accepted:', raw);
       }
     } catch (e) { results.push(`WHATSAPP ERROR: ${e.message}`); }
   } else {

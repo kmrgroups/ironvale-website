@@ -460,6 +460,26 @@
   .admin-tab{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;padding:14px 12px;color:var(--ink-soft);border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;}
   .admin-tab.active{color:var(--navy);border-bottom-color:var(--gold);background:var(--white);}
   .setup-card{border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px;background:var(--white);box-shadow:var(--shadow-sm);}
+  .dep-stage{border:1px solid var(--line);border-radius:var(--radius);margin-bottom:16px;background:var(--white);box-shadow:var(--shadow-sm);overflow:hidden;}
+  .dep-stage.done{border-color:rgba(31,157,107,.4);}
+  .dep-head{display:flex;align-items:center;gap:14px;padding:16px 20px;}
+  .dep-num{width:30px;height:30px;border-radius:50%;background:var(--navy);color:#fff;display:flex;
+    align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:13px;flex:0 0 auto;}
+  .dep-stage.done .dep-num{background:var(--ok);}
+  .dep-head h3{flex:1;font-size:var(--fs-card-title);color:var(--navy);}
+  .dep-tick{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:var(--fs-micro);
+    text-transform:uppercase;letter-spacing:.05em;color:var(--ink-mid);cursor:pointer;white-space:nowrap;}
+  .dep-tick input{width:16px;height:16px;accent-color:var(--ok);cursor:pointer;}
+  .dep-body{padding:0 20px 20px 64px;font-size:var(--fs-micro);color:var(--ink-mid);}
+  .dep-body ol,.dep-body ul{margin:0 0 12px 18px;line-height:1.85;}
+  .dep-body li{margin-bottom:4px;}
+  .dep-body p{margin:0 0 12px;line-height:1.8;}
+  .dep-body a{color:var(--sky-deep);text-decoration:underline;}
+  .dep-body code{background:var(--sky-wash);padding:1px 5px;border-radius:3px;font-size:.95em;}
+  .dep-progress{display:flex;gap:5px;margin-bottom:22px;}
+  .dep-progress div{flex:1;height:7px;border-radius:100px;background:var(--line);}
+  .dep-progress div.on{background:var(--ok);}
+  .dep-progress-label{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-mid);margin-bottom:8px;}
   .setup-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px;}
   .setup-head h3{font-size:var(--fs-card-title);color:var(--navy);}
   .setup-badge{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
@@ -776,6 +796,7 @@
     <button class="admin-tab" data-tab="notify">Notifications</button>
     <button class="admin-tab" data-tab="security">Logins</button>
     <button class="admin-tab" data-tab="sections">Sections</button>
+    <button class="admin-tab" data-tab="deploy">📦 Deploy for a Client</button>
   </div>
   <div class="admin-body">
 
@@ -1256,13 +1277,16 @@
     <div class="admin-group" data-group="security">
       <div class="info-box"><b>Two kinds of login.</b> <b>Developer</b> reaches everything including this admin panel.
       <b>Staff</b> can only open the RFQ Pipeline — useful for estimators who should not change site settings.
-      Turn on two-step verification and a 6-digit code is sent by email and WhatsApp at every sign-in.</div>
+      Turn on two-step verification and a 6-digit code is sent at every sign-in — to the <b>code email</b> and
+      <b>code WhatsApp</b> you set on that login below, not to the company address. Leave both blank and the
+      code cannot be sent, so two-step stays off for that login.</div>
 
       <div class="field"><label>Logins</label></div>
       <div id="user-list"></div>
       <button type="button" class="add-btn" id="add-user">+ Add a login</button>
 
-      <div class="field" style="margin-top:30px;"><label>Change your own password</label></div>
+      <div class="info-box" style="margin-top:30px;"><b>Changing your own password.</b> The boxes above manage
+      <i>all</i> logins. Use this section only to change the password of the login you are signed in with right now.</div>
       <div class="field"><label>Current Username</label><input type="text" id="pw-user"></div>
       <div class="field"><label>Current Password</label><div class="pw-wrap"><input type="password" id="pw-old"><button type="button" class="pw-eye" data-for="pw-old"></button></div></div>
       <div class="field"><label>New Username (optional)</label><input type="text" id="pw-newuser"></div>
@@ -1272,6 +1296,209 @@
       <div class="field-hint" id="pw-msg" style="margin-top:12px;"></div>
     </div>
 
+
+    <div class="admin-group" data-group="deploy">
+      <div class="info-box"><b>Setting this system up for another company.</b> Follow the eight stages below in order.
+      Allow about 45 minutes for a first-time setup, 20 once you have done it a few times.
+      Tick each stage off as you go — your progress is remembered on this device.</div>
+
+      <div id="deploy-progress"></div>
+
+      <div class="dep-stage" data-step="1">
+        <div class="dep-head"><span class="dep-num">1</span><h3>Gather the client's details first</h3>
+          <label class="dep-tick"><input type="checkbox" data-step="1"> Done</label></div>
+        <div class="dep-body">
+          <p>Collect these before you touch a computer. Chasing them mid-setup is what makes it take all day.</p>
+          <table class="setup-table">
+            <tr><th>What you need</th><th>Used for</th></tr>
+            <tr><td>Legal company name, registered address</td><td>Quotation letterhead</td></tr>
+            <tr><td>Logo file — SVG or large PNG</td><td>Website and all documents</td></tr>
+            <tr><td>GST number, PAN, CIN, IEC</td><td>Printed on every quotation</td></tr>
+            <tr><td>Bank details (if they want them on quotes)</td><td>Quotation footer</td></tr>
+            <tr><td>Authorised signatory name, designation, signature image, company seal</td><td>Document sign-off</td></tr>
+            <tr><td>Plant addresses</td><td>Contact page and cost sheets</td></tr>
+            <tr><td>Email address for RFQ alerts</td><td>Notifications</td></tr>
+            <tr><td>WhatsApp number for alerts</td><td>Notifications</td></tr>
+            <tr><td>Their domain name, and who manages its DNS</td><td>Website address and email sending</td></tr>
+            <tr><td>Machine list — cost, kW, floor area, maintenance, life</td><td>Machine hour rates</td></tr>
+            <tr><td>Labour rates by grade, working days, shifts, downtime %</td><td>Costing</td></tr>
+            <tr><td>Electricity tariff, factory rent, monthly overhead</td><td>Costing</td></tr>
+            <tr><td>Material price list</td><td>Costing</td></tr>
+          </table>
+          <p><b>The last four rows matter most.</b> Without real numbers the system quotes confidently from
+          worked examples, which is worse than not quoting at all. Insist on them.</p>
+        </div>
+      </div>
+
+      <div class="dep-stage" data-step="2">
+        <div class="dep-head"><span class="dep-num">2</span><h3>Put the code on GitHub</h3>
+          <label class="dep-tick"><input type="checkbox" data-step="2"> Done</label></div>
+        <div class="dep-body">
+          <ol>
+            <li>Go to <a href="https://github.com" target="_blank" rel="noopener">github.com</a> and sign in.</li>
+            <li><b>+</b> (top right) → <b>New repository</b>.</li>
+            <li>Name it after the client, e.g. <code>acme-website</code>. Leave everything else alone. <b>Create repository</b>.</li>
+            <li>Click <b>uploading an existing file</b>.</li>
+            <li>Drag in <code>index.html</code>, <code>package.json</code> and the whole <code>api</code> folder.</li>
+            <li><b>Commit changes</b>.</li>
+          </ol>
+          <p><b>Check:</b> the repository should show <code>index.html</code>, <code>package.json</code> and an
+          <code>api</code> folder containing eight <code>.js</code> files. If <code>ai.js</code> is loose at the top
+          level instead of inside <code>api</code>, nothing will work.</p>
+        </div>
+      </div>
+
+      <div class="dep-stage" data-step="3">
+        <div class="dep-head"><span class="dep-num">3</span><h3>Create the database</h3>
+          <label class="dep-tick"><input type="checkbox" data-step="3"> Done</label></div>
+        <div class="dep-body">
+          <ol>
+            <li><a href="https://neon.tech" target="_blank" rel="noopener">neon.tech</a> → sign in → <b>New Project</b>.</li>
+            <li>Name it after the client. Any region — pick one near them.</li>
+            <li>On the project page click <b>Connect</b>.</li>
+            <li>Click <b>Show password</b>, then <b>Copy snippet</b>. Keep <b>Connection pooling</b> on.</li>
+            <li>Paste it somewhere safe — you need it in the next stage.</li>
+          </ol>
+          <p><b>Each client needs their own database.</b> Never share one between companies — their RFQs,
+          pricing and customer details would sit in the same tables.</p>
+          <p>Neon's free plan allows one project per account. For several clients, either use separate Neon
+          accounts or move to their paid plan.</p>
+        </div>
+      </div>
+
+      <div class="dep-stage" data-step="4">
+        <div class="dep-head"><span class="dep-num">4</span><h3>Deploy on Vercel</h3>
+          <label class="dep-tick"><input type="checkbox" data-step="4"> Done</label></div>
+        <div class="dep-body">
+          <ol>
+            <li><a href="https://vercel.com" target="_blank" rel="noopener">vercel.com</a> → sign in with GitHub.</li>
+            <li><b>Add New</b> → <b>Project</b> → find the client's repository → <b>Import</b>.</li>
+            <li><b>Stop before pressing Deploy.</b> Open <b>Environment Variables</b> and add these four:</li>
+          </ol>
+          <table class="setup-table">
+            <tr><th>Name</th><th>Value</th></tr>
+            <tr><td><code>DATABASE_URL</code></td><td>the Neon connection string from stage 3</td></tr>
+            <tr><td><code>ADMIN_USER</code></td><td>first sign-in username, e.g. <code>admin</code></td></tr>
+            <tr><td><code>ADMIN_PASS</code></td><td>a strong password — write it down</td></tr>
+            <tr><td><code>ADMIN_RECOVERY_CODE</code></td><td>any phrase, for the Forgot Password option</td></tr>
+          </table>
+          <ol start="4">
+            <li>Press <b>Deploy</b> and wait for the success screen.</li>
+            <li>Copy the address it gives you, e.g. <code>acme-website.vercel.app</code>.</li>
+          </ol>
+          <p><b>These four are the only settings that must live in Vercel.</b> Everything else is done on the
+          client's own Setup screen.</p>
+          <p><b>If it deploys but shows nothing:</b> Vercel only builds when it sees a change. Add a README on
+          GitHub to trigger it.</p>
+        </div>
+      </div>
+
+      <div class="dep-stage" data-step="5">
+        <div class="dep-head"><span class="dep-num">5</span><h3>Sign in and set up email</h3>
+          <label class="dep-tick"><input type="checkbox" data-step="5"> Done</label></div>
+        <div class="dep-body">
+          <ol>
+            <li>Open the new site → click the <b>⚙</b> button → sign in with the username and password from stage 4.</li>
+            <li>Go to the <b>⚙ Setup</b> tab. Work down the checklist at the top.</li>
+            <li><a href="https://resend.com" target="_blank" rel="noopener">resend.com</a> → sign up →
+                <b>API Keys</b> → <b>Create API Key</b> → copy it.</li>
+            <li>Paste it into <b>Resend API Key</b> → Save.</li>
+            <li>Resend → <b>Domains</b> → <b>Add Domain</b> → the client's domain.</li>
+            <li>Add the DNS records Resend shows, wherever the domain is managed. Use the copy icons — never retype the DKIM string.</li>
+            <li>Press <b>Verify DNS Records</b>. Usually 15–60 minutes.</li>
+            <li>Once verified, set <b>Send emails from</b> to an address on that domain,
+                e.g. <code>Acme Ltd &lt;rfq@acme.com&gt;</code>, and <b>Send RFQ alerts to</b> to the client's inbox.</li>
+            <li>Press <b>Send myself a test email</b>.</li>
+          </ol>
+          <p><b>Do not skip domain verification.</b> Until it is done, Resend's test sender only delivers to the
+          account owner's own address. Customers receive nothing, while the system reports success.</p>
+        </div>
+      </div>
+
+      <div class="dep-stage" data-step="6">
+        <div class="dep-head"><span class="dep-num">6</span><h3>Turn on AI (optional)</h3>
+          <label class="dep-tick"><input type="checkbox" data-step="6"> Done</label></div>
+        <div class="dep-body">
+          <p>Without this, everything still works — drawing details are typed in by hand instead.</p>
+          <ol>
+            <li><a href="https://console.mistral.ai" target="_blank" rel="noopener">console.mistral.ai</a> → sign up →
+                <b>API Keys</b> → <b>Create new key</b>. Free tier, phone verification, no card.</li>
+            <li>Paste it into <b>Mistral API Key</b> on the Setup screen → Save.</li>
+            <li>Press <b>Test the AI connection</b>.</li>
+          </ol>
+          <p>Add a second provider as a backup — Groq is also free. The system tries them in order and falls
+          through automatically.</p>
+          <p><b>Free providers read images but not PDFs.</b> If the client receives many PDF drawings, an
+          Anthropic key (paid, roughly 2–5 US cents per drawing) handles those and reads difficult drawings better.</p>
+        </div>
+      </div>
+
+      <div class="dep-stage" data-step="7">
+        <div class="dep-head"><span class="dep-num">7</span><h3>Enter the client's real data</h3>
+          <label class="dep-tick"><input type="checkbox" data-step="7"> Done</label></div>
+        <div class="dep-body">
+          <p>This is the stage that decides whether the system is useful or dangerous. Work through these tabs:</p>
+          <ol>
+            <li><b>Company Profile</b> — legal name, addresses, plants, tax numbers, bank details, signatory, signature, seal.</li>
+            <li><b>Brand</b> — logo and colours. Documents pull the logo from here automatically.</li>
+            <li><b>Quotation Setup</b> — numbering format, currency, tax rate, payment and delivery terms.</li>
+            <li><b>Cost Base</b> — working days, shifts, downtime %, electricity tariff, factory rent and area, monthly overhead, margins.</li>
+            <li><b>Machines</b> — delete the examples. Add every real machine: purchase cost, life, salvage, kW, load factor, floor area, annual maintenance.</li>
+            <li><b>Labour</b> — each grade with real wages and statutory percentage.</li>
+            <li><b>Materials</b> — the grades they actually buy, with their own purchase rates.</li>
+            <li>Then check <b>Cost Base</b> again — the calculated machine hour rates appear at the bottom. Show these to the client and get them agreed before quoting anything.</li>
+          </ol>
+          <p><b>Watch the overhead line.</b> Factory overhead is divided across the machine list. With only two or
+          three machines entered it looks enormous and inflates every price. It settles once the full list is in.</p>
+          <p>Finally, fill in the website content — hero, capabilities, process, gallery, industries, certifications,
+          leadership — then press <b>Publish Changes</b>.</p>
+        </div>
+      </div>
+
+      <div class="dep-stage" data-step="8">
+        <div class="dep-head"><span class="dep-num">8</span><h3>Point their domain at the site</h3>
+          <label class="dep-tick"><input type="checkbox" data-step="8"> Done</label></div>
+        <div class="dep-body">
+          <p>Do this last, once the content is right — the moment you switch, whatever is on the site is what
+          the client's customers see.</p>
+          <ol>
+            <li>If the domain currently points at an older site, remove it from that Vercel project first —
+                a domain can only belong to one project.</li>
+            <li>Vercel → the client's project → <b>Settings</b> → <b>Domains</b> → add
+                <code>www.theirdomain.com</code>, then <code>theirdomain.com</code> set to redirect to the www version.</li>
+            <li>Vercel shows the DNS records needed — usually a CNAME on <code>www</code> and an A record on <code>@</code>.
+                Add them where the domain is managed, replacing any existing conflicting record rather than adding a second one.</li>
+            <li>Wait for Vercel to show a green tick. The security certificate is issued automatically.</li>
+            <li>Setup screen → <b>Live Site Address</b> → their new address → Save. This is what makes the
+                pipeline link inside alert emails work.</li>
+          </ol>
+          <p><b>Expect a short interruption</b> while the change spreads. Do it outside business hours.</p>
+          <p><b>To roll back:</b> remove the domain from the new project and add it back to the old one. It
+          returns within minutes.</p>
+        </div>
+      </div>
+
+      <div class="dep-stage" data-step="9">
+        <div class="dep-head"><span class="dep-num">9</span><h3>Hand over</h3>
+          <label class="dep-tick"><input type="checkbox" data-step="9"> Done</label></div>
+        <div class="dep-body">
+          <ol>
+            <li>Admin → <b>Logins</b> → create a <b>staff</b> login for their estimators — pipeline only, no settings access.</li>
+            <li>Change the <b>developer</b> password from the one you set in stage 4.</li>
+            <li>Turn on two-step verification for the developer login, with their email and WhatsApp for the code.</li>
+            <li>Submit a test RFQ end to end: acknowledgement to the customer, alert to them, drawing read, cost sheet, quotation PDF.</li>
+            <li>Show them: how to publish content changes, where RFQs arrive, how to edit a cost sheet, and how to approve a quotation.</li>
+          </ol>
+          <p><b>Tell them plainly</b> that AI cycle times and market price estimates are starting points to be
+          corrected from experience, and that an estimator should check every quotation before it goes out.
+          A confident wrong price is the one real risk in this system.</p>
+        </div>
+      </div>
+
+      <div class="warn-box" style="margin-top:22px;"><b>Costs to be aware of.</b> Free tiers are per account, not per client.
+      Neon allows one project free; Resend allows 3,000 emails a month; Vercel's hobby plan is for
+      non-commercial use. Beyond a handful of clients, budget for paid plans on all three and pass the cost on.</div>
+    </div>
     <div class="admin-group" data-group="sections">
       <div class="field"><label>Show or hide sections</label></div>
       <div class="toggle-row"><span>Capabilities</span><div class="switch on" data-toggle="capabilities"></div></div>
@@ -1794,8 +2021,9 @@
      was arriving. */
   async function sendMessage_(opts){
     const r=await fetch(API+'/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({event:'custom',payload:{
-        to:opts.email||'',whatsapp:opts.whatsapp||'',
+      body:JSON.stringify({event:'custom',
+        notifyWhatsapp:opts.useOwner?'':undefined,
+        payload:{to:opts.email||'',whatsapp:opts.whatsapp||'',
         subject:opts.subject||'',text:opts.text||''}})});
     const j=await r.json();
     return j.results||[];
@@ -2029,9 +2257,11 @@ Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.q
 
   function blankCosting(r){
     return {qty:1,batchQty:1,
-      material:{name:'',grade:'',stockForm:'',stockSize:'',cutLength:'',rate:0,unit:'kg',
+      material:{name:'',grade:'',stockForm:'',stockSize:'',cutLength:'',
+                piecesPerStock:0,offcut:'',rate:0,unit:'kg',
                 rateSource:'',rateDate:'',rateConfidence:'Manual',
                 finishWeight:0,blankWeight:0,scrapRecovery:0},
+      bom:[],
       operations:[],specialProcesses:[],
       tooling:[],consumables:[],
       packaging:{method:'',materials:'',costPerPart:0,source:'',basis:''},
@@ -2057,6 +2287,7 @@ Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.q
     c.operations=c.operations||[];
     c.specialProcesses=c.specialProcesses||[];
     c.tooling=c.tooling||[];
+    c.bom=c.bom||[];
     c.consumables=c.consumables||[];
     c.assumptions=c.assumptions||[];
     // carry any old single-figure packaging/freight into the new structure
@@ -2075,7 +2306,12 @@ Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.q
     const blank=num(c.material.blankWeight)||num(c.material.finishWeight);
     const matGross=blank*num(c.material.rate);
     const recovery=(blank-num(c.material.finishWeight))*num(c.material.scrapRecovery);
-    const materialCost=Math.max(0,matGross-recovery);
+    const bomTotal=(c.bom||[]).reduce((t,b)=>{
+      const per=num(b.costPerPart)||(num(b.qtyPerPart)*num(b.rate));
+      return t+(/offcut credit/i.test(b.type||'')?-Math.abs(per):per);
+    },0);
+    // an itemised bill of material takes priority over the simple weight × rate figure
+    const materialCost=bomTotal>0?bomTotal:Math.max(0,matGross-recovery);
 
     // --- operations ---
     let machineCost=0,labourCost=0,setupCost=0,totalCycleMin=0;
@@ -2140,15 +2376,26 @@ Order quantity: ${qty}
 Customer's stated requirement: ${r.message||'(none given)'}
 
 === RULES ===
-1. RAW MATERIAL SIZING. Work out the actual stock size needed, not just the grade.
-   State stock form (round bar / hex bar / plate / forging / casting / tube),
-   the size (e.g. "Ø45 mm round bar" or "60 × 40 × 12 mm plate"),
-   and the cut length per piece including facing and parting allowance.
-   Calculate blank weight from that size and the material density. Show your basis.
-2. PRICES. For any price you give, state where it came from in "source":
-   - "Company price book" when the material is in the list above (use that exact rate)
-   - "Market estimate" when you are estimating a typical current market price
-   Never claim a supplier quotation. Mark estimates clearly.
+1. RAW MATERIAL — BILL OF MATERIAL. Material is bought as stock, not as loose weight.
+   Decide how this component should be bought and cost it properly:
+   - Stock form: round bar / square bar / hex bar / flat / plate / tube / angle / profile,
+     OR a pre-formed blank: forging, casting, extrusion, laser-cut blank.
+   - Stock size as purchased (e.g. "Ø45 mm × 3 m round bar", "60 × 40 mm square bar",
+     "closed-die forging 0.9 kg gross").
+   - Cut length per piece including facing, parting-off and clamping allowance.
+   - Pieces obtainable per standard bar/plate, and the offcut left over.
+   - Blank weight per piece, and finished weight, from that size and the density.
+   - For bars: the base metal rate PLUS the conversion cost of drawing/peeling/centreless
+     grinding to that size and tolerance — bright bar costs more than black bar.
+   - For forgings and castings: die or pattern cost amortised over the order quantity,
+     plus the per-piece conversion charge on top of the metal.
+   Put all of this in "bom" as separate lines so the buyer can see what is being purchased.
+2. PRICES. For every price, say where it came from in "source":
+   - "Company price book" when the material is in the list above — use that exact rate.
+   - "Market estimate" when you are estimating a current market price. Say the basis
+     (e.g. "Indian secondary steel market, bright bar, typical trade price").
+   Never claim a supplier quotation you do not have. Mark every estimate clearly, and
+   set confidence honestly — Low if you are unsure of current market levels.
 3. TOOLING. For every operation list the cutting tools, inserts and tool holders needed.
    Give specification, typical unit cost, and expected tool life in PIECES for this component.
 4. CONSUMABLES. List coolant, cutting oil, deburring media, cleaning agents etc. with cost per piece.
@@ -2165,7 +2412,13 @@ Customer's stated requirement: ${r.message||'(none given)'}
 Reply with ONLY this JSON, no commentary or code fences:
 {
  "material":{"name":"","grade":"","stockForm":"","stockSize":"","cutLength":"",
-             "finishWeight":0,"blankWeight":0,"rate":0,"source":"","basis":""},
+             "piecesPerStock":0,"offcut":"","finishWeight":0,"blankWeight":0,
+             "rate":0,"source":"","basis":""},
+ "bom":[
+   {"item":"","type":"Base metal|Conversion|Die/Pattern|Blank|Offcut credit",
+    "spec":"","qtyPerPart":0,"unit":"kg|nos|m","rate":0,"costPerPart":0,
+    "source":"","confidence":"High|Medium|Low","note":""}
+ ],
  "operations":[
    {"op":10,"process":"","machineType":"","setupMin":0,"cycleMin":0,"labourGrade":"","notes":"","confidence":"High|Medium|Low"}
  ],
@@ -2207,8 +2460,14 @@ Reply with ONLY this JSON, no commentary or code fences:
       rateSource:mat?('Company price book — '+(mat.name||mat.grade)):(pm.source||'Market estimate'),
       rateDate:mat&&mat.sourceDate?mat.sourceDate:new Date().toISOString().slice(0,10),
       rateConfidence:mat?'Verified':'Estimate',
+      piecesPerStock:num(pm.piecesPerStock),offcut:pm.offcut||'',
       finishWeight:num(pm.finishWeight),blankWeight:num(pm.blankWeight),scrapRecovery:0,
       matched:!!mat, basis:pm.basis||''};
+    c.bom=(p.bom||[]).filter(b=>b&&b.item).map(b=>({
+      item:b.item,type:b.type||'Base metal',spec:b.spec||'',
+      qtyPerPart:num(b.qtyPerPart),unit:b.unit||'kg',rate:num(b.rate),
+      costPerPart:num(b.costPerPart)||(num(b.qtyPerPart)*num(b.rate)),
+      source:b.source||'Market estimate',confidence:b.confidence||'Medium',note:b.note||''}));
     c.operations=(p.operations||[]).map((o,i)=>{
       const m=bestMachineFor(o.machineType);
       const l=(data.labourGrades||[]).find(g=>String(g.grade||'').toLowerCase()===String(o.labourGrade||'').toLowerCase())
@@ -2367,6 +2626,14 @@ Reply with ONLY this JSON, no commentary or code fences:
     <td class="r">${num(c.material.finishWeight).toFixed(3)}</td>
     <td class="r">${money2(c.material.rate)}</td>
     <td class="r b">${money2(t.materialCost)}</td></tr></tbody></table>
+  ${(c.bom||[]).length?`<table style="margin-top:8px;"><thead><tr><th>Bill of Material</th><th>Type</th><th>Spec</th>
+    <th class="r">Qty/pc</th><th>Unit</th><th class="r">Rate</th><th class="r">Cost/pc</th><th>Source</th></tr></thead>
+    <tbody>${c.bom.map(bm=>`<tr><td>${esc(bm.item)}</td><td>${esc(bm.type)}</td><td>${esc(bm.spec||'—')}</td>
+      <td class="r">${num(bm.qtyPerPart)}</td><td>${esc(bm.unit)}</td><td class="r">${money2(bm.rate)}</td>
+      <td class="r b">${money2(num(bm.costPerPart)||(num(bm.qtyPerPart)*num(bm.rate)))}</td>
+      <td class="src">${esc(bm.source||'—')}</td></tr>`).join('')}
+    <tr><td colspan="6" class="r b">Material total per piece</td><td class="r b">${money2(t.materialCost)}</td><td></td></tr>
+    </tbody></table>`:''}
   <div class="src-note"><b>Price source:</b> ${esc(c.material.rateSource||'not stated')}${c.material.rateDate?' · '+esc(c.material.rateDate):''}
     ${c.material.basis?'<br><b>Sizing basis:</b> '+esc(c.material.basis):''}</div>
 
@@ -2507,7 +2774,27 @@ Reply with ONLY this JSON, no commentary or code fences:
         <div><label>Rate / kg</label><input class="cmat num" data-i="${i}" data-k="rate" value="${esc(c.material.rate)}"></div>
         <div><label>Price Source</label><input class="cmat" data-i="${i}" data-k="rateSource" value="${esc(c.material.rateSource)}"></div>
       </div>
+      <div class="cs-row four">
+        <div><label>Pieces per bar/plate</label><input class="cmat num" data-i="${i}" data-k="piecesPerStock" value="${esc(c.material.piecesPerStock)}"></div>
+        <div style="grid-column:span 3;"><label>Offcut / remnant</label><input class="cmat" data-i="${i}" data-k="offcut" value="${esc(c.material.offcut)}"></div>
+      </div>
       ${c.material.basis?`<div class="cs-basis">Sizing basis: ${esc(c.material.basis)}</div>`:''}
+
+      <div class="cs-sub">Bill of Material — what actually gets purchased</div>
+      <table class="cs-t"><thead><tr><th>Item</th><th>Type</th><th>Spec</th>
+        <th class="r">Qty/pc</th><th>Unit</th><th class="r">Rate</th><th class="r">Cost/pc</th><th>Source</th><th></th></tr></thead>
+        <tbody>${(c.bom||[]).map((bm,bi)=>`<tr>
+          <td><input class="cb" data-i="${i}" data-bi="${bi}" data-k="item" value="${esc(bm.item)}"></td>
+          <td style="width:96px"><input class="cb" data-i="${i}" data-bi="${bi}" data-k="type" value="${esc(bm.type)}"></td>
+          <td><input class="cb" data-i="${i}" data-bi="${bi}" data-k="spec" value="${esc(bm.spec)}"></td>
+          <td style="width:64px"><input class="cb num" data-i="${i}" data-bi="${bi}" data-k="qtyPerPart" value="${esc(bm.qtyPerPart)}"></td>
+          <td style="width:52px"><input class="cb" data-i="${i}" data-bi="${bi}" data-k="unit" value="${esc(bm.unit)}"></td>
+          <td style="width:72px"><input class="cb num" data-i="${i}" data-bi="${bi}" data-k="rate" value="${esc(bm.rate)}"></td>
+          <td class="r">${money(num(bm.costPerPart)||(num(bm.qtyPerPart)*num(bm.rate)))}</td>
+          <td style="width:104px"><span class="src-tag ${SRC_CLASS(bm.source)}">${esc(bm.source||'—')}</span></td>
+          <td><button class="qb-del" data-act="delbom" data-i="${i}" data-bi="${bi}">×</button></td></tr>`).join('')
+          ||'<tr><td colspan="9" class="t-micro">No bill of material — falls back to blank weight × rate.</td></tr>'}</tbody></table>
+      <button class="qb-add" data-act="addbom" data-i="${i}">+ Add BOM line</button>
       ${c.material.rateSource?`<div class="cs-basis"><span class="src-tag ${SRC_CLASS(c.material.rateSource)}">${esc(c.material.rateConfidence||'')}</span> ${esc(c.material.rateSource)}${c.material.rateDate?' · '+esc(c.material.rateDate):''}</div>`:''}
 
       <div class="cs-sub">Process Route</div>
@@ -2973,6 +3260,24 @@ Reply with ONLY this JSON, no commentary or code fences:
       r.costing.operations.splice(+b.dataset.oi,1);
       await patch(r.ref,{costing:r.costing}); renderRfqAdmin();
     }));
+    host.querySelectorAll('.cb').forEach(inp=>inp.addEventListener('input',()=>{
+      const r=rfqs[+inp.dataset.i];
+      const row=r.costing.bom[+inp.dataset.bi];
+      row[inp.dataset.k]=inp.value;
+      if(inp.dataset.k==='qtyPerPart'||inp.dataset.k==='rate') row.costPerPart=0;
+      saveCosting(r); refreshCost(+inp.dataset.i);
+    }));
+    host.querySelectorAll('[data-act="addbom"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      r.costing.bom=r.costing.bom||[];
+      r.costing.bom.push({item:'',type:'Base metal',spec:'',qtyPerPart:0,unit:'kg',rate:0,costPerPart:0,source:'Manual',confidence:'Manual'});
+      await patch(r.ref,{costing:r.costing}); renderRfqAdmin();
+    }));
+    host.querySelectorAll('[data-act="delbom"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      r.costing.bom.splice(+b.dataset.bi,1);
+      await patch(r.ref,{costing:r.costing}); renderRfqAdmin();
+    }));
     host.querySelectorAll('.ct').forEach(inp=>inp.addEventListener('input',()=>{
       const r=rfqs[+inp.dataset.i];
       r.costing.tooling[+inp.dataset.ti][inp.dataset.k]=inp.value;
@@ -3045,12 +3350,14 @@ Reply with ONLY this JSON, no commentary or code fences:
     }));
     host.querySelectorAll('[data-act="waforward"]').forEach(b=>b.addEventListener('click',async()=>{
       const r=rfqs[+b.dataset.i];
-      const num=(data.notifyWhatsapp||'').replace(/\D/g,'');
-      if(!num){ toast('Set your WhatsApp number in Setup first'); return; }
       const text=rfqSummaryText(r);
-      const res=await sendMessage_({whatsapp:num,text});
-      if(readResults(res).waOk){ toast('Sent to your WhatsApp'); return; }
-      window.open(waLink(num,text),'_blank','noopener');
+      b.textContent='Sending…'; b.disabled=true;
+      // blank number: the server uses the WhatsApp number saved on the Setup screen
+      const res=await sendMessage_({whatsapp:(data.notifyWhatsapp||'').replace(/\D/g,''),text,useOwner:true});
+      const st=readResults(res);
+      b.textContent='WhatsApp this to my phone'; b.disabled=false;
+      if(st.waOk){ toast('Sent to your WhatsApp'); return; }
+      toast(st.wa||'Could not send');
     }));
     host.querySelectorAll('[data-act="costpdf"]').forEach(b=>b.addEventListener('click',()=>{
       openCostSheetPdf(rfqs[+b.dataset.i]);
@@ -3776,6 +4083,32 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     }));
   }
 
+  /* ---------- deployment guide progress (remembered on this device) ---------- */
+  function depProgressKey(){ return 'deployProgress'; }
+  function loadDepProgress(){
+    try{ return JSON.parse(localStorage.getItem(depProgressKey())||'{}'); }catch(e){ return {}; }
+  }
+  function saveDepProgress(p){
+    try{ localStorage.setItem(depProgressKey(),JSON.stringify(p)); }catch(e){}
+  }
+  function renderDepProgress(){
+    const bar=document.getElementById('deploy-progress'); if(!bar) return;
+    const done=loadDepProgress();
+    const total=9, doneCount=Object.keys(done).filter(k=>done[k]).length;
+    bar.innerHTML=`<div class="dep-progress-label">${doneCount} of ${total} stages complete</div>
+      <div class="dep-progress">${Array.from({length:total},(_,i)=>`<div class="${done[i+1]?'on':''}"></div>`).join('')}</div>`;
+    document.querySelectorAll('.dep-stage').forEach(el=>{
+      const step=el.dataset.step;
+      el.classList.toggle('done',!!done[step]);
+      const cb=el.querySelector('input[type="checkbox"]'); if(cb) cb.checked=!!done[step];
+    });
+  }
+  function wireDepChecks(){
+    document.querySelectorAll('.dep-tick input').forEach(cb=>cb.addEventListener('change',()=>{
+      const p=loadDepProgress(); p[cb.dataset.step]=cb.checked; saveDepProgress(p); renderDepProgress();
+    }));
+  }
+
   let formBuilt=false;
   function fillForm(){
     SIMPLE.forEach(k=>{const el=document.getElementById('in-'+k); if(el)el.value=data[k];});
@@ -3874,6 +4207,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
         toast('Login created'); renderUsers(); }catch(e){ toast(e.message); }
     });
     loadSettings(); runSetupChecks(); renderUsers();
+    wireDepChecks(); renderDepProgress();
     document.getElementById('tax-switch').addEventListener('click',function(){
       data.quoteCfg.showTax=data.quoteCfg.showTax===false; this.classList.toggle('on',data.quoteCfg.showTax!==false); markDirty();
     });
@@ -3998,17 +4332,26 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.getElementById('login-modal').classList.add('open');
     setTimeout(()=>document.getElementById('login-user').focus(),150);
   }
+  async function confirmRole(){
+    try{ const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'whoami'})});
+      if(j.user){ currentRole=j.user.role||''; currentUser=j.user.username||currentUser; } }
+    catch(e){}
+    return currentRole;
+  }
   async function openTarget(t){
+    await confirmRole();
     if(t==='pipeline'){
       document.getElementById('staff-page').classList.add('open');
       document.body.style.overflow='hidden'; await loadRfqs(); checkAi();
       const sa=document.getElementById('staff-admin');
       if(sa) sa.style.display=(currentRole==='developer')?'':'none';
     } else {
-      if(currentRole && currentRole!=='developer'){
-        toast('That login can only open the RFQ Pipeline.');
+      if(currentRole!=='developer'){
+        toast('This login can only open the RFQ Pipeline. Sign in as the developer to change settings.');
         document.getElementById('staff-page').classList.add('open');
-        document.body.style.overflow='hidden'; await loadRfqs(); return;
+        document.body.style.overflow='hidden'; await loadRfqs(); checkAi();
+        const sa=document.getElementById('staff-admin'); if(sa) sa.style.display='none';
+        return;
       }
       fillForm(); document.getElementById('admin-panel').classList.add('open');
     }
@@ -4099,7 +4442,11 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     }catch(e){ err.textContent=e.message||'Reset failed.'; err.style.display='block'; }
   });
 
-  document.getElementById('admin-toggle').addEventListener('click',()=>requestLogin('admin'));
+  document.getElementById('admin-toggle').addEventListener('click',async()=>{
+    if(token){ await confirmRole();
+      if(currentRole!=='developer'){ toast('This login cannot open the admin panel.'); return; } }
+    requestLogin('admin');
+  });
   document.getElementById('staff-admin').addEventListener('click',()=>{
     document.getElementById('staff-page').classList.remove('open'); document.body.style.overflow='';
     fillForm(); document.getElementById('admin-panel').classList.add('open');});

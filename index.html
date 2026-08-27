@@ -825,6 +825,7 @@
       <button class="mini-btn gold" id="npo-create" style="margin-top:12px;">Create Order</button>
       <div class="field-hint" id="npo-msg" style="margin-top:8px;"></div>
     </div>
+    <div id="ppc-load" style="margin-bottom:22px;"></div>
     <div id="ppc-list"></div>
   </div>
 </div>
@@ -2144,12 +2145,17 @@
   function renderPpcAdmin(){
     const kpi=document.getElementById('ppc-kpi-row'), host=document.getElementById('ppc-list');
     if(!kpi||!host) return;
-    let go=0,no=0,unk=0;
-    poOrders.forEach(o=>{ const pl=planOrder(o); if(pl.error||pl.feasible===null) unk++; else if(pl.feasible) go++; else no++; });
+    let go=0,amber=0,red=0;
+    poOrders.forEach(o=>{ const pl=planOrder(o);
+      if(pl.error){ red++; return; }
+      if(pl.overall==='red') red++; else if(pl.overall==='amber') amber++; else go++; });
+    const L=machineLoad();
+    const overloadCount=L.rows.filter(r=>r.util>100).length;
     kpi.innerHTML=`<div class="kpi"><b>${poOrders.length}</b><span>Total Orders</span></div>
-      <div class="kpi"><b>${go}</b><span>On Track</span></div>
-      <div class="kpi"><b>${no}</b><span>At Risk</span></div>
-      <div class="kpi"><b>${unk}</b><span>Needs Data</span></div>`;
+      <div class="kpi"><b style="color:var(--ok)">${go}</b><span>On Track</span></div>
+      <div class="kpi"><b style="color:var(--gold-deep)">${amber}</b><span>At Risk</span></div>
+      <div class="kpi"><b style="color:#B03A2E">${red}</b><span>Critical</span></div>
+      <div class="kpi"><b style="color:${overloadCount?'#B03A2E':'var(--ok)'}">${overloadCount}</b><span>Overloaded Machines</span></div>`;
 
     if(!poOrders.length){ host.innerHTML='<p class="empty-note">No orders yet — create one above.</p>'; return; }
 
@@ -2157,20 +2163,41 @@
       const part=partById(o.partId);
       const plan=planOrder(o);
       const open=expandedOrder===o.ref;
-      const badgeClass=plan.error||plan.feasible===null?'unk':(plan.feasible?'go':'no');
-      const badgeText=plan.error?'No Data':plan.feasible===null?'No Date':(plan.feasible?'On Track':'At Risk');
+      const cls={green:'go',amber:'unk',red:'no'};
+      const badgeClass=plan.error?'no':cls[plan.overall];
+      const badgeText=plan.error?'No Data':(plan.overall==='green'?'On Track':plan.overall==='amber'?'At Risk':'Critical');
 
       const opRows=(plan.opRows||[]).map(r=>`<tr>
-        <td class="c">${esc(r.op)}</td><td>${esc(r.process)}</td><td>${esc(r.machineName)}</td>
-        <td class="r">${r.reqHours.toFixed(1)}</td><td class="r">${r.days}</td>
+        <td class="c">${esc(r.op)}</td><td>${esc(r.process)}${r.isSub?' <span class="src-tag">SUBCON</span>':''}</td>
+        <td>${esc(r.machineName)}</td>
+        <td class="r">${r.qty}</td>
+        <td class="r">${r.isSub?'—':r.pph.toFixed(1)}</td>
+        <td class="r">${r.isSub?'—':r.reqHours.toFixed(1)}</td>
+        <td class="r">${r.days}</td>
         <td class="r">${fmtDate(r.plannedStart)}</td><td class="r">${fmtDate(r.plannedFinish)}</td></tr>`).join('')
-        ||'<tr><td colspan="7" class="t-micro">No routing for this part.</td></tr>';
+        ||'<tr><td colspan="9" class="t-micro">No routing set for this part.</td></tr>';
 
       const bomRows=(plan.bomLines||[]).map(b=>`<tr>
+        <td><span class="order-badge ${b.status==='green'?'go':b.status==='amber'?'unk':'no'}">${b.status==='green'?'OK':b.status==='amber'?'BUY':'SHORT'}</span></td>
         <td>${esc(b.material)}${b.matched?'':' <span style="color:#B03A2E">(not in price book)</span>'}</td>
         <td class="r">${b.reqQty.toFixed(2)}</td><td>${esc(b.unit)}</td>
+        <td class="r">${b.onHand.toFixed(2)}</td><td class="r">${b.shortage.toFixed(2)}</td>
         <td class="r">${b.leadDays}</td><td class="r">${rupee(b.cost)}</td></tr>`).join('')
-        ||'<tr><td colspan="5" class="t-micro">No BOM for this part.</td></tr>';
+        ||'<tr><td colspan="8" class="t-micro">No BOM set for this part.</td></tr>';
+
+      const toolRows=(plan.opRows||[]).filter(r=>r.toolsNeeded>0).map(r=>`<tr>
+        <td class="c">${esc(r.op)}</td><td>${esc(r.process)}</td>
+        <td class="r">${r.qty}</td><td class="r">${r.toolsNeeded}</td>
+        <td class="r">${rupee(r.toolCost)}</td></tr>`).join('');
+
+      const subRows=(plan.opRows||[]).filter(r=>r.isSub).map(r=>`<tr>
+        <td class="c">${esc(r.op)}</td><td>${esc(r.process)}</td>
+        <td>${esc(r.vendor||'(no vendor named)')}</td><td class="r">${r.qty}</td>
+        <td class="r">${fmtDate(r.plannedStart)}</td><td class="r">${fmtDate(r.plannedFinish)}</td></tr>`).join('');
+
+      const riskRows=(plan.risks||[]).map(r=>`<tr>
+        <td><span class="order-badge ${r.level==='green'?'go':r.level==='amber'?'unk':'no'}">${r.level.toUpperCase()}</span></td>
+        <td><b>${esc(r.name)}</b></td><td class="t-micro">${esc(r.note)}</td></tr>`).join('');
 
       return `<div class="rfq-card ${open?'open':''}" data-ref="${esc(o.ref)}">
         <div class="list-item-head rfq-summary" data-toggle-order="${esc(o.ref)}">
@@ -2181,23 +2208,56 @@
         <div class="rfq-body" style="display:${open?'block':'none'};">
           ${feasBanner(plan)}
           ${!plan.error?`
-          <div class="cs-sub">Net Production Requirement</div>
-          <div class="feas-line" style="margin-bottom:14px;">PO Qty <b>${plan.po}</b> + Safety Stock <b>${plan.safety}</b>
-            − FG on Hand <b>${plan.fg}</b> − WIP <b>${plan.wip}</b> = <b>Net Requirement: ${plan.net}</b></div>
 
-          <div class="cs-sub">Bill of Material — Required for ${plan.net} pcs</div>
-          <table class="cs-t"><thead><tr><th>Material</th><th class="r">Qty Reqd</th><th>Unit</th>
-            <th class="r">Lead (days)</th><th class="r">Est. Cost</th></tr></thead><tbody>${bomRows}</tbody></table>
+          <div class="cs-sub">A · Net Production Requirement</div>
+          <div class="feas-line" style="margin-bottom:6px;">PO Qty <b>${plan.po}</b> + Safety Stock <b>${plan.safety}</b>
+            − FG on Hand <b>${plan.fg}</b> − WIP <b>${plan.wip}</b> = <b>Net Requirement: ${plan.net} good pcs</b></div>
+          <div class="feas-line" style="margin-bottom:14px;">Allowing for operation yield, production must
+            <b>start ${plan.grossStart} pcs</b> to finish ${plan.net} good
+            ${plan.yieldLossPcs>0?`(${plan.yieldLossPcs} pcs expected loss)`:''}.</div>
 
-          <div class="cs-sub">Operations — Backward Scheduled from Delivery Date</div>
-          <table class="cs-t"><thead><tr><th class="c">Op</th><th>Process</th><th>Machine</th>
-            <th class="r">Hours Reqd</th><th class="r">Days</th><th class="r">Start</th><th class="r">Finish</th></tr></thead>
-            <tbody>${opRows}</tbody></table>
+          <div class="cs-sub">B · Material Plan &amp; MRP</div>
+          <table class="cs-t"><thead><tr><th style="width:60px">Status</th><th>Material</th><th class="r">Required</th><th>Unit</th>
+            <th class="r">On Hand</th><th class="r">Shortage</th><th class="r">Lead days</th><th class="r">Est. Cost</th></tr></thead>
+            <tbody>${bomRows}</tbody></table>
+          <div class="feas-line" style="margin-top:8px;">Material needed on site by <b>${fmtDate(plan.materialRequiredBy)}</b>
+            → release purchase order by <b>${fmtDate(plan.poReleaseDate)}</b>
+            (${plan.materialLeadDays} days supplier lead time). Material value <b>${rupee(plan.materialCost)}</b>.</div>
+
+          <div class="cs-sub">C · Process Route, Capacity &amp; Schedule</div>
+          <table class="cs-t"><thead><tr><th class="c">Op</th><th>Process</th><th>Machine / Vendor</th>
+            <th class="r">Qty</th><th class="r">PPH</th><th class="r">Hours</th><th class="r">Days</th>
+            <th class="r">Start</th><th class="r">Finish</th></tr></thead><tbody>${opRows}</tbody></table>
+          <div class="feas-line" style="margin-top:8px;">Machining time <b>${plan.machiningHours.toFixed(1)} hrs</b>
+            · Total throughput <b>${plan.totalLeadDays} days</b>
+            (${plan.materialLeadDays} material + ${plan.productionDays} production).
+            ${plan.usedForward?'<b>Scheduled forward from today</b> because the delivery date cannot be met.':'Scheduled backward from the delivery date.'}</div>
           ${plan.unassigned?'<div class="dx-missing" style="margin-top:10px;"><b>One or more operations has no matching machine.</b> Check the Machine Type text in this part\'s Routing matches a Type in your Machines list.</div>':''}
 
-          <div class="feas-line" style="margin-top:14px;">Material required on site by <b>${fmtDate(plan.materialRequiredBy)}</b>
-          → purchase order should be released by <b>${fmtDate(plan.poReleaseDate)}</b>
-          (${plan.materialLeadDays} days supplier lead time).</div>
+          <div class="cs-sub">D · Manpower</div>
+          <div class="feas-line" style="margin-bottom:12px;">Total <b>${plan.manHours.toFixed(1)} man-hours</b>
+            · peak <b>${plan.peakOperators} operator(s)</b> on a single operation.
+            ${plan.overtimeHours>0?`<br><b style="color:#B03A2E">Overtime required: ${plan.overtimeHours.toFixed(1)} hrs</b> to recover the delivery date.`:''}</div>
+
+          ${toolRows?`<div class="cs-sub">E · Tooling</div>
+          <table class="cs-t"><thead><tr><th class="c">Op</th><th>Process</th><th class="r">Qty</th>
+            <th class="r">Tools Needed</th><th class="r">Cost</th></tr></thead><tbody>${toolRows}
+            <tr><td colspan="4" class="r"><b>Total tooling</b></td><td class="r"><b>${rupee(plan.toolTotalCost)}</b></td></tr>
+            </tbody></table>`:''}
+
+          ${subRows?`<div class="cs-sub">F · Subcontract Plan</div>
+          <table class="cs-t"><thead><tr><th class="c">Op</th><th>Process</th><th>Vendor</th>
+            <th class="r">Qty</th><th class="r">Dispatch</th><th class="r">Return By</th></tr></thead>
+            <tbody>${subRows}</tbody></table>`:''}
+
+          <div class="cs-sub">G · Risk Assessment</div>
+          <table class="cs-t"><thead><tr><th style="width:70px">Level</th><th style="width:110px">Area</th><th>Assessment</th></tr></thead>
+            <tbody>${riskRows}</tbody></table>
+
+          <div class="rfq-actions" style="margin-top:14px;">
+            <button class="mini-btn ai" data-act="ppc-advise" data-i="${i}">AI corrective recommendations</button>
+          </div>
+          <div id="advice-${i}"></div>
           `:''}
 
           <select class="status-select" data-i="${i}" id="ord-status-${i}">
@@ -2222,6 +2282,42 @@
         if(j.order) poOrders[+sel.dataset.i]=j.order; toast('Status updated'); }
       catch(e){ toast('Could not update: '+e.message); }
     }));
+    host.querySelectorAll('[data-act="ppc-advise"]').forEach(b=>b.addEventListener('click',async()=>{
+      const i=+b.dataset.i, o=poOrders[i], plan=planOrder(o), out=document.getElementById('advice-'+i);
+      b.textContent='Thinking…'; b.disabled=true;
+      const L=machineLoad();
+      const prompt=`You are an experienced production planning manager. Recommend corrective actions
+for this order. Be specific and practical. Do NOT invent data — work only from what is given.
+
+ORDER: ${o.ref} for ${o.customer}, ${o.qty} pcs, due ${o.deliveryDate||'no date set'}
+Net requirement ${plan.net} good pcs, starting ${plan.grossStart} pcs after yield.
+Earliest possible completion: ${plan.earliest.toDateString()}.
+${plan.feasible===false?`LATE BY ${Math.abs(plan.bufferDays)} DAYS.`:plan.feasible?`On time with ${plan.bufferDays} days buffer.`:'No delivery date set.'}
+${plan.overtimeHours>0?`Overtime needed: ${plan.overtimeHours.toFixed(1)} hrs.`:''}
+
+OPERATIONS:
+${plan.opRows.map(r=>`op${r.op} ${r.process} on ${r.machineName}: ${r.qty} pcs, ${r.isSub?r.days+' vendor days':r.reqHours.toFixed(1)+' hrs over '+r.days+' days'}`).join('\n')}
+
+MACHINE LOADING (rolling month):
+${L.rows.map(r=>`${r.name} (${r.type}): ${r.load.toFixed(1)} of ${r.available.toFixed(0)} hrs = ${r.util.toFixed(0)}%`).join('\n')}
+
+RISKS:
+${plan.risks.map(r=>`${r.level.toUpperCase()} ${r.name}: ${r.note}`).join('\n')}
+
+Give at most 5 numbered actions, each one line, most effective first. For each, state the
+expected effect (e.g. "recovers 3 days"). If the order is already on track, say so plainly
+and suggest nothing rather than inventing problems.`;
+      try{
+        const txt=await callAI(prompt,{maxTokens:700,surfaceError:true});
+        out.innerHTML=`<div class="dx" style="margin-top:12px;"><div class="dx-head"><b>AI recommendations</b>
+          <span class="t-micro">${new Date().toLocaleString()}</span></div>
+          <div class="feas-line" style="white-space:pre-wrap;">${esc(txt||'No response.')}</div>
+          <div class="t-micro" style="margin-top:10px;color:var(--ink-soft);">Suggestions only — check each against
+          what you know about the shop before acting.</div></div>`;
+      }catch(e){ out.innerHTML=`<div class="dx-err" style="margin-top:10px;">${esc(e.message)}</div>`; }
+      b.textContent='AI corrective recommendations'; b.disabled=false;
+    }));
+    renderMachineLoad();
     host.querySelectorAll('[data-act="delorder"]').forEach(b=>b.addEventListener('click',async()=>{
       const o=poOrders[+b.dataset.i];
       if(!confirm('Delete order '+o.ref+'?')) return;
@@ -2483,8 +2579,14 @@ Keep it under 150 words. Professional, direct, no flattery. Sign off as ${data.q
   function partById(id){ return (data.parts||[]).find(p=>p.id===id)||null; }
   function blankPart(){
     return {id:'pt'+Date.now().toString(36),partNo:'',custPartNo:'',description:'',
-      drawingNo:'',drawingRev:'',safetyStockQty:0,fgQty:0,wipQty:0,
+      drawingNo:'',drawingRev:'',rev:'A',safetyStockQty:0,fgQty:0,wipQty:0,
+      rmStockQty:0, packQtyPerBox:0, packTimeMinPerBox:0,
       bom:[],routing:[]};
+  }
+  function blankRouteOp(n){
+    return {op:n,process:'',machineType:'',machineId:'',cycleMin:0,setupMin:0,batchSize:0,
+      yieldPct:100, inspMinPer:0, operators:1, toolLifePcs:0, toolCost:0,
+      subcon:false, vendor:'', vendorLeadDays:0, vendorPcsPerDay:0};
   }
   function availableHoursPerDay(){
     const b=CB();
@@ -2504,10 +2606,16 @@ ${(data.materials||[]).map(m=>`- ${m.name} (${m.grade})`).join('\n')||'- none li
 MACHINES AVAILABLE (give the exact "type" text so it can be matched):
 ${(data.machines||[]).map(m=>`- ${m.name} | type: ${m.type}`).join('\n')||'- none listed'}
 
+Mark any operation normally sent outside (heat treatment, plating, hard chrome) with "subcon": true.
+Set a realistic yieldPct per operation (typically 97-99.5 for machining) — never leave it at 100
+unless the operation genuinely scraps nothing.
+
 Reply with ONLY this JSON, no commentary or code fences:
 {
  "bom":[{"material":"","qtyPerPart":0,"unit":"kg","scrapPct":0}],
- "routing":[{"op":10,"process":"","machineType":"","cycleMin":0,"setupMin":0,"batchSize":0}]
+ "routing":[{"op":10,"process":"","machineType":"","cycleMin":0,"setupMin":0,"batchSize":0,
+   "yieldPct":99,"inspMinPer":0,"operators":1,"toolLifePcs":0,"toolCost":0,
+   "subcon":false,"vendor":"","vendorLeadDays":0,"vendorPcsPerDay":0}]
 }`;
 
   async function draftPartBomRouting(part){
@@ -2522,66 +2630,273 @@ Reply with ONLY this JSON, no commentary or code fences:
       part.routing=(p.routing||[]).map((o,i)=>{
         const m=bestMachineFor(o.machineType);
         return {op:o.op||((i+1)*10),process:o.process||'',machineId:m?m.id:'',machineType:o.machineType||'',
-          cycleMin:num(o.cycleMin),setupMin:num(o.setupMin),batchSize:num(o.batchSize)};
+          cycleMin:num(o.cycleMin),setupMin:num(o.setupMin),batchSize:num(o.batchSize),
+          yieldPct:num(o.yieldPct)||100,inspMinPer:num(o.inspMinPer),operators:num(o.operators)||1,
+          toolLifePcs:num(o.toolLifePcs),toolCost:num(o.toolCost),
+          subcon:!!o.subcon,vendor:o.vendor||'',vendorLeadDays:num(o.vendorLeadDays),
+          vendorPcsPerDay:num(o.vendorPcsPerDay)};
       });
       toast('AI draft added — check every line before using it.');
     }catch(e){ toast('Could not understand the AI response.'); }
   }
 
   /* ---- the planning calculation itself: pure arithmetic on your own data ---- */
+  /* ================= §2 THE PLANNING ENGINE =================
+     One pass produces every plan the spec asks for that is computable from
+     your master data. Sections it cannot yet do — true finite sequencing
+     across orders (§13), gauge calibration (§19), PFMEA (§45) — are absent
+     rather than faked, and the UI says so. */
   function planOrder(order){
     const part=partById(order.partId);
     if(!part) return {error:'This order\'s part no longer exists.'};
 
+    /* --- §4 NET PRODUCTION REQUIREMENT --- */
     const po=num(order.qty), safety=num(part.safetyStockQty), fg=num(part.fgQty), wip=num(part.wipQty);
     const net=Math.max(0, po+safety-fg-wip);
 
+    /* --- §27/§28 YIELD: work backwards up the routing so the START quantity
+           is large enough that `net` good pieces survive every operation --- */
+    const route=(part.routing||[]);
+    let qtyAtOp=new Array(route.length).fill(net);
+    for(let i=route.length-1;i>=0;i--){
+      const y=Math.min(100,Math.max(1,num(route[i].yieldPct)||100))/100;
+      const out=(i===route.length-1)?net:qtyAtOp[i+1];
+      qtyAtOp[i]=Math.ceil(out/y);
+    }
+    const grossStart=route.length?qtyAtOp[0]:net;
+    const yieldLossPcs=grossStart-net;
+
+    /* --- §5/§7 BOM EXPLOSION + MRP (material sized on the GROSS start qty) --- */
     const bomLines=(part.bom||[]).map(b=>{
       const mat=materialByName(b.material);
       const rate=mat?num(mat.rate):0;
       const leadDays=mat?num(mat.leadTimeDays):0;
-      const reqQty=net*num(b.qtyPerPart)/Math.max(0.01,1-num(b.scrapPct)/100);
-      return {material:b.material,unit:b.unit,matched:!!mat,rate,leadDays,reqQty,cost:reqQty*rate};
+      const reqQty=grossStart*num(b.qtyPerPart)/Math.max(0.01,1-num(b.scrapPct)/100);
+      const onHand=num(part.rmStockQty);
+      const shortage=Math.max(0,reqQty-onHand);
+      return {material:b.material,unit:b.unit,matched:!!mat,rate,leadDays,reqQty,
+        onHand,shortage,cost:reqQty*rate,
+        status:!mat?'red':(shortage<=0?'green':(leadDays>0?'amber':'red'))};
     });
     const materialLeadDays=bomLines.length?Math.max(0,...bomLines.map(b=>b.leadDays)):0;
+    const materialCost=bomLines.reduce((t,b)=>t+b.cost,0);
 
+    /* --- §8/§9/§10 ROUTING, CYCLE TIME, CAPACITY --- */
     const hoursPerDay=Math.max(0.1,availableHoursPerDay());
-    const opRows=(part.routing||[]).map(o=>{
+    const opRows=route.map((o,i)=>{
       const m=machineById(o.machineId)||bestMachineFor(o.machineType);
-      const rate=m?machineRate(m).total:0;
-      const batch=Math.max(1,num(o.batchSize)||net);
-      const reqHours=net*(num(o.cycleMin)/60) + (num(o.setupMin)/60)*Math.ceil(net/batch);
-      const days=Math.max(1,Math.ceil(reqHours/hoursPerDay));
-      return {op:o.op,process:o.process,machineName:m?m.name:'(unassigned — check Routing)',
-        machineId:m?m.id:'',reqHours,days};
+      const qty=qtyAtOp[i];
+      const batch=Math.max(1,num(o.batchSize)||qty);
+      const setups=Math.ceil(qty/batch);
+      const runHours=qty*(num(o.cycleMin)/60);
+      const setupHours=(num(o.setupMin)/60)*setups;
+      const inspHours=qty*(num(o.inspMinPer)/60);
+      const reqHours=runHours+setupHours+inspHours;
+      const pph=num(o.cycleMin)>0?(60/num(o.cycleMin)):0;
+
+      /* §21 subcontract operations are timed by vendor throughput, not our machines */
+      const isSub=!!o.subcon;
+      const vendorDays=isSub
+        ? Math.max(num(o.vendorLeadDays), num(o.vendorPcsPerDay)>0?Math.ceil(qty/num(o.vendorPcsPerDay)):0)
+        : 0;
+      const days=isSub?Math.max(1,vendorDays):Math.max(1,Math.ceil(reqHours/hoursPerDay));
+
+      /* §17 tooling */
+      const toolsNeeded=num(o.toolLifePcs)>0?Math.ceil(qty/num(o.toolLifePcs)):0;
+      const toolCost=toolsNeeded*num(o.toolCost);
+
+      return {op:o.op,process:o.process,isSub,vendor:o.vendor||'',
+        machineName:isSub?('Subcontract — '+(o.vendor||'vendor not named')):(m?m.name:'(unassigned — check Routing)'),
+        machineId:isSub?'':(m?m.id:''),
+        qty,batch,setups,runHours,setupHours,inspHours,reqHours,pph,days,
+        operators:num(o.operators)||1,toolsNeeded,toolCost,
+        machineRate:m?machineRate(m).total:0};
     });
+
+    /* --- §9 machining time vs total throughput time --- */
+    const machiningHours=opRows.filter(o=>!o.isSub).reduce((t,o)=>t+o.runHours,0);
     const productionDays=opRows.reduce((t,o)=>t+o.days,0);
     const totalLeadDays=materialLeadDays+productionDays;
 
+    /* --- §16 MANPOWER --- */
+    const manHours=opRows.reduce((t,o)=>t+(o.isSub?0:o.reqHours*o.operators),0);
+    const peakOperators=opRows.reduce((mx,o)=>Math.max(mx,o.isSub?0:o.operators),0);
+
+    /* --- §17 TOOL PLAN totals --- */
+    const toolTotalCost=opRows.reduce((t,o)=>t+o.toolCost,0);
+
+    /* --- §14 BACKWARD SCHEDULE from the delivery date --- */
     const today=new Date(); today.setHours(0,0,0,0);
     const earliest=new Date(today); earliest.setDate(earliest.getDate()+totalLeadDays);
     const delivery=order.deliveryDate?new Date(order.deliveryDate):null;
     const feasible=delivery?(earliest<=delivery):null;
     const bufferDays=delivery?Math.round((delivery-earliest)/86400000):null;
 
-    // backward schedule: work back from the delivery date (or today+lead time if no date given)
-    const scheduleEnd=delivery&&feasible!==false?new Date(delivery):new Date(earliest);
-    let cursor=new Date(scheduleEnd);
-    const scheduled=[...opRows].reverse().map(o=>{
-      const finish=new Date(cursor);
-      cursor.setDate(cursor.getDate()-o.days);
-      const start=new Date(cursor);
-      return Object.assign({},o,{plannedStart:start,plannedFinish:finish});
-    }).reverse();
+    /* §15 if backward scheduling won't fit, we schedule forward from today instead */
+    const usedForward=(delivery&&feasible===false);
+    let cursor;
+    let scheduled;
+    if(usedForward){
+      cursor=new Date(today);
+      cursor.setDate(cursor.getDate()+materialLeadDays);
+      const matBy=new Date(cursor);
+      scheduled=opRows.map(o=>{
+        const start=new Date(cursor);
+        cursor.setDate(cursor.getDate()+o.days);
+        return Object.assign({},o,{plannedStart:start,plannedFinish:new Date(cursor)});
+      });
+      cursor=matBy;
+    } else {
+      const scheduleEnd=delivery?new Date(delivery):new Date(earliest);
+      cursor=new Date(scheduleEnd);
+      scheduled=[...opRows].reverse().map(o=>{
+        const finish=new Date(cursor);
+        cursor.setDate(cursor.getDate()-o.days);
+        return Object.assign({},o,{plannedStart:new Date(cursor),plannedFinish:finish});
+      }).reverse();
+    }
     const materialRequiredBy=new Date(cursor);
-    const poReleaseDate=new Date(materialRequiredBy); poReleaseDate.setDate(poReleaseDate.getDate()-materialLeadDays);
+    const poReleaseDate=new Date(materialRequiredBy);
+    poReleaseDate.setDate(poReleaseDate.getDate()-materialLeadDays);
 
-    return {net,po,safety,fg,wip,bomLines,materialLeadDays,opRows:scheduled,productionDays,
-      totalLeadDays,earliest,delivery,feasible,bufferDays,materialRequiredBy,poReleaseDate,
-      unassigned:opRows.some(o=>!o.machineId)};
+    /* --- §25 OVERTIME needed to recover a late order --- */
+    let overtimeHours=0;
+    if(delivery&&feasible===false){
+      const daysAvailable=Math.max(0,Math.round((delivery-today)/86400000)-materialLeadDays);
+      const machineHoursNeeded=opRows.filter(o=>!o.isSub).reduce((t,o)=>t+o.reqHours,0);
+      overtimeHours=Math.max(0,machineHoursNeeded-(daysAvailable*hoursPerDay));
+    }
+
+    /* --- §32 RISK ENGINE --- */
+    const load=machineLoad(order.ref);
+    const overloadedHere=opRows.filter(o=>o.machineId)
+      .map(o=>load.byId[o.machineId]).filter(r=>r&&r.util>100);
+    const risks=[];
+    const matRed=bomLines.filter(b=>b.status==='red');
+    const matAmber=bomLines.filter(b=>b.status==='amber');
+    risks.push({name:'Material',level:matRed.length?'red':(matAmber.length?'amber':'green'),
+      note:matRed.length?(matRed.length+' material line(s) unpriced or short with no lead time')
+        :(matAmber.length?(matAmber.length+' line(s) to be purchased — release PO by '+fmtDate(poReleaseDate)):'Available or ordered in time')});
+    risks.push({name:'Capacity',level:overloadedHere.length?'red':(load.rows.some(r=>r.util>85)?'amber':'green'),
+      note:overloadedHere.length?('Overloaded: '+overloadedHere.map(r=>r.name).join(', ')):'Within available machine hours'});
+    risks.push({name:'Machine',level:opRows.some(o=>!o.isSub&&!o.machineId)?'red':'green',
+      note:opRows.some(o=>!o.isSub&&!o.machineId)?'One or more operations has no matching machine':'All operations assigned'});
+    risks.push({name:'Subcontract',level:opRows.some(o=>o.isSub&&!o.vendor)?'amber':(opRows.some(o=>o.isSub)?'green':'green'),
+      note:opRows.some(o=>o.isSub)?(opRows.some(o=>o.isSub&&!o.vendor)?'A subcontract operation has no named vendor':'Vendor lead times included'):'No subcontract operations'});
+    risks.push({name:'Tooling',level:opRows.some(o=>o.toolLifePcs<=0&&!o.isSub)?'amber':'green',
+      note:opRows.some(o=>o.toolLifePcs<=0&&!o.isSub)?'Tool life not set on some operations — tool cost and replacements unknown':(toolTotalCost?rupee(toolTotalCost)+' of tooling required':'No tooling data')});
+    risks.push({name:'Yield',level:route.some(o=>num(o.yieldPct)>0&&num(o.yieldPct)<100)?(yieldLossPcs>net*0.1?'amber':'green'):'amber',
+      note:route.some(o=>num(o.yieldPct)&&num(o.yieldPct)<100)?('Starting '+grossStart+' pcs to yield '+net+' good')
+        :'Yield not set on operations — assuming 100%, which is optimistic'});
+    risks.push({name:'Delivery',level:feasible===null?'amber':(feasible?(bufferDays<3?'amber':'green'):'red'),
+      note:feasible===null?'No delivery date set':(feasible?(bufferDays+' day buffer'):(Math.abs(bufferDays)+' days late'))});
+
+    const worst=risks.some(r=>r.level==='red')?'red':(risks.some(r=>r.level==='amber')?'amber':'green');
+
+    return {part,net,po,safety,fg,wip,grossStart,yieldLossPcs,
+      bomLines,materialLeadDays,materialCost,
+      opRows:scheduled,productionDays,machiningHours,totalLeadDays,
+      manHours,peakOperators,toolTotalCost,overtimeHours,usedForward,
+      earliest,delivery,feasible,bufferDays,materialRequiredBy,poReleaseDate,
+      risks,overall:worst,
+      unassigned:opRows.some(o=>!o.isSub&&!o.machineId)};
   }
 
   function fmtDate(d){ return d?new Date(d).toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'}):'—'; }
+
+  /* ---- §10/§11 MACHINE LOADING: aggregate every live order onto each machine ----
+     This is what makes the plan honest across orders rather than per-order.
+     Still not a true finite scheduler — it does not sequence jobs or resolve
+     clashes automatically — but it shows real total load and flags overload. */
+  const LIVE_STATUSES=['Planned','Released','In Production'];
+
+  function machineLoad(excludeRef){
+    const b=CB();
+    const daysPerMonth=Math.max(1,num(b.workingDays)/12);
+    const hoursPerDay=Math.max(0.1,availableHoursPerDay());
+    const monthlyAvailable=daysPerMonth*hoursPerDay;
+
+    const rows=(data.machines||[]).map(m=>({
+      id:m.id,name:m.name,type:m.type,available:monthlyAvailable,load:0,orders:[]
+    }));
+    const byId={}; rows.forEach(r=>byId[r.id]=r);
+
+    /* Hours are computed directly here rather than by calling planOrder(),
+       because planOrder() itself asks for machine load — calling back into it
+       would recurse forever. */
+    let unassignedHours=0;
+    (poOrders||[]).forEach(o=>{
+      if(!LIVE_STATUSES.includes(o.status||'Planned')) return;
+      const part=partById(o.partId); if(!part) return;
+      const route=(part.routing||[]);
+      const net=Math.max(0,num(o.qty)+num(part.safetyStockQty)-num(part.fgQty)-num(part.wipQty));
+
+      // same yield roll-up as planOrder, so loaded hours match the plan
+      let q=new Array(route.length).fill(net);
+      for(let i=route.length-1;i>=0;i--){
+        const y=Math.min(100,Math.max(1,num(route[i].yieldPct)||100))/100;
+        q[i]=Math.ceil(((i===route.length-1)?net:q[i+1])/y);
+      }
+      route.forEach((op,i)=>{
+        if(op.subcon) return;                 // vendor time, not our machine time
+        const m=machineById(op.machineId)||bestMachineFor(op.machineType);
+        const qty=q[i];
+        const batch=Math.max(1,num(op.batchSize)||qty);
+        const hrs=qty*(num(op.cycleMin)/60)
+                + (num(op.setupMin)/60)*Math.ceil(qty/batch)
+                + qty*(num(op.inspMinPer)/60);
+        if(m&&byId[m.id]){
+          byId[m.id].load+=hrs;
+          byId[m.id].orders.push({ref:o.ref,op:op.op,hours:hrs,isThis:o.ref===excludeRef});
+        } else { unassignedHours+=hrs; }
+      });
+    });
+
+    rows.forEach(r=>{
+      r.util=r.available>0?(r.load/r.available*100):0;
+      r.remaining=r.available-r.load;
+      r.overload=Math.max(0,r.load-r.available);
+    });
+    return {rows,byId,unassignedHours,monthlyAvailable,hoursPerDay};
+  }
+
+  function renderMachineLoad(){
+    const host=document.getElementById('ppc-load'); if(!host) return;
+    const L=machineLoad();
+    if(!L.rows.length){ host.innerHTML='<p class="empty-note">No machines set up — add them in Admin → Machines.</p>'; return; }
+
+    const rows=L.rows.map(r=>{
+      const cls=r.util>100?'no':(r.util>85?'unk':'go');
+      return `<tr>
+        <td>${esc(r.name)}</td><td class="t-micro">${esc(r.type||'')}</td>
+        <td class="r">${r.available.toFixed(0)}</td>
+        <td class="r">${r.load.toFixed(1)}</td>
+        <td class="r">${r.remaining.toFixed(1)}</td>
+        <td class="r"><span class="order-badge ${cls}">${r.util.toFixed(0)}%</span></td>
+        <td class="t-micro">${r.orders.length?r.orders.map(x=>esc(x.ref)+' op'+esc(x.op)).join(', '):'—'}</td></tr>`;
+    }).join('');
+
+    const overloaded=L.rows.filter(r=>r.util>100);
+    host.innerHTML=`
+      <div class="cs-sub">Machine Loading — all Planned / Released / In Production orders</div>
+      <div class="feas-line" style="margin-bottom:10px;">Available capacity assumes
+        <b>${L.hoursPerDay.toFixed(1)} hrs/day</b> per machine
+        (${num(CB().shiftsPerDay)} shifts × ${num(CB().hoursPerShift)} hrs − ${num(CB().downtimePct)}% downtime),
+        shown here as a rolling month of <b>${L.monthlyAvailable.toFixed(0)} hrs</b>.</div>
+      <table class="cs-t"><thead><tr><th>Machine</th><th>Type</th><th class="r">Available hrs</th>
+        <th class="r">Loaded hrs</th><th class="r">Remaining</th><th class="r">Utilisation</th><th>Orders</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      ${overloaded.length?`<div class="dx-missing" style="margin-top:12px;"><b>🔴 Machine overload —
+        ${overloaded.map(r=>esc(r.name)+' by '+r.overload.toFixed(1)+' hrs').join('; ')}.</b>
+        <ul><li>Move an operation to another machine of the same type (edit that part's Routing)</li>
+        <li>Add a shift, or overtime hours, in Admin → Cost Base</li>
+        <li>Reduce setup frequency by increasing batch size</li>
+        <li>Subcontract the operation</li></ul></div>`:''}
+      ${L.unassignedHours>0?`<div class="dx-missing" style="margin-top:12px;">
+        <b>${L.unassignedHours.toFixed(1)} hrs are on operations with no matching machine.</b>
+        Check the Machine Type text in each part's Routing matches a Type in your Machines list —
+        until then those hours are invisible to this loading table.</div>`:''}`;
+  }
 
   /* ---- Parts, BOM & Routing admin editor ---- */
   let expandedPart=null;
@@ -2610,6 +2925,7 @@ Reply with ONLY this JSON, no commentary or code fences:
             <div><label>Safety Stock Qty</label><input class="pt-in num" data-i="${i}" data-k="safetyStockQty" value="${esc(p.safetyStockQty)}"></div>
             <div><label>Finished Goods on Hand</label><input class="pt-in num" data-i="${i}" data-k="fgQty" value="${esc(p.fgQty)}"></div>
             <div><label>WIP Qty</label><input class="pt-in num" data-i="${i}" data-k="wipQty" value="${esc(p.wipQty)}"></div>
+            <div><label>Raw Material on Hand</label><input class="pt-in num" data-i="${i}" data-k="rmStockQty" value="${esc(p.rmStockQty||0)}"></div>
             <div style="align-self:end;"><button class="mini-btn ai pt-ai" data-i="${i}">AI draft BOM &amp; routing</button></div>
           </div>
 
@@ -2624,18 +2940,33 @@ Reply with ONLY this JSON, no commentary or code fences:
               ||'<tr><td colspan="5" class="t-micro">No BOM lines yet.</td></tr>'}</tbody></table>
           <button class="qb-add" data-act="addbomline" data-i="${i}">+ Add BOM line</button>
 
-          <div class="cs-sub">Routing</div>
-          <table class="cs-t"><thead><tr><th style="width:44px">Op</th><th>Process</th><th>Machine Type</th>
-            <th class="r">Cycle min</th><th class="r">Setup min</th><th class="r">Batch</th><th></th></tr></thead>
+          <div class="cs-sub">Routing — operation by operation</div>
+          <div class="field-hint" style="margin-bottom:8px;">Yield % is what survives each operation — leave at 100
+          only if you genuinely scrap nothing. Tool life drives tool cost and replacement. Tick Subcon for
+          outsourced steps; those are timed by vendor lead time, not your machines.</div>
+          <table class="cs-t"><thead><tr><th style="width:40px">Op</th><th>Process</th><th>Machine Type</th>
+            <th class="r">Cycle min</th><th class="r">Setup min</th><th class="r">Batch</th>
+            <th class="r">Yield %</th><th class="r">Insp min</th><th class="r">Oprs</th>
+            <th class="r">Tool life</th><th class="r">Tool ₹</th>
+            <th class="c">Subcon</th><th>Vendor</th><th class="r">Vend days</th><th class="r">Vend/day</th><th></th></tr></thead>
             <tbody>${(p.routing||[]).map((o,oi)=>`<tr>
               <td><input class="rt-in" data-i="${i}" data-oi="${oi}" data-k="op" value="${esc(o.op)}"></td>
               <td><input class="rt-in" data-i="${i}" data-oi="${oi}" data-k="process" value="${esc(o.process)}"></td>
               <td><input class="rt-in" data-i="${i}" data-oi="${oi}" data-k="machineType" value="${esc(o.machineType)}" placeholder="matches Machines → Type"></td>
-              <td style="width:64px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="cycleMin" value="${esc(o.cycleMin)}"></td>
-              <td style="width:64px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="setupMin" value="${esc(o.setupMin)}"></td>
-              <td style="width:60px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="batchSize" value="${esc(o.batchSize)}"></td>
+              <td style="width:60px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="cycleMin" value="${esc(o.cycleMin)}"></td>
+              <td style="width:60px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="setupMin" value="${esc(o.setupMin)}"></td>
+              <td style="width:56px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="batchSize" value="${esc(o.batchSize)}"></td>
+              <td style="width:56px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="yieldPct" value="${esc(o.yieldPct===undefined?100:o.yieldPct)}"></td>
+              <td style="width:56px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="inspMinPer" value="${esc(o.inspMinPer||0)}"></td>
+              <td style="width:48px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="operators" value="${esc(o.operators===undefined?1:o.operators)}"></td>
+              <td style="width:64px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="toolLifePcs" value="${esc(o.toolLifePcs||0)}"></td>
+              <td style="width:60px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="toolCost" value="${esc(o.toolCost||0)}"></td>
+              <td class="c"><input type="checkbox" class="rt-sub" data-i="${i}" data-oi="${oi}" ${o.subcon?'checked':''}></td>
+              <td><input class="rt-in" data-i="${i}" data-oi="${oi}" data-k="vendor" value="${esc(o.vendor||'')}"></td>
+              <td style="width:56px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="vendorLeadDays" value="${esc(o.vendorLeadDays||0)}"></td>
+              <td style="width:60px"><input class="rt-in num" data-i="${i}" data-oi="${oi}" data-k="vendorPcsPerDay" value="${esc(o.vendorPcsPerDay||0)}"></td>
               <td><button class="qb-del" data-act="delroute" data-i="${i}" data-oi="${oi}">×</button></td></tr>`).join('')
-              ||'<tr><td colspan="7" class="t-micro">No routing steps yet.</td></tr>'}</tbody></table>
+              ||'<tr><td colspan="16" class="t-micro">No routing steps yet.</td></tr>'}</tbody></table>
           <button class="qb-add" data-act="addroute" data-i="${i}">+ Add routing step</button>
 
           <div class="rfq-actions" style="margin-top:16px;">
@@ -2668,9 +2999,12 @@ Reply with ONLY this JSON, no commentary or code fences:
     host.querySelectorAll('[data-act="delbomline"]').forEach(b=>b.addEventListener('click',()=>{
       data.parts[+b.dataset.i].bom.splice(+b.dataset.bi,1); markDirty(); renderPartsAdmin();
     }));
+    host.querySelectorAll('.rt-sub').forEach(cb=>cb.addEventListener('change',()=>{
+      data.parts[+cb.dataset.i].routing[+cb.dataset.oi].subcon=cb.checked; markDirty();
+    }));
     host.querySelectorAll('[data-act="addroute"]').forEach(b=>b.addEventListener('click',()=>{
       const p=data.parts[+b.dataset.i];
-      p.routing.push({op:(p.routing.length+1)*10,process:'',machineType:'',machineId:'',cycleMin:0,setupMin:0,batchSize:0});
+      p.routing.push(blankRouteOp((p.routing.length+1)*10));
       markDirty(); renderPartsAdmin();
     }));
     host.querySelectorAll('[data-act="delroute"]').forEach(b=>b.addEventListener('click',()=>{

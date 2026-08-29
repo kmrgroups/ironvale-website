@@ -343,6 +343,15 @@
   #hr-page{position:fixed;inset:0;z-index:150;background:var(--paper);overflow-y:auto;display:none;}
   #hr-page.open{display:block;}
   .hr-tab{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;padding:12px 18px;color:var(--ink-soft);border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;}
+.att-t{width:100%;border-collapse:collapse;font-size:10px;background:var(--white);}
+  .att-t th{background:var(--navy);color:#fff;padding:5px 3px;font-family:var(--mono);font-size:9px;font-weight:500;position:sticky;top:0;}
+  .att-t th.wo{background:#41567E;} .att-t th.hol{background:var(--gold-deep);}
+  .att-t th.nm,.att-t td.nm{text-align:left;min-width:150px;padding-left:8px;}
+  .att-t td{padding:2px;border-bottom:1px solid var(--line);text-align:center;}
+  .att-t td.wo{background:#EEF1F6;color:var(--ink-soft);} .att-t td.hol{background:#FFF6E0;color:var(--gold-deep);}
+  .att-t td.lv{background:#F3EDFF;color:#5B2BB8;font-weight:600;}
+  .att-t select{border:1px solid var(--line);border-radius:3px;font-size:10px;padding:2px;width:38px;background:var(--white);}
+  .att-t input.at-ot{width:52px;border:1px solid var(--line);border-radius:4px;padding:3px;font-size:10px;text-align:right;font-family:var(--mono);}
   .hr-tab.active{color:var(--navy);border-bottom-color:var(--gold);background:var(--white);}
   .staff-bar{position:sticky;top:0;z-index:5;background:var(--navy);color:#fff;padding:0 var(--gutter);height:var(--bar-h);display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:3px solid var(--gold);}
   .staff-bar h2{color:#fff;font-size:calc(var(--font-base)*1.15);}
@@ -858,6 +867,8 @@
   <div class="staff-body">
     <div class="admin-tabs" style="margin-bottom:20px;border-radius:var(--radius-sm);">
       <button class="hr-tab active" data-hrtab="people">Employees</button>
+      <button class="hr-tab" data-hrtab="attendance">Attendance</button>
+      <button class="hr-tab" data-hrtab="leave">Leave</button>
       <button class="hr-tab" data-hrtab="payroll">Payroll</button>
       <button class="hr-tab" data-hrtab="statutory">Statutory Settings</button>
       <button class="hr-tab" data-hrtab="audit">Audit Trail</button>
@@ -883,6 +894,39 @@
         <div class="field-hint" id="ne-msg" style="margin-top:8px;"></div>
       </div>
       <div id="hr-emp-list"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="attendance" style="display:none;">
+      <div class="qb" style="margin-bottom:18px;">
+        <h4>Attendance Sheet</h4>
+        <div class="cs-row four">
+          <div><label>Period</label><input type="month" id="at-period"></div>
+          <div style="align-self:end;"><button class="mini-btn" id="at-load">Load Sheet</button></div>
+          <div style="align-self:end;"><button class="mini-btn gold" id="at-fill">Mark all working days Present</button></div>
+          <div style="align-self:end;"><button class="mini-btn green" id="at-save">Save Attendance</button></div>
+        </div>
+        <div class="field-hint" id="at-msg" style="margin-top:8px;">Weekly offs and holidays are excluded
+          automatically. Approved leave is applied from the Leave tab. Anything left unmarked counts as absent.</div>
+      </div>
+      <div id="hr-att-grid"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="leave" style="display:none;">
+      <div class="qb" style="margin-bottom:18px;">
+        <h4>Apply for Leave</h4>
+        <div class="cs-row four">
+          <div><label>Employee</label><select id="lv-emp" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div>
+          <div><label>Type</label><select id="lv-type" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div>
+          <div><label>From</label><input type="date" id="lv-from"></div>
+          <div><label>To</label><input type="date" id="lv-to"></div>
+        </div>
+        <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+          <label>Reason</label><input type="text" id="lv-reason"></div></div>
+        <button class="mini-btn gold" id="lv-apply" style="margin-top:12px;">Submit Request</button>
+        <div class="field-hint" id="lv-msg" style="margin-top:8px;"></div>
+      </div>
+      <div id="hr-leave-bal"></div>
+      <div id="hr-leave-list"></div>
     </div>
 
     <div class="hr-panel" data-hrpanel="payroll" style="display:none;">
@@ -1772,6 +1816,26 @@
       gratuity:{accrualPct:4.81, note:"Provision only — payable per Gratuity Act on exit"},
       bonus:{accrualPct:8.33, wageCeiling:21000, note:"Provision only — Payment of Bonus Act"}
     },
+    /* ---- HR: leave rules, shifts and holiday calendar (§9, §10, §26) ---- */
+    leavePolicy:{
+      types:[
+        {code:"CL", name:"Casual Leave", annualDays:12, paid:true, carryForward:false, maxCarry:0},
+        {code:"SL", name:"Sick Leave", annualDays:12, paid:true, carryForward:false, maxCarry:0},
+        {code:"EL", name:"Earned Leave", annualDays:15, paid:true, carryForward:true, maxCarry:30},
+        {code:"LOP", name:"Loss of Pay", annualDays:0, paid:false, carryForward:false, maxCarry:0},
+        {code:"CO", name:"Comp Off", annualDays:0, paid:true, carryForward:true, maxCarry:12}
+      ],
+      weekOff:[0], /* 0 = Sunday */
+      lateGraceMin:10, halfDayAfterMin:120,
+      note:"Leave rules are company policy — check them against your standing orders."
+    },
+    shifts:[
+      {code:"GEN", name:"General", start:"09:00", end:"17:30", breakMin:30},
+      {code:"A", name:"Shift A", start:"06:00", end:"14:00", breakMin:30},
+      {code:"B", name:"Shift B", start:"14:00", end:"22:00", breakMin:30},
+      {code:"C", name:"Shift C", start:"22:00", end:"06:00", breakMin:30}
+    ],
+    holidays:[],
     salaryStructure:{
       /* percentages of monthly CTC used when creating a new employee's structure */
       basicPct:50, daPct:0, hraPct:20, conveyance:1600, special:0,
@@ -1944,6 +2008,9 @@
         data.materials=j.data.materials||DEFAULTS.materials;
         data.parts=j.data.parts||DEFAULTS.parts;
         data.statutory=Object.assign({},DEFAULTS.statutory,j.data.statutory||{});
+        data.leavePolicy=Object.assign({},DEFAULTS.leavePolicy,j.data.leavePolicy||{});
+        data.shifts=j.data.shifts||DEFAULTS.shifts;
+        data.holidays=j.data.holidays||DEFAULTS.holidays;
         data.salaryStructure=Object.assign({},DEFAULTS.salaryStructure,j.data.salaryStructure||{});
         data.sections=Object.assign({},DEFAULTS.sections,j.data.sections||{});
       }
@@ -2836,13 +2903,155 @@ Reply with ONLY this JSON, no commentary or code fences:
     w.document.close();
   }
 
+  /* ---------- Attendance sheet UI ---------- */
+  let attDraft={};
+  function renderAttendanceGrid(){
+    const host=document.getElementById('hr-att-grid'); if(!host) return;
+    const period=document.getElementById('at-period').value;
+    if(!period){ host.innerHTML='<p class="empty-note">Choose a period and press Load Sheet.</p>'; return; }
+    const days=daysInPeriod(period);
+    const active=hrEmployees.filter(e=>e.status!=='Exited');
+    if(!active.length){ host.innerHTML='<p class="empty-note">No active employees.</p>'; return; }
+
+    const head=days.map(d=>{
+      const off=isWeekOff(d), hol=isHoliday(d);
+      return `<th class="c ${off?'wo':''} ${hol?'hol':''}" title="${hol?esc(holidayName(d)):(off?'Weekly off':'')}">${d.getDate()}</th>`;
+    }).join('');
+
+    const rows=active.map(e=>{
+      const lm=leaveDaysFor(e.empId,period);
+      const cells=days.map(d=>{
+        const k=dayKey(d), off=isWeekOff(d), hol=isHoliday(d), lv=lm[k];
+        if(hol) return `<td class="c hol" title="${esc(holidayName(d))}">H</td>`;
+        if(off) return `<td class="c wo">W</td>`;
+        if(lv) return `<td class="c lv" title="Approved ${esc(lv)}">${esc(lv)}</td>`;
+        const cur=(attDraft[e.empId+'|'+k]||{}).status||'';
+        return `<td class="c"><select class="at-cell" data-emp="${esc(e.empId)}" data-day="${k}">
+          <option value="" ${!cur?'selected':''}>–</option>
+          <option value="Present" ${cur==='Present'?'selected':''}>P</option>
+          <option value="Half" ${cur==='Half'?'selected':''}>½</option>
+          <option value="Absent" ${cur==='Absent'?'selected':''}>A</option></select></td>`;
+      }).join('');
+      const sum=attendanceSummary(e.empId,period);
+      return `<tr><td class="nm">${esc(e.name)}<div class="t-micro">${esc(e.empId)}</div></td>${cells}
+        <td class="c"><b>${sum.payableDays}</b></td>
+        <td class="c">${sum.lop||''}</td>
+        <td class="c"><input class="at-ot num" data-emp="${esc(e.empId)}" value="${sum.otHours||0}" title="Overtime hours for the month"></td></tr>`;
+    }).join('');
+
+    host.innerHTML=`<div style="overflow-x:auto;"><table class="att-t">
+      <thead><tr><th class="nm">Employee</th>${head}<th class="c">Paid</th><th class="c">LOP</th><th class="c">OT hrs</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+      <div class="feas-line" style="margin-top:10px;">P = present · ½ = half day · A = absent · W = weekly off ·
+        H = holiday · leave codes come from approved requests. Blank counts as absent when payroll runs.</div>`;
+
+    host.querySelectorAll('.at-cell').forEach(sel=>sel.addEventListener('change',()=>{
+      const key=sel.dataset.emp+'|'+sel.dataset.day;
+      if(!sel.value){ delete attDraft[key]; }
+      else attDraft[key]={empId:sel.dataset.emp,day:sel.dataset.day,status:sel.value==='Half'?'Present':sel.value,
+        dayFraction:sel.value==='Half'?0.5:1,otHours:(attDraft[key]||{}).otHours||0};
+    }));
+    host.querySelectorAll('.at-ot').forEach(inp=>inp.addEventListener('input',()=>{
+      // OT is recorded once for the month against the last working day
+      const emp=inp.dataset.emp, last=days.filter(d=>!isWeekOff(d)&&!isHoliday(d)).pop();
+      if(!last) return;
+      const key=emp+'|'+dayKey(last);
+      attDraft[key]=Object.assign({empId:emp,day:dayKey(last),status:'Present',dayFraction:1},
+        attDraft[key]||{},{otHours:num(inp.value)});
+    }));
+  }
+
+  async function saveAttendance(){
+    const msg=document.getElementById('at-msg');
+    const records=Object.values(attDraft);
+    if(!records.length){ msg.textContent='Nothing to save.'; msg.style.color='#B03A2E'; return; }
+    try{
+      await api('/api/hr',{method:'POST',body:JSON.stringify({what:'attendance',records,manual:true,
+        reason:'attendance sheet saved'})});
+      await loadAttendance(document.getElementById('at-period').value);
+      msg.textContent=records.length+' records saved.'; msg.style.color='var(--ok)';
+    }catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+  }
+
+  async function loadAttendance(period){
+    if(!period) return;
+    const [y,m]=period.split('-').map(Number);
+    const from=period+'-01', to=period+'-'+String(new Date(y,m,0).getDate()).padStart(2,'0');
+    try{ const j=await api(`/api/hr?what=attendance&from=${from}&to=${to}`); hrAttendance=j.attendance||[]; }
+    catch(e){ hrAttendance=[]; }
+    attDraft={};
+    hrAttendance.forEach(a=>{ attDraft[a.empId+'|'+a.day]=a; });
+    renderAttendanceGrid();
+  }
+
+  /* ---------- Leave UI ---------- */
+  async function loadLeave(){
+    try{ const j=await api('/api/hr?what=leave'); hrLeave=j.leave||[]; }catch(e){ hrLeave=[]; }
+    renderLeave();
+  }
+  function refreshLeaveDropdowns(){
+    const es=document.getElementById('lv-emp'), ts=document.getElementById('lv-type');
+    if(es) es.innerHTML=hrEmployees.filter(e=>e.status!=='Exited')
+      .map(e=>`<option value="${esc(e.empId)}">${esc(e.empId)} — ${esc(e.name)}</option>`).join('')
+      ||'<option value="">No employees</option>';
+    if(ts) ts.innerHTML=(LP().types||[]).map(t=>`<option value="${esc(t.code)}">${esc(t.name)}${t.paid?'':' (unpaid)'}</option>`).join('');
+  }
+  function renderLeave(){
+    const bal=document.getElementById('hr-leave-bal'), host=document.getElementById('hr-leave-list');
+    if(!host) return;
+    const pending=hrLeave.filter(l=>l.status==='Pending');
+
+    if(bal){
+      const sel=document.getElementById('lv-emp');
+      const empId=sel?sel.value:'';
+      const b=empId?leaveBalance(empId):[];
+      bal.innerHTML=empId?`<div class="qb" style="margin-bottom:16px;"><h4>Leave Balance — ${esc(empId)}</h4>
+        <table class="cs-t"><thead><tr><th>Type</th><th class="r">Entitled</th><th class="r">Taken</th><th class="r">Balance</th></tr></thead>
+        <tbody>${b.map(x=>`<tr><td>${esc(x.name)}${x.paid?'':' <span class="t-micro">(unpaid)</span>'}</td>
+          <td class="r">${x.entitled}</td><td class="r">${x.taken}</td>
+          <td class="r"><b>${x.balance}</b></td></tr>`).join('')}</tbody></table></div>`:'';
+    }
+
+    host.innerHTML=`${pending.length?`<div class="dx-missing"><b>${pending.length} request(s) awaiting approval.</b></div>`:''}
+      <table class="cs-t"><thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th class="r">Days</th>
+      <th>Reason</th><th>Status</th><th></th></tr></thead><tbody>
+      ${hrLeave.map((l,i)=>{const d=l.data||l;
+        const days=Math.round((new Date(d.to)-new Date(d.from))/86400000)+1;
+        const emp=hrEmployees.find(e=>e.empId===l.emp_id);
+        return `<tr><td>${esc(emp?emp.name:l.emp_id)}<div class="t-micro">${esc(l.emp_id)}</div></td>
+        <td>${esc(d.type)}</td><td>${fmtDate(d.from)}</td><td>${fmtDate(d.to)}</td><td class="r">${days}</td>
+        <td class="t-micro">${esc(d.reason||'')}</td>
+        <td><span class="order-badge ${l.status==='Approved'?'go':l.status==='Rejected'?'no':'unk'}">${esc(l.status)}</span></td>
+        <td>${l.status==='Pending'?`<button class="mini-btn green lv-ok" data-id="${esc(l.leave_id)}">Approve</button>
+          <button class="mini-btn lv-no" data-id="${esc(l.leave_id)}">Reject</button>`
+          :`<button class="qb-del lv-del" data-id="${esc(l.leave_id)}">×</button>`}</td></tr>`;}).join('')
+        ||'<tr><td colspan="8" class="t-micro">No leave requests.</td></tr>'}</tbody></table>`;
+
+    host.querySelectorAll('.lv-ok, .lv-no').forEach(b=>b.addEventListener('click',async()=>{
+      const status=b.classList.contains('lv-ok')?'Approved':'Rejected';
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'leave',leaveId:b.dataset.id,
+        status,reason:status.toLowerCase()+' by '+(currentUser||'staff')})});
+        await loadLeave(); toast('Leave '+status.toLowerCase()); }catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.lv-del').forEach(b=>b.addEventListener('click',async()=>{
+      if(!confirm('Delete this leave record?')) return;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'leave',leaveId:b.dataset.id,remove:true,reason:'deleted'})});
+        await loadLeave(); }catch(e){ toast(e.message); }
+    }));
+  }
+
   /* ---------- Payroll runs ---------- */
   function buildDraftRun(period,totalDays){
     const active=hrEmployees.filter(e=>e.status!=='Exited');
-    const lines=active.map(e=>({
-      empId:e.empId, name:e.name, department:e.department,
-      payableDays:totalDays, totalDays, otHours:0, incentive:0, advance:0
-    }));
+    const lines=active.map(e=>{
+      const a=attendanceSummary(e.empId,period);
+      const hasRecords=hrAttendance.some(x=>x.empId===e.empId&&String(x.day).startsWith(period));
+      return {empId:e.empId, name:e.name, department:e.department,
+        payableDays:hasRecords?a.payableDays:totalDays,
+        totalDays:hasRecords?a.totalDays:totalDays,
+        otHours:hasRecords?a.otHours:0, incentive:0, advance:0,
+        fromAttendance:hasRecords};
+    });
     return {runId:'PR-'+period.replace('-','')+'-'+Date.now().toString(36).slice(-4).toUpperCase(),
       period, totalDays, status:'Draft', lines, createdAt:new Date().toISOString(),
       rulesEffectiveFrom:(ST().effectiveFrom||''), rulesReviewedBy:(ST().lastReviewedBy||'')};
@@ -2872,7 +3081,9 @@ Reply with ONLY this JSON, no commentary or code fences:
 
       const rows=t.slips.map((sl,si)=>`<tr>
         <td>${esc(sl.empId)}</td><td>${esc(sl.name)}</td>
-        <td><input class="pl-in num" data-i="${i}" data-si="${si}" data-k="payableDays" value="${sl.payableDays}" ${locked?'disabled':''}></td>
+        <td><input class="pl-in num" data-i="${i}" data-si="${si}" data-k="payableDays" value="${sl.payableDays}" ${locked?'disabled':''}
+          title="${(run.lines[si]||{}).fromAttendance?'From attendance records':'Typed in — no attendance recorded for this period'}"
+          style="${(run.lines[si]||{}).fromAttendance?'':'border-color:var(--gold);'}"></td>
         <td><input class="pl-in num" data-i="${i}" data-si="${si}" data-k="otHours" value="${sl.otHours}" ${locked?'disabled':''}></td>
         <td class="r">${rupee(sl.gross)}</td>
         <td class="r">${rupee(sl.deductions.pf)}</td><td class="r">${rupee(sl.deductions.esi)}</td>
@@ -3049,12 +3260,85 @@ Reply with ONLY this JSON, no commentary or code fences:
     }catch(e){ host.innerHTML='<p class="dx-err">'+esc(e.message)+'</p>'; }
   }
 
+  /* ================= ATTENDANCE & LEAVE ENGINE (§9, §10) =================
+     Attendance is the input payroll depends on. Everything here is plain
+     arithmetic on your own records — no estimation. */
+  let hrAttendance=[], hrLeave=[];
+  const LP=()=>data.leavePolicy||{};
+
+  const dayKey=d=>new Date(d).toISOString().slice(0,10);
+  function isWeekOff(d){ return (LP().weekOff||[]).includes(new Date(d).getDay()); }
+  function isHoliday(d){ const k=dayKey(d); return (data.holidays||[]).some(h=>h.date===k); }
+  function holidayName(d){ const k=dayKey(d); const h=(data.holidays||[]).find(x=>x.date===k); return h?h.name:''; }
+
+  function daysInPeriod(period){
+    const [y,m]=String(period||'').split('-').map(Number);
+    if(!y||!m) return [];
+    const out=[], last=new Date(y,m,0).getDate();
+    for(let d=1;d<=last;d++) out.push(new Date(y,m-1,d));
+    return out;
+  }
+
+  /* Approved leave, expanded day by day so attendance can read it */
+  function leaveDaysFor(empId,period){
+    const map={};
+    hrLeave.filter(l=>l.emp_id===empId && (l.status==='Approved'))
+      .forEach(l=>{
+        const d=l.data||l;
+        let cur=new Date(d.from), end=new Date(d.to);
+        while(cur<=end){
+          if(!period || dayKey(cur).startsWith(period)) map[dayKey(cur)]=d.type||'CL';
+          cur.setDate(cur.getDate()+1);
+        }
+      });
+    return map;
+  }
+
+  /* Roll a month of attendance into the numbers payroll needs */
+  function attendanceSummary(empId,period){
+    const days=daysInPeriod(period);
+    const leaveMap=leaveDaysFor(empId,period);
+    const recs={};
+    hrAttendance.filter(a=>a.empId===empId&&String(a.day).startsWith(period))
+      .forEach(a=>{recs[a.day]=a;});
+
+    let present=0, weekOff=0, holiday=0, paidLeave=0, lop=0, absent=0, otHours=0, lateCount=0;
+    const paidCodes=new Set((LP().types||[]).filter(t=>t.paid).map(t=>t.code));
+
+    days.forEach(d=>{
+      const k=dayKey(d), r=recs[k], lv=leaveMap[k];
+      if(r&&r.status==='Present'){ present+=num(r.dayFraction||1); otHours+=num(r.otHours); if(r.late) lateCount++; return; }
+      if(r&&r.status==='Absent'){ absent++; lop++; return; }
+      if(lv){ if(paidCodes.has(lv)) paidLeave++; else lop++; return; }
+      if(isHoliday(d)){ holiday++; return; }
+      if(isWeekOff(d)){ weekOff++; return; }
+      if(r&&r.status){ present+=num(r.dayFraction||1); otHours+=num(r.otHours); return; }
+      absent++; lop++;                       // no record and not a day off
+    });
+
+    const totalDays=days.length;
+    const payableDays=Math.max(0, totalDays-lop);
+    return {totalDays,present,weekOff,holiday,paidLeave,lop,absent,otHours,lateCount,payableDays};
+  }
+
+  function leaveBalance(empId){
+    const taken={};
+    hrLeave.filter(l=>l.emp_id===empId&&l.status==='Approved').forEach(l=>{
+      const d=l.data||l, days=Math.round((new Date(d.to)-new Date(d.from))/86400000)+1;
+      taken[d.type]=(taken[d.type]||0)+Math.max(1,days);
+    });
+    return (LP().types||[]).map(t=>({code:t.code,name:t.name,entitled:t.annualDays,
+      taken:taken[t.code]||0, balance:Math.max(0,num(t.annualDays)-(taken[t.code]||0)), paid:t.paid}));
+  }
+
   /* ---------- HR data loading + employee master UI ---------- */
   async function loadHr(){
     try{ const j=await api('/api/hr?what=employees'); hrEmployees=j.employees||[]; }
     catch(e){ hrEmployees=[]; toast('Could not load employees: '+e.message); }
     try{ const j=await api('/api/hr?what=payruns'); hrPayruns=j.payruns||[]; }
     catch(e){ hrPayruns=[]; }
+    try{ const j=await api('/api/hr?what=leave'); hrLeave=j.leave||[]; }catch(e){ hrLeave=[]; }
+    refreshLeaveDropdowns();
     renderEmployees(); renderPayruns(); renderStatutory();
   }
 
@@ -5965,8 +6249,49 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     });
     if(tab.dataset.hrtab==='audit') renderAudit();
     if(tab.dataset.hrtab==='statutory') renderStatutory();
+    if(tab.dataset.hrtab==='leave'){ refreshLeaveDropdowns(); loadLeave(); }
+    if(tab.dataset.hrtab==='attendance'){
+      const pe=document.getElementById('at-period');
+      if(!pe.value) pe.value=new Date().toISOString().slice(0,7);
+      loadAttendance(pe.value);
+    }
   }));
   document.getElementById('hr-refresh').addEventListener('click',loadHr);
+  document.getElementById('at-load').addEventListener('click',()=>loadAttendance(document.getElementById('at-period').value));
+  document.getElementById('at-save').addEventListener('click',saveAttendance);
+  document.getElementById('at-fill').addEventListener('click',()=>{
+    const period=document.getElementById('at-period').value;
+    if(!period){ toast('Choose a period first'); return; }
+    const days=daysInPeriod(period);
+    hrEmployees.filter(e=>e.status!=='Exited').forEach(e=>{
+      const lm=leaveDaysFor(e.empId,period);
+      days.forEach(d=>{
+        const k=dayKey(d);
+        if(isWeekOff(d)||isHoliday(d)||lm[k]) return;
+        const key=e.empId+'|'+k;
+        if(!attDraft[key]) attDraft[key]={empId:e.empId,day:k,status:'Present',dayFraction:1,otHours:0};
+      });
+    });
+    renderAttendanceGrid();
+    toast('Marked present — adjust exceptions, then Save');
+  });
+  document.getElementById('lv-emp').addEventListener('change',renderLeave);
+  document.getElementById('lv-apply').addEventListener('click',async function(){
+    const empId=document.getElementById('lv-emp').value;
+    const type=document.getElementById('lv-type').value;
+    const from=document.getElementById('lv-from').value, to=document.getElementById('lv-to').value;
+    const reason=document.getElementById('lv-reason').value.trim();
+    const msg=document.getElementById('lv-msg');
+    if(!empId||!from||!to){ msg.textContent='Employee and both dates are required.'; msg.style.color='#B03A2E'; return; }
+    if(new Date(to)<new Date(from)){ msg.textContent='The end date is before the start date.'; msg.style.color='#B03A2E'; return; }
+    const leave={leaveId:'LV-'+Date.now().toString(36).toUpperCase(),empId,type,from,to,reason,status:'Pending'};
+    this.disabled=true; this.textContent='Submitting…';
+    try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'leave',leave,reason:'leave applied'})});
+      await loadLeave(); document.getElementById('lv-reason').value='';
+      msg.textContent='Request submitted — approve it below to affect payroll.'; msg.style.color='var(--ok)'; }
+    catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false; this.textContent='Submit Request';
+  });
   document.getElementById('hr-admin').addEventListener('click',()=>{
     document.getElementById('hr-page').classList.remove('open'); document.body.style.overflow='';
     fillForm(); document.getElementById('admin-panel').classList.add('open');});

@@ -24,6 +24,21 @@ export async function ensureTables() {
     data JSONB NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now()
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS hr_attendance (
+    id TEXT PRIMARY KEY,
+    emp_id TEXT NOT NULL,
+    day DATE NOT NULL,
+    data JSONB NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now()
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS hr_att_emp_day ON hr_attendance (emp_id, day)`;
+  await sql`CREATE TABLE IF NOT EXISTS hr_leave (
+    leave_id TEXT PRIMARY KEY,
+    emp_id TEXT NOT NULL,
+    data JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Pending',
+    created_at TIMESTAMPTZ DEFAULT now()
+  )`;
   await sql`CREATE TABLE IF NOT EXISTS hr_payruns (
     run_id TEXT PRIMARY KEY,
     period TEXT NOT NULL,

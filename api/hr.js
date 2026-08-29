@@ -103,6 +103,69 @@ export default async function handler(req, res) {
       }
     }
 
+    /* ---------------- ATTENDANCE ---------------- */
+    if (what === 'attendance') {
+      if (req.method === 'GET') {
+        const from = String(req.query.from || ''), to = String(req.query.to || '');
+        const rows = (from && to)
+          ? await sql`SELECT data FROM hr_attendance WHERE day >= ${from} AND day <= ${to} ORDER BY day`
+          : await sql`SELECT data FROM hr_attendance ORDER BY day DESC LIMIT 3000`;
+        return res.status(200).json({ ok: true, attendance: rows.map(r => r.data) });
+      }
+      if (req.method === 'POST') {
+        // accepts a single record or a whole day/period in one go
+        const list = body.records || (body.record ? [body.record] : []);
+        if (!list.length) return res.status(400).json({ ok: false, error: 'No attendance records supplied.' });
+        for (const a of list) {
+          if (!a.empId || !a.day) continue;
+          a.id = a.empId + '|' + a.day;
+          await sql`INSERT INTO hr_attendance (id, emp_id, day, data, updated_at)
+                    VALUES (${a.id}, ${a.empId}, ${a.day}, ${JSON.stringify(a)}::jsonb, now())
+                    ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`;
+        }
+        // manual attendance edits must leave a trace (spec §8)
+        if (body.manual) await audit(me && me.username, 'attendance.manual', list.map(a => a.id).join(','),
+          null, { count: list.length }, body.reason || 'manual attendance entry');
+        return res.status(200).json({ ok: true, saved: list.length });
+      }
+    }
+
+    /* ---------------- LEAVE ---------------- */
+    if (what === 'leave') {
+      if (req.method === 'GET') {
+        const rows = await sql`SELECT leave_id, emp_id, status, data, created_at
+                               FROM hr_leave ORDER BY created_at DESC LIMIT 1000`;
+        return res.status(200).json({ ok: true, leave: rows });
+      }
+      if (req.method === 'POST') {
+        const l = body.leave || {};
+        if (!l.leaveId || !l.empId || !l.from || !l.to)
+          return res.status(400).json({ ok: false, error: 'Employee, dates and reference are required.' });
+        await sql`INSERT INTO hr_leave (leave_id, emp_id, data, status)
+                  VALUES (${l.leaveId}, ${l.empId}, ${JSON.stringify(l)}::jsonb, ${l.status || 'Pending'})
+                  ON CONFLICT (leave_id) DO NOTHING`;
+        await audit(me && me.username, 'leave.apply', l.leaveId, null,
+          { emp: l.empId, from: l.from, to: l.to, type: l.type }, body.reason);
+        return res.status(200).json({ ok: true, leaveId: l.leaveId });
+      }
+      if (req.method === 'PATCH') {
+        const rows = await sql`SELECT data, status FROM hr_leave WHERE leave_id = ${body.leaveId}`;
+        if (!rows.length) return res.status(404).json({ ok: false, error: 'Leave request not found.' });
+        if (body.remove) {
+          await sql`DELETE FROM hr_leave WHERE leave_id = ${body.leaveId}`;
+          await audit(me && me.username, 'leave.delete', body.leaveId, rows[0].data, null, body.reason);
+          return res.status(200).json({ ok: true, removed: body.leaveId });
+        }
+        const merged = Object.assign({}, rows[0].data, body.patch || {});
+        if (body.status) merged.status = body.status;
+        await sql`UPDATE hr_leave SET data = ${JSON.stringify(merged)}::jsonb,
+                  status = ${body.status || rows[0].status} WHERE leave_id = ${body.leaveId}`;
+        await audit(me && me.username, 'leave.' + (body.status || 'update').toLowerCase(),
+          body.leaveId, { status: rows[0].status }, { status: body.status || rows[0].status }, body.reason);
+        return res.status(200).json({ ok: true, leave: merged });
+      }
+    }
+
     /* ---------------- AUDIT TRAIL ---------------- */
     if (what === 'audit' && req.method === 'GET') {
       if (!(await checkRole(token, ['developer'])))

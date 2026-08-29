@@ -760,13 +760,45 @@
       <button class="login-cancel" id="code-cancel">Back to sign in</button>
     </div>
     <div class="login-body" id="forgot-panel">
-      <div class="field-hint" style="margin-top:0;margin-bottom:14px;">Enter the recovery code your developer set up when the site was deployed (the <code>ADMIN_RECOVERY_CODE</code> value in Vercel), then choose new sign-in details.</div>
-      <label>Recovery Code</label>
-      <div class="pw-wrap"><input type="password" id="forgot-code" autocomplete="off"><button type="button" class="pw-eye" data-for="forgot-code"></button></div>
-      <label>New Username</label><input type="text" id="forgot-user" autocomplete="username">
-      <label>New Password</label>
-      <div class="pw-wrap"><input type="password" id="forgot-pass" autocomplete="new-password"><button type="button" class="pw-eye" data-for="forgot-pass"></button></div>
-      <button class="btn btn-primary" id="forgot-btn">Reset &amp; Sign In</button>
+
+      <!-- step 1: who are you -->
+      <div id="fp-step1">
+        <div class="field-hint" style="margin-top:0;margin-bottom:14px;">We will email a 6-digit code to the address saved on your account.</div>
+        <label>Username or Email</label>
+        <input type="text" id="fp-who" autocomplete="username">
+        <button class="btn btn-primary" id="fp-send">Email me a code</button>
+        <div class="field-hint" style="margin-top:14px;">
+          No email on your account? <a href="#" id="fp-use-recovery" style="color:var(--gold-light)">Use the recovery code instead</a>
+        </div>
+      </div>
+
+      <!-- step 2: code and new password -->
+      <div id="fp-step2" style="display:none;">
+        <div class="field-hint" style="margin-top:0;margin-bottom:14px;" id="fp-note">Enter the code we sent you.</div>
+        <label>6-Digit Code</label>
+        <input type="text" id="fp-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="text-align:center;letter-spacing:.4em;font-size:20px;">
+        <label>New Password</label>
+        <div class="pw-wrap"><input type="password" id="fp-pass" autocomplete="new-password"><button type="button" class="pw-eye" data-for="fp-pass"></button></div>
+        <button class="btn btn-primary" id="fp-verify">Set Password &amp; Sign In</button>
+        <div class="field-hint" style="margin-top:12px;">
+          <a href="#" id="fp-resend" style="color:var(--gold-light)">Send the code again</a>
+        </div>
+      </div>
+
+      <!-- fallback: recovery code -->
+      <div id="fp-step3" style="display:none;">
+        <div class="field-hint" style="margin-top:0;margin-bottom:14px;">Enter the recovery code set when the site was deployed (the <code>ADMIN_RECOVERY_CODE</code> value in Vercel), then choose new sign-in details.</div>
+        <label>Recovery Code</label>
+        <div class="pw-wrap"><input type="password" id="forgot-code" autocomplete="off"><button type="button" class="pw-eye" data-for="forgot-code"></button></div>
+        <label>New Username</label><input type="text" id="forgot-user" autocomplete="username">
+        <label>New Password</label>
+        <div class="pw-wrap"><input type="password" id="forgot-pass" autocomplete="new-password"><button type="button" class="pw-eye" data-for="forgot-pass"></button></div>
+        <button class="btn btn-primary" id="forgot-btn">Reset &amp; Sign In</button>
+        <div class="field-hint" style="margin-top:12px;">
+          <a href="#" id="fp-use-email" style="color:var(--gold-light)">Email me a code instead</a>
+        </div>
+      </div>
+
       <div class="login-err" id="forgot-err"></div>
       <button class="login-cancel" id="forgot-cancel">Back to sign in</button>
     </div>
@@ -5233,15 +5265,60 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   });
 
   /* ---------- FORGOT PASSWORD ---------- */
+  let fpUser='';
+  function fpStep(n){
+    ['fp-step1','fp-step2','fp-step3'].forEach((id,i)=>{
+      document.getElementById(id).style.display=(i===n-1)?'':'none';
+    });
+    document.getElementById('forgot-err').style.display='none';
+  }
   document.getElementById('login-forgot-link').addEventListener('click',()=>{
     document.getElementById('login-fields').style.display='none';
     document.getElementById('forgot-panel').classList.add('open');
-    document.getElementById('forgot-err').style.display='none';
-    document.getElementById('forgot-code').value='';
-    document.getElementById('forgot-user').value='';
-    document.getElementById('forgot-pass').value='';
-    setTimeout(()=>document.getElementById('forgot-code').focus(),150);
+    ['fp-who','fp-code','fp-pass','forgot-code','forgot-user','forgot-pass'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    fpStep(1);
+    setTimeout(()=>document.getElementById('fp-who').focus(),150);
   });
+  document.getElementById('fp-use-recovery').addEventListener('click',e=>{e.preventDefault();fpStep(3);});
+  document.getElementById('fp-use-email').addEventListener('click',e=>{e.preventDefault();fpStep(1);});
+
+  async function fpSendCode(){
+    const err=document.getElementById('forgot-err'); err.style.display='none';
+    const who=document.getElementById('fp-who').value.trim();
+    if(!who){ err.textContent='Enter your username or email address.'; err.style.display='block'; return; }
+    const btn=document.getElementById('fp-send'); const label=btn.textContent; btn.textContent='Sending…'; btn.disabled=true;
+    try{
+      const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'forgotRequest',user:who})});
+      fpUser=j.user||who;
+      document.getElementById('fp-note').textContent=j.note||'If that account exists, a code is on its way.';
+      fpStep(2);
+      setTimeout(()=>document.getElementById('fp-code').focus(),150);
+    }catch(e){ err.textContent=e.message||'Could not send the code.'; err.style.display='block'; }
+    btn.textContent=label; btn.disabled=false;
+  }
+  document.getElementById('fp-send').addEventListener('click',fpSendCode);
+  document.getElementById('fp-who').addEventListener('keydown',e=>{if(e.key==='Enter')fpSendCode();});
+  document.getElementById('fp-resend').addEventListener('click',e=>{e.preventDefault();fpStep(1);fpSendCode();});
+
+  async function fpVerify(){
+    const err=document.getElementById('forgot-err'); err.style.display='none';
+    const code=document.getElementById('fp-code').value.trim();
+    const np=document.getElementById('fp-pass').value;
+    if(code.length!==6){ err.textContent='Enter the 6-digit code from the email.'; err.style.display='block'; return; }
+    if(np.length<6){ err.textContent='New password must be at least 6 characters.'; err.style.display='block'; return; }
+    try{
+      const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'forgotVerify',user:fpUser,code,newPass:np})});
+      token=j.token; currentUser=j.user; currentRole=j.role||'';
+      document.getElementById('login-modal').classList.remove('open');
+      showLoginFields();
+      toast('Password changed — you are signed in.');
+      openTarget(pendingTarget||'pipeline');
+    }catch(e){ err.textContent=e.message||'Could not verify the code.'; err.style.display='block'; }
+  }
+  document.getElementById('fp-verify').addEventListener('click',fpVerify);
+  document.getElementById('fp-pass').addEventListener('keydown',e=>{if(e.key==='Enter')fpVerify();});
   document.getElementById('forgot-cancel').addEventListener('click',showLoginFields);
   document.getElementById('forgot-btn').addEventListener('click',async()=>{
     const err=document.getElementById('forgot-err'); err.style.display='none';

@@ -166,6 +166,45 @@ export default async function handler(req, res) {
       }
     }
 
+    /* ------- TRAINING: TNI records, sessions, nominations, effectiveness ------- */
+    if (what === 'training') {
+      if (req.method === 'GET') {
+        const kind = String(req.query.kind || '');
+        const rows = kind
+          ? await sql`SELECT rec_id, kind, status, data, created_at FROM hr_training
+                      WHERE kind = ${kind} ORDER BY created_at DESC LIMIT 1000`
+          : await sql`SELECT rec_id, kind, status, data, created_at FROM hr_training
+                      ORDER BY created_at DESC LIMIT 2000`;
+        return res.status(200).json({ ok: true, records: rows });
+      }
+      if (req.method === 'POST') {
+        const r = body.record || {};
+        if (!r.recId || !r.kind)
+          return res.status(400).json({ ok: false, error: 'Record reference and kind are required.' });
+        await sql`INSERT INTO hr_training (rec_id, kind, data, status)
+                  VALUES (${r.recId}, ${r.kind}, ${JSON.stringify(r)}::jsonb, ${r.status || 'Open'})
+                  ON CONFLICT (rec_id) DO UPDATE SET data = EXCLUDED.data, status = EXCLUDED.status`;
+        await audit(me && me.username, 'training.' + r.kind, r.recId, null, r, body.reason);
+        return res.status(200).json({ ok: true, recId: r.recId });
+      }
+      if (req.method === 'PATCH') {
+        const rows = await sql`SELECT data, status FROM hr_training WHERE rec_id = ${body.recId}`;
+        if (!rows.length) return res.status(404).json({ ok: false, error: 'Record not found.' });
+        if (body.remove) {
+          await sql`DELETE FROM hr_training WHERE rec_id = ${body.recId}`;
+          await audit(me && me.username, 'training.delete', body.recId, rows[0].data, null, body.reason);
+          return res.status(200).json({ ok: true, removed: body.recId });
+        }
+        const merged = Object.assign({}, rows[0].data, body.patch || {});
+        if (body.status) merged.status = body.status;
+        await sql`UPDATE hr_training SET data = ${JSON.stringify(merged)}::jsonb,
+                  status = ${body.status || rows[0].status} WHERE rec_id = ${body.recId}`;
+        await audit(me && me.username, 'training.update', body.recId,
+          { status: rows[0].status }, { status: body.status || rows[0].status }, body.reason);
+        return res.status(200).json({ ok: true, record: merged });
+      }
+    }
+
     /* ---------------- AUDIT TRAIL ---------------- */
     if (what === 'audit' && req.method === 'GET') {
       if (!(await checkRole(token, ['developer'])))

@@ -39,6 +39,13 @@ export async function ensureTables() {
     status TEXT NOT NULL DEFAULT 'Pending',
     created_at TIMESTAMPTZ DEFAULT now()
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS hr_training (
+    rec_id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    data JSONB NOT NULL,
+    status TEXT DEFAULT 'Open',
+    created_at TIMESTAMPTZ DEFAULT now()
+  )`;
   await sql`CREATE TABLE IF NOT EXISTS hr_payruns (
     run_id TEXT PRIMARY KEY,
     period TEXT NOT NULL,

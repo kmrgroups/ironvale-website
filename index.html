@@ -355,6 +355,12 @@
   .att-t td.wo{background:#EEF1F6;color:var(--ink-soft);} .att-t td.hol{background:#FFF6E0;color:var(--gold-deep);}
   .att-t td.lv{background:#F3EDFF;color:#5B2BB8;font-weight:600;}
   .att-t select{border:1px solid var(--line);border-radius:3px;font-size:10px;padding:2px;width:38px;background:var(--white);}
+  .sk-t td.sk{font-family:var(--mono);font-weight:700;font-size:10px;padding:6px 3px;}
+  .sk-t td.sk.green{background:#E6F7F0;color:var(--ok);}
+  .sk-t td.sk.amber{background:#FFF6E0;color:var(--gold-deep);}
+  .sk-t td.sk.red{background:#FDECEA;color:#B03A2E;}
+  .sk-t td.sk.na{background:#F6F8FB;color:var(--ink-soft);}
+  .sk-t th.rot{font-size:8.5px;max-width:88px;white-space:normal;line-height:1.25;padding:6px 3px;vertical-align:bottom;}
   .att-t input.at-ot{width:52px;border:1px solid var(--line);border-radius:4px;padding:3px;font-size:10px;text-align:right;font-family:var(--mono);}
   .hr-tab.active{color:var(--navy);border-bottom-color:var(--gold);background:var(--white);}
   .staff-bar{position:sticky;top:0;z-index:5;background:var(--navy);color:#fff;padding:0 var(--gutter);height:var(--bar-h);display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:3px solid var(--gold);}
@@ -874,6 +880,8 @@
       <button class="hr-tab" data-hrtab="attendance">Attendance</button>
       <button class="hr-tab" data-hrtab="leave">Leave</button>
       <button class="hr-tab" data-hrtab="payroll">Payroll</button>
+      <button class="hr-tab" data-hrtab="skills">Skill Matrix</button>
+      <button class="hr-tab" data-hrtab="training">Training</button>
       <button class="hr-tab" data-hrtab="statutory">Statutory Settings</button>
       <button class="hr-tab" data-hrtab="audit">Audit Trail</button>
     </div>
@@ -949,6 +957,55 @@
         <div class="field-hint" id="pr-msg" style="margin-top:8px;"></div>
       </div>
       <div id="hr-payrun-list"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="skills" style="display:none;">
+      <div class="info-box">A person's <b>required</b> level comes from the standard set for their role.
+        Their <b>actual</b> level is assessed by a named person on a date — that record is the evidence an
+        IATF auditor asks for. Gaps here drive training need automatically.</div>
+      <div class="kpi-row" id="skill-kpi"></div>
+      <div class="qb" style="margin-bottom:16px;">
+        <h4>Role Standards — what each role must be able to do</h4>
+        <div class="cs-row four">
+          <div><label>Role / Designation</label><input type="text" id="rc-role" placeholder="CNC Operator"></div>
+          <div><label>Competency</label><select id="rc-comp" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div>
+          <div><label>Required Level</label><select id="rc-level" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div>
+          <div style="align-self:end;"><button class="mini-btn gold" id="rc-add">Add Standard</button></div>
+        </div>
+        <div id="rc-list" style="margin-top:12px;"></div>
+      </div>
+      <div class="cs-row" style="margin-bottom:12px;"><div>
+        <label>Filter by department</label>
+        <select id="sm-dept" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div></div>
+      <div id="skill-matrix"></div>
+      <div id="emp-assess"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="training" style="display:none;">
+      <div class="kpi-row" id="train-kpi"></div>
+      <div class="qb" style="margin-bottom:16px;">
+        <h4>Training Need Identification (§17)</h4>
+        <div class="field-hint" style="margin-bottom:10px;">Generated from live competency gaps. Review, then
+          schedule the ones you accept — nothing is scheduled automatically.</div>
+        <button class="mini-btn ai" id="tni-run">Generate TNI from current gaps</button>
+        <div id="tni-list" style="margin-top:12px;"></div>
+      </div>
+      <div class="qb" style="margin-bottom:16px;">
+        <h4>Schedule a Training Session (§18)</h4>
+        <div class="cs-row four">
+          <div><label>Course</label><select id="ts-course" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div>
+          <div><label>Trainer</label><input type="text" id="ts-trainer"></div>
+          <div><label>Date</label><input type="date" id="ts-date"></div>
+          <div><label>Evaluate after (days)</label><input type="text" id="ts-eval" class="num" value="30"></div>
+        </div>
+        <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+          <label>Participants</label>
+          <select id="ts-emps" multiple size="5" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select>
+          <div class="field-hint">Ctrl-click or Cmd-click to select several.</div></div></div>
+        <button class="mini-btn gold" id="ts-create" style="margin-top:12px;">Schedule Session</button>
+        <div class="field-hint" id="ts-msg" style="margin-top:8px;"></div>
+      </div>
+      <div id="train-sessions"></div>
     </div>
 
     <div class="hr-panel" data-hrpanel="statutory" style="display:none;">
@@ -1820,6 +1877,38 @@
       gratuity:{accrualPct:4.81, note:"Provision only — payable per Gratuity Act on exit"},
       bonus:{accrualPct:8.33, wageCeiling:21000, note:"Provision only — Payment of Bonus Act"}
     },
+    /* ---- HR: competency framework (§15) ----
+       Levels are configurable; the defaults follow the common 0–4 scale. ---- */
+    competencyLevels:[
+      {level:0,label:"No knowledge"},{level:1,label:"Awareness"},{level:2,label:"Basic"},
+      {level:3,label:"Competent"},{level:4,label:"Expert / can train others"}
+    ],
+    competencies:[
+      {id:"cmp1",name:"CNC Turning — setting & operation",category:"Technical"},
+      {id:"cmp2",name:"CNC Milling — setting & operation",category:"Technical"},
+      {id:"cmp3",name:"Drawing reading & GD&T",category:"Technical"},
+      {id:"cmp4",name:"Measuring instruments & gauges",category:"Quality"},
+      {id:"cmp5",name:"In-process inspection",category:"Quality"},
+      {id:"cmp6",name:"Machine safety & LOTO",category:"Safety"},
+      {id:"cmp7",name:"5S & shop floor discipline",category:"Behavioural"},
+      {id:"cmp8",name:"Problem solving / 8D",category:"Functional"}
+    ],
+    /* Required level per role — the standard a person in that role must reach */
+    roleCompetency:[],
+    /* Training catalogue (§18) */
+    trainingCatalogue:[
+      {id:"trn1",title:"CNC Programming Basics",type:"Technical",mode:"Internal",hours:16,
+       competencyIds:["cmp1","cmp2"],trainer:"",validityMonths:0},
+      {id:"trn2",title:"GD&T and Drawing Interpretation",type:"Technical",mode:"Internal",hours:8,
+       competencyIds:["cmp3"],trainer:"",validityMonths:0},
+      {id:"trn3",title:"Machine Safety & Lockout/Tagout",type:"Safety",mode:"Internal",hours:4,
+       competencyIds:["cmp6"],trainer:"",validityMonths:12}
+    ],
+    trainers:[],
+    /* §19 how effectiveness is judged */
+    effectivenessMethods:["Test score","Supervisor evaluation","Practical demonstration",
+      "KPI improvement","Reduction in rejections","On-job observation"],
+
     /* ---- HR: leave rules, shifts and holiday calendar (§9, §10, §26) ---- */
     leavePolicy:{
       types:[
@@ -2013,6 +2102,11 @@
         data.parts=j.data.parts||DEFAULTS.parts;
         data.statutory=Object.assign({},DEFAULTS.statutory,j.data.statutory||{});
         data.leavePolicy=Object.assign({},DEFAULTS.leavePolicy,j.data.leavePolicy||{});
+        data.competencies=j.data.competencies||DEFAULTS.competencies;
+        data.competencyLevels=j.data.competencyLevels||DEFAULTS.competencyLevels;
+        data.roleCompetency=j.data.roleCompetency||DEFAULTS.roleCompetency;
+        data.trainingCatalogue=j.data.trainingCatalogue||DEFAULTS.trainingCatalogue;
+        data.effectivenessMethods=j.data.effectivenessMethods||DEFAULTS.effectivenessMethods;
         data.shifts=j.data.shifts||DEFAULTS.shifts;
         data.holidays=j.data.holidays||DEFAULTS.holidays;
         data.salaryStructure=Object.assign({},DEFAULTS.salaryStructure,j.data.salaryStructure||{});
@@ -2918,6 +3012,227 @@ Reply with ONLY this JSON, no commentary or code fences:
     w.document.close();
   }
 
+  /* ---------- Skill matrix UI (§15, §16) ---------- */
+  let expandedAssess=null;
+  function refreshCompDropdowns(){
+    const c=document.getElementById('rc-comp'), l=document.getElementById('rc-level'),
+          d=document.getElementById('sm-dept');
+    if(c) c.innerHTML=(data.competencies||[]).map(x=>`<option value="${esc(x.id)}">${esc(x.name)} — ${esc(x.category)}</option>`).join('');
+    if(l) l.innerHTML=(data.competencyLevels||[]).map(x=>`<option value="${x.level}">${x.level} — ${esc(x.label)}</option>`).join('');
+    if(d){
+      const depts=[...new Set(hrEmployees.map(e=>e.department).filter(Boolean))];
+      d.innerHTML='<option value="">All departments</option>'+depts.map(x=>`<option>${esc(x)}</option>`).join('');
+    }
+  }
+  function renderRoleStandards(){
+    const host=document.getElementById('rc-list'); if(!host) return;
+    const list=data.roleCompetency||[];
+    host.innerHTML=list.length?`<table class="cs-t"><thead><tr><th>Role</th><th>Competency</th><th class="r">Required</th><th></th></tr></thead>
+      <tbody>${list.map((r,i)=>`<tr><td>${esc(r.role)}</td>
+        <td>${esc((compById(r.competencyId)||{}).name||r.competencyId)}</td>
+        <td class="r">${r.requiredLevel} — ${esc(levelLabel(r.requiredLevel))}</td>
+        <td><button class="qb-del rc-del" data-i="${i}">×</button></td></tr>`).join('')}</tbody></table>`
+      :'<p class="field-hint">No role standards yet. Without these the matrix has nothing to measure against.</p>';
+    host.querySelectorAll('.rc-del').forEach(b=>b.addEventListener('click',()=>{
+      data.roleCompetency.splice(+b.dataset.i,1); markDirty(); renderRoleStandards(); renderSkillMatrix();
+    }));
+  }
+  function renderSkillMatrix(){
+    const kpi=document.getElementById('skill-kpi'), host=document.getElementById('skill-matrix');
+    if(!host) return;
+    const dept=(document.getElementById('sm-dept')||{}).value||'';
+    const m=skillMatrix(dept);
+    if(kpi) kpi.innerHTML=`<div class="kpi"><b>${m.rows.length}</b><span>People Assessed</span></div>
+      <div class="kpi"><b>${m.compIds.length}</b><span>Competencies Tracked</span></div>
+      <div class="kpi"><b style="color:${m.totalGaps?'var(--gold-deep)':'var(--ok)'}">${m.totalGaps}</b><span>Total Gaps</span></div>
+      <div class="kpi"><b style="color:${m.critical?'#B03A2E':'var(--ok)'}">${m.critical}</b><span>Critical Gaps</span></div>`;
+
+    if(!m.compIds.length){ host.innerHTML='<p class="empty-note">Add role standards above to build the matrix.</p>'; return; }
+    const head=m.compIds.map(id=>`<th class="rot" title="${esc((compById(id)||{}).name||id)}">${esc(((compById(id)||{}).name||id).slice(0,22))}</th>`).join('');
+    const rows=m.rows.map((r,ri)=>`<tr>
+      <td class="nm">${esc(r.emp.name)}<div class="t-micro">${esc(r.emp.designation||'—')}</div></td>
+      ${r.cells.map(c=>c?`<td class="c sk ${c.status}" title="${esc(c.name)}: has ${c.have}, needs ${c.need}${c.assessedOn?' · assessed '+c.assessedOn:''}">${c.have}/${c.need}</td>`
+        :'<td class="c sk na">–</td>').join('')}
+      <td class="c"><button class="mini-btn sk-assess" data-emp="${esc(r.emp.empId)}">Assess</button></td></tr>`).join('');
+    host.innerHTML=`<div style="overflow-x:auto;"><table class="att-t sk-t">
+      <thead><tr><th class="nm">Employee</th>${head}<th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="feas-line" style="margin-top:10px;">
+        <span class="order-badge go">green</span> meets the standard ·
+        <span class="order-badge unk">amber</span> one level short ·
+        <span class="order-badge no">red</span> two or more short · – no standard set for that role</div>`;
+    host.querySelectorAll('.sk-assess').forEach(b=>b.addEventListener('click',()=>{
+      expandedAssess=b.dataset.emp; renderAssessPanel();
+    }));
+  }
+  function renderAssessPanel(){
+    const host=document.getElementById('emp-assess'); if(!host) return;
+    if(!expandedAssess){ host.innerHTML=''; return; }
+    const e=hrEmployees.find(x=>x.empId===expandedAssess);
+    if(!e){ host.innerHTML=''; return; }
+    const gaps=competencyGaps(e);
+    host.innerHTML=`<div class="qb" style="margin-top:16px;">
+      <h4>Assess — ${esc(e.name)} (${esc(e.designation||'no role set')})</h4>
+      ${gaps.length?`<table class="cs-t"><thead><tr><th>Competency</th><th class="r">Required</th>
+        <th style="width:190px">Actual Level</th><th>Assessed By</th><th>Date</th></tr></thead>
+        <tbody>${gaps.map(g=>`<tr><td>${esc(g.name)}<div class="t-micro">${esc(g.category)}</div></td>
+          <td class="r">${g.need}</td>
+          <td><select class="as-lvl" data-c="${esc(g.competencyId)}" style="width:100%;padding:6px;border:1px solid var(--line);border-radius:5px;font-size:var(--fs-micro);">
+            ${(data.competencyLevels||[]).map(l=>`<option value="${l.level}" ${g.have===l.level?'selected':''}>${l.level} — ${esc(l.label)}</option>`).join('')}</select></td>
+          <td><input class="as-by" data-c="${esc(g.competencyId)}" value="${esc(g.assessedBy||currentUser||'')}"></td>
+          <td><input type="date" class="as-on" data-c="${esc(g.competencyId)}" value="${esc(g.assessedOn||new Date().toISOString().slice(0,10))}"></td>
+        </tr>`).join('')}</tbody></table>
+        <button class="mini-btn gold" id="as-save" style="margin-top:12px;">Save Assessment</button>
+        <button class="mini-btn" id="as-close" style="margin-top:12px;">Close</button>`
+        :'<p class="field-hint">No role standard set for this designation — add one above first.</p>'}</div>`;
+
+    const save=document.getElementById('as-save');
+    if(save) save.addEventListener('click',async function(){
+      e.competencies=e.competencies||[];
+      host.querySelectorAll('.as-lvl').forEach(sel=>{
+        const cid=sel.dataset.c;
+        const by=host.querySelector(`.as-by[data-c="${CSS.escape(cid)}"]`).value;
+        const on=host.querySelector(`.as-on[data-c="${CSS.escape(cid)}"]`).value;
+        const ex=e.competencies.find(c=>c.competencyId===cid);
+        const rec={competencyId:cid,level:num(sel.value),assessedBy:by,assessedOn:on};
+        if(ex) Object.assign(ex,rec); else e.competencies.push(rec);
+      });
+      this.disabled=true; this.textContent='Saving…';
+      try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'employees',employee:e,
+        reason:'competency assessment recorded'})});
+        toast('Assessment saved'); renderSkillMatrix(); }
+      catch(err){ toast(err.message); }
+      this.disabled=false; this.textContent='Save Assessment';
+    });
+    const cl=document.getElementById('as-close');
+    if(cl) cl.addEventListener('click',()=>{ expandedAssess=null; renderAssessPanel(); });
+  }
+
+  /* ---------- Training UI (§17, §18, §19) ---------- */
+  let tniCache=[];
+  function refreshTrainDropdowns(){
+    const c=document.getElementById('ts-course'), e=document.getElementById('ts-emps');
+    if(c) c.innerHTML=(data.trainingCatalogue||[]).map(t=>`<option value="${esc(t.id)}">${esc(t.title)} (${t.hours}h)</option>`).join('');
+    if(e) e.innerHTML=hrEmployees.filter(x=>x.status!=='Exited')
+      .map(x=>`<option value="${esc(x.empId)}">${esc(x.empId)} — ${esc(x.name)}</option>`).join('');
+  }
+  function renderTNI(){
+    const host=document.getElementById('tni-list'); if(!host) return;
+    if(!tniCache.length){ host.innerHTML='<p class="field-hint">Press the button above to generate.</p>'; return; }
+    host.innerHTML=`<table class="cs-t"><thead><tr><th>Priority</th><th>Employee</th><th>Competency</th>
+      <th class="r">Has / Needs</th><th class="r">Also needed by</th><th>Suggested Course</th></tr></thead>
+      <tbody>${tniCache.slice(0,80).map(n=>`<tr>
+        <td><span class="order-badge ${n.priority==='High'?'no':n.priority==='Medium'?'unk':'go'}">${n.priority}</span></td>
+        <td>${esc(n.name)}<div class="t-micro">${esc(n.department||'')}</div></td>
+        <td>${esc(n.competency)}</td><td class="r">${n.have} / ${n.need}</td>
+        <td class="r">${n.peopleNeeding}</td>
+        <td class="t-micro">${esc(n.suggestedCourse)}</td></tr>`).join('')}</tbody></table>
+      <div class="feas-line" style="margin-top:8px;">${tniCache.length} need(s) identified.
+        Schedule the ones you accept below.</div>`;
+  }
+  function renderTrainSessions(){
+    const kpi=document.getElementById('train-kpi'), host=document.getElementById('train-sessions');
+    if(!host) return;
+    const sessions=hrTraining.filter(r=>r.kind==='session');
+    const due=effectivenessDue();
+    const pendingEff=sessions.filter(r=>{const d=r.data||r;return d.completedOn&&!d.effectivenessDone;});
+    if(kpi) kpi.innerHTML=`<div class="kpi"><b>${sessions.length}</b><span>Sessions</span></div>
+      <div class="kpi"><b>${sessions.filter(r=>(r.data||r).completedOn).length}</b><span>Completed</span></div>
+      <div class="kpi"><b style="color:${pendingEff.length?'var(--gold-deep)':'var(--ok)'}">${pendingEff.length}</b><span>Effectiveness Pending</span></div>
+      <div class="kpi"><b style="color:${due.length?'#B03A2E':'var(--ok)'}">${due.length}</b><span>Evaluation Overdue</span></div>`;
+
+    host.innerHTML=sessions.length?sessions.map((r,i)=>{
+      const d=r.data||r, st=trainingStatusOf(r);
+      const course=(data.trainingCatalogue||[]).find(t=>t.id===d.courseId);
+      return `<div class="rfq-card"><div class="list-item-head rfq-summary" style="cursor:default;">
+        <div><div class="rfq-ref">${esc(d.title||(course?course.title:'Training'))}</div>
+        <div class="rfq-when">${fmtDate(d.date)} · ${(d.participants||[]).length} participants · trainer ${esc(d.trainer||'—')}</div></div>
+        <span class="order-badge ${st.cls}">${st.label}</span></div>
+      <div class="rfq-body" style="display:block;">
+        <table class="cs-t"><thead><tr><th>Participant</th><th class="c">Attended</th>
+          <th class="c">Assessment %</th><th class="c">On-job OK</th></tr></thead>
+          <tbody>${(d.participants||[]).map((pp,pi)=>{
+            const emp=hrEmployees.find(x=>x.empId===pp.empId);
+            return `<tr><td>${esc(emp?emp.name:pp.empId)}</td>
+            <td class="c"><input type="checkbox" class="tp-att" data-i="${i}" data-pi="${pi}" ${pp.attended?'checked':''}></td>
+            <td class="c"><input class="tp-score num" data-i="${i}" data-pi="${pi}" value="${esc(pp.score||'')}" style="width:64px"></td>
+            <td class="c"><input type="checkbox" class="tp-job" data-i="${i}" data-pi="${pi}" ${pp.onJobOk?'checked':''}></td></tr>`;
+          }).join('')}</tbody></table>
+        <div class="cs-row four" style="margin-top:12px;">
+          <div><label>Completed On</label><input type="date" class="ts-in" data-i="${i}" data-k="completedOn" value="${esc(d.completedOn||'')}"></div>
+          <div><label>Effectiveness Method</label>
+            <select class="ts-in" data-i="${i}" data-k="method" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+              ${(data.effectivenessMethods||[]).map(mm=>`<option ${d.method===mm?'selected':''}>${esc(mm)}</option>`).join('')}</select></div>
+          <div><label>Evaluated On</label><input type="date" class="ts-in" data-i="${i}" data-k="evaluatedOn" value="${esc(d.evaluatedOn||'')}"></div>
+          <div><label>Verdict</label>
+            <select class="ts-eff" data-i="${i}" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+              <option value="" ${!d.effectivenessDone?'selected':''}>Not evaluated</option>
+              <option value="yes" ${d.effectivenessDone&&d.effective?'selected':''}>Effective</option>
+              <option value="no" ${d.effectivenessDone&&!d.effective?'selected':''}>Not effective — retrain</option>
+            </select></div>
+        </div>
+        <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+          <label>Evidence / remarks</label><input class="ts-in" data-i="${i}" data-k="remarks" value="${esc(d.remarks||'')}"></div></div>
+        <div class="rfq-actions" style="margin-top:12px;">
+          <button class="mini-btn gold ts-save" data-i="${i}">Save</button>
+          <button class="mini-btn green ts-apply" data-i="${i}" title="Raise each participant's recorded level for the competencies this course covers">Apply to Competency</button>
+          <button class="item-delete ts-del" data-i="${i}">Delete</button>
+        </div></div></div>`;
+    }).join(''):'<p class="empty-note">No training sessions yet.</p>';
+
+    const upd=(i,fn)=>{ const r=sessions[i]; const d=r.data||r; fn(d); r.data=d; };
+    host.querySelectorAll('.tp-att').forEach(cb=>cb.addEventListener('change',()=>
+      upd(+cb.dataset.i,d=>{d.participants[+cb.dataset.pi].attended=cb.checked;})));
+    host.querySelectorAll('.tp-job').forEach(cb=>cb.addEventListener('change',()=>
+      upd(+cb.dataset.i,d=>{d.participants[+cb.dataset.pi].onJobOk=cb.checked;})));
+    host.querySelectorAll('.tp-score').forEach(inp=>inp.addEventListener('input',()=>
+      upd(+inp.dataset.i,d=>{d.participants[+inp.dataset.pi].score=num(inp.value); d.assessmentDone=(d.participants||[]).some(x=>num(x.score)>0);})));
+    host.querySelectorAll('.ts-in').forEach(inp=>inp.addEventListener('input',()=>
+      upd(+inp.dataset.i,d=>{d[inp.dataset.k]=inp.value;})));
+    host.querySelectorAll('.ts-eff').forEach(sel=>sel.addEventListener('change',()=>
+      upd(+sel.dataset.i,d=>{d.effectivenessDone=!!sel.value; d.effective=(sel.value==='yes');})));
+
+    host.querySelectorAll('.ts-save').forEach(b=>b.addEventListener('click',async()=>{
+      const r=sessions[+b.dataset.i], d=r.data||r;
+      b.textContent='Saving…'; b.disabled=true;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'training',recId:r.rec_id,patch:d,
+        reason:'training record updated'})}); await loadTraining(); toast('Saved'); }
+      catch(e){ toast(e.message); b.textContent='Save'; b.disabled=false; }
+    }));
+    host.querySelectorAll('.ts-apply').forEach(b=>b.addEventListener('click',async()=>{
+      const r=sessions[+b.dataset.i], d=r.data||r;
+      if(!d.effectivenessDone||!d.effective){ toast('Only an effective, evaluated session can raise competency.'); return; }
+      const course=(data.trainingCatalogue||[]).find(t=>t.id===d.courseId);
+      if(!course||!(course.competencyIds||[]).length){ toast('This course is not mapped to any competency.'); return; }
+      let updated=0;
+      for(const pp of (d.participants||[])){
+        if(!pp.attended||!pp.onJobOk) continue;
+        const e=hrEmployees.find(x=>x.empId===pp.empId); if(!e) continue;
+        e.competencies=e.competencies||[];
+        course.competencyIds.forEach(cid=>{
+          const req=requiredFor(e.designation).find(x=>x.competencyId===cid);
+          const target=req?num(req.requiredLevel):3;
+          const ex=e.competencies.find(c=>c.competencyId===cid);
+          const rec={competencyId:cid,level:Math.max(ex?num(ex.level):0,target),
+            assessedBy:(d.trainer||currentUser||'training'),assessedOn:d.evaluatedOn||d.completedOn};
+          if(ex) Object.assign(ex,rec); else e.competencies.push(rec);
+        });
+        try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'employees',employee:e,
+          reason:'competency raised by effective training '+r.rec_id})}); updated++; }catch(err){}
+      }
+      toast(updated+' employee record(s) updated'); renderSkillMatrix();
+    }));
+    host.querySelectorAll('.ts-del').forEach(b=>b.addEventListener('click',async()=>{
+      const r=sessions[+b.dataset.i];
+      if(!confirm('Delete this training record?')) return;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'training',recId:r.rec_id,remove:true,reason:'deleted'})});
+        await loadTraining(); }catch(e){ toast(e.message); }
+    }));
+  }
+  async function loadTraining(){
+    try{ const j=await api('/api/hr?what=training'); hrTraining=j.records||[]; }catch(e){ hrTraining=[]; }
+    renderTrainSessions();
+  }
+
   /* ---------- Attendance sheet UI ---------- */
   let attDraft={};
   function renderAttendanceGrid(){
@@ -3273,6 +3588,97 @@ Reply with ONLY this JSON, no commentary or code fences:
           <td>${esc(a.who)}</td><td>${esc(a.what)}</td><td>${esc(a.ref)}</td>
           <td class="t-micro">${esc(a.reason||'')}</td></tr>`).join('')||'<tr><td colspan="5" class="t-micro">No history yet.</td></tr>'}</tbody></table>`;
     }catch(e){ host.innerHTML='<p class="dx-err">'+esc(e.message)+'</p>'; }
+  }
+
+  /* ================= COMPETENCY, SKILL MATRIX & TNI (§15–§17) =================
+     Required level comes from the role standard you define. Actual level is
+     assessed by a person and recorded with their name and the date — this is
+     the evidence an IATF auditor asks for. Gaps drive training need
+     automatically; nothing is inferred or invented. */
+  let hrTraining=[];
+  const compById=id=>(data.competencies||[]).find(c=>c.id===id)||null;
+  const levelLabel=n=>((data.competencyLevels||[]).find(l=>l.level===num(n))||{}).label||('Level '+n);
+
+  /* what the role demands */
+  function requiredFor(designation){
+    return (data.roleCompetency||[]).filter(r=>
+      String(r.role||'').toLowerCase()===String(designation||'').toLowerCase());
+  }
+  /* what the person actually has */
+  function actualLevel(emp,competencyId){
+    const rec=(emp.competencies||[]).find(c=>c.competencyId===competencyId);
+    return rec?num(rec.level):0;
+  }
+  function assessmentOf(emp,competencyId){
+    return (emp.competencies||[]).find(c=>c.competencyId===competencyId)||null;
+  }
+
+  /* one employee's gap picture */
+  function competencyGaps(emp){
+    return requiredFor(emp.designation).map(r=>{
+      const have=actualLevel(emp,r.competencyId), need=num(r.requiredLevel);
+      const a=assessmentOf(emp,r.competencyId);
+      return {competencyId:r.competencyId, name:(compById(r.competencyId)||{}).name||r.competencyId,
+        category:(compById(r.competencyId)||{}).category||'', need, have, gap:Math.max(0,need-have),
+        status: have>=need?'green':(have>=need-1?'amber':'red'),
+        assessedOn:a?a.assessedOn:'', assessedBy:a?a.assessedBy:''};
+    });
+  }
+
+  /* §16 the matrix itself */
+  function skillMatrix(filterDept){
+    const emps=hrEmployees.filter(e=>e.status!=='Exited'&&(!filterDept||e.department===filterDept));
+    const compIds=[...new Set((data.roleCompetency||[]).map(r=>r.competencyId))];
+    const rows=emps.map(e=>{
+      const gaps=competencyGaps(e);
+      const byId={}; gaps.forEach(g=>byId[g.competencyId]=g);
+      return {emp:e, cells:compIds.map(id=>byId[id]||null),
+        gapCount:gaps.filter(g=>g.gap>0).length,
+        criticalCount:gaps.filter(g=>g.status==='red').length};
+    });
+    return {compIds,rows,
+      totalGaps:rows.reduce((t,r)=>t+r.gapCount,0),
+      critical:rows.reduce((t,r)=>t+r.criticalCount,0)};
+  }
+
+  /* §17 training need, derived straight from the gaps */
+  function generateTNI(){
+    const needs=[];
+    hrEmployees.filter(e=>e.status!=='Exited').forEach(e=>{
+      competencyGaps(e).filter(g=>g.gap>0).forEach(g=>{
+        const course=(data.trainingCatalogue||[]).find(t=>(t.competencyIds||[]).includes(g.competencyId));
+        needs.push({empId:e.empId,name:e.name,department:e.department,designation:e.designation,
+          competencyId:g.competencyId,competency:g.name,category:g.category,
+          have:g.have,need:g.need,gap:g.gap,
+          priority: g.status==='red'?'High':(g.gap>=1?'Medium':'Low'),
+          source:'Competency gap',
+          suggestedCourse: course?course.title:'(no course mapped to this competency)',
+          courseId: course?course.id:''});
+      });
+    });
+    // most severe first, then by how many people need it
+    const counts={}; needs.forEach(n=>counts[n.competencyId]=(counts[n.competencyId]||0)+1);
+    needs.forEach(n=>n.peopleNeeding=counts[n.competencyId]);
+    const order={High:0,Medium:1,Low:2};
+    needs.sort((a,b)=>(order[a.priority]-order[b.priority])||(b.peopleNeeding-a.peopleNeeding));
+    return needs;
+  }
+
+  /* §19 effectiveness is only "done" when it has been evaluated after the event */
+  function trainingStatusOf(rec){
+    const d=rec.data||rec;
+    if(!d.completedOn) return {label:'Scheduled',cls:'unk'};
+    if(!d.assessmentDone) return {label:'Assessment pending',cls:'no'};
+    if(!d.effectivenessDone) return {label:'Effectiveness pending',cls:'no'};
+    return {label: d.effective?'Effective':'Not effective', cls: d.effective?'go':'no'};
+  }
+  function effectivenessDue(){
+    return hrTraining.filter(r=>{
+      const d=r.data||r;
+      if(r.kind!=='session'||!d.completedOn||d.effectivenessDone) return false;
+      const due=new Date(d.completedOn); due.setDate(due.getDate()+num(d.evaluateAfterDays||30));
+      return new Date()>=due;
+    });
   }
 
   /* ================= ATTENDANCE & LEAVE ENGINE (§9, §10) =================
@@ -6265,6 +6671,8 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     if(tab.dataset.hrtab==='audit') renderAudit();
     if(tab.dataset.hrtab==='statutory') renderStatutory();
     if(tab.dataset.hrtab==='leave'){ refreshLeaveDropdowns(); loadLeave(); }
+    if(tab.dataset.hrtab==='skills'){ refreshCompDropdowns(); renderRoleStandards(); renderSkillMatrix(); }
+    if(tab.dataset.hrtab==='training'){ refreshTrainDropdowns(); loadTraining(); }
     if(tab.dataset.hrtab==='attendance'){
       const pe=document.getElementById('at-period');
       if(!pe.value) pe.value=new Date().toISOString().slice(0,7);
@@ -6291,6 +6699,41 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     toast('Marked present — adjust exceptions, then Save');
   });
   document.getElementById('lv-emp').addEventListener('change',renderLeave);
+  document.getElementById('sm-dept').addEventListener('change',renderSkillMatrix);
+  document.getElementById('rc-add').addEventListener('click',()=>{
+    const role=document.getElementById('rc-role').value.trim();
+    const competencyId=document.getElementById('rc-comp').value;
+    const requiredLevel=num(document.getElementById('rc-level').value);
+    if(!role){ toast('Enter the role this standard applies to'); return; }
+    data.roleCompetency=data.roleCompetency||[];
+    const ex=data.roleCompetency.find(r=>r.role.toLowerCase()===role.toLowerCase()&&r.competencyId===competencyId);
+    if(ex) ex.requiredLevel=requiredLevel;
+    else data.roleCompetency.push({role,competencyId,requiredLevel});
+    markDirty(); renderRoleStandards(); renderSkillMatrix();
+    toast('Standard set — publish changes to keep it');
+  });
+  document.getElementById('tni-run').addEventListener('click',function(){
+    tniCache=generateTNI(); renderTNI();
+    toast(tniCache.length?tniCache.length+' training needs found':'No gaps — nothing to train');
+  });
+  document.getElementById('ts-create').addEventListener('click',async function(){
+    const courseId=document.getElementById('ts-course').value;
+    const course=(data.trainingCatalogue||[]).find(t=>t.id===courseId);
+    const picked=[...document.getElementById('ts-emps').selectedOptions].map(o=>o.value);
+    const msg=document.getElementById('ts-msg');
+    if(!course||!picked.length){ msg.textContent='Choose a course and at least one participant.'; msg.style.color='#B03A2E'; return; }
+    const rec={recId:'TR-'+Date.now().toString(36).toUpperCase(),kind:'session',
+      courseId,title:course.title,trainer:document.getElementById('ts-trainer').value.trim(),
+      date:document.getElementById('ts-date').value,
+      evaluateAfterDays:num(document.getElementById('ts-eval').value)||30,
+      participants:picked.map(id=>({empId:id,attended:false,score:0,onJobOk:false})),
+      completedOn:'',assessmentDone:false,effectivenessDone:false,effective:false,status:'Scheduled'};
+    this.disabled=true; this.textContent='Scheduling…';
+    try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'training',record:rec,reason:'session scheduled'})});
+      await loadTraining(); msg.textContent='Scheduled. Mark attendance and scores after the session.'; msg.style.color='var(--ok)'; }
+    catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false; this.textContent='Schedule Session';
+  });
   document.getElementById('lv-apply').addEventListener('click',async function(){
     const empId=document.getElementById('lv-emp').value;
     const type=document.getElementById('lv-type').value;

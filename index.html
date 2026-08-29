@@ -329,6 +329,10 @@
   #ppc-page{position:fixed;inset:0;z-index:150;background:var(--paper);overflow-y:auto;display:none;}
   #staff-page.open{display:block;}
   #ppc-page.open{display:block;}
+  #hr-page{position:fixed;inset:0;z-index:150;background:var(--paper);overflow-y:auto;display:none;}
+  #hr-page.open{display:block;}
+  .hr-tab{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;padding:12px 18px;color:var(--ink-soft);border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;}
+  .hr-tab.active{color:var(--navy);border-bottom-color:var(--gold);background:var(--white);}
   .staff-bar{position:sticky;top:0;z-index:5;background:var(--navy);color:#fff;padding:0 var(--gutter);height:var(--bar-h);display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:3px solid var(--gold);}
   .staff-bar h2{color:#fff;font-size:calc(var(--font-base)*1.15);}
   .staff-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;}
@@ -760,45 +764,13 @@
       <button class="login-cancel" id="code-cancel">Back to sign in</button>
     </div>
     <div class="login-body" id="forgot-panel">
-
-      <!-- step 1: who are you -->
-      <div id="fp-step1">
-        <div class="field-hint" style="margin-top:0;margin-bottom:14px;">We will email a 6-digit code to the address saved on your account.</div>
-        <label>Username or Email</label>
-        <input type="text" id="fp-who" autocomplete="username">
-        <button class="btn btn-primary" id="fp-send">Email me a code</button>
-        <div class="field-hint" style="margin-top:14px;">
-          No email on your account? <a href="#" id="fp-use-recovery" style="color:var(--gold-light)">Use the recovery code instead</a>
-        </div>
-      </div>
-
-      <!-- step 2: code and new password -->
-      <div id="fp-step2" style="display:none;">
-        <div class="field-hint" style="margin-top:0;margin-bottom:14px;" id="fp-note">Enter the code we sent you.</div>
-        <label>6-Digit Code</label>
-        <input type="text" id="fp-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="text-align:center;letter-spacing:.4em;font-size:20px;">
-        <label>New Password</label>
-        <div class="pw-wrap"><input type="password" id="fp-pass" autocomplete="new-password"><button type="button" class="pw-eye" data-for="fp-pass"></button></div>
-        <button class="btn btn-primary" id="fp-verify">Set Password &amp; Sign In</button>
-        <div class="field-hint" style="margin-top:12px;">
-          <a href="#" id="fp-resend" style="color:var(--gold-light)">Send the code again</a>
-        </div>
-      </div>
-
-      <!-- fallback: recovery code -->
-      <div id="fp-step3" style="display:none;">
-        <div class="field-hint" style="margin-top:0;margin-bottom:14px;">Enter the recovery code set when the site was deployed (the <code>ADMIN_RECOVERY_CODE</code> value in Vercel), then choose new sign-in details.</div>
-        <label>Recovery Code</label>
-        <div class="pw-wrap"><input type="password" id="forgot-code" autocomplete="off"><button type="button" class="pw-eye" data-for="forgot-code"></button></div>
-        <label>New Username</label><input type="text" id="forgot-user" autocomplete="username">
-        <label>New Password</label>
-        <div class="pw-wrap"><input type="password" id="forgot-pass" autocomplete="new-password"><button type="button" class="pw-eye" data-for="forgot-pass"></button></div>
-        <button class="btn btn-primary" id="forgot-btn">Reset &amp; Sign In</button>
-        <div class="field-hint" style="margin-top:12px;">
-          <a href="#" id="fp-use-email" style="color:var(--gold-light)">Email me a code instead</a>
-        </div>
-      </div>
-
+      <div class="field-hint" style="margin-top:0;margin-bottom:14px;">Enter the recovery code your developer set up when the site was deployed (the <code>ADMIN_RECOVERY_CODE</code> value in Vercel), then choose new sign-in details.</div>
+      <label>Recovery Code</label>
+      <div class="pw-wrap"><input type="password" id="forgot-code" autocomplete="off"><button type="button" class="pw-eye" data-for="forgot-code"></button></div>
+      <label>New Username</label><input type="text" id="forgot-user" autocomplete="username">
+      <label>New Password</label>
+      <div class="pw-wrap"><input type="password" id="forgot-pass" autocomplete="new-password"><button type="button" class="pw-eye" data-for="forgot-pass"></button></div>
+      <button class="btn btn-primary" id="forgot-btn">Reset &amp; Sign In</button>
       <div class="login-err" id="forgot-err"></div>
       <button class="login-cancel" id="forgot-cancel">Back to sign in</button>
     </div>
@@ -859,6 +831,80 @@
     </div>
     <div id="ppc-load" style="margin-bottom:22px;"></div>
     <div id="ppc-list"></div>
+  </div>
+</div>
+
+<div id="hr-page">
+  <div class="staff-bar">
+    <div><h2>HR &amp; People</h2><span class="t-micro" id="hr-brand" style="color:var(--gold-light)">IRONVALE</span></div>
+    <div class="staff-actions">
+      <button id="hr-refresh">Refresh</button>
+      <button id="hr-admin">Site Admin</button>
+      <button id="hr-back">View Website</button>
+      <button class="gold" id="hr-logout">Sign Out</button>
+    </div>
+  </div>
+  <div class="staff-body">
+    <div class="admin-tabs" style="margin-bottom:20px;border-radius:var(--radius-sm);">
+      <button class="hr-tab active" data-hrtab="people">Employees</button>
+      <button class="hr-tab" data-hrtab="payroll">Payroll</button>
+      <button class="hr-tab" data-hrtab="statutory">Statutory Settings</button>
+      <button class="hr-tab" data-hrtab="audit">Audit Trail</button>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="people">
+      <div class="kpi-row" id="hr-kpi-row"></div>
+      <div class="qb" style="margin-bottom:18px;">
+        <h4>Add Employee</h4>
+        <div class="cs-row four">
+          <div><label>Employee ID</label><input type="text" id="ne-empId"></div>
+          <div><label>Name</label><input type="text" id="ne-name"></div>
+          <div><label>Department</label><input type="text" id="ne-department"></div>
+          <div><label>Designation</label><input type="text" id="ne-designation"></div>
+        </div>
+        <div class="cs-row four" style="margin-top:10px;">
+          <div><label>Date of Joining</label><input type="date" id="ne-doj"></div>
+          <div><label>Annual CTC</label><input type="text" id="ne-ctc" class="num"></div>
+          <div><label>Grade</label><input type="text" id="ne-grade"></div>
+          <div><label>Shift</label><input type="text" id="ne-shift" value="General"></div>
+        </div>
+        <button class="mini-btn gold" id="ne-create" style="margin-top:12px;">Add Employee</button>
+        <div class="field-hint" id="ne-msg" style="margin-top:8px;"></div>
+      </div>
+      <div id="hr-emp-list"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="payroll" style="display:none;">
+      <div class="warn-box" style="margin-bottom:16px;"><b>Every pay run is a draft until you approve it.</b>
+        Check the exception list before approving. Once approved a run is locked and cannot be edited or
+        deleted — raise a correction run instead. Confirm the figures on the Statutory Settings tab are
+        current before the first run of any financial year.</div>
+      <div class="qb" style="margin-bottom:18px;">
+        <h4>New Pay Run</h4>
+        <div class="cs-row four">
+          <div><label>Period</label><input type="month" id="pr-period"></div>
+          <div><label>Days in Period</label><input type="text" id="pr-days" class="num" value="30"></div>
+          <div style="grid-column:span 2;align-self:end;">
+            <button class="mini-btn gold" id="pr-create">Create Draft Run</button></div>
+        </div>
+        <div class="field-hint" id="pr-msg" style="margin-top:8px;"></div>
+      </div>
+      <div id="hr-payrun-list"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="statutory" style="display:none;">
+      <div class="warn-box" style="margin-bottom:16px;"><b>These figures are not legal advice.</b>
+        They are starting placeholders. Every rate below must be checked against current law and your
+        state's rules by your CA or payroll advisor before any payroll is approved. Record who checked
+        them and when, so the review is evidenced rather than assumed.</div>
+      <div id="hr-statutory"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="audit" style="display:none;">
+      <div class="info-box">Every employee change and every payroll approval is recorded here with who,
+        what and when. This history cannot be edited from the application.</div>
+      <div id="hr-audit-list"></div>
+    </div>
   </div>
 </div>
 
@@ -1636,6 +1682,7 @@
       <div class="toggle-row"><span>RFQ Tracking</span><div class="switch on" data-toggle="track"></div></div>
       <div class="toggle-row"><span>“RFQ Pipeline” button in menu</span><div class="switch on" id="pipebtn-switch"></div></div>
       <div class="toggle-row"><span>“Production Planning” button in menu</span><div class="switch on" id="ppcbtn-switch"></div></div>
+      <div class="toggle-row"><span>“HR &amp; People” button in menu</span><div class="switch on" id="hrbtn-switch"></div></div>
       <div class="field" style="margin-top:30px;"><label>Your Own Sections</label></div>
       <div id="list-custom"></div>
       <button type="button" class="add-btn solid" id="add-custom">+ Create New Section</button>
@@ -1657,7 +1704,7 @@
   const DEFAULTS=Object.assign({
     brandName:"IRONVALE",brandSuffix:"MANUFACTURING",
     sky:"#3FA9E0",navy:"#0B2A5B",gold:"#C2932E",glow:"#69C2ED",chatA:"#7B3FF2",chatB:"#4B1FA8",
-    showBrandText:true,logoGlow:true,logoDataUrl:"",heroBannerDataUrl:"",showPipeBtn:true,showPPCBtn:true,
+    showBrandText:true,logoGlow:true,logoDataUrl:"",heroBannerDataUrl:"",showPipeBtn:true,showPPCBtn:true,showHRBtn:true,
     heroVisual:"orb",heroVideoDataUrl:"",heroVideoUrl:"",heroSignatureImg:"",heroVideoCaption:"Watch our film",
     social:{youtube:"",instagram:"",facebook:"",linkedin:"",twitter:"",whatsapp:""},
     mapEmbed:"",mapLink:"",showMap:true,
@@ -1695,6 +1742,30 @@
     ],
     /* ---- PPC: Part Master, each with its own BOM and Routing ---- */
     parts:[],
+
+    /* ---- HR: statutory rules. EVERY rate is editable with an effective date.
+       Nothing here is a legal interpretation baked into code — the figures below
+       are only starting placeholders and MUST be checked against current law and
+       your own CA's advice before any payroll is approved. ---- */
+    statutory:{
+      effectiveFrom:"2026-04-01",
+      lastReviewedBy:"", lastReviewedOn:"",
+      pf:{enabled:true, employeePct:12, employerPct:12, wageCeiling:15000, applyCeiling:true,
+          epsPct:8.33, epsCeiling:15000, edliPct:0.5, adminPct:0.5, note:"EPF & MP Act"},
+      esi:{enabled:true, employeePct:0.75, employerPct:3.25, grossLimit:21000, note:"ESI Act"},
+      pt:{enabled:true, state:"Karnataka",
+          slabs:[{upTo:24999, amount:0},{upTo:999999999, amount:200}], note:"State professional tax"},
+      tds:{enabled:true, mode:"manual", note:"Per-employee monthly figure from your CA or payroll advisor"},
+      lwf:{enabled:false, employee:0, employer:0, note:"Labour Welfare Fund, where applicable"},
+      ot:{multiplier:2, basisComponents:"basic+da", note:"Factories Act overtime multiplier"},
+      gratuity:{accrualPct:4.81, note:"Provision only — payable per Gratuity Act on exit"},
+      bonus:{accrualPct:8.33, wageCeiling:21000, note:"Provision only — Payment of Bonus Act"}
+    },
+    salaryStructure:{
+      /* percentages of monthly CTC used when creating a new employee's structure */
+      basicPct:50, daPct:0, hraPct:20, conveyance:1600, special:0,
+      note:"Starting template only — each employee's structure can be edited individually."
+    },
 
     /* ---- COMPANY PROFILE (drives every generated document) ---- */
     company:{
@@ -1861,6 +1932,8 @@
         data.labourGrades=j.data.labourGrades||DEFAULTS.labourGrades;
         data.materials=j.data.materials||DEFAULTS.materials;
         data.parts=j.data.parts||DEFAULTS.parts;
+        data.statutory=Object.assign({},DEFAULTS.statutory,j.data.statutory||{});
+        data.salaryStructure=Object.assign({},DEFAULTS.salaryStructure,j.data.salaryStructure||{});
         data.sections=Object.assign({},DEFAULTS.sections,j.data.sections||{});
       }
       if(j.updatedAt) setText('content-stamp','Content updated '+new Date(j.updatedAt).toLocaleDateString());
@@ -1934,6 +2007,7 @@
     let html=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('');
     if(data.showPipeBtn) html+=`<a href="#" class="pipeline" id="nav-pipeline">RFQ Pipeline</a>`;
     if(data.showPPCBtn) html+=`<a href="#" class="pipeline" id="nav-ppc">Production Planning</a>`;
+    if(data.showHRBtn) html+=`<a href="#" class="pipeline" id="nav-hr">HR &amp; People</a>`;
     document.getElementById('main-nav').innerHTML=html;
     document.getElementById('foot-links').innerHTML=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('')
       +`<a href="#" id="foot-pipeline">RFQ Pipeline</a><a href="#" id="foot-ppc">Production Planning</a>`;
@@ -1945,6 +2019,8 @@
     if(nq) nq.addEventListener('click',e=>{e.preventDefault();requestLogin('ppc');});
     const fq=document.getElementById('foot-ppc');
     if(fq) fq.addEventListener('click',e=>{e.preventDefault();requestLogin('ppc');});
+    const nh=document.getElementById('nav-hr');
+    if(nh) nh.addEventListener('click',e=>{e.preventDefault();requestLogin('hr');});
   }
   function renderCustomSections(){
     document.getElementById('custom-sections').innerHTML=data.customSections.map(s=>{
@@ -2673,6 +2749,533 @@ Reply with ONLY this JSON, no commentary or code fences:
   }
 
   /* ---- the planning calculation itself: pure arithmetic on your own data ---- */
+  function openPayslipsPdf(r){
+    const run=r.data||r, t=runTotals(run), co=CO();
+    const w=window.open('','_blank');
+    if(!w){ toast('Allow pop-ups for this site.'); return; }
+    const logo=documentLogo();
+    const slips=t.slips.map(sl=>`
+      <div class="slip">
+        <div class="sh">${logo?`<img src="${logo}">`:''}
+          <div><div class="co">${esc(co.legalName||co.displayName||data.brandName)}</div>
+          <div class="ad">${esc(companyAddressLines().join(', '))}</div></div>
+          <div class="pd">PAYSLIP<br><b>${esc(run.period)}</b></div></div>
+        <table class="meta"><tr><td><b>${esc(sl.name)}</b> (${esc(sl.empId)})</td>
+          <td>${esc(sl.department||'')}</td>
+          <td>Paid days ${sl.payableDays}/${sl.totalDays}${sl.lopDays?` · LOP ${sl.lopDays}`:''}</td></tr></table>
+        <table class="amt"><thead><tr><th>Earnings</th><th class="r">Amount</th><th>Deductions</th><th class="r">Amount</th></tr></thead>
+          <tbody>
+          <tr><td>Basic</td><td class="r">${sl.earnings.basic}</td><td>Provident Fund</td><td class="r">${sl.deductions.pf}</td></tr>
+          <tr><td>DA</td><td class="r">${sl.earnings.da}</td><td>ESI</td><td class="r">${sl.deductions.esi}</td></tr>
+          <tr><td>HRA</td><td class="r">${sl.earnings.hra}</td><td>Professional Tax</td><td class="r">${sl.deductions.pt}</td></tr>
+          <tr><td>Conveyance</td><td class="r">${sl.earnings.conveyance}</td><td>TDS</td><td class="r">${sl.deductions.tds}</td></tr>
+          <tr><td>Special Allowance</td><td class="r">${sl.earnings.special}</td><td>Other</td><td class="r">${sl.deductions.other}</td></tr>
+          <tr><td>Overtime${sl.otHours?` (${sl.otHours} hrs)`:''}</td><td class="r">${sl.earnings.ot}</td><td></td><td></td></tr>
+          <tr><td>Incentive</td><td class="r">${sl.earnings.incentive}</td><td></td><td></td></tr>
+          <tr class="tot"><td><b>Gross Earnings</b></td><td class="r"><b>${sl.gross}</b></td>
+            <td><b>Total Deductions</b></td><td class="r"><b>${sl.totalDeductions}</b></td></tr></tbody></table>
+        <div class="net">NET PAY &nbsp; ₹${sl.net.toLocaleString()}</div>
+        <div class="foot">Employer contributions (not deducted from you): PF ${sl.employer.pf} · EPS ${sl.employer.eps}
+          · EDLI ${sl.employer.edli} · ESI ${sl.employer.esi}<br>
+          Statutory rates effective from ${esc(sl.rulesEffectiveFrom||'not recorded')}.
+          Computer-generated payslip — no signature required.</div>
+      </div>`).join('');
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Payslips ${esc(run.period)}</title>
+    <style>@page{size:A4;margin:10mm;} *{box-sizing:border-box;}
+    body{font-family:Arial,sans-serif;font-size:9pt;color:#12233f;margin:0;}
+    .slip{border:1pt solid #ccd6e5;border-radius:3px;padding:12px;margin-bottom:12px;page-break-inside:avoid;}
+    .sh{display:flex;gap:12px;align-items:center;border-bottom:1.5pt solid #0B2A5B;padding-bottom:8px;}
+    .sh img{max-height:40px;max-width:110px;object-fit:contain;}
+    .co{font-size:12pt;font-weight:800;color:#0B2A5B;} .ad{font-size:7.5pt;color:#41567E;}
+    .pd{margin-left:auto;text-align:right;font-size:8pt;color:#8E6A19;letter-spacing:1pt;}
+    table{width:100%;border-collapse:collapse;} .meta td{padding:6px 4px;font-size:8.5pt;border-bottom:.6pt solid #e2e9f2;}
+    .amt{margin-top:8px;} .amt th{background:#0B2A5B;color:#fff;font-size:7.5pt;text-align:left;padding:5px;text-transform:uppercase;}
+    .amt td{padding:4px 5px;border-bottom:.6pt solid #eef2f7;} .r{text-align:right;}
+    .tot td{border-top:1pt solid #b9c6d8;background:#f4f7fb;}
+    .net{margin-top:8px;background:#0B2A5B;color:#fff;padding:8px 12px;border-radius:3px;font-size:11pt;font-weight:800;text-align:right;}
+    .foot{margin-top:8px;font-size:7pt;color:#8894ab;line-height:1.5;}
+    .noprint{text-align:center;padding:14px;background:#0B2A5B;color:#fff;}
+    .noprint button{background:#E0B44E;color:#0B2A5B;border:none;padding:10px 24px;border-radius:100px;font-weight:700;cursor:pointer;margin:0 4px;}
+    @media print{.noprint{display:none;}}</style></head><body>
+    <div class="noprint"><button onclick="window.print()">Save as PDF / Print</button>
+    <button onclick="window.close()" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);">Close</button>
+    <div style="font-size:11px;opacity:.85;margin-top:9px;">In the print dialog choose <b>Save as PDF</b> and untick <b>Headers and footers</b>.</div></div>
+    ${slips}</body></html>`);
+    w.document.close();
+  }
+
+  /* ---------- Payroll runs ---------- */
+  function buildDraftRun(period,totalDays){
+    const active=hrEmployees.filter(e=>e.status!=='Exited');
+    const lines=active.map(e=>({
+      empId:e.empId, name:e.name, department:e.department,
+      payableDays:totalDays, totalDays, otHours:0, incentive:0, advance:0
+    }));
+    return {runId:'PR-'+period.replace('-','')+'-'+Date.now().toString(36).slice(-4).toUpperCase(),
+      period, totalDays, status:'Draft', lines, createdAt:new Date().toISOString(),
+      rulesEffectiveFrom:(ST().effectiveFrom||''), rulesReviewedBy:(ST().lastReviewedBy||'')};
+  }
+  function runTotals(run){
+    const slips=(run.lines||[]).map(l=>{
+      const emp=hrEmployees.find(e=>e.empId===l.empId);
+      return emp?calcPayslip(emp,l):null;
+    }).filter(Boolean);
+    return {slips,
+      gross:slips.reduce((t,s)=>t+s.gross,0),
+      deductions:slips.reduce((t,s)=>t+s.totalDeductions,0),
+      net:slips.reduce((t,s)=>t+s.net,0),
+      ctcCost:slips.reduce((t,s)=>t+s.ctcCost,0),
+      flags:slips.filter(s=>s.flags.length)};
+  }
+
+  function renderPayruns(){
+    const host=document.getElementById('hr-payrun-list'); if(!host) return;
+    if(!hrPayruns.length){ host.innerHTML='<p class="empty-note">No pay runs yet.</p>'; return; }
+
+    host.innerHTML=hrPayruns.map((r,i)=>{
+      const run=r.data||r; const open=expandedRun===r.run_id;
+      const t=runTotals(run);
+      const locked=(r.status==='Approved');
+      const badge=locked?'go':(r.status==='Reviewed'?'unk':'no');
+
+      const rows=t.slips.map((sl,si)=>`<tr>
+        <td>${esc(sl.empId)}</td><td>${esc(sl.name)}</td>
+        <td><input class="pl-in num" data-i="${i}" data-si="${si}" data-k="payableDays" value="${sl.payableDays}" ${locked?'disabled':''}></td>
+        <td><input class="pl-in num" data-i="${i}" data-si="${si}" data-k="otHours" value="${sl.otHours}" ${locked?'disabled':''}></td>
+        <td class="r">${rupee(sl.gross)}</td>
+        <td class="r">${rupee(sl.deductions.pf)}</td><td class="r">${rupee(sl.deductions.esi)}</td>
+        <td class="r">${rupee(sl.deductions.pt)}</td><td class="r">${rupee(sl.deductions.tds)}</td>
+        <td class="r"><b>${rupee(sl.net)}</b></td>
+        <td>${sl.flags.length?`<span class="order-badge no" title="${esc(sl.flags.join('; '))}">${sl.flags.length}</span>`:''}</td></tr>`).join('');
+
+      return `<div class="rfq-card ${open?'open':''}">
+        <div class="list-item-head rfq-summary" data-toggle-run="${esc(r.run_id)}">
+          <div><div class="rfq-ref">${esc(r.run_id)} — ${esc(run.period)}</div>
+          <div class="rfq-when">${t.slips.length} employees · Net ${rupee(t.net)} · Employer cost ${rupee(t.ctcCost)}</div></div>
+          <div class="rfq-summary-right"><span class="order-badge ${badge}">${esc(r.status)}</span>
+          <span class="rfq-chevron">${open?'▾':'▸'}</span></div></div>
+        <div class="rfq-body" style="display:${open?'block':'none'};">
+          ${locked?`<div class="feas-banner go"><div class="feas-title">🔒 APPROVED AND LOCKED</div>
+            <div class="feas-line">This run cannot be edited or deleted. To correct it, create a new run for the same period.</div></div>`:''}
+          ${t.flags.length?`<div class="dx-missing"><b>${t.flags.length} employee(s) have exceptions — review before approving:</b>
+            <ul>${t.flags.slice(0,10).map(f=>`<li><b>${esc(f.name)}</b>: ${esc(f.flags.join('; '))}</li>`).join('')}</ul></div>`:''}
+          <div class="feas-line" style="margin:10px 0;">Statutory rules effective from
+            <b>${esc(run.rulesEffectiveFrom||'not recorded')}</b>${run.rulesReviewedBy?`, last reviewed by ${esc(run.rulesReviewedBy)}`:', <span style="color:#B03A2E">no reviewer recorded</span>'}.</div>
+          <table class="cs-t"><thead><tr><th>ID</th><th>Name</th><th style="width:62px">Days</th><th style="width:56px">OT hrs</th>
+            <th class="r">Gross</th><th class="r">PF</th><th class="r">ESI</th><th class="r">PT</th><th class="r">TDS</th>
+            <th class="r">Net</th><th style="width:34px"></th></tr></thead><tbody>${rows}</tbody></table>
+          <div class="cs-break" style="margin-top:12px;">
+            <div><span>Total gross</span><span>${rupee(t.gross)}</span></div>
+            <div><span>Total deductions</span><span>${rupee(t.deductions)}</span></div>
+            <div class="grand"><span>Net payable</span><span>${rupee(t.net)}</span></div>
+            <div class="minp"><span>Total employer cost (incl. contributions)</span><span>${rupee(t.ctcCost)}</span></div>
+          </div>
+          <div class="rfq-actions" style="margin-top:14px;">
+            ${!locked?`<button class="mini-btn pr-save" data-i="${i}">Save Draft</button>
+              <button class="mini-btn green pr-approve" data-i="${i}">Review &amp; Approve</button>
+              <button class="item-delete pr-del" data-i="${i}">Delete Draft</button>`:''}
+            <button class="mini-btn gold pr-print" data-i="${i}">Payslips PDF</button>
+          </div>
+        </div></div>`;
+    }).join('');
+
+    host.querySelectorAll('[data-toggle-run]').forEach(row=>row.addEventListener('click',()=>{
+      const id=row.dataset.toggleRun; expandedRun=(expandedRun===id)?null:id; renderPayruns();
+    }));
+    host.querySelectorAll('.pl-in').forEach(inp=>inp.addEventListener('input',()=>{
+      const r=hrPayruns[+inp.dataset.i]; const run=r.data||r;
+      run.lines[+inp.dataset.si][inp.dataset.k]=num(inp.value);
+      clearTimeout(window.__plt); window.__plt=setTimeout(renderPayruns,600);
+    }));
+    host.querySelectorAll('.pr-save').forEach(b=>b.addEventListener('click',async()=>{
+      const r=hrPayruns[+b.dataset.i]; const run=r.data||r;
+      b.textContent='Saving…'; b.disabled=true;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'payruns',runId:r.run_id,patch:run,reason:'draft edited'})});
+        toast('Draft saved'); }catch(e){ toast(e.message); }
+      b.textContent='Save Draft'; b.disabled=false;
+    }));
+    host.querySelectorAll('.pr-approve').forEach(b=>b.addEventListener('click',async()=>{
+      const r=hrPayruns[+b.dataset.i]; const run=r.data||r; const t=runTotals(run);
+      if(t.flags.length && !confirm(t.flags.length+' employee(s) still have exceptions. Approve anyway?')) return;
+      const reason=prompt('Approving locks this pay run permanently.\nState who checked it and against what:');
+      if(!reason) return;
+      b.textContent='Approving…'; b.disabled=true;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'payruns',runId:r.run_id,patch:run,status:'Approved',reason})});
+        toast('Pay run approved and locked'); await loadHr(); }
+      catch(e){ toast(e.message); b.textContent='Review & Approve'; b.disabled=false; }
+    }));
+    host.querySelectorAll('.pr-del').forEach(b=>b.addEventListener('click',async()=>{
+      const r=hrPayruns[+b.dataset.i];
+      if(!confirm('Delete draft '+r.run_id+'?')) return;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'payruns',runId:r.run_id,remove:true,reason:'draft discarded'})});
+        await loadHr(); toast('Draft deleted'); }catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.pr-print').forEach(b=>b.addEventListener('click',()=>{
+      openPayslipsPdf(hrPayruns[+b.dataset.i]);
+    }));
+  }
+
+  /* ---------- Statutory settings ---------- */
+  function renderStatutory(){
+    const host=document.getElementById('hr-statutory'); if(!host) return;
+    const st=ST();
+    const f=(label,path,val,hint)=>`<div><label>${label}</label>
+      <input class="st-in num" data-path="${path}" value="${esc(val)}">
+      ${hint?`<div class="field-hint">${hint}</div>`:''}</div>`;
+    host.innerHTML=`
+      <div class="qb"><h4>Review Record</h4>
+      <div class="cs-row four">
+        <div><label>Rules Effective From</label><input class="st-in" data-path="effectiveFrom" type="date" value="${esc(st.effectiveFrom)}"></div>
+        <div><label>Last Reviewed By</label><input class="st-in" data-path="lastReviewedBy" value="${esc(st.lastReviewedBy)}" placeholder="CA / consultant name"></div>
+        <div><label>Reviewed On</label><input class="st-in" data-path="lastReviewedOn" type="date" value="${esc(st.lastReviewedOn)}"></div>
+      </div></div>
+
+      <div class="qb"><h4>Provident Fund</h4><div class="cs-row four">
+        ${f('Employee %','pf.employeePct',st.pf.employeePct)}
+        ${f('Employer %','pf.employerPct',st.pf.employerPct)}
+        ${f('Wage Ceiling','pf.wageCeiling',st.pf.wageCeiling,'Set 0 and turn the ceiling off to apply on full wages')}
+        ${f('EPS %','pf.epsPct',st.pf.epsPct)}
+      </div><div class="cs-row four" style="margin-top:10px;">
+        ${f('EPS Ceiling','pf.epsCeiling',st.pf.epsCeiling)}
+        ${f('EDLI %','pf.edliPct',st.pf.edliPct)}
+        ${f('Admin %','pf.adminPct',st.pf.adminPct)}
+        <div><label>Apply Ceiling</label><select class="st-bool" data-path="pf.applyCeiling" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+          <option value="yes" ${st.pf.applyCeiling?'selected':''}>Yes</option><option value="no" ${!st.pf.applyCeiling?'selected':''}>No</option></select></div>
+      </div></div>
+
+      <div class="qb"><h4>ESI</h4><div class="cs-row four">
+        ${f('Employee %','esi.employeePct',st.esi.employeePct)}
+        ${f('Employer %','esi.employerPct',st.esi.employerPct)}
+        ${f('Gross Limit','esi.grossLimit',st.esi.grossLimit,'ESI not deducted above this monthly gross')}
+      </div></div>
+
+      <div class="qb"><h4>Professional Tax — ${esc(st.pt.state||'')}</h4>
+      <div class="field-hint" style="margin-bottom:10px;">Slabs are state-specific. Enter each threshold and the monthly amount payable up to it.</div>
+      <table class="cs-t"><thead><tr><th class="r">Gross up to</th><th class="r">PT Amount</th><th></th></tr></thead>
+        <tbody>${(st.pt.slabs||[]).map((sl,si)=>`<tr>
+          <td><input class="pt-slab num" data-si="${si}" data-k="upTo" value="${esc(sl.upTo)}"></td>
+          <td><input class="pt-slab num" data-si="${si}" data-k="amount" value="${esc(sl.amount)}"></td>
+          <td><button class="qb-del pt-del" data-si="${si}">×</button></td></tr>`).join('')}</tbody></table>
+      <button class="qb-add" id="pt-add">+ Add slab</button></div>
+
+      <div class="qb"><h4>Overtime, Gratuity &amp; Bonus</h4><div class="cs-row four">
+        ${f('OT Multiplier','ot.multiplier',st.ot.multiplier)}
+        <div><label>OT Basis</label><select class="st-str" data-path="ot.basisComponents" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+          <option value="basic+da" ${st.ot.basisComponents==='basic+da'?'selected':''}>Basic + DA</option>
+          <option value="gross" ${st.ot.basisComponents==='gross'?'selected':''}>Gross</option></select></div>
+        ${f('Gratuity accrual %','gratuity.accrualPct',st.gratuity.accrualPct,'Provision only')}
+        ${f('Bonus accrual %','bonus.accrualPct',st.bonus.accrualPct,'Provision only')}
+      </div></div>
+      <button class="add-btn solid" id="st-save" style="margin-top:6px;">Save Statutory Settings</button>
+      <div class="field-hint" id="st-msg" style="margin-top:8px;"></div>`;
+
+    const setPath=(path,val)=>{
+      const ks=path.split('.'); let o=data.statutory;
+      for(let i=0;i<ks.length-1;i++){ o[ks[i]]=o[ks[i]]||{}; o=o[ks[i]]; }
+      o[ks[ks.length-1]]=val;
+    };
+    host.querySelectorAll('.st-in').forEach(inp=>inp.addEventListener('input',()=>{
+      setPath(inp.dataset.path, inp.classList.contains('num')?num(inp.value):inp.value); markDirty();
+    }));
+    host.querySelectorAll('.st-bool').forEach(sel=>sel.addEventListener('change',()=>{
+      setPath(sel.dataset.path, sel.value==='yes'); markDirty();
+    }));
+    host.querySelectorAll('.st-str').forEach(sel=>sel.addEventListener('change',()=>{
+      setPath(sel.dataset.path, sel.value); markDirty();
+    }));
+    host.querySelectorAll('.pt-slab').forEach(inp=>inp.addEventListener('input',()=>{
+      data.statutory.pt.slabs[+inp.dataset.si][inp.dataset.k]=num(inp.value); markDirty();
+    }));
+    host.querySelectorAll('.pt-del').forEach(b=>b.addEventListener('click',()=>{
+      data.statutory.pt.slabs.splice(+b.dataset.si,1); markDirty(); renderStatutory();
+    }));
+    const add=document.getElementById('pt-add');
+    if(add) add.addEventListener('click',()=>{
+      data.statutory.pt.slabs.push({upTo:0,amount:0}); markDirty(); renderStatutory();
+    });
+    const save=document.getElementById('st-save');
+    if(save) save.addEventListener('click',async function(){
+      const msg=document.getElementById('st-msg');
+      if(!ST().lastReviewedBy){ msg.textContent='Record who reviewed these figures before saving.'; msg.style.color='#B03A2E'; return; }
+      this.disabled=true; this.textContent='Saving…';
+      try{ await api('/api/content',{method:'POST',body:JSON.stringify({data})}); dirty=false;
+        msg.textContent='Saved. These rates now apply to new pay runs.'; msg.style.color='var(--ok)'; }
+      catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+      this.disabled=false; this.textContent='Save Statutory Settings';
+    });
+  }
+
+  async function renderAudit(){
+    const host=document.getElementById('hr-audit-list'); if(!host) return;
+    host.innerHTML='<p class="field-hint">Loading…</p>';
+    try{
+      const j=await api('/api/hr?what=audit');
+      host.innerHTML=`<table class="cs-t"><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Record</th><th>Reason</th></tr></thead>
+        <tbody>${(j.audit||[]).map(a=>`<tr><td class="t-micro">${new Date(a.at).toLocaleString()}</td>
+          <td>${esc(a.who)}</td><td>${esc(a.what)}</td><td>${esc(a.ref)}</td>
+          <td class="t-micro">${esc(a.reason||'')}</td></tr>`).join('')||'<tr><td colspan="5" class="t-micro">No history yet.</td></tr>'}</tbody></table>`;
+    }catch(e){ host.innerHTML='<p class="dx-err">'+esc(e.message)+'</p>'; }
+  }
+
+  /* ---------- HR data loading + employee master UI ---------- */
+  async function loadHr(){
+    try{ const j=await api('/api/hr?what=employees'); hrEmployees=j.employees||[]; }
+    catch(e){ hrEmployees=[]; toast('Could not load employees: '+e.message); }
+    try{ const j=await api('/api/hr?what=payruns'); hrPayruns=j.payruns||[]; }
+    catch(e){ hrPayruns=[]; }
+    renderEmployees(); renderPayruns(); renderStatutory();
+  }
+
+  function renderEmployees(){
+    const kpi=document.getElementById('hr-kpi-row'), host=document.getElementById('hr-emp-list');
+    if(!host) return;
+    const active=hrEmployees.filter(e=>e.status!=='Exited');
+    const noStruct=active.filter(e=>grossMonthly(e)<=0);
+    const monthlyCost=active.reduce((t,e)=>t+grossMonthly(e),0);
+    if(kpi) kpi.innerHTML=`<div class="kpi"><b>${active.length}</b><span>Active Employees</span></div>
+      <div class="kpi"><b>${new Set(active.map(e=>e.department).filter(Boolean)).size}</b><span>Departments</span></div>
+      <div class="kpi"><b style="color:${noStruct.length?'#B03A2E':'var(--ok)'}">${noStruct.length}</b><span>No Salary Structure</span></div>
+      <div class="kpi"><b>${rupee(monthlyCost)}</b><span>Monthly Gross</span></div>`;
+
+    if(!hrEmployees.length){ host.innerHTML='<p class="empty-note">No employees yet — add one above.</p>'; return; }
+
+    host.innerHTML=hrEmployees.map((e,i)=>{
+      const open=expandedEmp===e.empId, s=e.structure||{};
+      const gross=grossMonthly(e);
+      return `<div class="rfq-card ${open?'open':''}" data-ref="${esc(e.empId)}">
+        <div class="list-item-head rfq-summary" data-toggle-emp="${esc(e.empId)}">
+          <div><div class="rfq-ref">${esc(e.empId)} — ${esc(e.name)}</div>
+          <div class="rfq-when">${esc(e.designation||'—')} · ${esc(e.department||'—')} ·
+            ${gross>0?rupee(gross)+'/month':'<span style="color:#B03A2E">no structure</span>'} · ${esc(e.status||'Active')}</div></div>
+          <span class="rfq-chevron">${open?'▾':'▸'}</span></div>
+        <div class="rfq-body" style="display:${open?'block':'none'};">
+          <div class="cs-sub">Employment</div>
+          <div class="cs-row four">
+            <div><label>Name</label><input class="em-in" data-i="${i}" data-k="name" value="${esc(e.name)}"></div>
+            <div><label>Department</label><input class="em-in" data-i="${i}" data-k="department" value="${esc(e.department)}"></div>
+            <div><label>Designation</label><input class="em-in" data-i="${i}" data-k="designation" value="${esc(e.designation)}"></div>
+            <div><label>Grade</label><input class="em-in" data-i="${i}" data-k="grade" value="${esc(e.grade)}"></div>
+          </div>
+          <div class="cs-row four" style="margin-top:10px;">
+            <div><label>Date of Joining</label><input type="date" class="em-in" data-i="${i}" data-k="doj" value="${esc(e.doj)}"></div>
+            <div><label>Reports To</label><input class="em-in" data-i="${i}" data-k="reportsTo" value="${esc(e.reportsTo)}"></div>
+            <div><label>Shift</label><input class="em-in" data-i="${i}" data-k="shift" value="${esc(e.shift)}"></div>
+            <div><label>Status</label>
+              <select class="em-in" data-i="${i}" data-k="status" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+                ${['Active','Probation','On Leave','Suspended','Exited'].map(x=>`<option ${e.status===x?'selected':''}>${x}</option>`).join('')}
+              </select></div>
+          </div>
+
+          <div class="cs-sub">Statutory Identifiers</div>
+          <div class="cs-row four">
+            <div><label>UAN</label><input class="em-in" data-i="${i}" data-k="uan" value="${esc(e.uan)}"></div>
+            <div><label>ESI Number</label><input class="em-in" data-i="${i}" data-k="esiNumber" value="${esc(e.esiNumber)}"></div>
+            <div><label>PAN</label><input class="em-in" data-i="${i}" data-k="pan" value="${esc(e.pan)}"></div>
+            <div><label>Bank A/c</label><input class="em-in" data-i="${i}" data-k="bankAcc" value="${esc(e.bankAcc)}"></div>
+          </div>
+
+          <div class="cs-sub">Salary Structure — monthly</div>
+          <div class="cs-row four">
+            <div><label>Annual CTC</label><input class="em-in num" data-i="${i}" data-k="ctcAnnual" value="${esc(e.ctcAnnual)}"></div>
+            <div style="align-self:end;"><button class="mini-btn em-build" data-i="${i}">Rebuild from CTC</button></div>
+            <div><label>Basic</label><input class="es-in num" data-i="${i}" data-k="basic" value="${esc(s.basic)}"></div>
+            <div><label>DA</label><input class="es-in num" data-i="${i}" data-k="da" value="${esc(s.da)}"></div>
+          </div>
+          <div class="cs-row four" style="margin-top:10px;">
+            <div><label>HRA</label><input class="es-in num" data-i="${i}" data-k="hra" value="${esc(s.hra)}"></div>
+            <div><label>Conveyance</label><input class="es-in num" data-i="${i}" data-k="conveyance" value="${esc(s.conveyance)}"></div>
+            <div><label>Special Allowance</label><input class="es-in num" data-i="${i}" data-k="special" value="${esc(s.special)}"></div>
+            <div><label>Other Allowance</label><input class="es-in num" data-i="${i}" data-k="otherAllow" value="${esc(s.otherAllow)}"></div>
+          </div>
+          <div class="feas-line" style="margin-top:8px;">Monthly gross from structure: <b>${rupee(gross)}</b>
+            ${e.ctcAnnual?` · annual CTC ÷ 12 = ${rupee(num(e.ctcAnnual)/12)}`:''}</div>
+
+          <div class="cs-sub">Deductions &amp; Applicability</div>
+          <div class="cs-row four">
+            <div><label>Monthly TDS</label><input class="em-in num" data-i="${i}" data-k="monthlyTds" value="${esc(e.monthlyTds)}">
+              <div class="field-hint">From your CA — not computed here.</div></div>
+            <div><label>Other Deduction</label><input class="em-in num" data-i="${i}" data-k="otherDeduction" value="${esc(e.otherDeduction)}"></div>
+            <div><label>PF Applicable</label>
+              <select class="em-bool" data-i="${i}" data-k="pfApplicable" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+                <option value="yes" ${e.pfApplicable!==false?'selected':''}>Yes</option><option value="no" ${e.pfApplicable===false?'selected':''}>No</option></select></div>
+            <div><label>ESI Applicable</label>
+              <select class="em-bool" data-i="${i}" data-k="esiApplicable" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+                <option value="yes" ${e.esiApplicable!==false?'selected':''}>Yes</option><option value="no" ${e.esiApplicable===false?'selected':''}>No</option></select></div>
+          </div>
+
+          <div class="rfq-actions" style="margin-top:16px;">
+            <button class="mini-btn gold em-save" data-i="${i}">Save Employee</button>
+            <button class="item-delete em-del" data-i="${i}">Delete</button>
+          </div>
+        </div></div>`;
+    }).join('');
+
+    host.querySelectorAll('[data-toggle-emp]').forEach(r=>r.addEventListener('click',()=>{
+      const id=r.dataset.toggleEmp; expandedEmp=(expandedEmp===id)?null:id; renderEmployees();
+    }));
+    host.querySelectorAll('.em-in').forEach(inp=>inp.addEventListener('input',()=>{
+      hrEmployees[+inp.dataset.i][inp.dataset.k]=inp.value;
+    }));
+    host.querySelectorAll('.em-bool').forEach(sel=>sel.addEventListener('change',()=>{
+      hrEmployees[+sel.dataset.i][sel.dataset.k]=(sel.value==='yes');
+    }));
+    host.querySelectorAll('.es-in').forEach(inp=>inp.addEventListener('input',()=>{
+      const e=hrEmployees[+inp.dataset.i]; e.structure=e.structure||{};
+      e.structure[inp.dataset.k]=num(inp.value);
+    }));
+    host.querySelectorAll('.em-build').forEach(b=>b.addEventListener('click',()=>{
+      const e=hrEmployees[+b.dataset.i];
+      if(!num(e.ctcAnnual)){ toast('Enter the annual CTC first'); return; }
+      e.structure=structureFromCtc(e.ctcAnnual); renderEmployees();
+      toast('Structure rebuilt — check each component before saving');
+    }));
+    host.querySelectorAll('.em-save').forEach(b=>b.addEventListener('click',async()=>{
+      const e=hrEmployees[+b.dataset.i];
+      b.textContent='Saving…'; b.disabled=true;
+      try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'employees',employee:e,reason:'edited in HR screen'})});
+        toast('Employee saved'); }catch(err){ toast(err.message); }
+      b.textContent='Save Employee'; b.disabled=false;
+    }));
+    host.querySelectorAll('.em-del').forEach(b=>b.addEventListener('click',async()=>{
+      const e=hrEmployees[+b.dataset.i];
+      if(!confirm('Delete '+e.empId+' — '+e.name+'? Their payroll history stays in approved pay runs.')) return;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'employees',empId:e.empId,remove:true,reason:'deleted in HR screen'})});
+        hrEmployees.splice(+b.dataset.i,1); expandedEmp=null; renderEmployees(); toast('Employee deleted'); }
+      catch(err){ toast(err.message); }
+    }));
+  }
+
+  /* ================= HR: PAYROLL ENGINE =================
+     Deterministic arithmetic only. Every statutory rate comes from
+     data.statutory, which is user-editable and effective-dated — no legal
+     rule is written into this code. The engine produces a DRAFT that a human
+     reviews and approves; it never finalises anything by itself. */
+  const ST=()=>data.statutory||{};
+  let hrEmployees=[], hrPayruns=[], expandedEmp=null, expandedRun=null;
+
+  function blankEmployee(){
+    return {empId:'', name:'', photo:'', doj:'', dob:'',
+      department:'', designation:'', grade:'', location:'', reportsTo:'',
+      employmentType:'Permanent', shift:'General', status:'Active',
+      phone:'', email:'', emergencyContact:'',
+      pfNumber:'', uan:'', esiNumber:'', pan:'', bankAcc:'', ifsc:'',
+      ctcAnnual:0,
+      structure:{basic:0, da:0, hra:0, conveyance:0, special:0, otherAllow:0},
+      pfApplicable:true, esiApplicable:true, ptApplicable:true,
+      monthlyTds:0, otherDeduction:0,
+      competencies:[], trainings:[], notes:''
+    };
+  }
+
+  /* Build a monthly salary structure from annual CTC using the template. */
+  function structureFromCtc(annualCtc){
+    const t=data.salaryStructure||{};
+    const m=num(annualCtc)/12;
+    const basic=Math.round(m*num(t.basicPct)/100);
+    const da=Math.round(m*num(t.daPct)/100);
+    const hra=Math.round(m*num(t.hraPct)/100);
+    const conveyance=num(t.conveyance);
+    const known=basic+da+hra+conveyance;
+    return {basic,da,hra,conveyance,special:Math.max(0,Math.round(m-known)),otherAllow:0};
+  }
+
+  function grossMonthly(emp){
+    const s=emp.structure||{};
+    return num(s.basic)+num(s.da)+num(s.hra)+num(s.conveyance)+num(s.special)+num(s.otherAllow);
+  }
+
+  /* ---- the payslip calculation for one employee for one period ---- */
+  function calcPayslip(emp, att){
+    const st=ST();
+    const s=emp.structure||{};
+    const payableDays=num(att.payableDays), totalDays=Math.max(1,num(att.totalDays)||30);
+    const factor=Math.min(1, payableDays/totalDays);
+
+    // earnings, prorated by days actually payable
+    const basic=Math.round(num(s.basic)*factor);
+    const da=Math.round(num(s.da)*factor);
+    const hra=Math.round(num(s.hra)*factor);
+    const conveyance=Math.round(num(s.conveyance)*factor);
+    const special=Math.round(num(s.special)*factor);
+    const otherAllow=Math.round(num(s.otherAllow)*factor);
+
+    // overtime, on the configured basis and multiplier
+    const otBasisMonthly=(String((st.ot||{}).basisComponents||'basic+da')==='gross')
+      ? grossMonthly(emp) : (num(s.basic)+num(s.da));
+    const hoursPerMonth=Math.max(1,totalDays*num(CB().hoursPerShift||8));
+    const otRatePerHour=(otBasisMonthly/hoursPerMonth)*num((st.ot||{}).multiplier||2);
+    const otAmount=Math.round(num(att.otHours)*otRatePerHour);
+
+    const incentive=num(att.incentive);
+    const gross=basic+da+hra+conveyance+special+otherAllow+otAmount+incentive;
+
+    // --- statutory deductions, all from the editable rule set ---
+    const notes=[];
+    let pfEmp=0,pfEr=0,eps=0,edli=0,pfAdmin=0;
+    const pf=st.pf||{};
+    if(pf.enabled && emp.pfApplicable!==false){
+      const pfWageRaw=basic+da;
+      const pfWage=pf.applyCeiling?Math.min(pfWageRaw,num(pf.wageCeiling)):pfWageRaw;
+      pfEmp=Math.round(pfWage*num(pf.employeePct)/100);
+      const erTotal=Math.round(pfWage*num(pf.employerPct)/100);
+      eps=Math.round(Math.min(pfWage,num(pf.epsCeiling||pf.wageCeiling))*num(pf.epsPct)/100);
+      pfEr=Math.max(0,erTotal-eps);
+      edli=Math.round(Math.min(pfWage,num(pf.wageCeiling))*num(pf.edliPct)/100);
+      pfAdmin=Math.round(Math.min(pfWage,num(pf.wageCeiling))*num(pf.adminPct)/100);
+      if(pf.applyCeiling&&pfWageRaw>num(pf.wageCeiling)) notes.push('PF restricted to the wage ceiling');
+    }
+
+    let esiEmp=0,esiEr=0;
+    const esi=st.esi||{};
+    if(esi.enabled && emp.esiApplicable!==false){
+      if(gross<=num(esi.grossLimit)){
+        esiEmp=Math.ceil(gross*num(esi.employeePct)/100);
+        esiEr=Math.ceil(gross*num(esi.employerPct)/100);
+      } else notes.push('ESI not applied — gross above the configured limit');
+    }
+
+    let pt=0;
+    const ptr=st.pt||{};
+    if(ptr.enabled && emp.ptApplicable!==false){
+      const slab=(ptr.slabs||[]).slice().sort((a,b)=>num(a.upTo)-num(b.upTo))
+        .find(x=>gross<=num(x.upTo));
+      pt=slab?num(slab.amount):0;
+    }
+
+    const tds=((st.tds||{}).enabled!==false)?num(emp.monthlyTds):0;
+    const lwfEmp=(st.lwf||{}).enabled?num(st.lwf.employee):0;
+    const lwfEr=(st.lwf||{}).enabled?num(st.lwf.employer):0;
+    const otherDed=num(emp.otherDeduction)+num(att.advance);
+
+    const totalDeductions=pfEmp+esiEmp+pt+tds+lwfEmp+otherDed;
+    const net=gross-totalDeductions;
+    const ctcCost=gross+pfEr+eps+edli+pfAdmin+esiEr+lwfEr;
+
+    // provisions, not deductions
+    const gratuityProv=Math.round((basic+da)*num((st.gratuity||{}).accrualPct)/100);
+    const bonusProv=Math.round(Math.min(basic+da,num((st.bonus||{}).wageCeiling)||(basic+da))
+      *num((st.bonus||{}).accrualPct)/100);
+
+    const flags=[];
+    if(net<0) flags.push('Net pay is negative — check deductions');
+    if(payableDays>totalDays) flags.push('Payable days exceed days in the period');
+    if(!emp.structure||grossMonthly(emp)<=0) flags.push('No salary structure set');
+    if(pf.enabled&&emp.pfApplicable!==false&&!emp.uan) flags.push('PF applicable but no UAN recorded');
+    if(esiEmp>0&&!emp.esiNumber) flags.push('ESI deducted but no ESI number recorded');
+    if(num(att.otHours)>0&&otAmount===0) flags.push('OT hours entered but OT value is zero');
+
+    return {empId:emp.empId,name:emp.name,department:emp.department,
+      payableDays,totalDays,lopDays:Math.max(0,totalDays-payableDays),
+      earnings:{basic,da,hra,conveyance,special,otherAllow,ot:otAmount,incentive},
+      gross,
+      deductions:{pf:pfEmp,esi:esiEmp,pt,tds,lwf:lwfEmp,other:otherDed},
+      totalDeductions,net,
+      employer:{pf:pfEr,eps,edli,admin:pfAdmin,esi:esiEr,lwf:lwfEr},
+      ctcCost, provisions:{gratuity:gratuityProv,bonus:bonusProv},
+      otHours:num(att.otHours), notes, flags,
+      rulesEffectiveFrom:st.effectiveFrom||''};
+  }
+
   /* ================= §2 THE PLANNING ENGINE =================
      One pass produces every plan the spec asks for that is computable from
      your master data. Sections it cannot yet do — true finite sequencing
@@ -4939,6 +5542,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.getElementById('ack-switch').classList.toggle('on',data.autoAcknowledge!==false);
     document.getElementById('pipebtn-switch').classList.toggle('on',!!data.showPipeBtn);
     document.getElementById('ppcbtn-switch').classList.toggle('on',!!data.showPPCBtn);
+    document.getElementById('hrbtn-switch').classList.toggle('on',!!data.showHRBtn);
     document.getElementById('pw-user').value=currentUser||'';
     syncRanges();
     singleImageField('logo-upload-wrap','logoDataUrl');
@@ -5188,6 +5792,10 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
       document.body.style.overflow='hidden'; await loadRfqs(); checkAi();
       const sa=document.getElementById('staff-admin');
       if(sa) sa.style.display=(currentRole==='developer')?'':'none';
+    } else if(t==='hr'){
+      if(currentRole!=='developer'){ toast('HR records need the developer login.'); return; }
+      document.getElementById('hr-page').classList.add('open');
+      document.body.style.overflow='hidden'; await loadHr();
     } else if(t==='ppc'){
       document.getElementById('ppc-page').classList.add('open');
       document.body.style.overflow='hidden'; await loadOrders(); refreshPartDropdown();
@@ -5265,60 +5873,15 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   });
 
   /* ---------- FORGOT PASSWORD ---------- */
-  let fpUser='';
-  function fpStep(n){
-    ['fp-step1','fp-step2','fp-step3'].forEach((id,i)=>{
-      document.getElementById(id).style.display=(i===n-1)?'':'none';
-    });
-    document.getElementById('forgot-err').style.display='none';
-  }
   document.getElementById('login-forgot-link').addEventListener('click',()=>{
     document.getElementById('login-fields').style.display='none';
     document.getElementById('forgot-panel').classList.add('open');
-    ['fp-who','fp-code','fp-pass','forgot-code','forgot-user','forgot-pass'].forEach(id=>{
-      const el=document.getElementById(id); if(el) el.value='';
-    });
-    fpStep(1);
-    setTimeout(()=>document.getElementById('fp-who').focus(),150);
+    document.getElementById('forgot-err').style.display='none';
+    document.getElementById('forgot-code').value='';
+    document.getElementById('forgot-user').value='';
+    document.getElementById('forgot-pass').value='';
+    setTimeout(()=>document.getElementById('forgot-code').focus(),150);
   });
-  document.getElementById('fp-use-recovery').addEventListener('click',e=>{e.preventDefault();fpStep(3);});
-  document.getElementById('fp-use-email').addEventListener('click',e=>{e.preventDefault();fpStep(1);});
-
-  async function fpSendCode(){
-    const err=document.getElementById('forgot-err'); err.style.display='none';
-    const who=document.getElementById('fp-who').value.trim();
-    if(!who){ err.textContent='Enter your username or email address.'; err.style.display='block'; return; }
-    const btn=document.getElementById('fp-send'); const label=btn.textContent; btn.textContent='Sending…'; btn.disabled=true;
-    try{
-      const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'forgotRequest',user:who})});
-      fpUser=j.user||who;
-      document.getElementById('fp-note').textContent=j.note||'If that account exists, a code is on its way.';
-      fpStep(2);
-      setTimeout(()=>document.getElementById('fp-code').focus(),150);
-    }catch(e){ err.textContent=e.message||'Could not send the code.'; err.style.display='block'; }
-    btn.textContent=label; btn.disabled=false;
-  }
-  document.getElementById('fp-send').addEventListener('click',fpSendCode);
-  document.getElementById('fp-who').addEventListener('keydown',e=>{if(e.key==='Enter')fpSendCode();});
-  document.getElementById('fp-resend').addEventListener('click',e=>{e.preventDefault();fpStep(1);fpSendCode();});
-
-  async function fpVerify(){
-    const err=document.getElementById('forgot-err'); err.style.display='none';
-    const code=document.getElementById('fp-code').value.trim();
-    const np=document.getElementById('fp-pass').value;
-    if(code.length!==6){ err.textContent='Enter the 6-digit code from the email.'; err.style.display='block'; return; }
-    if(np.length<6){ err.textContent='New password must be at least 6 characters.'; err.style.display='block'; return; }
-    try{
-      const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'forgotVerify',user:fpUser,code,newPass:np})});
-      token=j.token; currentUser=j.user; currentRole=j.role||'';
-      document.getElementById('login-modal').classList.remove('open');
-      showLoginFields();
-      toast('Password changed — you are signed in.');
-      openTarget(pendingTarget||'pipeline');
-    }catch(e){ err.textContent=e.message||'Could not verify the code.'; err.style.display='block'; }
-  }
-  document.getElementById('fp-verify').addEventListener('click',fpVerify);
-  document.getElementById('fp-pass').addEventListener('keydown',e=>{if(e.key==='Enter')fpVerify();});
   document.getElementById('forgot-cancel').addEventListener('click',showLoginFields);
   document.getElementById('forgot-btn').addEventListener('click',async()=>{
     const err=document.getElementById('forgot-err'); err.style.display='none';
@@ -5360,6 +5923,72 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   document.getElementById('ppc-back').addEventListener('click',()=>{
     document.getElementById('ppc-page').classList.remove('open'); document.body.style.overflow='';
     if(location.hash==='#ppc')history.replaceState(null,'',location.pathname);});
+
+  /* ---------- HR page wiring ---------- */
+  document.querySelectorAll('.hr-tab').forEach(tab=>tab.addEventListener('click',()=>{
+    document.querySelectorAll('.hr-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.hr-panel').forEach(pn=>{
+      pn.style.display=(pn.dataset.hrpanel===tab.dataset.hrtab)?'':'none';
+    });
+    if(tab.dataset.hrtab==='audit') renderAudit();
+    if(tab.dataset.hrtab==='statutory') renderStatutory();
+  }));
+  document.getElementById('hr-refresh').addEventListener('click',loadHr);
+  document.getElementById('hr-admin').addEventListener('click',()=>{
+    document.getElementById('hr-page').classList.remove('open'); document.body.style.overflow='';
+    fillForm(); document.getElementById('admin-panel').classList.add('open');});
+  document.getElementById('hr-back').addEventListener('click',()=>{
+    document.getElementById('hr-page').classList.remove('open'); document.body.style.overflow='';
+    if(location.hash==='#hr')history.replaceState(null,'',location.pathname);});
+  document.getElementById('hr-logout').addEventListener('click',()=>{
+    token=null; currentUser=''; hrEmployees=[]; hrPayruns=[];
+    document.getElementById('hr-page').classList.remove('open');
+    document.getElementById('admin-panel').classList.remove('open');
+    document.body.style.overflow='';
+    if(location.hash==='#hr')history.replaceState(null,'',location.pathname);
+    toast('Signed out');});
+
+  document.getElementById('ne-create').addEventListener('click',async function(){
+    const e=blankEmployee();
+    e.empId=document.getElementById('ne-empId').value.trim();
+    e.name=document.getElementById('ne-name').value.trim();
+    e.department=document.getElementById('ne-department').value.trim();
+    e.designation=document.getElementById('ne-designation').value.trim();
+    e.doj=document.getElementById('ne-doj').value;
+    e.grade=document.getElementById('ne-grade').value.trim();
+    e.shift=document.getElementById('ne-shift').value.trim();
+    e.ctcAnnual=num(document.getElementById('ne-ctc').value);
+    const msg=document.getElementById('ne-msg');
+    if(!e.empId||!e.name){ msg.textContent='Employee ID and name are required.'; msg.style.color='#B03A2E'; return; }
+    if(e.ctcAnnual>0) e.structure=structureFromCtc(e.ctcAnnual);
+    this.disabled=true; this.textContent='Adding…';
+    try{
+      await api('/api/hr',{method:'POST',body:JSON.stringify({what:'employees',employee:e,reason:'new employee added'})});
+      hrEmployees.unshift(e); expandedEmp=e.empId; renderEmployees();
+      ['ne-empId','ne-name','ne-department','ne-designation','ne-doj','ne-grade','ne-ctc'].forEach(id=>document.getElementById(id).value='');
+      msg.textContent='Added — open the record to check the salary structure.'; msg.style.color='var(--ok)';
+    }catch(err){ msg.textContent=err.message; msg.style.color='#B03A2E'; }
+    this.disabled=false; this.textContent='Add Employee';
+  });
+
+  document.getElementById('pr-create').addEventListener('click',async function(){
+    const period=document.getElementById('pr-period').value;
+    const days=num(document.getElementById('pr-days').value)||30;
+    const msg=document.getElementById('pr-msg');
+    if(!period){ msg.textContent='Choose the pay period.'; msg.style.color='#B03A2E'; return; }
+    if(!hrEmployees.length){ msg.textContent='Add employees first.'; msg.style.color='#B03A2E'; return; }
+    if(!ST().lastReviewedBy && !confirm('The statutory figures have no recorded reviewer.\nCreate this draft anyway?')) return;
+    this.disabled=true; this.textContent='Creating…';
+    const run=buildDraftRun(period,days);
+    try{
+      await api('/api/hr',{method:'POST',body:JSON.stringify({what:'payruns',payrun:run,reason:'draft created'})});
+      await loadHr(); expandedRun=run.runId; renderPayruns();
+      msg.textContent='Draft created — enter attendance days and OT, then review.'; msg.style.color='var(--ok)';
+    }catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false; this.textContent='Create Draft Run';
+  });
+
   document.getElementById('ppc-refresh').addEventListener('click',loadOrders);
   function refreshPartDropdown(){
     const sel=document.getElementById('npo-part'); if(!sel) return;
@@ -5459,6 +6088,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   sSwitch('autoquote-switch','autoQuote');
   sSwitch('pipebtn-switch','showPipeBtn',render);
   sSwitch('ppcbtn-switch','showPPCBtn',render);
+  sSwitch('hrbtn-switch','showHRBtn',render);
 
   document.getElementById('chat-fab').addEventListener('click',()=>{
     document.getElementById('chat-panel').classList.add('open');
@@ -5501,6 +6131,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     render();
     if(location.hash==='#pipeline') requestLogin('pipeline');
     if(location.hash==='#ppc') requestLogin('ppc');
+    if(location.hash==='#hr') requestLogin('hr');
   })();
 })();
 </script>

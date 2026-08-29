@@ -99,6 +99,17 @@
   nav.links a.pipeline{background:var(--navy);color:#fff;border-color:transparent;box-shadow:0 4px 0 var(--navy-deep);}
   nav.links a.pipeline:hover{color:var(--gold-light);box-shadow:0 7px 0 var(--navy-deep);}
   .nav-cta{flex:0 0 auto;}
+  .ops-wrap{position:relative;display:inline-block;}
+  .ops-caret{font-size:9px;opacity:.75;margin-left:2px;}
+  .ops-menu{position:absolute;top:calc(100% + 8px);left:0;min-width:265px;background:var(--white);
+    border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 18px 44px rgba(11,42,91,.2);
+    padding:7px;z-index:60;display:none;}
+  .ops-menu.open{display:block;}
+  .ops-menu a{display:block;padding:11px 13px;border-radius:var(--radius-sm);text-align:left;
+    border:none;background:none;min-width:0;height:auto;}
+  .ops-menu a:hover{background:var(--sky-wash);}
+  .ops-menu a b{display:block;font-family:var(--body);font-size:var(--fs-body);color:var(--navy);font-weight:600;}
+  .ops-menu a span{display:block;font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);margin-top:2px;}
 
   /* ---- HERO ---- */
   .hero{position:relative;overflow:hidden;padding:calc(var(--section-pad)*.95) 0 0;
@@ -2004,23 +2015,44 @@
   }
   function renderNav(){
     const it=navItems();
+
+    /* Staff modules live behind one "Operations" dropdown so the public menu
+       stays short as more modules are added. */
+    const ops=[];
+    if(data.showPipeBtn) ops.push(['pipeline','RFQ Pipeline','Enquiries, quotations and costing']);
+    if(data.showPPCBtn)  ops.push(['ppc','Production Planning','Orders, capacity and scheduling']);
+    if(data.showHRBtn)   ops.push(['hr','HR &amp; People','Employees, payroll and compliance']);
+
     let html=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('');
-    if(data.showPipeBtn) html+=`<a href="#" class="pipeline" id="nav-pipeline">RFQ Pipeline</a>`;
-    if(data.showPPCBtn) html+=`<a href="#" class="pipeline" id="nav-ppc">Production Planning</a>`;
-    if(data.showHRBtn) html+=`<a href="#" class="pipeline" id="nav-hr">HR &amp; People</a>`;
+    if(ops.length){
+      html+=`<div class="ops-wrap" id="ops-wrap">
+        <a href="#" class="pipeline ops-btn" id="ops-btn">Operations <span class="ops-caret">▾</span></a>
+        <div class="ops-menu" id="ops-menu">
+          ${ops.map(([t,label,desc])=>`<a href="#" data-ops="${t}"><b>${label}</b><span>${desc}</span></a>`).join('')}
+        </div></div>`;
+    }
     document.getElementById('main-nav').innerHTML=html;
+
     document.getElementById('foot-links').innerHTML=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('')
-      +`<a href="#" id="foot-pipeline">RFQ Pipeline</a><a href="#" id="foot-ppc">Production Planning</a>`;
-    const np=document.getElementById('nav-pipeline');
-    if(np) np.addEventListener('click',e=>{e.preventDefault();requestLogin('pipeline');});
-    const fp=document.getElementById('foot-pipeline');
-    if(fp) fp.addEventListener('click',e=>{e.preventDefault();requestLogin('pipeline');});
-    const nq=document.getElementById('nav-ppc');
-    if(nq) nq.addEventListener('click',e=>{e.preventDefault();requestLogin('ppc');});
-    const fq=document.getElementById('foot-ppc');
-    if(fq) fq.addEventListener('click',e=>{e.preventDefault();requestLogin('ppc');});
-    const nh=document.getElementById('nav-hr');
-    if(nh) nh.addEventListener('click',e=>{e.preventDefault();requestLogin('hr');});
+      +ops.map(([t,label])=>`<a href="#" data-ops="${t}">${label}</a>`).join('');
+
+    /* one handler serves the dropdown and the footer */
+    document.querySelectorAll('[data-ops]').forEach(a=>a.addEventListener('click',e=>{
+      e.preventDefault();
+      const menu=document.getElementById('ops-menu');
+      if(menu) menu.classList.remove('open');
+      requestLogin(a.dataset.ops);
+    }));
+
+    const btn=document.getElementById('ops-btn'), menu=document.getElementById('ops-menu');
+    if(btn&&menu){
+      btn.addEventListener('click',e=>{ e.preventDefault(); e.stopPropagation(); menu.classList.toggle('open'); });
+      document.addEventListener('click',ev=>{
+        const wrap=document.getElementById('ops-wrap');
+        if(wrap&&!wrap.contains(ev.target)) menu.classList.remove('open');
+      });
+      document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') menu.classList.remove('open'); });
+    }
   }
   function renderCustomSections(){
     document.getElementById('custom-sections').innerHTML=data.customSections.map(s=>{

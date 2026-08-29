@@ -884,6 +884,7 @@
       <button class="hr-tab" data-hrtab="training">Training</button>
       <button class="hr-tab" data-hrtab="policies">Policies</button>
       <button class="hr-tab" data-hrtab="tasks">DWM &amp; Tasks</button>
+      <button class="hr-tab" data-hrtab="kpi">KPI &amp; Performance</button>
       <button class="hr-tab" data-hrtab="audit-ready">Audit Readiness</button>
       <button class="hr-tab" data-hrtab="statutory">Statutory Settings</button>
       <button class="hr-tab" data-hrtab="audit">Audit Trail</button>
@@ -1065,6 +1066,54 @@
           <option value="open">Open tasks</option><option value="today">Due today or overdue</option>
           <option value="mine">My tasks</option><option value="all">Everything</option></select></div></div>
       <div id="task-list"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="kpi" style="display:none;">
+      <div class="info-box">KPIs cascade Company → Department → Role → Employee. Where a figure already exists
+        elsewhere in this system it is pulled in automatically and marked <b>auto</b>; everything else is entered
+        by a person and marked <b>manual</b>, so you always know which numbers are measured and which are asserted.</div>
+      <div class="kpi-row" id="kpi-kpi"></div>
+
+      <div class="qb" style="margin-bottom:16px;">
+        <h4>Define a KPI</h4>
+        <div class="cs-row four">
+          <div><label>KPI Name</label><input type="text" id="kp-name" placeholder="On-time delivery"></div>
+          <div><label>Level</label><select id="kp-level" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option>Company</option><option>Department</option><option>Role</option><option>Employee</option></select></div>
+          <div><label>Applies To</label><input type="text" id="kp-owner" placeholder="Blank = whole company"></div>
+          <div><label>Category</label><select id="kp-cat" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option>Production</option><option>Quality</option><option>Delivery</option><option>HR</option>
+            <option>Safety</option><option>Cost</option></select></div>
+        </div>
+        <div class="cs-row four" style="margin-top:10px;">
+          <div><label>Target</label><input type="text" id="kp-target" class="num"></div>
+          <div><label>Unit</label><input type="text" id="kp-unit" placeholder="% / nos / PPM"></div>
+          <div><label>Better When</label><select id="kp-dir" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option value="higher">Higher is better</option><option value="lower">Lower is better</option></select></div>
+          <div><label>Source</label><select id="kp-src" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option value="manual">Manual entry</option>
+            <option value="otd">Auto — on-time delivery from PPC orders</option>
+            <option value="attrition">Auto — attrition from employee records</option>
+            <option value="absentee">Auto — absenteeism from attendance</option>
+            <option value="training">Auto — training completion</option>
+            <option value="competency">Auto — competency achievement</option>
+            <option value="tasks">Auto — task closure rate</option></select></div>
+        </div>
+        <button class="mini-btn gold" id="kp-add" style="margin-top:12px;">Add KPI</button>
+        <div class="field-hint" id="kp-msg" style="margin-top:8px;"></div>
+      </div>
+      <div id="kpi-list"></div>
+
+      <div class="qb" style="margin-top:20px;">
+        <h4>Performance Appraisal (§21)</h4>
+        <div class="cs-row four">
+          <div><label>Employee</label><select id="ap-emp" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div>
+          <div><label>Period</label><input type="text" id="ap-period" placeholder="FY 2026-27"></div>
+          <div style="align-self:end;"><button class="mini-btn gold" id="ap-create">Start Appraisal</button></div>
+        </div>
+        <div class="field-hint" id="ap-msg" style="margin-top:8px;"></div>
+      </div>
+      <div id="appraisal-list"></div>
     </div>
 
     <div class="hr-panel" data-hrpanel="audit-ready" style="display:none;">
@@ -3080,6 +3129,187 @@ Reply with ONLY this JSON, no commentary or code fences:
     w.document.close();
   }
 
+  /* ================= KPI ENGINE (§20) =================
+     Where a KPI can be measured from data already in the system it is, and the
+     figure is labelled 'auto'. Anything else is entered by a person and labelled
+     'manual'. The distinction is shown on screen so nobody mistakes an asserted
+     number for a measured one. */
+  function autoKpiValue(source){
+    const active=hrEmployees.filter(e=>e.status!=='Exited');
+    const period=new Date().toISOString().slice(0,7);
+    switch(source){
+      case 'otd': {
+        const done=(poOrders||[]).filter(o=>o.status==='Completed'||o.status==='Dispatched');
+        if(!done.length) return null;
+        const onTime=done.filter(o=>{const p=planOrder(o); return !p.error&&p.feasible!==false;}).length;
+        return {value:Math.round(onTime/done.length*100), basis:onTime+' of '+done.length+' orders'};
+      }
+      case 'attrition': {
+        const exited=hrEmployees.filter(e=>e.status==='Exited').length;
+        const total=hrEmployees.length;
+        if(!total) return null;
+        return {value:Math.round(exited/total*1000)/10, basis:exited+' exits of '+total+' records'};
+      }
+      case 'absentee': {
+        if(!hrAttendance.length) return null;
+        let lop=0,total=0;
+        active.forEach(e=>{const a=attendanceSummary(e.empId,period); lop+=a.lop; total+=a.totalDays;});
+        if(!total) return null;
+        return {value:Math.round(lop/total*1000)/10, basis:lop+' lost days of '+total+' in '+period};
+      }
+      case 'training': {
+        const sessions=hrTraining.filter(r=>r.kind==='session');
+        if(!sessions.length) return null;
+        const done=sessions.filter(r=>(r.data||r).effectivenessDone).length;
+        return {value:Math.round(done/sessions.length*100), basis:done+' of '+sessions.length+' sessions closed out'};
+      }
+      case 'competency': {
+        let need=0,met=0;
+        active.forEach(e=>competencyGaps(e).forEach(g=>{need++; if(g.gap===0) met++;}));
+        if(!need) return null;
+        return {value:Math.round(met/need*100), basis:met+' of '+need+' role requirements met'};
+      }
+      case 'tasks': {
+        const all=itemsOf('task');
+        if(!all.length) return null;
+        const closed=all.filter(t=>t.status==='Completed').length;
+        return {value:Math.round(closed/all.length*100), basis:closed+' of '+all.length+' tasks closed'};
+      }
+      default: return null;
+    }
+  }
+  function kpiStatus(k,actual){
+    if(actual===null||actual===undefined||actual==='') return {cls:'unk',label:'No data'};
+    const t=num(k.target), a=num(actual);
+    const hit=(k.direction==='lower')?(a<=t):(a>=t);
+    if(hit) return {cls:'go',label:'On target'};
+    const off=t?Math.abs(a-t)/Math.abs(t)*100:100;
+    return off<=10?{cls:'unk',label:'Near target'}:{cls:'no',label:'Below target'};
+  }
+
+  function renderKpis(){
+    const kpiRow=document.getElementById('kpi-kpi'), host=document.getElementById('kpi-list');
+    if(!host) return;
+    const list=itemsOf('kpi');
+    const evaluated=list.map(k=>{
+      const d=k.data||k;
+      const auto=d.source&&d.source!=='manual'?autoKpiValue(d.source):null;
+      const actual=auto?auto.value:(d.actual===''||d.actual===undefined?null:num(d.actual));
+      return {rec:k,d,auto,actual,st:kpiStatus(d,actual)};
+    });
+    const onTarget=evaluated.filter(x=>x.st.cls==='go').length;
+    const below=evaluated.filter(x=>x.st.cls==='no').length;
+    const noData=evaluated.filter(x=>x.st.cls==='unk').length;
+    if(kpiRow) kpiRow.innerHTML=`<div class="kpi"><b>${list.length}</b><span>KPIs Defined</span></div>
+      <div class="kpi"><b style="color:var(--ok)">${onTarget}</b><span>On Target</span></div>
+      <div class="kpi"><b style="color:#B03A2E">${below}</b><span>Below Target</span></div>
+      <div class="kpi"><b style="color:var(--ink-soft)">${noData}</b><span>No Data Yet</span></div>`;
+
+    host.innerHTML=list.length?`<table class="cs-t"><thead><tr><th style="width:88px">Status</th><th>KPI</th>
+      <th>Level / Applies To</th><th class="r">Target</th><th style="width:110px">Actual</th>
+      <th class="r">Variance</th><th>Source</th><th></th></tr></thead><tbody>
+      ${evaluated.map((x,i)=>{
+        const variance=(x.actual===null)?'—':
+          ((x.d.direction==='lower'?num(x.d.target)-num(x.actual):num(x.actual)-num(x.d.target)).toFixed(1));
+        return `<tr>
+        <td><span class="order-badge ${x.st.cls}">${x.st.label}</span></td>
+        <td>${esc(x.d.name)}<div class="t-micro">${esc(x.d.category||'')}</div></td>
+        <td class="t-micro">${esc(x.d.level)}${x.d.owner?' · '+esc(x.d.owner):''}</td>
+        <td class="r">${esc(x.d.target)} ${esc(x.d.unit||'')}</td>
+        <td>${x.auto?`<b>${x.auto.value}</b> ${esc(x.d.unit||'')}`
+          :`<input class="kp-act num" data-id="${esc(x.rec.item_id)}" value="${esc(x.d.actual===undefined?'':x.d.actual)}" style="width:76px">`}</td>
+        <td class="r" style="${x.actual!==null&&variance<0?'color:#B03A2E;':''}">${variance}</td>
+        <td class="t-micro">${x.auto?`<span class="src-tag verified">auto</span> ${esc(x.auto.basis)}`:'<span class="src-tag">manual</span>'}</td>
+        <td><button class="qb-del kp-del" data-id="${esc(x.rec.item_id)}">×</button></td></tr>`;}).join('')}
+      </tbody></table>`:'<p class="empty-note">No KPIs defined yet.</p>';
+
+    host.querySelectorAll('.kp-act').forEach(inp=>inp.addEventListener('change',async()=>{
+      const k=list.find(x=>x.item_id===inp.dataset.id), d=k.data||k;
+      d.actual=num(inp.value); d.updatedOn=new Date().toISOString().slice(0,10);
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:k.item_id,patch:d,
+        reason:'KPI actual updated'})}); await loadItems(); }catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.kp-del').forEach(b=>b.addEventListener('click',async()=>{
+      if(!confirm('Delete this KPI?')) return;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:b.dataset.id,remove:true,reason:'deleted'})});
+        await loadItems(); }catch(e){ toast(e.message); }
+    }));
+  }
+
+  /* ================= PERFORMANCE APPRAISAL (§21) ================= */
+  function renderAppraisals(){
+    const host=document.getElementById('appraisal-list'); if(!host) return;
+    const list=itemsOf('appraisal');
+    host.innerHTML=list.length?list.map((r,i)=>{
+      const d=r.data||r;
+      const emp=hrEmployees.find(e=>e.empId===d.empId);
+      const gaps=emp?competencyGaps(emp):[];
+      const metCount=gaps.filter(g=>g.gap===0).length;
+      const badge=r.status==='Approved'?'go':(r.status==='Manager Review'?'unk':'no');
+      return `<div class="rfq-card"><div class="list-item-head rfq-summary" data-appr="${esc(r.item_id)}">
+        <div><div class="rfq-ref">${esc(emp?emp.name:d.empId)} — ${esc(d.period||'')}</div>
+        <div class="rfq-when">${esc(emp?emp.designation||'':'')} ·
+          competency ${metCount}/${gaps.length} met${d.rating?' · rating '+esc(d.rating):''}</div></div>
+        <span class="order-badge ${badge}">${esc(r.status)}</span></div>
+      <div class="rfq-body" style="display:${expandedAppraisal===r.item_id?'block':'none'};">
+        <div class="cs-sub">Competency position (from the skill matrix)</div>
+        <table class="cs-t"><thead><tr><th>Competency</th><th class="r">Required</th><th class="r">Actual</th><th>Status</th></tr></thead>
+          <tbody>${gaps.map(g=>`<tr><td>${esc(g.name)}</td><td class="r">${g.need}</td><td class="r">${g.have}</td>
+            <td><span class="order-badge ${g.status==='green'?'go':g.status==='amber'?'unk':'no'}">${g.gap?('short '+g.gap):'met'}</span></td></tr>`).join('')
+            ||'<tr><td colspan="4" class="t-micro">No role standard set.</td></tr>'}</tbody></table>
+
+        <div class="cs-sub">Assessment</div>
+        <div class="cs-row"><div><label>Self assessment</label>
+          <textarea class="ap-in" data-id="${esc(r.item_id)}" data-k="selfText" rows="3">${esc(d.selfText||'')}</textarea></div>
+          <div><label>Manager assessment</label>
+          <textarea class="ap-in" data-id="${esc(r.item_id)}" data-k="managerText" rows="3">${esc(d.managerText||'')}</textarea></div></div>
+        <div class="cs-row four" style="margin-top:10px;">
+          <div><label>Rating</label><select class="ap-in" data-id="${esc(r.item_id)}" data-k="rating" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option value="">—</option>${['Outstanding','Exceeds','Meets','Needs improvement','Unsatisfactory']
+              .map(x=>`<option ${d.rating===x?'selected':''}>${x}</option>`).join('')}</select></div>
+          <div><label>Promotion recommended</label><select class="ap-in" data-id="${esc(r.item_id)}" data-k="promotion" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option value="">No</option><option ${d.promotion==='Yes'?'selected':''}>Yes</option></select></div>
+          <div><label>Increment recommended %</label><input class="ap-in num" data-id="${esc(r.item_id)}" data-k="incrementPct" value="${esc(d.incrementPct||'')}"></div>
+          <div><label>Reviewed by</label><input class="ap-in" data-id="${esc(r.item_id)}" data-k="reviewedBy" value="${esc(d.reviewedBy||currentUser||'')}"></div>
+        </div>
+        <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+          <label>Development plan — what will change before the next review</label>
+          <textarea class="ap-in" data-id="${esc(r.item_id)}" data-k="devPlan" rows="2">${esc(d.devPlan||'')}</textarea></div></div>
+        <div class="rfq-actions" style="margin-top:12px;">
+          <button class="mini-btn gold ap-save" data-id="${esc(r.item_id)}">Save</button>
+          ${r.status!=='Approved'?`<button class="mini-btn green ap-approve" data-id="${esc(r.item_id)}">Approve</button>`:''}
+          <button class="item-delete ap-del" data-id="${esc(r.item_id)}">Delete</button>
+        </div></div></div>`;
+    }).join(''):'<p class="empty-note">No appraisals started.</p>';
+
+    host.querySelectorAll('[data-appr]').forEach(row=>row.addEventListener('click',e=>{
+      if(e.target.closest('button')||e.target.closest('select')||e.target.closest('textarea')||e.target.closest('input')) return;
+      const id=row.dataset.appr; expandedAppraisal=(expandedAppraisal===id)?null:id; renderAppraisals();
+    }));
+    host.querySelectorAll('.ap-in').forEach(inp=>inp.addEventListener('input',()=>{
+      const r=list.find(x=>x.item_id===inp.dataset.id), d=r.data||r;
+      d[inp.dataset.k]=inp.value; r.data=d;
+    }));
+    host.querySelectorAll('.ap-save').forEach(b=>b.addEventListener('click',async()=>{
+      const r=list.find(x=>x.item_id===b.dataset.id), d=r.data||r;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:r.item_id,patch:d,
+        status:'Manager Review',reason:'appraisal updated'})}); await loadItems(); toast('Saved'); }
+      catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.ap-approve').forEach(b=>b.addEventListener('click',async()=>{
+      const r=list.find(x=>x.item_id===b.dataset.id), d=r.data||r;
+      if(!d.rating){ toast('Set a rating before approving.'); return; }
+      const reason=prompt('Approving this appraisal. Note for the record:')||'';
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:r.item_id,patch:d,
+        status:'Approved',reason})}); await loadItems(); toast('Approved'); }catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.ap-del').forEach(b=>b.addEventListener('click',async()=>{
+      if(!confirm('Delete this appraisal?')) return;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:b.dataset.id,remove:true,reason:'deleted'})});
+        await loadItems(); }catch(e){ toast(e.message); }
+    }));
+  }
+
   /* ================= ISO 9001 / IATF 16949 EVIDENCE LAYER (§27, §28) =================
      Each check answers one question: if an auditor asked for this evidence today,
      could you produce it from records that already exist? Nothing here asserts
@@ -3282,7 +3512,7 @@ Reply with ONLY this JSON, no commentary or code fences:
 
   async function loadItems(){
     try{ const j=await api('/api/hr?what=items'); hrItems=j.items||[]; }catch(e){ hrItems=[]; }
-    renderPolicies(); renderTasks();
+    renderPolicies(); renderTasks(); renderKpis(); renderAppraisals();
   }
 
   function renderPolicies(){
@@ -3436,7 +3666,7 @@ Reply with ONLY this JSON, no commentary or code fences:
   }
 
   /* ---------- Skill matrix UI (§15, §16) ---------- */
-  let expandedAssess=null, expandedPolicy=null;
+  let expandedAssess=null, expandedPolicy=null, expandedAppraisal=null;
   function refreshCompDropdowns(){
     const c=document.getElementById('rc-comp'), l=document.getElementById('rc-level'),
           d=document.getElementById('sm-dept');
@@ -7098,6 +7328,12 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     if(tab.dataset.hrtab==='training'){ refreshTrainDropdowns(); loadTraining(); }
     if(tab.dataset.hrtab==='policies'){ loadItems(); }
     if(tab.dataset.hrtab==='tasks'){ refreshTaskDropdowns(); loadItems(); }
+    if(tab.dataset.hrtab==='kpi'){
+      const e=document.getElementById('ap-emp');
+      if(e) e.innerHTML=hrEmployees.filter(x=>x.status!=='Exited')
+        .map(x=>`<option value="${esc(x.empId)}">${esc(x.empId)} — ${esc(x.name)}</option>`).join('');
+      Promise.all([loadTraining(),loadItems()]).then(()=>{renderKpis();renderAppraisals();});
+    }
     if(tab.dataset.hrtab==='audit-ready'){
       // needs every source loaded before it can judge the evidence
       Promise.all([loadTraining(),loadItems()]).then(renderAuditReady);
@@ -7130,6 +7366,39 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   document.getElementById('lv-emp').addEventListener('change',renderLeave);
   document.getElementById('sm-dept').addEventListener('change',renderSkillMatrix);
   document.getElementById('tk-filter').addEventListener('change',renderTasks);
+  document.getElementById('kp-add').addEventListener('click',async function(){
+    const name=document.getElementById('kp-name').value.trim();
+    const msg=document.getElementById('kp-msg');
+    if(!name){ msg.textContent='Give the KPI a name.'; msg.style.color='#B03A2E'; return; }
+    const item={itemId:'KPI-'+Date.now().toString(36).toUpperCase(),kind:'kpi',status:'Active',
+      name, level:document.getElementById('kp-level').value,
+      owner:document.getElementById('kp-owner').value.trim(),
+      category:document.getElementById('kp-cat').value,
+      target:num(document.getElementById('kp-target').value),
+      unit:document.getElementById('kp-unit').value.trim(),
+      direction:document.getElementById('kp-dir').value,
+      source:document.getElementById('kp-src').value, actual:''};
+    this.disabled=true; this.textContent='Adding…';
+    try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'items',item,reason:'KPI defined'})});
+      await loadItems(); document.getElementById('kp-name').value='';
+      msg.textContent='KPI added.'; msg.style.color='var(--ok)'; }
+    catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false; this.textContent='Add KPI';
+  });
+  document.getElementById('ap-create').addEventListener('click',async function(){
+    const empId=document.getElementById('ap-emp').value;
+    const period=document.getElementById('ap-period').value.trim();
+    const msg=document.getElementById('ap-msg');
+    if(!empId||!period){ msg.textContent='Choose an employee and a period.'; msg.style.color='#B03A2E'; return; }
+    const item={itemId:'APR-'+Date.now().toString(36).toUpperCase(),kind:'appraisal',status:'Self Assessment',
+      empId,period,selfText:'',managerText:'',rating:'',promotion:'',incrementPct:'',devPlan:'',
+      reviewedBy:currentUser||''};
+    this.disabled=true; this.textContent='Starting…';
+    try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'items',item,reason:'appraisal started'})});
+      await loadItems(); msg.textContent='Appraisal started — open it below.'; msg.style.color='var(--ok)'; }
+    catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false; this.textContent='Start Appraisal';
+  });
   function refreshTaskDropdowns(){
     const o=document.getElementById('tk-owner');
     if(o) o.innerHTML=hrEmployees.filter(e=>e.status!=='Exited')

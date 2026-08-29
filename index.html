@@ -882,6 +882,8 @@
       <button class="hr-tab" data-hrtab="payroll">Payroll</button>
       <button class="hr-tab" data-hrtab="skills">Skill Matrix</button>
       <button class="hr-tab" data-hrtab="training">Training</button>
+      <button class="hr-tab" data-hrtab="policies">Policies</button>
+      <button class="hr-tab" data-hrtab="tasks">DWM &amp; Tasks</button>
       <button class="hr-tab" data-hrtab="statutory">Statutory Settings</button>
       <button class="hr-tab" data-hrtab="audit">Audit Trail</button>
     </div>
@@ -1006,6 +1008,62 @@
         <div class="field-hint" id="ts-msg" style="margin-top:8px;"></div>
       </div>
       <div id="train-sessions"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="policies" style="display:none;">
+      <div class="info-box">Policies are version-controlled. Publishing a revision supersedes the previous
+        one and clears acknowledgements, so everyone must read the current version. Superseded versions stay
+        readable as evidence but are never presented as current.</div>
+      <div class="kpi-row" id="pol-kpi"></div>
+      <div class="qb" style="margin-bottom:16px;">
+        <h4>New Policy or Revision</h4>
+        <div class="cs-row four">
+          <div><label>Title</label><input type="text" id="pl-title" placeholder="Attendance Policy"></div>
+          <div><label>Category</label><input type="text" id="pl-cat" placeholder="HR / Safety / Quality"></div>
+          <div><label>Version</label><input type="text" id="pl-ver" value="1.0"></div>
+          <div><label>Effective From</label><input type="date" id="pl-eff"></div>
+        </div>
+        <div class="cs-row four" style="margin-top:10px;">
+          <div><label>Applies To</label><input type="text" id="pl-applies" placeholder="All employees / a department"></div>
+          <div><label>Owner</label><input type="text" id="pl-owner"></div>
+          <div><label>Next Review</label><input type="date" id="pl-review"></div>
+          <div><label>Supersedes</label><select id="pl-supersedes" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div>
+        </div>
+        <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+          <label>Policy Text</label><textarea id="pl-body" rows="6"></textarea></div></div>
+        <button class="mini-btn gold" id="pl-create" style="margin-top:12px;">Save as Draft</button>
+        <div class="field-hint" id="pl-msg" style="margin-top:8px;"></div>
+      </div>
+      <div id="pol-list"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="tasks" style="display:none;">
+      <div class="kpi-row" id="task-kpi"></div>
+      <div class="qb" style="margin-bottom:16px;">
+        <h4>New Task</h4>
+        <div class="cs-row four">
+          <div><label>Description</label><input type="text" id="tk-desc"></div>
+          <div><label>Owner</label><select id="tk-owner" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div>
+          <div><label>Priority</label><select id="tk-pri" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option>Normal</option><option>High</option><option>Critical</option></select></div>
+          <div><label>Due</label><input type="date" id="tk-due"></div>
+        </div>
+        <div class="cs-row four" style="margin-top:10px;">
+          <div><label>Source</label><select id="tk-src" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option>DWM</option><option>Meeting</option><option>Audit finding</option><option>Quality issue</option>
+            <option>Production issue</option><option>Maintenance</option><option>Customer complaint</option>
+            <option>KPI gap</option><option>Training</option><option>Management review</option></select></div>
+          <div style="grid-column:span 3;"><label>Department</label><input type="text" id="tk-dept"></div>
+        </div>
+        <button class="mini-btn gold" id="tk-create" style="margin-top:12px;">Create Task</button>
+        <div class="field-hint" id="tk-msg" style="margin-top:8px;"></div>
+      </div>
+      <div class="cs-row" style="margin-bottom:12px;"><div>
+        <label>Show</label>
+        <select id="tk-filter" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+          <option value="open">Open tasks</option><option value="today">Due today or overdue</option>
+          <option value="mine">My tasks</option><option value="all">Everything</option></select></div></div>
+      <div id="task-list"></div>
     </div>
 
     <div class="hr-panel" data-hrpanel="statutory" style="display:none;">
@@ -3012,8 +3070,170 @@ Reply with ONLY this JSON, no commentary or code fences:
     w.document.close();
   }
 
+  /* ================= POLICIES (§13) =================
+     Version-controlled. A published revision supersedes its predecessor and
+     resets acknowledgements — an old acknowledgement is not evidence that
+     someone read the current rules. */
+  let hrItems=[];
+  const itemsOf=k=>hrItems.filter(i=>i.kind===k);
+
+  async function loadItems(){
+    try{ const j=await api('/api/hr?what=items'); hrItems=j.items||[]; }catch(e){ hrItems=[]; }
+    renderPolicies(); renderTasks();
+  }
+
+  function renderPolicies(){
+    const kpi=document.getElementById('pol-kpi'), host=document.getElementById('pol-list');
+    if(!host) return;
+    const pols=itemsOf('policy');
+    const current=pols.filter(p=>p.status==='Published');
+    const drafts=pols.filter(p=>p.status==='Draft');
+    const active=hrEmployees.filter(e=>e.status!=='Exited');
+    const dueReview=current.filter(p=>{const d=p.data||p; return d.reviewOn&&new Date(d.reviewOn)<=new Date();});
+    const pendingAck=current.reduce((t,p)=>{
+      const d=p.data||p; const acks=(d.acknowledgements||[]).length;
+      return t+Math.max(0,active.length-acks);},0);
+
+    if(kpi) kpi.innerHTML=`<div class="kpi"><b>${current.length}</b><span>Published</span></div>
+      <div class="kpi"><b>${drafts.length}</b><span>Drafts</span></div>
+      <div class="kpi"><b style="color:${pendingAck?'var(--gold-deep)':'var(--ok)'}">${pendingAck}</b><span>Acknowledgements Pending</span></div>
+      <div class="kpi"><b style="color:${dueReview.length?'#B03A2E':'var(--ok)'}">${dueReview.length}</b><span>Due for Review</span></div>`;
+
+    const sel=document.getElementById('pl-supersedes');
+    if(sel) sel.innerHTML='<option value="">Nothing — this is new</option>'+
+      current.map(p=>`<option value="${esc(p.item_id)}">${esc((p.data||p).title)} v${esc((p.data||p).version)}</option>`).join('');
+
+    host.innerHTML=pols.length?pols.map((p,i)=>{
+      const d=p.data||p;
+      const acks=(d.acknowledgements||[]).length;
+      const overdue=d.reviewOn&&new Date(d.reviewOn)<=new Date();
+      const badge=p.status==='Published'?'go':(p.status==='Superseded'?'unk':'no');
+      return `<div class="rfq-card"><div class="list-item-head rfq-summary" data-pol="${esc(p.item_id)}">
+        <div><div class="rfq-ref">${esc(d.title)} <span class="t-micro">v${esc(d.version)}</span></div>
+        <div class="rfq-when">${esc(d.category||'')} · effective ${fmtDate(d.effectiveFrom)} ·
+          ${acks}/${active.length} acknowledged${overdue?' · <span style="color:#B03A2E">review overdue</span>':''}</div></div>
+        <span class="order-badge ${badge}">${esc(p.status)}</span></div>
+      <div class="rfq-body" style="display:${expandedPolicy===p.item_id?'block':'none'};">
+        <div class="feas-line" style="white-space:pre-wrap;margin-bottom:12px;">${esc(d.body||'')}</div>
+        <div class="feas-line">Applies to <b>${esc(d.appliesTo||'all employees')}</b> · owner ${esc(d.owner||'—')}
+          ${d.reviewOn?` · next review ${fmtDate(d.reviewOn)}`:''}
+          ${d.supersedesTitle?`<br>Supersedes ${esc(d.supersedesTitle)}`:''}</div>
+        ${p.status==='Published'?`
+          <div class="cs-sub">Acknowledgements</div>
+          <div class="feas-line">${acks} of ${active.length} employees have acknowledged this version.
+            ${acks<active.length?`<br><span class="t-micro">Not yet: ${esc(active.filter(e=>!(d.acknowledgements||[]).some(a=>a.empId===e.empId)).slice(0,12).map(e=>e.name).join(', '))}${active.length-acks>12?'…':''}</span>`:''}</div>
+          <div class="cs-row four" style="margin-top:10px;">
+            <div><label>Record acknowledgement for</label>
+              <select class="pol-ack-emp" data-p="${esc(p.item_id)}" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+                ${active.filter(e=>!(d.acknowledgements||[]).some(a=>a.empId===e.empId))
+                  .map(e=>`<option value="${esc(e.empId)}">${esc(e.name)}</option>`).join('')||'<option value="">Everyone has acknowledged</option>'}</select></div>
+            <div style="align-self:end;"><button class="mini-btn pol-ack" data-p="${esc(p.item_id)}">Record</button></div>
+          </div>`:''}
+        <div class="rfq-actions" style="margin-top:12px;">
+          ${p.status==='Draft'?`<button class="mini-btn green pol-pub" data-p="${esc(p.item_id)}">Publish</button>`:''}
+          ${p.status!=='Superseded'?`<button class="item-delete pol-del" data-p="${esc(p.item_id)}">Delete</button>`:''}
+        </div></div></div>`;
+    }).join(''):'<p class="empty-note">No policies yet.</p>';
+
+    host.querySelectorAll('[data-pol]').forEach(r=>r.addEventListener('click',e=>{
+      if(e.target.closest('button')||e.target.closest('select')) return;
+      const id=r.dataset.pol; expandedPolicy=(expandedPolicy===id)?null:id; renderPolicies();
+    }));
+    host.querySelectorAll('.pol-pub').forEach(b=>b.addEventListener('click',async()=>{
+      const p=pols.find(x=>x.item_id===b.dataset.p), d=p.data||p;
+      if(!confirm('Publish this version? Any policy it supersedes becomes read-only and acknowledgements start again.')) return;
+      try{
+        if(d.supersedes){
+          await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:d.supersedes,
+            status:'Superseded',reason:'superseded by '+d.version})});
+        }
+        d.acknowledgements=[];
+        await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:p.item_id,patch:d,
+          status:'Published',reason:'policy published'})});
+        await loadItems(); toast('Published');
+      }catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.pol-ack').forEach(b=>b.addEventListener('click',async()=>{
+      const p=pols.find(x=>x.item_id===b.dataset.p), d=p.data||p;
+      const sel=host.querySelector(`.pol-ack-emp[data-p="${CSS.escape(b.dataset.p)}"]`);
+      if(!sel||!sel.value) return;
+      d.acknowledgements=d.acknowledgements||[];
+      d.acknowledgements.push({empId:sel.value,on:new Date().toISOString().slice(0,10),by:currentUser||''});
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:p.item_id,patch:d,
+        reason:'acknowledgement recorded for '+sel.value})});
+        await loadItems(); toast('Recorded'); }catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.pol-del').forEach(b=>b.addEventListener('click',async()=>{
+      if(!confirm('Delete this policy?')) return;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:b.dataset.p,remove:true,reason:'deleted'})});
+        await loadItems(); }catch(e){ toast(e.message); }
+    }));
+  }
+
+  /* ================= DWM & TASKS (§22, §23) ================= */
+  function taskState(t){
+    const d=t.data||t;
+    if(t.status==='Completed') return {label:'Completed',cls:'go',dot:'🟢'};
+    if(t.status==='Blocked') return {label:'Blocked',cls:'no',dot:'🔴'};
+    if(t.status==='In Progress') return {label:'In progress',cls:'unk',dot:'🟡'};
+    return {label:'Not started',cls:'unk',dot:'⚪'};
+  }
+  function renderTasks(){
+    const kpi=document.getElementById('task-kpi'), host=document.getElementById('task-list');
+    if(!host) return;
+    const all=itemsOf('task');
+    const today=new Date(); today.setHours(23,59,59,999);
+    const open=all.filter(t=>t.status!=='Completed');
+    const overdue=open.filter(t=>t.due&&new Date(t.due)<new Date(new Date().toDateString()));
+    const dueToday=open.filter(t=>t.due&&new Date(t.due)<=today);
+    const blocked=open.filter(t=>t.status==='Blocked');
+
+    if(kpi) kpi.innerHTML=`<div class="kpi"><b>${open.length}</b><span>Open Tasks</span></div>
+      <div class="kpi"><b>${dueToday.length}</b><span>Due Today or Sooner</span></div>
+      <div class="kpi"><b style="color:${overdue.length?'#B03A2E':'var(--ok)'}">${overdue.length}</b><span>Overdue</span></div>
+      <div class="kpi"><b style="color:${blocked.length?'#B03A2E':'var(--ok)'}">${blocked.length}</b><span>Blocked</span></div>`;
+
+    const f=(document.getElementById('tk-filter')||{}).value||'open';
+    let list=all;
+    if(f==='open') list=open;
+    else if(f==='today') list=dueToday;
+    else if(f==='mine') list=all.filter(t=>t.owner===currentUser||((t.data||t).ownerName||'')===currentUser);
+
+    host.innerHTML=list.length?`<table class="cs-t"><thead><tr><th style="width:34px"></th><th>Task</th><th>Owner</th>
+      <th>Source</th><th>Priority</th><th>Due</th><th style="width:130px">Status</th><th></th></tr></thead>
+      <tbody>${list.map(t=>{const d=t.data||t, st=taskState(t);
+        const late=t.due&&new Date(t.due)<new Date(new Date().toDateString())&&t.status!=='Completed';
+        const emp=hrEmployees.find(e=>e.empId===t.owner);
+        return `<tr><td class="c">${st.dot}</td>
+        <td>${esc(d.description)}${d.evidence?`<div class="t-micro">Evidence: ${esc(d.evidence)}</div>`:''}</td>
+        <td>${esc(emp?emp.name:(t.owner||'—'))}<div class="t-micro">${esc(d.department||'')}</div></td>
+        <td class="t-micro">${esc(d.source||'')}</td>
+        <td><span class="order-badge ${d.priority==='Critical'?'no':d.priority==='High'?'unk':'go'}">${esc(d.priority||'Normal')}</span></td>
+        <td class="${late?'':''}" style="${late?'color:#B03A2E;font-weight:700;':''}">${fmtDate(t.due)}</td>
+        <td><select class="tk-st" data-id="${esc(t.item_id)}" style="width:100%;padding:5px;border:1px solid var(--line);border-radius:5px;font-size:var(--fs-micro);">
+          ${['Not Started','In Progress','Blocked','Completed'].map(x=>`<option ${t.status===x?'selected':''}>${x}</option>`).join('')}</select></td>
+        <td><button class="qb-del tk-del" data-id="${esc(t.item_id)}">×</button></td></tr>`;}).join('')}</tbody></table>`
+      :'<p class="empty-note">Nothing to show for this filter.</p>';
+
+    host.querySelectorAll('.tk-st').forEach(sel=>sel.addEventListener('change',async()=>{
+      let reason='';
+      if(sel.value==='Completed'){ reason=prompt('What is the evidence this is done?')||''; }
+      if(sel.value==='Blocked'){ reason=prompt('What is blocking it?')||''; }
+      const t=all.find(x=>x.item_id===sel.dataset.id), d=t.data||t;
+      if(reason) d.evidence=reason;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:sel.dataset.id,
+        patch:d,status:sel.value,reason:reason||('status → '+sel.value)})});
+        await loadItems(); }catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.tk-del').forEach(b=>b.addEventListener('click',async()=>{
+      if(!confirm('Delete this task?')) return;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:b.dataset.id,remove:true,reason:'deleted'})});
+        await loadItems(); }catch(e){ toast(e.message); }
+    }));
+  }
+
   /* ---------- Skill matrix UI (§15, §16) ---------- */
-  let expandedAssess=null;
+  let expandedAssess=null, expandedPolicy=null;
   function refreshCompDropdowns(){
     const c=document.getElementById('rc-comp'), l=document.getElementById('rc-level'),
           d=document.getElementById('sm-dept');
@@ -6673,6 +6893,8 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     if(tab.dataset.hrtab==='leave'){ refreshLeaveDropdowns(); loadLeave(); }
     if(tab.dataset.hrtab==='skills'){ refreshCompDropdowns(); renderRoleStandards(); renderSkillMatrix(); }
     if(tab.dataset.hrtab==='training'){ refreshTrainDropdowns(); loadTraining(); }
+    if(tab.dataset.hrtab==='policies'){ loadItems(); }
+    if(tab.dataset.hrtab==='tasks'){ refreshTaskDropdowns(); loadItems(); }
     if(tab.dataset.hrtab==='attendance'){
       const pe=document.getElementById('at-period');
       if(!pe.value) pe.value=new Date().toISOString().slice(0,7);
@@ -6700,6 +6922,51 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   });
   document.getElementById('lv-emp').addEventListener('change',renderLeave);
   document.getElementById('sm-dept').addEventListener('change',renderSkillMatrix);
+  document.getElementById('tk-filter').addEventListener('change',renderTasks);
+  function refreshTaskDropdowns(){
+    const o=document.getElementById('tk-owner');
+    if(o) o.innerHTML=hrEmployees.filter(e=>e.status!=='Exited')
+      .map(e=>`<option value="${esc(e.empId)}">${esc(e.name)}</option>`).join('')||'<option value="">No employees</option>';
+  }
+  document.getElementById('pl-create').addEventListener('click',async function(){
+    const title=document.getElementById('pl-title').value.trim();
+    const body=document.getElementById('pl-body').value.trim();
+    const msg=document.getElementById('pl-msg');
+    if(!title||!body){ msg.textContent='Title and policy text are required.'; msg.style.color='#B03A2E'; return; }
+    const sup=document.getElementById('pl-supersedes');
+    const item={itemId:'POL-'+Date.now().toString(36).toUpperCase(),kind:'policy',status:'Draft',
+      title,category:document.getElementById('pl-cat').value.trim(),
+      version:document.getElementById('pl-ver').value.trim()||'1.0',
+      effectiveFrom:document.getElementById('pl-eff').value,
+      appliesTo:document.getElementById('pl-applies').value.trim(),
+      owner:document.getElementById('pl-owner').value.trim(),
+      reviewOn:document.getElementById('pl-review').value,
+      supersedes:sup.value, supersedesTitle:sup.value?sup.options[sup.selectedIndex].text:'',
+      body, acknowledgements:[]};
+    this.disabled=true; this.textContent='Saving…';
+    try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'items',item,reason:'policy drafted'})});
+      await loadItems(); ['pl-title','pl-body','pl-cat','pl-applies'].forEach(id=>document.getElementById(id).value='');
+      msg.textContent='Draft saved. Publish it when approved.'; msg.style.color='var(--ok)'; }
+    catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false; this.textContent='Save as Draft';
+  });
+  document.getElementById('tk-create').addEventListener('click',async function(){
+    const description=document.getElementById('tk-desc').value.trim();
+    const msg=document.getElementById('tk-msg');
+    if(!description){ msg.textContent='Describe the task.'; msg.style.color='#B03A2E'; return; }
+    const item={itemId:'TSK-'+Date.now().toString(36).toUpperCase(),kind:'task',status:'Not Started',
+      description, owner:document.getElementById('tk-owner').value,
+      priority:document.getElementById('tk-pri').value,
+      due:document.getElementById('tk-due').value||null,
+      source:document.getElementById('tk-src').value,
+      department:document.getElementById('tk-dept').value.trim(), evidence:''};
+    this.disabled=true; this.textContent='Creating…';
+    try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'items',item,reason:'task created'})});
+      await loadItems(); document.getElementById('tk-desc').value='';
+      msg.textContent='Task created.'; msg.style.color='var(--ok)'; }
+    catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false; this.textContent='Create Task';
+  });
   document.getElementById('rc-add').addEventListener('click',()=>{
     const role=document.getElementById('rc-role').value.trim();
     const competencyId=document.getElementById('rc-comp').value;

@@ -205,6 +205,49 @@ export default async function handler(req, res) {
       }
     }
 
+    /* ------- ITEMS: policies, tasks, KPIs, appraisals — one shape, many kinds ------- */
+    if (what === 'items') {
+      if (req.method === 'GET') {
+        const kind = String(req.query.kind || '');
+        const rows = kind
+          ? await sql`SELECT item_id, kind, status, owner, due, data, created_at FROM hr_items
+                      WHERE kind = ${kind} ORDER BY created_at DESC LIMIT 2000`
+          : await sql`SELECT item_id, kind, status, owner, due, data, created_at FROM hr_items
+                      ORDER BY created_at DESC LIMIT 3000`;
+        return res.status(200).json({ ok: true, items: rows });
+      }
+      if (req.method === 'POST') {
+        const it = body.item || {};
+        if (!it.itemId || !it.kind)
+          return res.status(400).json({ ok: false, error: 'Reference and kind are required.' });
+        await sql`INSERT INTO hr_items (item_id, kind, data, status, owner, due)
+                  VALUES (${it.itemId}, ${it.kind}, ${JSON.stringify(it)}::jsonb,
+                          ${it.status || 'Open'}, ${it.owner || ''}, ${it.due || null})
+                  ON CONFLICT (item_id) DO UPDATE SET data = EXCLUDED.data,
+                    status = EXCLUDED.status, owner = EXCLUDED.owner, due = EXCLUDED.due`;
+        await audit(me && me.username, it.kind + '.save', it.itemId, null, it, body.reason);
+        return res.status(200).json({ ok: true, itemId: it.itemId });
+      }
+      if (req.method === 'PATCH') {
+        const rows = await sql`SELECT data, status FROM hr_items WHERE item_id = ${body.itemId}`;
+        if (!rows.length) return res.status(404).json({ ok: false, error: 'Not found.' });
+        if (body.remove) {
+          await sql`DELETE FROM hr_items WHERE item_id = ${body.itemId}`;
+          await audit(me && me.username, 'item.delete', body.itemId, rows[0].data, null, body.reason);
+          return res.status(200).json({ ok: true, removed: body.itemId });
+        }
+        const merged = Object.assign({}, rows[0].data, body.patch || {});
+        if (body.status) merged.status = body.status;
+        await sql`UPDATE hr_items SET data = ${JSON.stringify(merged)}::jsonb,
+                  status = ${body.status || rows[0].status},
+                  owner = ${merged.owner || ''}, due = ${merged.due || null}
+                  WHERE item_id = ${body.itemId}`;
+        await audit(me && me.username, 'item.' + (body.status || 'update').toLowerCase(),
+          body.itemId, { status: rows[0].status }, { status: body.status || rows[0].status }, body.reason);
+        return res.status(200).json({ ok: true, item: merged });
+      }
+    }
+
     /* ---------------- AUDIT TRAIL ---------------- */
     if (what === 'audit' && req.method === 'GET') {
       if (!(await checkRole(token, ['developer'])))

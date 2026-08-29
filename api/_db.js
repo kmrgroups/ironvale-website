@@ -46,6 +46,16 @@ export async function ensureTables() {
     status TEXT DEFAULT 'Open',
     created_at TIMESTAMPTZ DEFAULT now()
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS hr_items (
+    item_id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    data JSONB NOT NULL,
+    status TEXT DEFAULT 'Open',
+    owner TEXT DEFAULT '',
+    due DATE,
+    created_at TIMESTAMPTZ DEFAULT now()
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS hr_items_kind ON hr_items (kind, status)`;
   await sql`CREATE TABLE IF NOT EXISTS hr_payruns (
     run_id TEXT PRIMARY KEY,
     period TEXT NOT NULL,

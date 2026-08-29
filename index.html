@@ -362,6 +362,25 @@
   .sk-t td.sk.na{background:#F6F8FB;color:var(--ink-soft);}
   .sk-t th.rot{font-size:8.5px;max-width:88px;white-space:normal;line-height:1.25;padding:6px 3px;vertical-align:bottom;}
   .att-t input.at-ot{width:52px;border:1px solid var(--line);border-radius:4px;padding:3px;font-size:10px;text-align:right;font-family:var(--mono);}
+.tower-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:16px;}
+  .tower-card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;box-shadow:var(--shadow-sm);cursor:pointer;transition:box-shadow .2s,transform .2s;}
+  .tower-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+  .tower-card h4{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;
+    color:var(--gold-deep);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--line);}
+  .tw-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:var(--fs-micro);color:var(--ink-mid);}
+  .tw-row b{font-family:var(--mono);font-size:var(--fs-body);color:var(--navy);}
+  .tw-row b.good{color:var(--ok);} .tw-row b.warn{color:var(--gold-deep);} .tw-row b.bad{color:#B03A2E;}
+  .tower-alerts{display:flex;flex-direction:column;gap:7px;margin-bottom:18px;}
+  .t-alert{display:flex;align-items:center;gap:12px;background:var(--white);border:1px solid var(--line);
+    border-left:4px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;cursor:pointer;transition:background .15s;}
+  .t-alert:hover{background:var(--paper);}
+  .t-alert.red{border-left-color:#B03A2E;} .t-alert.amber{border-left-color:var(--gold);}
+  .t-alert .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
+  .t-alert.red .dot{background:#B03A2E;} .t-alert.amber .dot{background:var(--gold);}
+  .t-alert b{display:block;font-size:var(--fs-body);color:var(--navy);}
+  .t-alert span:not(.dot):not(.go){display:block;font-size:var(--fs-micro);color:var(--ink-soft);margin-top:1px;}
+  .t-alert .go{margin-left:auto;color:var(--ink-soft);font-size:15px;}
   .hr-tab.active{color:var(--navy);border-bottom-color:var(--gold);background:var(--white);}
   .staff-bar{position:sticky;top:0;z-index:5;background:var(--navy);color:#fff;padding:0 var(--gutter);height:var(--bar-h);display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:3px solid var(--gold);}
   .staff-bar h2{color:#fff;font-size:calc(var(--font-base)*1.15);}
@@ -876,7 +895,8 @@
   </div>
   <div class="staff-body">
     <div class="admin-tabs" style="margin-bottom:20px;border-radius:var(--radius-sm);">
-      <button class="hr-tab active" data-hrtab="people">Employees</button>
+      <button class="hr-tab active" data-hrtab="tower">Control Tower</button>
+      <button class="hr-tab" data-hrtab="people">Employees</button>
       <button class="hr-tab" data-hrtab="attendance">Attendance</button>
       <button class="hr-tab" data-hrtab="leave">Leave</button>
       <button class="hr-tab" data-hrtab="payroll">Payroll</button>
@@ -890,7 +910,14 @@
       <button class="hr-tab" data-hrtab="audit">Audit Trail</button>
     </div>
 
-    <div class="hr-panel" data-hrpanel="people">
+    <div class="hr-panel" data-hrpanel="tower">
+      <div id="tower-alerts"></div>
+      <div id="tower-grid"></div>
+      <div class="field-hint" style="margin-top:16px;">Every figure here is read live from the records in this
+        system. Click any card to open the tab it comes from.</div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="people" style="display:none;">
       <div class="kpi-row" id="hr-kpi-row"></div>
       <div class="qb" style="margin-bottom:18px;">
         <h4>Add Employee</h4>
@@ -3129,6 +3156,174 @@ Reply with ONLY this JSON, no commentary or code fences:
     w.document.close();
   }
 
+  /* ================= CONTROL TOWER & ALERTS (§31, §32) =================
+     Management sees status first, not a table of employees. Every number is
+     read live from records elsewhere in the system — nothing is stored here,
+     so it can never drift out of step with the underlying data. */
+  function towerData(){
+    const active=hrEmployees.filter(e=>e.status!=='Exited');
+    const period=new Date().toISOString().slice(0,7);
+    const today=new Date(); today.setHours(0,0,0,0);
+
+    /* workforce */
+    let present=0, onLeave=0, absent=0;
+    const todayKey=dayKey(today);
+    active.forEach(e=>{
+      const rec=hrAttendance.find(a=>a.empId===e.empId&&a.day===todayKey);
+      const lv=leaveDaysFor(e.empId,period)[todayKey];
+      if(rec&&rec.status==='Present') present++;
+      else if(lv) onLeave++;
+      else if(rec&&rec.status==='Absent') absent++;
+    });
+
+    /* competency */
+    let reqTotal=0, reqMet=0, criticalGaps=0;
+    active.forEach(e=>competencyGaps(e).forEach(g=>{
+      reqTotal++; if(g.gap===0) reqMet++; if(g.status==='red') criticalGaps++;
+    }));
+
+    /* training */
+    const sessions=hrTraining.filter(r=>r.kind==='session');
+    const completed=sessions.filter(r=>(r.data||r).completedOn);
+    const effPending=completed.filter(r=>!(r.data||r).effectivenessDone);
+    const overdueEval=effectivenessDue();
+
+    /* policies */
+    const pols=itemsOf('policy').filter(p=>p.status==='Published');
+    const ackPending=pols.reduce((t,p)=>t+Math.max(0,active.length-((p.data||p).acknowledgements||[]).length),0);
+    const reviewOverdue=pols.filter(p=>{const d=p.data||p;return d.reviewOn&&new Date(d.reviewOn)<=new Date();});
+
+    /* tasks */
+    const tasks=itemsOf('task');
+    const openTasks=tasks.filter(t=>t.status!=='Completed');
+    const overdueTasks=openTasks.filter(t=>t.due&&new Date(t.due)<today);
+    const blockedTasks=openTasks.filter(t=>t.status==='Blocked');
+
+    /* payroll */
+    const draftRuns=hrPayruns.filter(r=>r.status!=='Approved');
+    const lastRun=hrPayruns.find(r=>r.status==='Approved');
+    const noStructure=active.filter(e=>grossMonthly(e)<=0);
+
+    /* KPIs */
+    const kpis=itemsOf('kpi').map(k=>{
+      const d=k.data||k;
+      const auto=d.source&&d.source!=='manual'?autoKpiValue(d.source):null;
+      const actual=auto?auto.value:(d.actual===''||d.actual===undefined?null:num(d.actual));
+      return {d,actual,st:kpiStatus(d,actual)};
+    });
+    const kpiBelow=kpis.filter(k=>k.st.cls==='no');
+
+    /* probation & anniversaries */
+    const probationEnding=active.filter(e=>{
+      if(!e.doj||e.status!=='Probation') return false;
+      const end=new Date(e.doj); end.setMonth(end.getMonth()+6);
+      const days=(end-today)/86400000;
+      return days>=0&&days<=30;
+    });
+
+    return {active,present,onLeave,absent,reqTotal,reqMet,criticalGaps,
+      sessions,completed,effPending,overdueEval,pols,ackPending,reviewOverdue,
+      tasks,openTasks,overdueTasks,blockedTasks,draftRuns,lastRun,noStructure,
+      kpis,kpiBelow,probationEnding,
+      competencyPct:reqTotal?Math.round(reqMet/reqTotal*100):null};
+  }
+
+  function towerAlerts(t){
+    const a=[];
+    const push=(level,title,detail,tab)=>a.push({level,title,detail,tab});
+    if(t.criticalGaps) push('red','Critical competency gaps',
+      t.criticalGaps+' role requirement(s) are two or more levels short','skills');
+    if(t.overdueEval.length) push('red','Training effectiveness overdue',
+      t.overdueEval.length+' session(s) past their evaluation date','training');
+    if(t.overdueTasks.length) push('red','Overdue tasks',
+      t.overdueTasks.length+' task(s) past their due date','tasks');
+    if(t.blockedTasks.length) push('red','Blocked tasks',
+      t.blockedTasks.length+' task(s) blocked and not moving','tasks');
+    if(t.noStructure.length) push('red','Employees without a salary structure',
+      t.noStructure.length+' person/people cannot be paid correctly','people');
+    if(!ST().lastReviewedBy) push('red','Statutory rates never reviewed',
+      'No reviewer recorded against PF, ESI, PT or TDS figures','statutory');
+    if(t.reviewOverdue.length) push('amber','Policies due for review',
+      t.reviewOverdue.length+' policy/policies past their review date','policies');
+    if(t.ackPending) push('amber','Policy acknowledgements outstanding',
+      t.ackPending+' acknowledgement(s) not yet recorded','policies');
+    if(t.effPending.length) push('amber','Training effectiveness pending',
+      t.effPending.length+' completed session(s) awaiting a verdict','training');
+    if(t.kpiBelow.length) push('amber','KPIs below target',
+      t.kpiBelow.map(k=>k.d.name).slice(0,3).join(', ')+(t.kpiBelow.length>3?'…':''),'kpi');
+    if(t.probationEnding.length) push('amber','Probation ending within 30 days',
+      t.probationEnding.map(e=>e.name).join(', '),'people');
+    if(t.draftRuns.length) push('amber','Payroll draft not approved',
+      t.draftRuns.length+' pay run(s) still in draft','payroll');
+    if(t.absent) push('amber','Absent today',t.absent+' person/people marked absent','attendance');
+    return a;
+  }
+
+  function renderTower(){
+    const alertHost=document.getElementById('tower-alerts'), grid=document.getElementById('tower-grid');
+    if(!grid) return;
+    const t=towerData();
+    const alerts=towerAlerts(t);
+    const reds=alerts.filter(x=>x.level==='red');
+
+    alertHost.innerHTML=alerts.length?`
+      <div class="feas-banner ${reds.length?'no':'unk'}">
+        <div class="feas-title">${reds.length?'🔴 '+reds.length+' ITEM(S) NEED ATTENTION NOW':'🟡 '+alerts.length+' ITEM(S) TO REVIEW'}</div>
+        <div class="feas-line">Click any line to go straight to it.</div></div>
+      <div class="tower-alerts">${alerts.map(x=>`<div class="t-alert ${x.level}" data-goto="${x.tab}">
+        <span class="dot"></span><div><b>${esc(x.title)}</b><span>${esc(x.detail)}</span></div>
+        <span class="go">→</span></div>`).join('')}</div>`
+      :`<div class="feas-banner go"><div class="feas-title">🟢 NOTHING OUTSTANDING</div>
+        <div class="feas-line">No overdue tasks, no critical gaps, no pending acknowledgements.</div></div>`;
+
+    const card=(title,items,tab)=>`<div class="tower-card" data-goto="${tab}">
+      <h4>${title}</h4>${items.map(([k,v,cls])=>
+        `<div class="tw-row"><span>${k}</span><b class="${cls||''}">${v}</b></div>`).join('')}</div>`;
+
+    grid.innerHTML=`<div class="tower-grid">
+      ${card('Workforce',[
+        ['Active employees',t.active.length],
+        ['Present today',t.present],
+        ['On leave',t.onLeave],
+        ['Absent',t.absent,t.absent?'bad':'']],'attendance')}
+      ${card('Competency',[
+        ['Requirements met',(t.competencyPct===null?'—':t.competencyPct+'%'),t.competencyPct!==null&&t.competencyPct<80?'warn':'good'],
+        ['Requirements tracked',t.reqTotal],
+        ['Critical gaps',t.criticalGaps,t.criticalGaps?'bad':'good']],'skills')}
+      ${card('Training',[
+        ['Sessions held',t.completed.length],
+        ['Effectiveness pending',t.effPending.length,t.effPending.length?'warn':'good'],
+        ['Evaluation overdue',t.overdueEval.length,t.overdueEval.length?'bad':'good']],'training')}
+      ${card('Compliance',[
+        ['Published policies',t.pols.length],
+        ['Acknowledgements pending',t.ackPending,t.ackPending?'warn':'good'],
+        ['Reviews overdue',t.reviewOverdue.length,t.reviewOverdue.length?'bad':'good']],'policies')}
+      ${card('Tasks &amp; DWM',[
+        ['Open',t.openTasks.length],
+        ['Overdue',t.overdueTasks.length,t.overdueTasks.length?'bad':'good'],
+        ['Blocked',t.blockedTasks.length,t.blockedTasks.length?'bad':'good']],'tasks')}
+      ${card('Payroll',[
+        ['Drafts awaiting approval',t.draftRuns.length,t.draftRuns.length?'warn':'good'],
+        ['Last approved run',t.lastRun?esc(t.lastRun.period):'none'],
+        ['Missing salary structure',t.noStructure.length,t.noStructure.length?'bad':'good']],'payroll')}
+      ${card('KPIs',[
+        ['Defined',t.kpis.length],
+        ['On target',t.kpis.filter(k=>k.st.cls==='go').length,'good'],
+        ['Below target',t.kpiBelow.length,t.kpiBelow.length?'bad':'good']],'kpi')}
+      ${card('Audit Readiness',(()=>{
+        const c=auditChecks();
+        return [['Evidence available',c.filter(x=>x.level==='green').length,'good'],
+          ['Partial',c.filter(x=>x.level==='amber').length,'warn'],
+          ['Missing',c.filter(x=>x.level==='red').length,c.some(x=>x.level==='red')?'bad':'good']];
+      })(),'audit-ready')}
+    </div>`;
+
+    document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',()=>{
+      const tab=document.querySelector(`.hr-tab[data-hrtab="${el.dataset.goto}"]`);
+      if(tab) tab.click();
+    }));
+  }
+
   /* ================= KPI ENGINE (§20) =================
      Where a KPI can be measured from data already in the system it is, and the
      figure is labelled 'auto'. Anything else is entered by a person and labelled
@@ -4413,7 +4608,13 @@ Reply with ONLY this JSON, no commentary or code fences:
     catch(e){ hrPayruns=[]; }
     try{ const j=await api('/api/hr?what=leave'); hrLeave=j.leave||[]; }catch(e){ hrLeave=[]; }
     refreshLeaveDropdowns();
-    renderEmployees(); renderPayruns(); renderStatutory();
+    try{ const j=await api('/api/hr?what=training'); hrTraining=j.records||[]; }catch(e){ hrTraining=[]; }
+    try{ const j=await api('/api/hr?what=items'); hrItems=j.items||[]; }catch(e){ hrItems=[]; }
+    const per=new Date().toISOString().slice(0,7);
+    const [yy,mm]=per.split('-').map(Number);
+    try{ const j=await api(`/api/hr?what=attendance&from=${per}-01&to=${per}-${String(new Date(yy,mm,0).getDate()).padStart(2,'0')}`);
+      hrAttendance=j.attendance||[]; }catch(e){ hrAttendance=[]; }
+    renderEmployees(); renderPayruns(); renderStatutory(); renderTower();
   }
 
   function renderEmployees(){
@@ -7328,6 +7529,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     if(tab.dataset.hrtab==='training'){ refreshTrainDropdowns(); loadTraining(); }
     if(tab.dataset.hrtab==='policies'){ loadItems(); }
     if(tab.dataset.hrtab==='tasks'){ refreshTaskDropdowns(); loadItems(); }
+    if(tab.dataset.hrtab==='tower'){ renderTower(); }
     if(tab.dataset.hrtab==='kpi'){
       const e=document.getElementById('ap-emp');
       if(e) e.innerHTML=hrEmployees.filter(x=>x.status!=='Exited')

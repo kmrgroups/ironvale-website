@@ -884,6 +884,7 @@
       <button class="hr-tab" data-hrtab="training">Training</button>
       <button class="hr-tab" data-hrtab="policies">Policies</button>
       <button class="hr-tab" data-hrtab="tasks">DWM &amp; Tasks</button>
+      <button class="hr-tab" data-hrtab="audit-ready">Audit Readiness</button>
       <button class="hr-tab" data-hrtab="statutory">Statutory Settings</button>
       <button class="hr-tab" data-hrtab="audit">Audit Trail</button>
     </div>
@@ -1064,6 +1065,15 @@
           <option value="open">Open tasks</option><option value="today">Due today or overdue</option>
           <option value="mine">My tasks</option><option value="all">Everything</option></select></div></div>
       <div id="task-list"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="audit-ready" style="display:none;">
+      <div class="info-box"><b>What an auditor asks for, and whether you can produce it.</b> Every line below is
+        computed from records already in this system — nothing here is a self-assessment or a claim.
+        Green means the evidence exists and can be shown. This is not a certification statement.</div>
+      <div class="kpi-row" id="ar-kpi"></div>
+      <div id="ar-summary"></div>
+      <div id="ar-detail"></div>
     </div>
 
     <div class="hr-panel" data-hrpanel="statutory" style="display:none;">
@@ -3067,6 +3077,199 @@ Reply with ONLY this JSON, no commentary or code fences:
     <button onclick="window.close()" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);">Close</button>
     <div style="font-size:11px;opacity:.85;margin-top:9px;">In the print dialog choose <b>Save as PDF</b> and untick <b>Headers and footers</b>.</div></div>
     ${slips}</body></html>`);
+    w.document.close();
+  }
+
+  /* ================= ISO 9001 / IATF 16949 EVIDENCE LAYER (§27, §28) =================
+     Each check answers one question: if an auditor asked for this evidence today,
+     could you produce it from records that already exist? Nothing here asserts
+     conformity or certification — it reports what is and is not evidenced. */
+  function auditChecks(){
+    const active=hrEmployees.filter(e=>e.status!=='Exited');
+    const pols=itemsOf('policy').filter(p=>p.status==='Published');
+    const sessions=hrTraining.filter(r=>r.kind==='session');
+    const checks=[];
+
+    const add=(clause,requirement,level,evidence,gap,action)=>
+      checks.push({clause,requirement,level,evidence,gap,action});
+
+    /* --- Competence (ISO 9001 7.2, IATF 7.2.1) --- */
+    const withRole=active.filter(e=>e.designation);
+    const standardsSet=[...new Set((data.roleCompetency||[]).map(r=>String(r.role).toLowerCase()))];
+    const rolesCovered=withRole.filter(e=>standardsSet.includes(String(e.designation).toLowerCase()));
+    add('7.2 Competence','A defined competence requirement exists for every role',
+      standardsSet.length===0?'red':(rolesCovered.length===withRole.length?'green':'amber'),
+      standardsSet.length+' role standard(s) defined covering '+rolesCovered.length+' of '+withRole.length+' people',
+      withRole.length-rolesCovered.length>0?(withRole.length-rolesCovered.length)+' people have no standard for their role':'',
+      'Set role standards on the Skill Matrix tab');
+
+    const assessed=active.filter(e=>(e.competencies||[]).length>0);
+    const dated=active.filter(e=>(e.competencies||[]).some(c=>c.assessedOn&&c.assessedBy));
+    add('7.2 Competence','Competence is evaluated and the evaluation is recorded',
+      assessed.length===0?'red':(dated.length===active.length?'green':'amber'),
+      dated.length+' of '+active.length+' people have a dated, named assessment',
+      active.length-dated.length>0?(active.length-dated.length)+' people have no recorded assessment':'',
+      'Use Assess on the Skill Matrix tab');
+
+    const gapPeople=active.filter(e=>competencyGaps(e).some(g=>g.gap>0));
+    add('7.2 Competence','Where competence is lacking, action is taken',
+      gapPeople.length===0?'green':(itemsOf('task').filter(t=>(t.data||t).source==='Training').length||sessions.length?'amber':'red'),
+      gapPeople.length+' people currently below their role standard; '+sessions.length+' training session(s) recorded',
+      gapPeople.length&&!sessions.length?'Gaps exist with no training scheduled against them':'',
+      'Generate TNI and schedule training');
+
+    /* --- Training effectiveness (ISO 9001 7.2 d, IATF 7.2.1) --- */
+    const completed=sessions.filter(r=>(r.data||r).completedOn);
+    const evaluated=completed.filter(r=>(r.data||r).effectivenessDone);
+    const overdueEval=effectivenessDue();
+    add('7.2 Competence','Effectiveness of training is evaluated, not just attendance',
+      completed.length===0?'amber':(evaluated.length===completed.length?'green':'red'),
+      evaluated.length+' of '+completed.length+' completed sessions have an effectiveness verdict',
+      overdueEval.length?overdueEval.length+' session(s) overdue for evaluation':'',
+      'Record the verdict on the Training tab');
+
+    /* --- Awareness (ISO 9001 7.3) --- */
+    const ackGap=pols.reduce((t,p)=>{
+      const d=p.data||p; return t+Math.max(0,active.length-((d.acknowledgements||[]).length));},0);
+    add('7.3 Awareness','Employees are aware of the policies that apply to them',
+      pols.length===0?'red':(ackGap===0?'green':'amber'),
+      pols.length+' published policy/policies; '+ackGap+' acknowledgement(s) outstanding',
+      ackGap?ackGap+' acknowledgements still to be recorded':'',
+      'Record acknowledgements on the Policies tab');
+
+    /* --- Documented information (ISO 9001 7.5) --- */
+    const reviewOverdue=pols.filter(p=>{const d=p.data||p;return d.reviewOn&&new Date(d.reviewOn)<=new Date();});
+    add('7.5 Documented information','Documents are version-controlled and reviewed',
+      pols.length===0?'red':(reviewOverdue.length?'amber':'green'),
+      'All policies carry a version, effective date and review date',
+      reviewOverdue.length?reviewOverdue.length+' policy/policies past their review date':'',
+      'Revise and republish overdue policies');
+
+    /* --- Records / traceability (ISO 9001 7.5.3) --- */
+    add('7.5.3 Control of records','Changes to people records are traceable',
+      'green','Every employee change, payroll approval, leave decision and task closure is written to an audit log with user, timestamp and reason','',
+      'Audit Trail tab');
+
+    /* --- Job descriptions / responsibility (ISO 9001 5.3) --- */
+    const noDesig=active.filter(e=>!e.designation);
+    add('5.3 Roles and responsibilities','Every person has a defined role',
+      noDesig.length===0?'green':'amber',
+      (active.length-noDesig.length)+' of '+active.length+' have a designation recorded',
+      noDesig.length?noDesig.length+' people have no designation':'',
+      'Set the designation on the Employees tab');
+
+    /* --- Legal & other requirements --- */
+    const st=ST();
+    add('Statutory','Payroll rules are current and their review is recorded',
+      st.lastReviewedBy?(st.lastReviewedOn&&(new Date()-new Date(st.lastReviewedOn))/86400000<400?'green':'amber'):'red',
+      st.lastReviewedBy?('Last reviewed by '+st.lastReviewedBy+(st.lastReviewedOn?' on '+st.lastReviewedOn:'')):'No reviewer recorded',
+      !st.lastReviewedBy?'Statutory rates have never been formally reviewed':'',
+      'Statutory Settings tab');
+
+    return checks;
+  }
+
+  function renderAuditReady(){
+    const kpi=document.getElementById('ar-kpi'), sum=document.getElementById('ar-summary'),
+          det=document.getElementById('ar-detail');
+    if(!det) return;
+    const checks=auditChecks();
+    const g=checks.filter(c=>c.level==='green').length;
+    const a=checks.filter(c=>c.level==='amber').length;
+    const r=checks.filter(c=>c.level==='red').length;
+    const pct=checks.length?Math.round(g/checks.length*100):0;
+
+    if(kpi) kpi.innerHTML=`<div class="kpi"><b>${pct}%</b><span>Fully Evidenced</span></div>
+      <div class="kpi"><b style="color:var(--ok)">${g}</b><span>Evidence Available</span></div>
+      <div class="kpi"><b style="color:var(--gold-deep)">${a}</b><span>Partial</span></div>
+      <div class="kpi"><b style="color:#B03A2E">${r}</b><span>Evidence Missing</span></div>`;
+
+    if(sum) sum.innerHTML=r?`<div class="dx-missing"><b>${r} area(s) have no evidence an auditor could accept.</b>
+      Address these before a surveillance or customer audit.</div>`:
+      (a?`<div class="feas-banner unk"><div class="feas-title">🟡 PARTIALLY EVIDENCED</div>
+        <div class="feas-line">${a} area(s) are incomplete. Nothing is missing outright.</div></div>`:
+      `<div class="feas-banner go"><div class="feas-title">🟢 EVIDENCE AVAILABLE FOR ALL CHECKS</div>
+        <div class="feas-line">Every check below can be evidenced from records in this system.
+        This is not a statement of conformity or certification — an auditor still judges the evidence itself.</div></div>`);
+
+    det.innerHTML=`<table class="cs-t"><thead><tr><th style="width:80px">Status</th><th style="width:120px">Clause</th>
+      <th>Requirement</th><th>Evidence held</th><th>Gap</th><th>Where to fix it</th></tr></thead>
+      <tbody>${checks.map(c=>`<tr>
+        <td><span class="order-badge ${c.level==='green'?'go':c.level==='amber'?'unk':'no'}">
+          ${c.level==='green'?'OK':c.level==='amber'?'PARTIAL':'MISSING'}</span></td>
+        <td class="t-micro">${esc(c.clause)}</td>
+        <td>${esc(c.requirement)}</td>
+        <td class="t-micro">${esc(c.evidence)}</td>
+        <td class="t-micro" style="${c.gap?'color:#B03A2E;':''}">${esc(c.gap||'—')}</td>
+        <td class="t-micro">${esc(c.action)}</td></tr>`).join('')}</tbody></table>
+      <div class="rfq-actions" style="margin-top:14px;">
+        <button class="mini-btn gold" id="ar-print">Print evidence pack</button>
+      </div>
+      <div class="warn-box" style="margin-top:16px;"><b>What this is not.</b> This dashboard reports whether
+        records exist, not whether they are adequate. It does not assess your quality system, and it never
+        claims conformity or certification to any standard. An auditor judges the evidence on its merits.</div>`;
+
+    const pr=document.getElementById('ar-print');
+    if(pr) pr.addEventListener('click',()=>printAuditPack(checks));
+  }
+
+  function printAuditPack(checks){
+    const co=CO(), w=window.open('','_blank');
+    if(!w){ toast('Allow pop-ups for this site.'); return; }
+    const active=hrEmployees.filter(e=>e.status!=='Exited');
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>HR Evidence Pack</title>
+    <style>@page{size:A4;margin:14mm;}body{font-family:Arial,sans-serif;font-size:9pt;color:#12233f;margin:0;}
+    h1{font-size:14pt;color:#0B2A5B;margin:0 0 4px;}h2{font-size:10pt;color:#8E6A19;margin:18px 0 6px;
+      text-transform:uppercase;letter-spacing:1pt;border-bottom:.7pt solid #e2e9f2;padding-bottom:3px;}
+    table{width:100%;border-collapse:collapse;font-size:8pt;margin-bottom:10px;}
+    th{background:#0B2A5B;color:#fff;text-align:left;padding:5px;font-size:7.5pt;text-transform:uppercase;}
+    td{padding:4px 5px;border-bottom:.6pt solid #e2e9f2;vertical-align:top;}
+    .g{color:#1F9D6B;font-weight:700;}.a{color:#8E6A19;font-weight:700;}.r{color:#B03A2E;font-weight:700;}
+    .head{border-bottom:2pt solid #0B2A5B;padding-bottom:8px;margin-bottom:12px;}
+    .note{background:#FFF6E0;border:.7pt solid #e0c37a;padding:8px 10px;font-size:7.5pt;color:#7a5c14;margin-top:14px;}
+    .noprint{text-align:center;padding:14px;background:#0B2A5B;color:#fff;}
+    .noprint button{background:#E0B44E;color:#0B2A5B;border:none;padding:10px 24px;border-radius:100px;font-weight:700;cursor:pointer;}
+    @media print{.noprint{display:none;}}</style></head><body>
+    <div class="noprint"><button onclick="window.print()">Save as PDF / Print</button></div>
+    <div class="head"><h1>${esc(co.legalName||data.brandName)}</h1>
+      <div>HR Evidence Pack — generated ${new Date().toLocaleString()}</div></div>
+
+    <h2>Evidence Summary</h2>
+    <table><thead><tr><th style="width:60px">Status</th><th style="width:90px">Clause</th><th>Requirement</th>
+      <th>Evidence held</th><th>Gap</th></tr></thead><tbody>
+      ${checks.map(c=>`<tr><td class="${c.level[0]}">${c.level==='green'?'OK':c.level==='amber'?'PARTIAL':'MISSING'}</td>
+      <td>${esc(c.clause)}</td><td>${esc(c.requirement)}</td><td>${esc(c.evidence)}</td>
+      <td>${esc(c.gap||'—')}</td></tr>`).join('')}</tbody></table>
+
+    <h2>Competence Records</h2>
+    <table><thead><tr><th>Employee</th><th>Role</th><th>Competency</th><th>Required</th><th>Actual</th>
+      <th>Assessed By</th><th>Date</th></tr></thead><tbody>
+      ${active.flatMap(e=>competencyGaps(e).map(g=>`<tr><td>${esc(e.name)}</td><td>${esc(e.designation||'')}</td>
+        <td>${esc(g.name)}</td><td>${g.need}</td><td>${g.have}</td>
+        <td>${esc(g.assessedBy||'—')}</td><td>${esc(g.assessedOn||'—')}</td></tr>`)).join('')
+        ||'<tr><td colspan="7">No competence records.</td></tr>'}</tbody></table>
+
+    <h2>Training &amp; Effectiveness</h2>
+    <table><thead><tr><th>Session</th><th>Date</th><th>Participants</th><th>Completed</th>
+      <th>Method</th><th>Verdict</th></tr></thead><tbody>
+      ${hrTraining.filter(r=>r.kind==='session').map(r=>{const d=r.data||r;
+        return `<tr><td>${esc(d.title||'')}</td><td>${esc(d.date||'')}</td>
+        <td>${(d.participants||[]).length}</td><td>${esc(d.completedOn||'—')}</td>
+        <td>${esc(d.method||'—')}</td>
+        <td class="${d.effectivenessDone?(d.effective?'g':'r'):'a'}">${d.effectivenessDone?(d.effective?'Effective':'Not effective'):'Pending'}</td></tr>`;
+      }).join('')||'<tr><td colspan="6">No training records.</td></tr>'}</tbody></table>
+
+    <h2>Policies &amp; Awareness</h2>
+    <table><thead><tr><th>Policy</th><th>Version</th><th>Effective</th><th>Acknowledged</th><th>Next Review</th></tr></thead><tbody>
+      ${itemsOf('policy').filter(p=>p.status==='Published').map(p=>{const d=p.data||p;
+        return `<tr><td>${esc(d.title)}</td><td>${esc(d.version)}</td><td>${esc(d.effectiveFrom||'')}</td>
+        <td>${(d.acknowledgements||[]).length} of ${active.length}</td><td>${esc(d.reviewOn||'—')}</td></tr>`;
+      }).join('')||'<tr><td colspan="5">No published policies.</td></tr>'}</tbody></table>
+
+    <div class="note"><b>Scope of this document.</b> It reports which records exist in the HR system on the date
+    shown. It does not assess whether those records are adequate, and it makes no claim of conformity or
+    certification to ISO 9001, IATF 16949 or any other standard. Adequacy is a matter for the auditor.</div>
+    </body></html>`);
     w.document.close();
   }
 
@@ -6895,6 +7098,10 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     if(tab.dataset.hrtab==='training'){ refreshTrainDropdowns(); loadTraining(); }
     if(tab.dataset.hrtab==='policies'){ loadItems(); }
     if(tab.dataset.hrtab==='tasks'){ refreshTaskDropdowns(); loadItems(); }
+    if(tab.dataset.hrtab==='audit-ready'){
+      // needs every source loaded before it can judge the evidence
+      Promise.all([loadTraining(),loadItems()]).then(renderAuditReady);
+    }
     if(tab.dataset.hrtab==='attendance'){
       const pe=document.getElementById('at-period');
       if(!pe.value) pe.value=new Date().toISOString().slice(0,7);

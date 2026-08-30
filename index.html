@@ -4,14 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IRONVALE — Precision Manufacturing</title>
-<meta name="description" content="IRONVALE Manufacturing — precision-engineered machining and manufacturing solutions.">
-<meta name="theme-color" content="#061A3C">
-<link rel="icon" href="/favicon.ico" sizes="any">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="manifest" href="/site.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -673,6 +665,11 @@
     .gallery-grid{grid-template-columns:1fr 1fr;}    #chat-panel{bottom:12px;left:12px;right:12px;width:auto;height:calc(100vh - 90px);}
   }
 </style>
+  <!-- Favicon: dynamically replaced at runtime with the exact logo saved in Admin → Brand. -->
+  <link id="site-favicon" rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link id="site-favicon-ico" rel="alternate icon" href="/favicon.ico">
+  <link id="site-apple-icon" rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#0B2A5B">
 </head>
 <body>
 
@@ -2329,6 +2326,23 @@ I would recommend this company as a place to work</textarea></div></div>
   let poOrders=[], expandedOrder=null;
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const setText=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
+  // Keep the browser tab icon tied to the same logo used by the website header.
+  // The logo is stored in the Admin → Brand record as data.logoDataUrl.
+  function setFaviconFromBrandLogo(logo){
+    const href=String(logo||'').trim();
+    const link=document.getElementById('site-favicon');
+    const ico=document.getElementById('site-favicon-ico');
+    const apple=document.getElementById('site-apple-icon');
+    if(href){
+      if(link){ link.href=href; link.type=/\.svg(?:$|[?#])/i.test(href)||href.startsWith('data:image/svg')?'image/svg+xml':'image/png'; }
+      if(ico) ico.href=href;
+      if(apple) apple.href=href;
+    } else {
+      if(link){ link.href='/favicon.svg'; link.type='image/svg+xml'; }
+      if(ico) ico.href='/favicon.ico';
+      if(apple) apple.href='/apple-touch-icon.png';
+    }
+  }
   const toast=(m)=>{const t=document.getElementById('save-toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);};
   function shade(hex,pct){
     const n=parseInt(String(hex).replace('#',''),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
@@ -2662,23 +2676,6 @@ I would recommend this company as a place to work</textarea></div></div>
         <div class="core-label">PRECISION ENGINEERED</div></div>`;
     }
   }
-  /* ---------- BROWSER FAVICON ---------- */
-  function setFavicon(){
-    const logo=data && data.logoDataUrl;
-    const setLink=(rel,href,type)=>{
-      let el=document.querySelector('link[data-dynamic-favicon="'+rel+'"]');
-      if(!el){ el=document.createElement('link'); el.rel=rel; el.setAttribute('data-dynamic-favicon',rel); document.head.appendChild(el); }
-      if(type) el.type=type;
-      el.href=href;
-    };
-    // Prefer the same logo uploaded in the Brand tab; otherwise use the bundled IRONVALE favicon.
-    if(logo){
-      setLink('icon',logo,'image/png');
-    } else {
-      setLink('icon','/favicon.svg','image/svg+xml');
-    }
-  }
-
   function render(){
     applyVars();
     setText('d-brand-name',data.brandName); setText('d-brand-name-2',data.brandName);
@@ -2692,6 +2689,7 @@ I would recommend this company as a place to work</textarea></div></div>
     lw.classList.toggle('logo-glow',!!data.logoGlow);
     lw.innerHTML=data.logoDataUrl?`<img src="${data.logoDataUrl}" alt="logo" decoding="async" draggable="false">`
       :`<div class="logo-fallback">${esc(data.brandName.charAt(0))}</div>`;
+    setFaviconFromBrandLogo(data.logoDataUrl);
     document.getElementById('brand-text').style.display=data.showBrandText?'':'none';
     document.getElementById('hero-bg').style.backgroundImage=data.heroBannerDataUrl?`url('${data.heroBannerDataUrl}')`:'none';
     renderHeroVisual();
@@ -2748,7 +2746,6 @@ I would recommend this company as a place to work</textarea></div></div>
     setText('chat-avatar',(data.botName||'A').trim().charAt(0).toUpperCase());
     renderChips(); renderNav(); renderSocial(); renderMap(); renderCareers();
     document.title=data.brandName+" — Precision Manufacturing";
-    setFavicon();
   }
 
   /* ---------- STAFF ---------- */

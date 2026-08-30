@@ -103,6 +103,20 @@
     background:linear-gradient(90deg,var(--sky) 0%,var(--gold) 50%,var(--sky) 100%);
     background-size:200% 100%;animation:bootbar 1.1s linear infinite;}
   @keyframes bootbar{0%{background-position:0% 0}100%{background-position:-200% 0}}
+  .job-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;}
+  .job-item{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;
+    box-shadow:var(--shadow-sm);cursor:pointer;transition:box-shadow .2s,transform .2s,border-color .2s;}
+  .job-item:hover{box-shadow:var(--shadow-md);transform:translateY(-3px);border-color:var(--gold);}
+  .job-item h3{font-size:var(--fs-card-title);color:var(--navy);margin-bottom:5px;}
+  .job-meta{font-family:var(--mono);font-size:var(--fs-micro);color:var(--ink-soft);letter-spacing:.04em;}
+  .job-item .more{margin-top:12px;font-family:var(--mono);font-size:var(--fs-micro);color:var(--gold-deep);letter-spacing:.06em;text-transform:uppercase;}
+  #job-modal{position:fixed;inset:0;background:rgba(6,26,60,.55);z-index:170;display:none;
+    align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;}
+  #job-modal.open{display:flex;}
+  .job-card{background:var(--white);border-radius:var(--radius);max-width:720px;width:100%;
+    padding:34px;position:relative;box-shadow:0 30px 80px rgba(6,26,60,.4);}
+  .job-close{position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;color:var(--ink-soft);}
+  .jd-body{white-space:pre-wrap;font-size:var(--fs-body);color:var(--ink-mid);line-height:1.8;margin:16px 0 22px;}
   .ops-wrap{position:relative;display:inline-block;}
   .ops-caret{font-size:9px;opacity:.75;margin-left:2px;}
   .ops-menu{position:fixed;min-width:265px;max-width:90vw;background:var(--white);
@@ -725,6 +739,15 @@
       <div class="quote-attr"><strong id="d-quote-name">Name</strong><span id="d-quote-role">Role</span></div>
     </div></div></section>
 
+  <section id="careers">
+    <div class="wrap">
+      <p class="t-label">JOIN US</p>
+      <h2 class="t-title">Careers</h2>
+      <p class="t-sub" id="d-careers-sub" style="max-width:60ch;margin-bottom:26px;"></p>
+      <div id="careers-list"></div>
+    </div>
+  </section>
+
   <section class="cta" id="contact"><div class="wrap cta-grid">
     <div>
       <h2 class="t-title" id="d-contact-title">Contact</h2>
@@ -788,6 +811,13 @@
   <div class="chat-input-row"><input type="text" id="chat-input" placeholder="Ask about capabilities, lead times…" autocomplete="off">
     <button class="chat-send" id="chat-send">➤</button></div>
   <div class="chat-foot">AI assistant — confirm details with our team.</div>
+</div>
+
+<div id="job-modal">
+  <div class="job-card">
+    <button class="job-close" id="job-close">✕</button>
+    <div id="job-detail"></div>
+  </div>
 </div>
 
 <div id="login-modal">
@@ -895,22 +925,39 @@
   </div>
   <div class="staff-body">
     <div class="admin-tabs" style="margin-bottom:20px;border-radius:var(--radius-sm);">
-      <button class="hr-tab active" data-hrtab="tower">Control Tower</button>
-      <button class="hr-tab" data-hrtab="people">Employees</button>
-      <button class="hr-tab" data-hrtab="attendance">Attendance</button>
-      <button class="hr-tab" data-hrtab="leave">Leave</button>
-      <button class="hr-tab" data-hrtab="payroll">Payroll</button>
-      <button class="hr-tab" data-hrtab="skills">Skill Matrix</button>
-      <button class="hr-tab" data-hrtab="training">Training</button>
-      <button class="hr-tab" data-hrtab="policies">Policies</button>
-      <button class="hr-tab" data-hrtab="tasks">DWM &amp; Tasks</button>
-      <button class="hr-tab" data-hrtab="kpi">KPI &amp; Performance</button>
-      <button class="hr-tab" data-hrtab="audit-ready">Audit Readiness</button>
-      <button class="hr-tab" data-hrtab="statutory">Statutory Settings</button>
-      <button class="hr-tab" data-hrtab="audit">Audit Trail</button>
+      <button class="hr-tab active" data-hrtab="tower">1 · Control Tower</button>
+      <button class="hr-tab" data-hrtab="recruit">2 · Recruit</button>
+      <button class="hr-tab" data-hrtab="people">3 · Employees</button>
+      <button class="hr-tab" data-hrtab="attendance">4 · Attendance</button>
+      <button class="hr-tab" data-hrtab="leave">5 · Leave</button>
+      <button class="hr-tab" data-hrtab="payroll">6 · Payroll</button>
+      <button class="hr-tab" data-hrtab="skills">7 · Competency</button>
+      <button class="hr-tab" data-hrtab="training">8 · Training</button>
+      <button class="hr-tab" data-hrtab="kpi">9 · KPI &amp; Appraisal</button>
+      <button class="hr-tab" data-hrtab="tasks">10 · DWM &amp; Tasks</button>
+      <button class="hr-tab" data-hrtab="engage">11 · Engagement</button>
+      <button class="hr-tab" data-hrtab="policies">12 · Policies</button>
+      <button class="hr-tab" data-hrtab="audit-ready">13 · Audit Readiness</button>
+      <button class="hr-tab" data-hrtab="exit">14 · Exit &amp; F&amp;F</button>
+      <button class="hr-tab" data-hrtab="statutory">⚙ Statutory</button>
+      <button class="hr-tab" data-hrtab="audit">⚙ Audit Trail</button>
     </div>
 
     <div class="hr-panel" data-hrpanel="tower">
+      <div class="qb" style="margin-bottom:16px;">
+        <h4>Ask the system</h4>
+        <div class="cs-row"><div style="grid-column:1/-1;">
+          <input type="text" id="hrq-q" placeholder="Which employees have competency gaps? · Who has not acknowledged the safety policy? · Whose probation ends this month?">
+        </div></div>
+        <div class="rfq-actions" style="margin-top:10px;">
+          <button class="mini-btn ai" id="hrq-ask">Ask</button>
+          <button class="mini-btn" id="demo-load">Load demonstration data</button>
+          <button class="mini-btn" id="demo-clear">Clear demonstration data</button>
+        </div>
+        <div id="hrq-out"></div>
+        <div class="field-hint" style="margin-top:8px;">Answers are drawn from the records in this system only.
+          Where something is not recorded, it says so rather than guessing.</div>
+      </div>
       <div id="tower-alerts"></div>
       <div id="tower-grid"></div>
       <div class="field-hint" style="margin-top:16px;">Every figure here is read live from the records in this
@@ -937,6 +984,60 @@
         <div class="field-hint" id="ne-msg" style="margin-top:8px;"></div>
       </div>
       <div id="hr-emp-list"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="recruit" style="display:none;">
+      <div class="info-box">Requisition → candidates → interview → CTC → offer → joining. When a candidate
+        joins, their record is converted into an employee automatically rather than typed again.
+        <b>AI assists with screening only</b> — it summarises and flags what a CV does and does not evidence
+        against the role. It never scores or ranks people, and the hiring decision stays entirely with you.</div>
+      <div class="kpi-row" id="rec-kpi"></div>
+
+      <div class="qb" style="margin-bottom:16px;">
+        <h4>Manpower Requisition (§3B)</h4>
+        <div class="cs-row four">
+          <div><label>Position</label><input type="text" id="rq-title" placeholder="CNC Operator"></div>
+          <div><label>Department</label><input type="text" id="rq-dept"></div>
+          <div><label>Positions</label><input type="text" id="rq-count" class="num" value="1"></div>
+          <div><label>Needed By</label><input type="date" id="rq-by"></div>
+        </div>
+        <div class="cs-row four" style="margin-top:10px;">
+          <div><label>Grade</label><input type="text" id="rq-grade"></div>
+          <div><label>CTC Range</label><input type="text" id="rq-ctc" placeholder="2.4 – 3.0 LPA"></div>
+          <div><label>Reason</label><select id="rq-reason" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option>Replacement</option><option>Expansion</option><option>New line</option><option>Temporary</option></select></div>
+          <div><label>Raised By</label><input type="text" id="rq-by-who"></div>
+        </div>
+        <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+          <label>Job description — responsibilities, qualification, experience, competencies</label>
+          <textarea id="rq-jd" rows="4"></textarea>
+          <div class="rfq-actions" style="margin-top:8px;">
+            <button class="mini-btn ai" id="rq-jd-ai">Draft JD with AI</button></div></div></div>
+        <button class="mini-btn gold" id="rq-create" style="margin-top:12px;">Raise Requisition</button>
+        <div class="field-hint" id="rq-msg" style="margin-top:8px;"></div>
+      </div>
+      <div id="req-list"></div>
+
+      <div class="qb" style="margin-top:20px;">
+        <h4>Add Candidate</h4>
+        <div class="cs-row four">
+          <div><label>Requisition</label><select id="cd-req" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div>
+          <div><label>Name</label><input type="text" id="cd-name"></div>
+          <div><label>Phone</label><input type="text" id="cd-phone"></div>
+          <div><label>Email</label><input type="text" id="cd-email"></div>
+        </div>
+        <div class="cs-row four" style="margin-top:10px;">
+          <div><label>Qualification</label><input type="text" id="cd-qual"></div>
+          <div><label>Experience (yrs)</label><input type="text" id="cd-exp" class="num"></div>
+          <div><label>Current CTC</label><input type="text" id="cd-cctc" class="num"></div>
+          <div><label>Expected CTC</label><input type="text" id="cd-ectc" class="num"></div>
+        </div>
+        <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+          <label>CV text — paste it here for AI screening</label><textarea id="cd-cv" rows="4"></textarea></div></div>
+        <button class="mini-btn gold" id="cd-add" style="margin-top:12px;">Add Candidate</button>
+        <div class="field-hint" id="cd-msg" style="margin-top:8px;"></div>
+      </div>
+      <div id="cand-list"></div>
     </div>
 
     <div class="hr-panel" data-hrpanel="attendance" style="display:none;">
@@ -1037,6 +1138,69 @@
         <div class="field-hint" id="ts-msg" style="margin-top:8px;"></div>
       </div>
       <div id="train-sessions"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="engage" style="display:none;">
+      <div class="info-box">Surveys can be run anonymously. When they are, individual responses are never shown
+        — only aggregate scores and free-text comments stripped of identity. That is what makes people answer honestly.</div>
+      <div class="kpi-row" id="eng-kpi"></div>
+
+      <div class="qb" style="margin-bottom:16px;">
+        <h4>Record Recognition (§25)</h4>
+        <div class="cs-row four">
+          <div><label>Employee</label><select id="rw-emp" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div>
+          <div><label>Award</label><select id="rw-type" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option>Employee of the Month</option><option>Best Kaizen</option><option>Quality Champion</option>
+            <option>Safety Champion</option><option>Productivity Champion</option><option>Best Trainer</option>
+            <option>Best Team Player</option><option>Long Service</option><option>Appreciation</option></select></div>
+          <div><label>Period / Occasion</label><input type="text" id="rw-period" placeholder="Aug 2026"></div>
+          <div style="align-self:end;"><button class="mini-btn gold" id="rw-add">Record</button></div>
+        </div>
+        <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+          <label>Citation — what they actually did</label><input type="text" id="rw-note"></div></div>
+        <div class="field-hint" id="rw-msg" style="margin-top:8px;"></div>
+      </div>
+      <div id="reward-list"></div>
+
+      <div class="qb" style="margin-top:20px;">
+        <h4>Employee Survey (§24)</h4>
+        <div class="cs-row four">
+          <div style="grid-column:span 2;"><label>Survey Title</label><input type="text" id="sv-title" placeholder="Engagement Pulse — Q3"></div>
+          <div><label>Anonymous</label><select id="sv-anon" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option value="yes">Yes — responses not attributable</option><option value="no">No — named responses</option></select></div>
+          <div style="align-self:end;"><button class="mini-btn gold" id="sv-create">Create Survey</button></div>
+        </div>
+        <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+          <label>Questions, one per line — each answered 1 (poor) to 5 (excellent)</label>
+          <textarea id="sv-qs" rows="4">I understand what is expected of me
+I have the tools and training to do my job well
+My supervisor listens to my concerns
+I feel safe at work
+I would recommend this company as a place to work</textarea></div></div>
+        <div class="field-hint" id="sv-msg" style="margin-top:8px;"></div>
+      </div>
+      <div id="survey-list"></div>
+    </div>
+
+    <div class="hr-panel" data-hrpanel="exit" style="display:none;">
+      <div class="info-box">Exit closes the lifecycle: notice, clearance, final settlement and relieving
+        documents. Settlement figures are computed from the same salary structure and statutory rules payroll
+        uses, so the arithmetic cannot diverge between the two.</div>
+      <div class="qb" style="margin-bottom:16px;">
+        <h4>Initiate Exit</h4>
+        <div class="cs-row four">
+          <div><label>Employee</label><select id="ex-emp" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);"></select></div>
+          <div><label>Type</label><select id="ex-type" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            <option>Resignation</option><option>Retirement</option><option>End of contract</option>
+            <option>Termination</option><option>Abandonment</option></select></div>
+          <div><label>Last Working Day</label><input type="date" id="ex-lwd"></div>
+          <div style="align-self:end;"><button class="mini-btn gold" id="ex-create">Start Exit</button></div>
+        </div>
+        <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+          <label>Reason stated by employee</label><input type="text" id="ex-reason"></div></div>
+        <div class="field-hint" id="ex-msg" style="margin-top:8px;"></div>
+      </div>
+      <div id="exit-list"></div>
     </div>
 
     <div class="hr-panel" data-hrpanel="policies" style="display:none;">
@@ -1964,7 +2128,8 @@
   const DEFAULTS=Object.assign({
     brandName:"IRONVALE",brandSuffix:"MANUFACTURING",
     sky:"#3FA9E0",navy:"#0B2A5B",gold:"#C2932E",glow:"#69C2ED",chatA:"#7B3FF2",chatB:"#4B1FA8",
-    showBrandText:true,logoGlow:true,logoDataUrl:"",heroBannerDataUrl:"",showPipeBtn:true,showPPCBtn:true,showHRBtn:true,
+    showBrandText:true,logoGlow:true,logoDataUrl:"",heroBannerDataUrl:"",showPipeBtn:true,showPPCBtn:true,showHRBtn:true,showCareers:true,
+    careersSub:"We hire people who care about precision. Open positions are listed below.",
     heroVisual:"orb",heroVideoDataUrl:"",heroVideoUrl:"",heroSignatureImg:"",heroVideoCaption:"Watch our film",
     social:{youtube:"",instagram:"",facebook:"",linkedin:"",twitter:"",whatsapp:""},
     mapEmbed:"",mapLink:"",showMap:true,
@@ -2331,6 +2496,7 @@
     if(data.showPipeBtn) ops.push(['pipeline','RFQ Pipeline','Enquiries, quotations and costing']);
     if(data.showPPCBtn)  ops.push(['ppc','Production Planning','Orders, capacity and scheduling']);
     if(data.showHRBtn)   ops.push(['hr','HR &amp; People','Employees, payroll and compliance']);
+    if(data.showCareers!==false) it.push(['#careers','Careers']);
 
     let html=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('');
     if(ops.length){
@@ -2491,7 +2657,11 @@
   function render(){
     applyVars();
     setText('d-brand-name',data.brandName); setText('d-brand-name-2',data.brandName);
-    setText('staff-brand',data.brandName); setText('d-brand-suffix',data.brandSuffix);
+    // all three staff screens show the company name from Company Profile,
+    // falling back to the website brand name if that has not been filled in yet
+    const staffName=(CO().legalName||CO().displayName||data.brandName||'');
+    setText('staff-brand',staffName); setText('ppc-brand',staffName); setText('hr-brand',staffName);
+    setText('d-brand-suffix',data.brandSuffix);
     setText('d-footer-copy',data.footerCopy);
     const lw=document.getElementById('logo-wrap');
     lw.classList.toggle('logo-glow',!!data.logoGlow);
@@ -2551,7 +2721,7 @@
     document.getElementById('chat-fab').style.display=data.chatEnabled?'':'none';
     setText('chat-fab-label',data.botLauncher); setText('chat-bot-name',data.botName);
     setText('chat-avatar',(data.botName||'A').trim().charAt(0).toUpperCase());
-    renderChips(); renderNav(); renderSocial(); renderMap();
+    renderChips(); renderNav(); renderSocial(); renderMap(); renderCareers();
     document.title=data.brandName+" — Precision Manufacturing";
   }
 
@@ -3156,6 +3326,992 @@ Reply with ONLY this JSON, no commentary or code fences:
     w.document.close();
   }
 
+  /* ================= ENGAGEMENT & RECOGNITION (§24, §25) =================
+     Anonymous means anonymous. Where a survey is marked anonymous the response
+     carries no employee reference at all — not hidden, absent — so there is
+     nothing to leak even to an administrator. */
+  function renderRewards(){
+    const kpi=document.getElementById('eng-kpi'), host=document.getElementById('reward-list');
+    if(!host) return;
+    const rewards=itemsOf('reward'), surveys=itemsOf('survey');
+    const thisYear=new Date().getFullYear();
+    const responses=surveys.reduce((t,sv)=>t+((sv.data||sv).responses||[]).length,0);
+    const scored=surveys.flatMap(sv=>((sv.data||sv).responses||[]).flatMap(r=>r.answers||[]));
+    const avg=scored.length?(scored.reduce((t,n)=>t+num(n),0)/scored.length):null;
+
+    if(kpi) kpi.innerHTML=`<div class="kpi"><b>${rewards.length}</b><span>Recognitions</span></div>
+      <div class="kpi"><b>${surveys.length}</b><span>Surveys</span></div>
+      <div class="kpi"><b>${responses}</b><span>Responses</span></div>
+      <div class="kpi"><b style="color:${avg===null?'var(--ink-soft)':(avg>=4?'var(--ok)':avg>=3?'var(--gold-deep)':'#B03A2E')}">
+        ${avg===null?'—':avg.toFixed(2)}</b><span>Average Score (of 5)</span></div>`;
+
+    host.innerHTML=rewards.length?`<table class="cs-t"><thead><tr><th>Employee</th><th>Award</th>
+      <th>Period</th><th>Citation</th><th>Recorded</th><th></th></tr></thead><tbody>
+      ${rewards.map(r=>{const d=r.data||r; const e=hrEmployees.find(x=>x.empId===d.empId);
+        return `<tr><td>${esc(e?e.name:d.empId)}<div class="t-micro">${esc(e?e.department||'':'')}</div></td>
+        <td><b>${esc(d.type)}</b></td><td>${esc(d.period||'')}</td>
+        <td class="t-micro">${esc(d.note||'')}</td><td class="t-micro">${esc(d.recordedOn||'')}</td>
+        <td><button class="qb-del rw-del" data-id="${esc(r.item_id)}">×</button></td></tr>`;}).join('')}
+      </tbody></table>`:'<p class="empty-note">No recognition recorded yet.</p>';
+
+    host.querySelectorAll('.rw-del').forEach(b=>b.addEventListener('click',async()=>{
+      if(!confirm('Remove this recognition record?')) return;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:b.dataset.id,remove:true,reason:'deleted'})});
+        await loadItems(); }catch(e){ toast(e.message); }
+    }));
+  }
+
+  function renderSurveys(){
+    const host=document.getElementById('survey-list'); if(!host) return;
+    const surveys=itemsOf('survey');
+    host.innerHTML=surveys.length?surveys.map(sv=>{
+      const d=sv.data||sv, resp=d.responses||[];
+      const qAvg=(d.questions||[]).map((q,qi)=>{
+        const vals=resp.map(r=>num((r.answers||[])[qi])).filter(v=>v>0);
+        return {q, avg: vals.length?(vals.reduce((t,v)=>t+v,0)/vals.length):null, n:vals.length};
+      });
+      const open=expandedSurvey===sv.item_id;
+      return `<div class="rfq-card ${open?'open':''}">
+        <div class="list-item-head rfq-summary" data-survey="${esc(sv.item_id)}">
+          <div><div class="rfq-ref">${esc(d.title)}</div>
+          <div class="rfq-when">${resp.length} response(s) · ${d.anonymous?'anonymous':'named'} ·
+            ${(d.questions||[]).length} questions</div></div>
+          <span class="rfq-chevron">${open?'▾':'▸'}</span></div>
+        <div class="rfq-body" style="display:${open?'block':'none'};">
+          ${d.anonymous?`<div class="feas-line" style="margin-bottom:10px;">
+            <b>Anonymous survey.</b> Responses carry no employee reference. Individual answers cannot be
+            traced back to a person by anyone, including an administrator.</div>`:''}
+          <table class="cs-t"><thead><tr><th>Question</th><th class="r">Average</th><th class="r">Answers</th><th style="width:150px">Result</th></tr></thead>
+            <tbody>${qAvg.map(x=>`<tr><td>${esc(x.q)}</td>
+              <td class="r">${x.avg===null?'—':x.avg.toFixed(2)}</td><td class="r">${x.n}</td>
+              <td>${x.avg===null?'':`<span class="order-badge ${x.avg>=4?'go':x.avg>=3?'unk':'no'}">
+                ${x.avg>=4?'Positive':x.avg>=3?'Mixed':'Concern'}</span>`}</td></tr>`).join('')}</tbody></table>
+          ${resp.some(r=>r.comment)?`<div class="cs-sub">Comments</div>
+            <div class="feas-line">${resp.filter(r=>r.comment).map(r=>'“'+esc(r.comment)+'”').join('<br><br>')}</div>`:''}
+
+          <div class="cs-sub">Add a response</div>
+          <div class="cs-row four">
+            ${(d.questions||[]).map((q,qi)=>`<div><label title="${esc(q)}">Q${qi+1}</label>
+              <select class="sv-ans" data-q="${qi}" style="width:100%;padding:7px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+              ${[1,2,3,4,5].map(n=>`<option value="${n}" ${n===3?'selected':''}>${n}</option>`).join('')}</select></div>`).join('')}
+          </div>
+          <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+            <label>Comment (optional)</label><input class="sv-comment"></div></div>
+          <div class="rfq-actions" style="margin-top:10px;">
+            <button class="mini-btn gold sv-submit" data-id="${esc(sv.item_id)}">Submit Response</button>
+            <button class="item-delete sv-del" data-id="${esc(sv.item_id)}">Delete Survey</button>
+          </div></div></div>`;
+    }).join(''):'<p class="empty-note">No surveys yet.</p>';
+
+    host.querySelectorAll('[data-survey]').forEach(r=>r.addEventListener('click',e=>{
+      if(e.target.closest('button')||e.target.closest('select')||e.target.closest('input')) return;
+      const id=r.dataset.survey; expandedSurvey=(expandedSurvey===id)?null:id; renderSurveys();
+    }));
+    host.querySelectorAll('.sv-submit').forEach(b=>b.addEventListener('click',async()=>{
+      const sv=surveys.find(x=>x.item_id===b.dataset.id), d=sv.data||sv;
+      const card=b.closest('.rfq-body');
+      const answers=[...card.querySelectorAll('.sv-ans')].map(s=>num(s.value));
+      const comment=(card.querySelector('.sv-comment')||{}).value||'';
+      d.responses=d.responses||[];
+      /* an anonymous response stores no identity at all */
+      d.responses.push(d.anonymous?{answers,comment,on:new Date().toISOString().slice(0,10)}
+        :{answers,comment,on:new Date().toISOString().slice(0,10),by:currentUser||''});
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:sv.item_id,patch:d,
+        reason:'survey response recorded'})}); await loadItems(); toast('Response recorded'); }
+      catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.sv-del').forEach(b=>b.addEventListener('click',async()=>{
+      if(!confirm('Delete this survey and its responses?')) return;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:b.dataset.id,remove:true,reason:'deleted'})});
+        await loadItems(); }catch(e){ toast(e.message); }
+    }));
+  }
+
+  /* ================= EXIT & FULL AND FINAL (§41) ================= */
+  function calcFnF(emp,ex){
+    const st=ST(), s=emp.structure||{};
+    const lwd=new Date(ex.lastWorkingDay||Date.now());
+    const period=lwd.toISOString().slice(0,7);
+    const daysInMonth=new Date(lwd.getFullYear(),lwd.getMonth()+1,0).getDate();
+    const workedDays=lwd.getDate();
+    const factor=workedDays/daysInMonth;
+
+    const gross=grossMonthly(emp);
+    const finalSalary=Math.round(gross*factor);
+
+    /* leave encashment on unused paid leave, at basic+DA per day */
+    const bal=leaveBalance(emp.empId).filter(b=>b.paid&&b.code!=='LOP');
+    const encashDays=bal.reduce((t,b)=>t+num(b.balance),0);
+    const perDay=(num(s.basic)+num(s.da))/Math.max(1,daysInMonth);
+    const encashment=Math.round(encashDays*perDay);
+
+    /* gratuity — only where the service qualifies under the Act */
+    let years=0;
+    if(emp.doj){ years=(lwd-new Date(emp.doj))/(365.25*86400000); }
+    const gratuityEligible=years>=5;
+    const gratuity=gratuityEligible
+      ? Math.round(((num(s.basic)+num(s.da))*15/26)*Math.round(years)) : 0;
+
+    const deductions=num(ex.recoveries);
+    const net=finalSalary+encashment+gratuity-deductions;
+    return {workedDays,daysInMonth,finalSalary,encashDays,encashment,years:years.toFixed(1),
+      gratuityEligible,gratuity,deductions,net,perDay};
+  }
+
+  function renderExits(){
+    const host=document.getElementById('exit-list'); if(!host) return;
+    const exits=itemsOf('exit');
+    host.innerHTML=exits.length?exits.map(x=>{
+      const d=x.data||x;
+      const emp=hrEmployees.find(e=>e.empId===d.empId);
+      if(!emp) return '';
+      const f=calcFnF(emp,d);
+      const open=expandedExit===x.item_id;
+      return `<div class="rfq-card ${open?'open':''}">
+        <div class="list-item-head rfq-summary" data-exit="${esc(x.item_id)}">
+          <div><div class="rfq-ref">${esc(emp.name)} — ${esc(d.type)}</div>
+          <div class="rfq-when">Last working day ${fmtDate(d.lastWorkingDay)} · ${f.years} years service ·
+            settlement ${rupee(f.net)}</div></div>
+          <div class="rfq-summary-right"><span class="order-badge ${x.status==='Settled'?'go':'unk'}">${esc(x.status)}</span>
+          <span class="rfq-chevron">${open?'▾':'▸'}</span></div></div>
+        <div class="rfq-body" style="display:${open?'block':'none'};">
+          <div class="cs-sub">Clearance</div>
+          <div class="cs-row four">
+            ${['Tools returned','ID card returned','Company property','Handover complete','Accounts clear']
+              .map(c=>`<div><label>${c}</label>
+              <select class="ex-clr" data-id="${esc(x.item_id)}" data-k="${esc(c)}" style="width:100%;padding:7px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+                <option value="">Pending</option><option value="yes" ${(d.clearance||{})[c]==='yes'?'selected':''}>Cleared</option>
+                <option value="na" ${(d.clearance||{})[c]==='na'?'selected':''}>Not applicable</option></select></div>`).join('')}
+          </div>
+
+          <div class="cs-sub">Full &amp; Final Settlement</div>
+          <div class="cs-row four">
+            <div><label>Recoveries / advances</label><input class="ex-in num" data-id="${esc(x.item_id)}" data-k="recoveries" value="${esc(d.recoveries||0)}"></div>
+            <div><label>Exit interview notes</label><input class="ex-in" data-id="${esc(x.item_id)}" data-k="exitNotes" value="${esc(d.exitNotes||'')}"></div>
+          </div>
+          <div class="cs-break" style="margin-top:12px;">
+            <div><span>Final salary (${f.workedDays} of ${f.daysInMonth} days)</span><span>${rupee(f.finalSalary)}</span></div>
+            <div><span>Leave encashment (${f.encashDays} days at ${rupee(f.perDay)}/day)</span><span>${rupee(f.encashment)}</span></div>
+            <div><span>Gratuity ${f.gratuityEligible?`(${f.years} yrs service)`:'— under 5 years, not payable'}</span><span>${rupee(f.gratuity)}</span></div>
+            <div><span>Less recoveries</span><span>− ${rupee(f.deductions)}</span></div>
+            <div class="grand"><span>Net settlement</span><span>${rupee(f.net)}</span></div>
+          </div>
+          <div class="warn-box" style="margin-top:12px;font-size:var(--fs-micro);">Gratuity is calculated as
+            15 days' wages per completed year on last drawn basic + DA, payable only after five years'
+            continuous service. Check this against the Act and your own terms before paying — eligibility has
+            exceptions this system does not judge.</div>
+          <div class="rfq-actions" style="margin-top:12px;">
+            <button class="mini-btn gold ex-save" data-id="${esc(x.item_id)}">Save</button>
+            <button class="mini-btn ex-print" data-id="${esc(x.item_id)}">Relieving Letter</button>
+            ${x.status!=='Settled'?`<button class="mini-btn green ex-settle" data-id="${esc(x.item_id)}">Mark Settled</button>`:''}
+          </div></div></div>`;
+    }).join(''):'<p class="empty-note">No exits in progress.</p>';
+
+    host.querySelectorAll('[data-exit]').forEach(r=>r.addEventListener('click',e=>{
+      if(e.target.closest('button')||e.target.closest('select')||e.target.closest('input')) return;
+      const id=r.dataset.exit; expandedExit=(expandedExit===id)?null:id; renderExits();
+    }));
+    host.querySelectorAll('.ex-in').forEach(inp=>inp.addEventListener('input',()=>{
+      const x=exits.find(v=>v.item_id===inp.dataset.id), d=x.data||x;
+      d[inp.dataset.k]=inp.value; x.data=d;
+    }));
+    host.querySelectorAll('.ex-clr').forEach(sel=>sel.addEventListener('change',()=>{
+      const x=exits.find(v=>v.item_id===sel.dataset.id), d=x.data||x;
+      d.clearance=d.clearance||{}; d.clearance[sel.dataset.k]=sel.value; x.data=d;
+    }));
+    host.querySelectorAll('.ex-save').forEach(b=>b.addEventListener('click',async()=>{
+      const x=exits.find(v=>v.item_id===b.dataset.id), d=x.data||x;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:x.item_id,patch:d,
+        reason:'exit record updated'})}); await loadItems(); toast('Saved'); }catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.ex-settle').forEach(b=>b.addEventListener('click',async()=>{
+      const x=exits.find(v=>v.item_id===b.dataset.id), d=x.data||x;
+      const pending=Object.entries(d.clearance||{}).filter(([k,v])=>!v);
+      if(!confirm('Mark settled and set the employee to Exited?'+(pending.length?'\n\nClearance still pending on some items.':''))) return;
+      const emp=hrEmployees.find(e=>e.empId===d.empId);
+      try{
+        if(emp){ emp.status='Exited';
+          await api('/api/hr',{method:'POST',body:JSON.stringify({what:'employees',employee:emp,
+            reason:'exited — settlement '+x.item_id})}); }
+        await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:x.item_id,patch:d,
+          status:'Settled',reason:'full and final settled'})});
+        await loadHr(); await loadItems(); toast('Settled');
+      }catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.ex-print').forEach(b=>b.addEventListener('click',()=>{
+      const x=exits.find(v=>v.item_id===b.dataset.id), d=x.data||x;
+      const emp=hrEmployees.find(e=>e.empId===d.empId);
+      if(emp) printRelieving(emp,d,calcFnF(emp,d));
+    }));
+  }
+
+  function printRelieving(emp,d,f){
+    const co=CO(), logo=documentLogo(), w=window.open('','_blank');
+    if(!w){ toast('Allow pop-ups for this site.'); return; }
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relieving — ${esc(emp.name)}</title>
+    <style>@page{size:A4;margin:18mm;}body{font-family:Arial,sans-serif;font-size:10pt;color:#12233f;line-height:1.7;margin:0;}
+    .lh{display:flex;gap:14px;align-items:center;border-bottom:2pt solid #0B2A5B;padding-bottom:10px;margin-bottom:20px;}
+    .lh img{max-height:52px;max-width:130px;object-fit:contain;}
+    .co{font-size:14pt;font-weight:800;color:#0B2A5B;}.ad{font-size:8pt;color:#41567E;}
+    h2{text-align:center;font-size:12pt;letter-spacing:2pt;color:#0B2A5B;margin:18px 0;}
+    table{width:100%;border-collapse:collapse;margin:14px 0;font-size:9.5pt;}
+    th{background:#0B2A5B;color:#fff;text-align:left;padding:6px;font-size:8pt;text-transform:uppercase;}
+    td{padding:5px 6px;border-bottom:.6pt solid #e2e9f2;}.r{text-align:right;}
+    .sign{margin-top:44px;font-size:9pt;}
+    .noprint{text-align:center;padding:14px;background:#0B2A5B;color:#fff;}
+    .noprint button{background:#E0B44E;color:#0B2A5B;border:none;padding:10px 24px;border-radius:100px;font-weight:700;cursor:pointer;}
+    @media print{.noprint{display:none;}}</style></head><body>
+    <div class="noprint"><button onclick="window.print()">Save as PDF / Print</button></div>
+    <div class="lh">${logo?`<img src="${logo}">`:''}<div><div class="co">${esc(co.legalName||data.brandName)}</div>
+      <div class="ad">${esc(companyAddressLines().join(', '))}</div></div></div>
+    <div style="text-align:right;font-size:9pt;">Date: ${new Date().toLocaleDateString()}</div>
+    <h2>RELIEVING &amp; EXPERIENCE CERTIFICATE</h2>
+    <p>This is to certify that <b>${esc(emp.name)}</b> (Employee ID ${esc(emp.empId)}) was employed with
+      ${esc(co.legalName||data.brandName)} as <b>${esc(emp.designation||'')}</b>
+      ${emp.department?`in the ${esc(emp.department)} department`:''}
+      from <b>${emp.doj?new Date(emp.doj).toLocaleDateString():'—'}</b> to
+      <b>${d.lastWorkingDay?new Date(d.lastWorkingDay).toLocaleDateString():'—'}</b>.</p>
+    <p>They are relieved from their duties with effect from the close of business on the last working day
+      shown above, and all dues have been settled as detailed below.</p>
+    <table><thead><tr><th>Full &amp; Final Settlement</th><th class="r">Amount</th></tr></thead><tbody>
+      <tr><td>Final salary</td><td class="r">${rupee(f.finalSalary)}</td></tr>
+      <tr><td>Leave encashment (${f.encashDays} days)</td><td class="r">${rupee(f.encashment)}</td></tr>
+      <tr><td>Gratuity</td><td class="r">${rupee(f.gratuity)}</td></tr>
+      <tr><td>Less recoveries</td><td class="r">− ${rupee(f.deductions)}</td></tr>
+      <tr><td><b>Net settlement</b></td><td class="r"><b>${rupee(f.net)}</b></td></tr>
+    </tbody></table>
+    <p>We wish them well in their future endeavours.</p>
+    <div class="sign">For ${esc(co.legalName||data.brandName)}<br><br><br>
+      ${esc(co.signatoryName||'Authorised Signatory')}<br>
+      <span style="font-size:8pt;color:#41567E;">${esc(co.signatoryTitle||'')}</span></div>
+    </body></html>`);
+    w.document.close();
+  }
+
+  /* ================= EMPLOYEE ID CARD (§7) ================= */
+  function printIdCard(emp){
+    const co=CO(), logo=documentLogo(), w=window.open('','_blank');
+    if(!w){ toast('Allow pop-ups for this site.'); return; }
+    /* the QR carries only the employee ID — nothing personal travels on the card */
+    const qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+
+      encodeURIComponent(emp.empId);
+    const valid=new Date(); valid.setFullYear(valid.getFullYear()+3);
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>ID Card — ${esc(emp.name)}</title>
+    <style>@page{size:A4;margin:16mm;}body{font-family:Arial,sans-serif;margin:0;color:#12233f;}
+    .sheet{display:flex;gap:14px;flex-wrap:wrap;}
+    .card{width:54mm;height:86mm;border:1pt solid #ccd6e5;border-radius:4mm;overflow:hidden;
+      display:flex;flex-direction:column;page-break-inside:avoid;}
+    .top{background:#0B2A5B;color:#fff;padding:5mm 4mm;text-align:center;}
+    .top img{max-height:9mm;max-width:32mm;object-fit:contain;filter:brightness(0) invert(1);}
+    .top .cn{font-size:8pt;font-weight:800;letter-spacing:.4pt;margin-top:2mm;}
+    .photo{width:24mm;height:30mm;margin:4mm auto 2mm;border:1pt solid #ccd6e5;border-radius:2mm;
+      background:#eef1f6;display:flex;align-items:center;justify-content:center;font-size:7pt;color:#8894ab;overflow:hidden;}
+    .photo img{width:100%;height:100%;object-fit:cover;}
+    .nm{text-align:center;font-size:10pt;font-weight:800;color:#0B2A5B;padding:0 3mm;}
+    .dg{text-align:center;font-size:7.5pt;color:#41567E;margin-bottom:2mm;}
+    .rows{padding:0 4mm;font-size:7pt;flex:1;}
+    .rows div{display:flex;justify-content:space-between;padding:1mm 0;border-bottom:.4pt solid #eef2f7;}
+    .rows span:first-child{color:#8894ab;}
+    .qr{text-align:center;padding:2mm;}.qr img{width:17mm;height:17mm;}
+    .bar{background:#C2932E;color:#fff;text-align:center;font-size:6pt;padding:1.5mm;letter-spacing:.4pt;}
+    .back{padding:5mm 4mm;font-size:6.5pt;color:#41567E;line-height:1.6;}
+    .back h4{font-size:7pt;color:#0B2A5B;margin-bottom:2mm;}
+    .noprint{text-align:center;padding:14px;background:#0B2A5B;color:#fff;}
+    .noprint button{background:#E0B44E;color:#0B2A5B;border:none;padding:10px 24px;border-radius:100px;font-weight:700;cursor:pointer;}
+    @media print{.noprint{display:none;}}</style></head><body>
+    <div class="noprint"><button onclick="window.print()">Save as PDF / Print</button>
+      <div style="font-size:11px;opacity:.85;margin-top:8px;">Front and back print side by side — cut and laminate back to back.</div></div>
+    <div class="sheet">
+      <div class="card">
+        <div class="top">${logo?`<img src="${logo}">`:''}<div class="cn">${esc(co.legalName||data.brandName)}</div></div>
+        <div class="photo">${emp.photo?`<img src="${emp.photo}">`:'PHOTO'}</div>
+        <div class="nm">${esc(emp.name)}</div>
+        <div class="dg">${esc(emp.designation||'')}</div>
+        <div class="rows">
+          <div><span>ID</span><b>${esc(emp.empId)}</b></div>
+          <div><span>Dept</span><b>${esc(emp.department||'—')}</b></div>
+          <div><span>Joined</span><b>${emp.doj?new Date(emp.doj).toLocaleDateString():'—'}</b></div>
+          <div><span>Blood Gp</span><b>${esc(emp.bloodGroup||'—')}</b></div>
+        </div>
+        <div class="qr"><img src="${qr}" alt=""></div>
+        <div class="bar">VALID TO ${valid.toLocaleDateString()}</div>
+      </div>
+      <div class="card">
+        <div class="top"><div class="cn">IF FOUND, PLEASE RETURN TO</div></div>
+        <div class="back">
+          <h4>${esc(co.legalName||data.brandName)}</h4>
+          ${esc(companyAddressLines().join(', '))}<br>
+          ${co.phone||co.mobile?('Tel: '+esc(co.phone||co.mobile)):''}<br>
+          ${co.email?esc(co.email):''}
+          <h4 style="margin-top:4mm;">Conditions</h4>
+          1. This card remains company property.<br>
+          2. It must be worn and visible on the premises.<br>
+          3. It is not transferable.<br>
+          4. Report loss to HR immediately.<br>
+          5. Return it on the last working day.
+          <h4 style="margin-top:4mm;">Emergency</h4>
+          ${esc(emp.emergencyContact||'Not recorded')}
+        </div>
+        <div class="bar">${esc(emp.empId)}</div>
+      </div>
+    </div></body></html>`);
+    w.document.close();
+  }
+
+  /* ================= AI HR AGENT (§29) =================
+     Answers only from the records loaded in this session. The context handed to
+     the model is assembled here, so it cannot invent an employee, a policy or a
+     legal requirement — if something is not in the context it must say so. */
+  function hrContext(){
+    const active=hrEmployees.filter(e=>e.status!=='Exited');
+    const period=new Date().toISOString().slice(0,7);
+    const L=[];
+    L.push('EMPLOYEES ('+active.length+' active):');
+    active.forEach(e=>{
+      const g=competencyGaps(e), a=attendanceSummary(e.empId,period);
+      L.push(`- ${e.empId} ${e.name} | ${e.designation||'no role'} | ${e.department||'no dept'} | status ${e.status||'Active'} | joined ${e.doj||'?'}`
+        +` | competency ${g.filter(x=>x.gap===0).length}/${g.length} met`
+        +(g.filter(x=>x.gap>0).length?` | gaps: ${g.filter(x=>x.gap>0).map(x=>x.name+' (has '+x.have+', needs '+x.need+')').join('; ')}`:'')
+        +` | this month payable ${a.payableDays}/${a.totalDays}, LOP ${a.lop}, OT ${a.otHours}h`);
+    });
+    const pols=itemsOf('policy').filter(p=>p.status==='Published');
+    L.push('\nPOLICIES:');
+    pols.forEach(p=>{const d=p.data||p;
+      const ackd=(d.acknowledgements||[]).map(a=>a.empId);
+      L.push(`- ${d.title} v${d.version} effective ${d.effectiveFrom||'?'} review ${d.reviewOn||'none'}`
+        +` | acknowledged by ${ackd.length}: ${ackd.join(', ')||'nobody'}`
+        +` | NOT acknowledged: ${active.filter(e=>!ackd.includes(e.empId)).map(e=>e.name).join(', ')||'none'}`);});
+    L.push('\nTRAINING:');
+    hrTraining.filter(r=>r.kind==='session').forEach(r=>{const d=r.data||r;
+      L.push(`- ${d.title} on ${d.date||'?'} | ${(d.participants||[]).length} participants`
+        +` | completed ${d.completedOn||'no'} | effectiveness ${d.effectivenessDone?(d.effective?'effective':'not effective'):'PENDING'}`);});
+    L.push('\nTASKS:');
+    itemsOf('task').forEach(t=>{const d=t.data||t;
+      L.push(`- ${d.description} | owner ${d.owner||'?'} | ${t.status} | due ${t.due||'none'} | priority ${d.priority}`);});
+    L.push('\nRECRUITMENT:');
+    itemsOf('requisition').forEach(r=>{const d=r.data||r;
+      L.push(`- ${d.title} (${r.status}) ${d.count} position(s), needed by ${d.neededBy||'?'}`);});
+    itemsOf('candidate').forEach(c=>{const d=c.data||c;
+      L.push(`- candidate ${d.name} for ${d.positionTitle||d.reqId} | stage ${c.status}`
+        +(d.matchPct!==undefined&&d.matchPct!==null?` | ${d.matchPct}% requirement match`:''));});
+    L.push('\nKPIs:');
+    itemsOf('kpi').forEach(k=>{const d=k.data||k;
+      const auto=d.source&&d.source!=='manual'?autoKpiValue(d.source):null;
+      const act=auto?auto.value:d.actual;
+      L.push(`- ${d.name}: target ${d.target}${d.unit||''}, actual ${act===''||act===undefined?'not recorded':act}${d.unit||''} (${d.direction} is better)`);});
+    L.push('\nLEAVE REQUESTS:');
+    hrLeave.forEach(l=>{const d=l.data||l;
+      L.push(`- ${d.empId} ${d.type} ${d.from} to ${d.to} — ${l.status}`);});
+    L.push('\nSTATUTORY: rules effective from '+(ST().effectiveFrom||'not set')
+      +', last reviewed by '+(ST().lastReviewedBy||'NOBODY'));
+    return L.join('\n');
+  }
+
+  async function askHr(question){
+    const out=document.getElementById('hrq-out');
+    out.innerHTML='<div class="field-hint">Reading the records…</div>';
+    const prompt=`You are an HR assistant for a manufacturing company. Answer the question using ONLY the
+records below. This is the whole of what you know.
+
+${hrContext()}
+
+QUESTION: ${question}
+
+Rules you must follow:
+- Answer only from the records above. If the answer is not in them, say plainly what is missing and where
+  it would be recorded. Never guess or fill in a plausible number.
+- Never invent an employee, a policy, a training record or a legal requirement.
+- Do not give legal advice on employment law, statutory dues or termination. Say it needs HR or legal review.
+- Be brief and specific. Name people and figures from the records. Use short lines, not paragraphs.
+- If the question asks you to judge a person's worth, potential or suitability, decline and give the
+  recorded facts instead.`;
+    try{
+      const txt=await callAI(prompt,{maxTokens:900,surfaceError:true});
+      out.innerHTML=`<div class="dx" style="margin-top:12px;">
+        <div class="dx-head"><b>Answer</b><span class="t-micro">${new Date().toLocaleString()}</span></div>
+        <div class="feas-line" style="white-space:pre-wrap;">${esc(txt||'No answer returned.')}</div>
+        <div class="t-micro" style="margin-top:8px;color:var(--ink-soft);">Drawn from the records shown in this
+          module. Check anything you intend to act on.</div></div>`;
+    }catch(e){ out.innerHTML=`<div class="dx-err" style="margin-top:10px;">${esc(e.message)}</div>`; }
+  }
+
+  /* ================= DEMONSTRATION DATA =================
+     Everything created here is tagged demo:true so it can be removed in one
+     click. Use it to see how the module behaves, then clear it before real use. */
+  async function seedDemoData(btn){
+    const say=t=>{ if(btn) btn.textContent=t; };
+    const today=new Date();
+    const iso=d=>d.toISOString().slice(0,10);
+    const ago=n=>{const d=new Date(today); d.setDate(d.getDate()-n); return iso(d);};
+    const ahead=n=>{const d=new Date(today); d.setDate(d.getDate()+n); return iso(d);};
+
+    const emps=[
+      {empId:'ET001',name:'Ramesh Kumar',designation:'CNC Operator',department:'Machining',grade:'W3',
+       doj:ago(1100),ctcAnnual:264000,shift:'Shift A',status:'Active',uan:'101234567890',esiNumber:'3112345678',
+       phone:'9880012301',reportsTo:'Suresh Babu'},
+      {empId:'ET002',name:'Anitha R',designation:'Quality Inspector',department:'Quality',grade:'S2',
+       doj:ago(820),ctcAnnual:312000,shift:'General',status:'Active',uan:'101234567891',esiNumber:'3112345679',
+       phone:'9880012302',reportsTo:'Suresh Babu'},
+      {empId:'ET003',name:'Suresh Babu',designation:'Production Supervisor',department:'Machining',grade:'S4',
+       doj:ago(2200),ctcAnnual:540000,shift:'General',status:'Active',uan:'101234567892',
+       phone:'9880012303',reportsTo:'Vijay Kumar D P'},
+      {empId:'ET004',name:'Prakash M',designation:'CNC Operator',department:'Machining',grade:'W2',
+       doj:ago(140),ctcAnnual:228000,shift:'Shift B',status:'Probation',uan:'101234567893',esiNumber:'3112345680',
+       phone:'9880012304',reportsTo:'Suresh Babu'},
+      {empId:'ET005',name:'Lakshmi N',designation:'Setter',department:'Machining',grade:'W4',
+       doj:ago(1560),ctcAnnual:348000,shift:'Shift A',status:'Active',uan:'101234567894',esiNumber:'3112345681',
+       phone:'9880012305',reportsTo:'Suresh Babu'}
+    ];
+    say('Employees…');
+    for(const e of emps){
+      const emp=Object.assign(blankEmployee(),e,{demo:true});
+      emp.structure=structureFromCtc(e.ctcAnnual);
+      emp.competencies=[];
+      await api('/api/hr',{method:'POST',body:JSON.stringify({what:'employees',employee:emp,reason:'demo data'})});
+    }
+
+    /* role standards, so the skill matrix has something to measure against */
+    data.roleCompetency=[
+      {role:'CNC Operator',competencyId:'cmp1',requiredLevel:3},
+      {role:'CNC Operator',competencyId:'cmp3',requiredLevel:2},
+      {role:'CNC Operator',competencyId:'cmp6',requiredLevel:3},
+      {role:'Quality Inspector',competencyId:'cmp4',requiredLevel:4},
+      {role:'Quality Inspector',competencyId:'cmp5',requiredLevel:3},
+      {role:'Quality Inspector',competencyId:'cmp3',requiredLevel:3},
+      {role:'Setter',competencyId:'cmp1',requiredLevel:4},
+      {role:'Setter',competencyId:'cmp2',requiredLevel:3},
+      {role:'Production Supervisor',competencyId:'cmp8',requiredLevel:3},
+      {role:'Production Supervisor',competencyId:'cmp7',requiredLevel:4}
+    ];
+    data.holidays=[{date:ahead(20),name:'Gandhi Jayanti'},{date:ahead(48),name:'Deepavali'}];
+    markDirty();
+
+    /* assessments — deliberately mixed so gaps and training need show up */
+    say('Assessments…');
+    const levels={ET001:{cmp1:3,cmp3:2,cmp6:3},ET002:{cmp4:3,cmp5:3,cmp3:2},
+      ET003:{cmp8:2,cmp7:4},ET004:{cmp1:1,cmp3:1,cmp6:2},ET005:{cmp1:4,cmp2:2}};
+    await loadHr();
+    for(const e of hrEmployees.filter(x=>levels[x.empId])){
+      e.competencies=Object.entries(levels[e.empId]).map(([cid,lv])=>
+        ({competencyId:cid,level:lv,assessedBy:'Suresh Babu',assessedOn:ago(45)}));
+      await api('/api/hr',{method:'POST',body:JSON.stringify({what:'employees',employee:e,reason:'demo assessment'})});
+    }
+
+    say('Recruitment…');
+    const items=[
+      {itemId:'REQ-DEMO1',kind:'requisition',status:'Open',demo:true,title:'CNC Turner — Night Shift',
+       department:'Machining',count:2,neededBy:ahead(35),grade:'W3',ctcRange:'2.4 – 3.0 LPA',
+       reason:'Expansion',raisedBy:'Suresh Babu',
+       jd:'PURPOSE\nOperate CNC turning centres to produce precision components to drawing.\n\nRESPONSIBILITIES\n- Set up and operate CNC turning centres\n- Read engineering drawings and interpret GD&T\n- Carry out first-off and in-process inspection\n- Record production and rejection data\n- Maintain 5S and machine cleanliness\n\nQUALIFICATION\nITI in Turner or Machinist, or Diploma in Mechanical Engineering.\n\nEXPERIENCE\nMinimum 2 years operating CNC turning centres in a machining environment.\n\nTECHNICAL SKILLS\n- CNC turning setting and operation (Fanuc or Siemens control)\n- Drawing reading and GD&T\n- Use of micrometer, vernier, bore gauge and height gauge\n\nSAFETY\nFollow machine safety and lockout/tagout procedures without exception.\n\nMEASURED ON\nProduction achievement, rejection rate, adherence to cycle time, safety incidents.'},
+      {itemId:'REQ-DEMO2',kind:'requisition',status:'Open',demo:true,title:'Quality Engineer',
+       department:'Quality',count:1,neededBy:ahead(60),grade:'S3',ctcRange:'4.2 – 5.5 LPA',
+       reason:'Replacement',raisedBy:'Vijay Kumar D P',
+       jd:'PURPOSE\nOwn in-process and final quality for machined components.\n\nRESPONSIBILITIES\n- Prepare and maintain control plans and inspection standards\n- Investigate customer complaints using 8D\n- Conduct layout inspection and gauge calibration control\n- Support IATF 16949 internal audits\n\nQUALIFICATION\nDiploma or BE in Mechanical Engineering.\n\nEXPERIENCE\n3 years in quality within automotive machining.\n\nTECHNICAL SKILLS\n- GD&T interpretation\n- Measuring instruments and gauges\n- Problem solving / 8D methodology\n- Knowledge of IATF 16949 requirements'},
+      {itemId:'POL-DEMO1',kind:'policy',status:'Published',demo:true,title:'Attendance & Punctuality Policy',
+       category:'HR',version:'2.0',effectiveFrom:ago(90),appliesTo:'All employees',owner:'HR',
+       reviewOn:ahead(275),acknowledgements:[{empId:'ET001',on:ago(80)},{empId:'ET003',on:ago(78)}],
+       body:'1. Working hours are as per the shift assigned.\n2. A grace period of 10 minutes applies. Arrival after this is recorded as late.\n3. Three late arrivals in a month are treated as half a day of loss of pay.\n4. Absence without prior approval is loss of pay and may attract disciplinary action.\n5. Leave must be applied for in advance except in a genuine emergency.'},
+      {itemId:'POL-DEMO2',kind:'policy',status:'Published',demo:true,title:'Machine Safety Policy',
+       category:'Safety',version:'1.0',effectiveFrom:ago(400),appliesTo:'All shop floor employees',
+       owner:'Safety Officer',reviewOn:ago(35),acknowledgements:[{empId:'ET001',on:ago(390)}],
+       body:'1. Personal protective equipment is mandatory on the shop floor.\n2. Machine guards must never be removed or bypassed.\n3. Lockout/tagout must be applied before any maintenance.\n4. Report every near miss, however minor.\n5. Only trained and authorised persons may operate a machine.'},
+      {itemId:'KPI-DEMO1',kind:'kpi',status:'Active',demo:true,name:'Competency achievement',level:'Company',
+       category:'HR',target:90,unit:'%',direction:'higher',source:'competency',actual:''},
+      {itemId:'KPI-DEMO2',kind:'kpi',status:'Active',demo:true,name:'Absenteeism',level:'Company',
+       category:'HR',target:3,unit:'%',direction:'lower',source:'absentee',actual:''},
+      {itemId:'KPI-DEMO3',kind:'kpi',status:'Active',demo:true,name:'Training closed out',level:'Company',
+       category:'HR',target:100,unit:'%',direction:'higher',source:'training',actual:''},
+      {itemId:'KPI-DEMO4',kind:'kpi',status:'Active',demo:true,name:'Internal rejection',level:'Department',
+       owner:'Machining',category:'Quality',target:1.5,unit:'%',direction:'lower',source:'manual',actual:2.4},
+      {itemId:'TSK-DEMO1',kind:'task',status:'In Progress',demo:true,description:'Calibrate bore gauges — annual due',
+       owner:'ET002',priority:'High',due:ahead(6),source:'Audit finding',department:'Quality',evidence:''},
+      {itemId:'TSK-DEMO2',kind:'task',status:'Not Started',demo:true,description:'Retrain Prakash on drawing reading',
+       owner:'ET003',priority:'Normal',due:ago(3),source:'KPI gap',department:'Machining',evidence:''},
+      {itemId:'TSK-DEMO3',kind:'task',status:'Blocked',demo:true,description:'Fit guard interlock on VMC-01',
+       owner:'ET003',priority:'Critical',due:ahead(2),source:'Audit finding',department:'Machining',
+       evidence:'Waiting for the interlock switch from supplier'},
+      {itemId:'RWD-DEMO1',kind:'reward',status:'Recorded',demo:true,empId:'ET005',type:'Best Kaizen',
+       period:'Aug 2026',note:'Reduced setup time on the turning line by 18 minutes with a simple stop block',
+       recordedOn:ago(12)}
+    ];
+    for(const it of items){
+      await api('/api/hr',{method:'POST',body:JSON.stringify({what:'items',item:it,reason:'demo data'})});
+    }
+
+    say('Candidates…');
+    const cands=[
+      {itemId:'CAND-DEMO1',kind:'candidate',status:'Applied',demo:true,reqId:'REQ-DEMO1',
+       name:'Mohan Raj',phone:'9900112233',email:'mohanraj.demo@example.com',qualification:'ITI Turner',
+       experience:4,currentCtc:240000,expectedCtc:300000,source:'Careers page',appliedOn:ago(4),
+       cvText:'ITI Turner, 2018. Four years operating Fanuc CNC turning centres at a Tier-2 automotive supplier. Setting, first-off inspection, in-process checks with micrometer and bore gauge. Familiar with drawing reading and basic GD&T. Trained in machine safety and LOTO.'},
+      {itemId:'CAND-DEMO2',kind:'candidate',status:'Applied',demo:true,reqId:'REQ-DEMO1',
+       name:'Karthik S',phone:'9900112244',email:'karthik.demo@example.com',qualification:'Diploma Mechanical',
+       experience:1,currentCtc:180000,expectedCtc:260000,source:'Careers page',appliedOn:ago(2),
+       cvText:'Diploma in Mechanical Engineering, 2024. One year as a trainee on manual lathes. Exposure to CNC during college project. Keen to learn CNC turning. No independent setting experience yet.'},
+      {itemId:'CAND-DEMO3',kind:'candidate',status:'Interview',demo:true,reqId:'REQ-DEMO2',
+       name:'Divya Prasad',phone:'9900112255',email:'divya.demo@example.com',qualification:'BE Mechanical',
+       experience:5,currentCtc:480000,expectedCtc:600000,source:'Referral',appliedOn:ago(11),
+       interviewDate:ahead(3),interviewer:'Vijay Kumar D P',techScore:8,hrScore:7,
+       cvText:'BE Mechanical, 2019. Five years in quality at an automotive machining company. Prepared control plans and PFMEA. Led 8D investigations for customer complaints. Internal auditor for IATF 16949. Proficient with CMM, gauges and GD&T.'}
+    ];
+    for(const c of cands){
+      await api('/api/hr',{method:'POST',body:JSON.stringify({what:'items',item:c,reason:'demo data'})});
+    }
+
+    say('Training…');
+    await api('/api/hr',{method:'POST',body:JSON.stringify({what:'training',reason:'demo data',record:{
+      recId:'TR-DEMO1',kind:'session',demo:true,courseId:'trn3',title:'Machine Safety & Lockout/Tagout',
+      trainer:'Safety Officer',date:ago(38),evaluateAfterDays:30,
+      participants:[{empId:'ET001',attended:true,score:9,onJobOk:true},
+        {empId:'ET004',attended:true,score:6,onJobOk:false},
+        {empId:'ET005',attended:true,score:8,onJobOk:true}],
+      completedOn:ago(38),assessmentDone:true,method:'Practical demonstration',
+      effectivenessDone:false,effective:false,status:'Scheduled'}})});
+    await api('/api/hr',{method:'POST',body:JSON.stringify({what:'training',reason:'demo data',record:{
+      recId:'TR-DEMO2',kind:'session',demo:true,courseId:'trn2',title:'GD&T and Drawing Interpretation',
+      trainer:'External — Mr Iyer',date:ahead(9),evaluateAfterDays:30,
+      participants:[{empId:'ET004',attended:false,score:0,onJobOk:false}],
+      completedOn:'',assessmentDone:false,effectivenessDone:false,effective:false,status:'Scheduled'}})});
+
+    say('Attendance…');
+    const period=iso(today).slice(0,7);
+    const days=daysInPeriod(period).filter(d=>d<=today);
+    const recs=[];
+    hrEmployees.filter(e=>e.demo||emps.some(x=>x.empId===e.empId)).forEach((e,ei)=>{
+      days.forEach((d,di)=>{
+        if(isWeekOff(d)||isHoliday(d)) return;
+        const absent=(ei===3&&di%9===0);          // one person with a couple of absences
+        recs.push({empId:e.empId,day:dayKey(d),status:absent?'Absent':'Present',
+          dayFraction:1,otHours:(ei===0&&di%7===0)?2:0,demo:true});
+      });
+    });
+    if(recs.length) await api('/api/hr',{method:'POST',
+      body:JSON.stringify({what:'attendance',records:recs,manual:false,reason:'demo attendance'})});
+
+    say('Leave…');
+    await api('/api/hr',{method:'POST',body:JSON.stringify({what:'leave',reason:'demo data',leave:{
+      leaveId:'LV-DEMO1',empId:'ET002',type:'SL',from:ago(6),to:ago(5),
+      reason:'Fever',status:'Approved',demo:true}})});
+    await api('/api/hr',{method:'POST',body:JSON.stringify({what:'leave',reason:'demo data',leave:{
+      leaveId:'LV-DEMO2',empId:'ET005',type:'EL',from:ahead(12),to:ahead(16),
+      reason:'Family function',status:'Pending',demo:true}})});
+
+    try{ await api('/api/content',{method:'POST',body:JSON.stringify({data})}); dirty=false; }catch(e){}
+    await loadHr(); await loadItems(); await loadTraining(); await loadJobs();
+    say('Load demonstration data');
+  }
+
+  async function clearDemoData(btn){
+    const say=t=>{ if(btn) btn.textContent=t; };
+    say('Removing…');
+    await loadHr(); await loadItems(); await loadTraining();
+    for(const e of hrEmployees.filter(x=>x.demo))
+      await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'employees',empId:e.empId,remove:true,reason:'demo data cleared'})});
+    for(const i of hrItems.filter(x=>(x.data||x).demo))
+      await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:i.item_id,remove:true,reason:'demo data cleared'})});
+    for(const t of hrTraining.filter(x=>(x.data||x).demo))
+      await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'training',recId:t.rec_id,remove:true,reason:'demo data cleared'})});
+    for(const l of hrLeave.filter(x=>(x.data||x).demo))
+      await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'leave',leaveId:l.leave_id,remove:true,reason:'demo data cleared'})});
+    data.roleCompetency=[]; data.holidays=[];
+    try{ await api('/api/content',{method:'POST',body:JSON.stringify({data})}); dirty=false; }catch(e){}
+    await loadHr(); await loadItems(); await loadTraining(); await loadJobs();
+    say('Clear demonstration data');
+    toast('Demonstration data removed');
+  }
+
+  /* ================= PUBLIC CAREERS PAGE =================
+     Open requisitions are published here. Applying creates a candidate record
+     that lands directly in HR & People — nothing is retyped. */
+  let publicJobs=[];
+  async function loadJobs(){
+    try{ const r=await fetch(API+'/api/hr?what=jobs'); const j=await r.json(); publicJobs=j.jobs||[]; }
+    catch(e){ publicJobs=[]; }
+    renderCareers();
+  }
+  function renderCareers(){
+    const host=document.getElementById('careers-list'); if(!host) return;
+    setText('d-careers-sub',data.careersSub||'');
+    host.innerHTML=publicJobs.length?`<div class="job-list">${publicJobs.map(j=>`
+      <div class="job-item" data-job="${esc(j.id)}">
+        <h3>${esc(j.title)}</h3>
+        <div class="job-meta">${esc(j.department||'')}${j.grade?' · '+esc(j.grade):''}${j.count>1?' · '+j.count+' positions':''}</div>
+        ${j.ctcRange?`<div class="job-meta" style="margin-top:4px;">${esc(j.ctcRange)}</div>`:''}
+        <div class="more">View &amp; apply →</div>
+      </div>`).join('')}</div>`
+      :'<p class="empty-note">No open positions at the moment. Do check back.</p>';
+
+    host.querySelectorAll('[data-job]').forEach(el=>el.addEventListener('click',()=>openJob(el.dataset.job)));
+  }
+  function openJob(id){
+    const j=publicJobs.find(x=>x.id===id); if(!j) return;
+    document.getElementById('job-detail').innerHTML=`
+      <p class="t-label">OPEN POSITION</p>
+      <h2 class="t-title" style="margin-bottom:6px;">${esc(j.title)}</h2>
+      <div class="job-meta">${esc(j.department||'')}${j.grade?' · '+esc(j.grade):''}${j.ctcRange?' · '+esc(j.ctcRange):''}</div>
+      <div class="jd-body">${esc(j.jd||'Job description not published for this role. Apply and we will share the details.')}</div>
+      <div class="cs-sub">Apply for this position</div>
+      <div class="cs-row"><div><label>Full Name *</label><input id="ap-name"></div>
+        <div><label>Phone *</label><input id="ap-phone" placeholder="9XXXXXXXXX"></div></div>
+      <div class="cs-row" style="margin-top:10px;"><div><label>Email</label><input id="ap-email"></div>
+        <div><label>Qualification</label><input id="ap-qual"></div></div>
+      <div class="cs-row" style="margin-top:10px;"><div><label>Experience (years)</label><input id="ap-exp" class="num"></div>
+        <div><label>Expected CTC (annual)</label><input id="ap-ectc" class="num"></div></div>
+      <div class="field" style="margin-top:12px;"><label>Resume — PDF or Word</label>
+        <input type="file" id="ap-file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+        <div class="field-hint">Up to 3MB. PDFs can be read by our system automatically; Word files are
+          stored and read by a person.</div></div>
+      <div class="field" style="margin-top:10px;"><label>Anything you would like us to know</label>
+        <textarea id="ap-note" rows="3"></textarea></div>
+      <button class="btn btn-primary" id="ap-submit" style="width:100%;margin-top:16px;">Submit Application</button>
+      <div class="field-hint" id="ap-msg" style="margin-top:10px;"></div>`;
+    document.getElementById('job-modal').classList.add('open');
+
+    document.getElementById('ap-submit').addEventListener('click',async function(){
+      const name=document.getElementById('ap-name').value.trim();
+      const phone=document.getElementById('ap-phone').value.trim();
+      const msg=document.getElementById('ap-msg');
+      if(!name||!phone){ msg.textContent='Name and phone are required.'; msg.style.color='#B03A2E'; return; }
+      const f=document.getElementById('ap-file').files[0];
+      this.disabled=true; this.textContent='Submitting…';
+      const cand={reqId:id,name,phone,
+        email:document.getElementById('ap-email').value.trim(),
+        qualification:document.getElementById('ap-qual').value.trim(),
+        experience:num(document.getElementById('ap-exp').value),
+        expectedCtc:num(document.getElementById('ap-ectc').value),
+        note:document.getElementById('ap-note').value.trim(),
+        positionTitle:j.title};
+      try{
+        if(f){
+          if(f.size>3*1024*1024) throw new Error('That file is over 3MB.');
+          cand.resumeName=f.name;
+          cand.resumeType=f.type;
+          cand.resumeData=await new Promise((ok,no)=>{
+            const rd=new FileReader(); rd.onload=()=>ok(rd.result); rd.onerror=()=>no(new Error('Could not read the file')); rd.readAsDataURL(f);});
+        }
+        const r=await fetch(API+'/api/hr',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({what:'apply',candidate:cand})});
+        const jj=await r.json();
+        if(!jj.ok) throw new Error(jj.error||'Could not submit');
+        document.getElementById('job-detail').innerHTML=`
+          <p class="t-label">THANK YOU</p><h2 class="t-title">Application received</h2>
+          <p class="t-body" style="margin-top:12px;">Your reference is <b>${esc(jj.ref)}</b>.
+          We review every application and will be in touch if there is a fit.</p>`;
+      }catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E';
+        this.disabled=false; this.textContent='Submit Application'; }
+    });
+  }
+
+  /* ================= RECRUITMENT (§3B, §4, §5) =================
+     AI is used for screening assistance only: it summarises what a CV does and
+     does not evidence against the role. It deliberately does not score, rank or
+     recommend — §40 of the spec forbids uncontrolled hiring decisions, and a
+     numeric score invites exactly that. The judgement stays with a person. */
+  const CAND_STAGES=['Applied','Screened','Interview','Selected','Offer Made','Joined','Rejected'];
+
+  function renderRequisitions(){
+    const kpi=document.getElementById('rec-kpi'), host=document.getElementById('req-list');
+    if(!host) return;
+    const reqs=itemsOf('requisition'), cands=itemsOf('candidate');
+    const open=reqs.filter(r=>r.status!=='Closed');
+    const joined=cands.filter(c=>c.status==='Joined');
+    const inProcess=cands.filter(c=>!['Joined','Rejected'].includes(c.status));
+    const offers=cands.filter(c=>c.status==='Offer Made');
+
+    if(kpi) kpi.innerHTML=`<div class="kpi"><b>${open.length}</b><span>Open Positions</span></div>
+      <div class="kpi"><b>${inProcess.length}</b><span>Candidates in Process</span></div>
+      <div class="kpi"><b style="color:var(--gold-deep)">${offers.length}</b><span>Offers Pending</span></div>
+      <div class="kpi"><b style="color:var(--ok)">${joined.length}</b><span>Joined</span></div>`;
+
+    const sel=document.getElementById('cd-req');
+    if(sel) sel.innerHTML=open.map(r=>`<option value="${esc(r.item_id)}">${esc((r.data||r).title)} — ${esc((r.data||r).department||'')}</option>`).join('')
+      ||'<option value="">Raise a requisition first</option>';
+
+    host.innerHTML=reqs.length?`<table class="cs-t"><thead><tr><th>Position</th><th>Department</th>
+      <th class="r">Positions</th><th class="r">Candidates</th><th>Needed By</th><th>Status</th><th></th></tr></thead>
+      <tbody>${reqs.map(r=>{const d=r.data||r;
+        const mine=cands.filter(c=>(c.data||c).reqId===r.item_id);
+        const late=d.neededBy&&new Date(d.neededBy)<new Date()&&r.status!=='Closed';
+        return `<tr><td>${esc(d.title)}<div class="t-micro">${esc(d.reason||'')}</div></td>
+        <td>${esc(d.department||'')}</td><td class="r">${esc(d.count||1)}</td>
+        <td class="r">${mine.length}</td>
+        <td style="${late?'color:#B03A2E;font-weight:700;':''}">${fmtDate(d.neededBy)}</td>
+        <td><span class="order-badge ${r.status==='Closed'?'go':'unk'}">${esc(r.status)}</span></td>
+        <td>${r.status!=='Closed'?`<button class="mini-btn rq-close" data-id="${esc(r.item_id)}">Close</button>`:''}
+          <button class="qb-del rq-del" data-id="${esc(r.item_id)}">×</button></td></tr>`;}).join('')}</tbody></table>`
+      :'<p class="empty-note">No requisitions raised.</p>';
+
+    host.querySelectorAll('.rq-close').forEach(b=>b.addEventListener('click',async()=>{
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:b.dataset.id,
+        status:'Closed',reason:'position filled or withdrawn'})}); await loadItems(); }catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.rq-del').forEach(b=>b.addEventListener('click',async()=>{
+      if(!confirm('Delete this requisition?')) return;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:b.dataset.id,remove:true,reason:'deleted'})});
+        await loadItems(); }catch(e){ toast(e.message); }
+    }));
+  }
+
+  function renderCandidates(){
+    const host=document.getElementById('cand-list'); if(!host) return;
+    const cands=itemsOf('candidate'), reqs=itemsOf('requisition');
+    host.innerHTML=cands.length?cands.map(c=>{
+      const d=c.data||c;
+      const req=reqs.find(r=>r.item_id===d.reqId);
+      const open=expandedCandidate===c.item_id;
+      const badge=c.status==='Joined'?'go':(c.status==='Rejected'?'no':'unk');
+      return `<div class="rfq-card ${open?'open':''}">
+        <div class="list-item-head rfq-summary" data-cand="${esc(c.item_id)}">
+          <div><div class="rfq-ref">${esc(d.name)}</div>
+          <div class="rfq-when">${esc(req?(req.data||req).title:'—')} · ${esc(d.experience||0)} yrs ·
+            ${d.expectedCtc?'expects '+rupee(d.expectedCtc):'CTC not stated'}</div></div>
+          <div class="rfq-summary-right"><span class="order-badge ${badge}">${esc(c.status)}</span>
+          <span class="rfq-chevron">${open?'▾':'▸'}</span></div></div>
+        <div class="rfq-body" style="display:${open?'block':'none'};">
+          <div class="feas-line">${esc(d.phone||'')} ${d.email?' · '+esc(d.email):''} ·
+            ${esc(d.qualification||'qualification not recorded')}</div>
+
+          ${d.resumeName?`<div class="feas-line" style="margin-bottom:8px;">📎 ${esc(d.resumeName)}
+            ${d.resumeData?`· <a style="color:var(--sky-deep);text-decoration:underline;" href="${d.resumeData}" download="${esc(d.resumeName)}">download</a>`:''}
+            ${/pdf/i.test(d.resumeType||'')?'':' <span class="t-micro">(Word file — AI cannot read it, paste the text below)</span>'}</div>`:''}
+          ${d.note?`<div class="feas-line" style="margin-bottom:8px;"><b>Candidate's note:</b> ${esc(d.note)}</div>`:''}
+          <div class="field"><label>CV text (paste here if no PDF was attached)</label>
+            <textarea class="cd-in" data-id="${esc(c.item_id)}" data-k="cvText" rows="3">${esc(d.cvText||'')}</textarea></div>
+          <div class="rfq-actions" style="margin-top:10px;">
+            <button class="mini-btn ai cd-screen" data-id="${esc(c.item_id)}">Evaluate against the role</button>
+            <button class="mini-btn cd-invite" data-id="${esc(c.item_id)}">Invite to interview</button>
+          </div>
+          <div id="scr-${esc(c.item_id)}">${d.screening?`<div class="dx" style="margin-top:10px;">
+            <div class="dx-head"><b>Match against stated requirements</b><span class="t-micro">${esc(d.screenedOn||'')}</span></div>
+            ${d.matchPct!==undefined&&d.matchPct!==null?`<div class="feas-banner ${d.matchPct>=70?'go':d.matchPct>=40?'unk':'no'}" style="margin-bottom:10px;">
+              <div class="feas-title">${d.matchPct}% of stated requirements evidenced</div>
+              <div class="feas-line">${esc(d.recommendation||'')}</div></div>`:''}
+            <div class="feas-line" style="white-space:pre-wrap;">${esc(d.screening)}</div>
+            <div class="t-micro" style="margin-top:8px;color:var(--ink-soft);">This measures the CV against the
+              requirements written in the JD. It does not assess the person, and the hiring decision is yours.</div></div>`:''}</div>
+
+          <div class="cs-sub">Interview &amp; Assessment</div>
+          <div class="cs-row four">
+            <div><label>Interview Date</label><input type="date" class="cd-in" data-id="${esc(c.item_id)}" data-k="interviewDate" value="${esc(d.interviewDate||'')}"></div>
+            <div><label>Technical</label><input class="cd-in num" data-id="${esc(c.item_id)}" data-k="techScore" value="${esc(d.techScore||'')}" placeholder="/10"></div>
+            <div><label>HR</label><input class="cd-in num" data-id="${esc(c.item_id)}" data-k="hrScore" value="${esc(d.hrScore||'')}" placeholder="/10"></div>
+            <div><label>Interviewed By</label><input class="cd-in" data-id="${esc(c.item_id)}" data-k="interviewer" value="${esc(d.interviewer||'')}"></div>
+          </div>
+          <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+            <label>Interview notes</label><textarea class="cd-in" data-id="${esc(c.item_id)}" data-k="notes" rows="2">${esc(d.notes||'')}</textarea></div></div>
+
+          <div class="cs-sub">Offer (§4)</div>
+          <div class="cs-row four">
+            <div><label>Offered CTC (annual)</label><input class="cd-in num" data-id="${esc(c.item_id)}" data-k="offerCtc" value="${esc(d.offerCtc||'')}"></div>
+            <div><label>Designation</label><input class="cd-in" data-id="${esc(c.item_id)}" data-k="designation" value="${esc(d.designation||(req?(req.data||req).title:''))}"></div>
+            <div><label>Grade</label><input class="cd-in" data-id="${esc(c.item_id)}" data-k="grade" value="${esc(d.grade||'')}"></div>
+            <div><label>Joining Date</label><input type="date" class="cd-in" data-id="${esc(c.item_id)}" data-k="joiningDate" value="${esc(d.joiningDate||'')}"></div>
+          </div>
+          ${d.offerCtc?`<div class="feas-line" style="margin-top:8px;">Monthly structure this would produce:
+            ${(()=>{const st=structureFromCtc(d.offerCtc);
+              return `Basic ${rupee(st.basic)} · HRA ${rupee(st.hra)} · Conveyance ${rupee(st.conveyance)} ·
+                Special ${rupee(st.special)} — gross ${rupee(st.basic+st.da+st.hra+st.conveyance+st.special)}`;})()}</div>`:''}
+
+          <div class="cs-row four" style="margin-top:12px;">
+            <div><label>Stage</label><select class="cd-stage" data-id="${esc(c.item_id)}" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+              ${CAND_STAGES.map(x=>`<option ${c.status===x?'selected':''}>${x}</option>`).join('')}</select></div>
+          </div>
+          <div class="rfq-actions" style="margin-top:12px;">
+            <button class="mini-btn gold cd-save" data-id="${esc(c.item_id)}">Save</button>
+            ${d.offerCtc?`<button class="mini-btn cd-offer" data-id="${esc(c.item_id)}">Print Offer Letter</button>`:''}
+            ${c.status==='Offer Made'?`<button class="mini-btn green cd-join" data-id="${esc(c.item_id)}">Convert to Employee</button>`:''}
+            <button class="item-delete cd-del" data-id="${esc(c.item_id)}">Delete</button>
+          </div></div></div>`;
+    }).join(''):'<p class="empty-note">No candidates yet.</p>';
+
+    host.querySelectorAll('[data-cand]').forEach(r=>r.addEventListener('click',e=>{
+      if(e.target.closest('button')||e.target.closest('select')||e.target.closest('input')||e.target.closest('textarea')) return;
+      const id=r.dataset.cand; expandedCandidate=(expandedCandidate===id)?null:id; renderCandidates();
+    }));
+    host.querySelectorAll('.cd-in').forEach(inp=>inp.addEventListener('input',()=>{
+      const c=cands.find(x=>x.item_id===inp.dataset.id), d=c.data||c;
+      d[inp.dataset.k]=inp.value; c.data=d;
+    }));
+    host.querySelectorAll('.cd-stage').forEach(sel=>sel.addEventListener('change',async()=>{
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:sel.dataset.id,
+        status:sel.value,reason:'stage → '+sel.value})}); await loadItems(); }catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.cd-save').forEach(b=>b.addEventListener('click',async()=>{
+      const c=cands.find(x=>x.item_id===b.dataset.id), d=c.data||c;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:c.item_id,patch:d,
+        reason:'candidate updated'})}); await loadItems(); toast('Saved'); }catch(e){ toast(e.message); }
+    }));
+    host.querySelectorAll('.cd-screen').forEach(b=>b.addEventListener('click',async()=>{
+      const c=cands.find(x=>x.item_id===b.dataset.id), d=c.data||c;
+      const req=reqs.find(r=>r.item_id===d.reqId);
+      if(!d.cvText){ toast('Paste the CV text first.'); return; }
+      b.textContent='Reading…'; b.disabled=true;
+      const prompt=`Compare a CV against the written requirements of a role. Be factual and specific.
+
+ROLE: ${req?(req.data||req).title:'not specified'}
+STATED REQUIREMENTS (this is the only standard to measure against):
+${req?((req.data||req).jd||'No written requirements — say so and measure nothing.'):'not specified'}
+
+CANDIDATE DETAILS: ${d.qualification||'qualification not stated'}, ${d.experience||0} years experience.
+CV TEXT:
+${d.cvText||'(no CV text supplied)'}
+
+Reply with ONLY this JSON, no commentary or code fences:
+{
+ "matchPct": 0,
+ "recommendation": "",
+ "detail": ""
+}
+
+How to fill it:
+- "matchPct": of the requirements actually written in the JD, what percentage does the CV evidence?
+  Count only requirements stated in the JD. If the JD lists no requirements, return null.
+- "recommendation": one short sentence, and it must be one of these three shapes:
+  "Meets the stated requirements — worth interviewing"
+  "Partially meets the requirements — interview to clarify [what]"
+  "Does not evidence the stated requirements — [what is missing]"
+- "detail": plain text with four short sections: Requirements evidenced / Requirements not evidenced /
+  Gaps to probe at interview / Three questions to ask.
+
+Rules you must follow:
+- Judge the CV against the written requirements only. Never assess the person's worth, potential or fit.
+- Never mention or infer age, sex, marital status, religion, caste, region, community, disability or health.
+- If the CV does not state something, say it is not evidenced rather than assuming either way.
+- A low percentage means the document lacks evidence, not that the person is unsuitable.`;
+      try{
+        const txt=await callAI(prompt,{maxTokens:1100,surfaceError:true});
+        try{
+          const clean=(txt||'').replace(/```json|```/g,'').trim();
+          const j=JSON.parse(clean.slice(clean.indexOf('{'),clean.lastIndexOf('}')+1));
+          d.matchPct=(j.matchPct===null||j.matchPct===undefined)?null:Math.round(num(j.matchPct));
+          d.recommendation=j.recommendation||'';
+          d.screening=j.detail||txt||'';
+        }catch(_){ d.screening=txt||''; d.matchPct=null; d.recommendation=''; }
+        d.screenedOn=new Date().toLocaleString();
+        await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:c.item_id,patch:d,
+          status:c.status==='Applied'?'Screened':c.status,reason:'AI screening summary generated'})});
+        await loadItems();
+      }catch(e){ toast(e.message); }
+      b.textContent='AI screening summary'; b.disabled=false;
+    }));
+    host.querySelectorAll('.cd-invite').forEach(b=>b.addEventListener('click',async()=>{
+      const c=cands.find(x=>x.item_id===b.dataset.id), d=c.data||c;
+      const req=reqs.find(r=>r.item_id===d.reqId);
+      const when=prompt('Interview date and time to tell the candidate:','');
+      if(!when) return;
+      const where=prompt('Where should they come? (address or "video call")',
+        companyAddressLines().join(', '))||'';
+      b.textContent='Sending…'; b.disabled=true;
+      const co=CO();
+      const text=`Dear ${d.name},
+
+Thank you for applying for the position of ${req?(req.data||req).title:'the advertised role'} with ${co.legalName||data.brandName}.
+
+We would like to meet you.
+
+  Date and time: ${when}
+  Venue: ${where}
+
+Please bring your original certificates and a copy of your resume.
+Reply to this message to confirm, or to ask for a different time.
+
+Regards,
+${data.quoteSender||'HR'}
+${co.legalName||data.brandName}
+${co.phone||co.mobile||''}`;
+      const res=await sendMessage_({email:d.email||'',whatsapp:d.phone||'',
+        subject:'Interview invitation — '+(req?(req.data||req).title:'your application'),text});
+      const st=readResults(res);
+      d.interviewInvitedOn=new Date().toLocaleString();
+      d.interviewDate=d.interviewDate||'';
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:c.item_id,patch:d,
+        status:'Interview',reason:'interview invitation sent'})}); await loadItems(); }catch(e){}
+      b.textContent='Invite to interview'; b.disabled=false;
+      toast(st.emailOk||st.waOk
+        ? ('Invitation sent'+(st.emailOk?' by email':'')+(st.waOk?(st.emailOk?' and WhatsApp':' by WhatsApp'):''))
+        : ('Not sent — '+(st.email||st.wa||'check the Setup screen')));
+    }));
+    host.querySelectorAll('.cd-offer').forEach(b=>b.addEventListener('click',()=>{
+      const c=cands.find(x=>x.item_id===b.dataset.id);
+      printOfferLetter(c.data||c);
+    }));
+    host.querySelectorAll('.cd-join').forEach(b=>b.addEventListener('click',async()=>{
+      const c=cands.find(x=>x.item_id===b.dataset.id), d=c.data||c;
+      const empId=prompt('Employee ID for '+d.name+':');
+      if(!empId) return;
+      const e=blankEmployee();
+      Object.assign(e,{empId:empId.trim(),name:d.name,phone:d.phone,email:d.email,
+        designation:d.designation||'',grade:d.grade||'',doj:d.joiningDate||'',
+        department:(reqs.find(r=>r.item_id===d.reqId)||{data:{}}).data.department||'',
+        ctcAnnual:num(d.offerCtc),status:'Probation'});
+      if(num(d.offerCtc)) e.structure=structureFromCtc(d.offerCtc);
+      try{
+        await api('/api/hr',{method:'POST',body:JSON.stringify({what:'employees',employee:e,
+          reason:'converted from candidate '+c.item_id})});
+        await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:c.item_id,
+          patch:Object.assign(d,{empId:e.empId}),status:'Joined',reason:'joined as '+e.empId})});
+        await loadHr(); await loadItems();
+        toast(d.name+' added as employee '+e.empId);
+      }catch(err){ toast(err.message); }
+    }));
+    host.querySelectorAll('.cd-del').forEach(b=>b.addEventListener('click',async()=>{
+      if(!confirm('Delete this candidate?')) return;
+      try{ await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:b.dataset.id,remove:true,reason:'deleted'})});
+        await loadItems(); }catch(e){ toast(e.message); }
+    }));
+  }
+
+  /* §5 offer letter, built from the approved figures rather than retyped */
+  function printOfferLetter(d){
+    const co=CO(), logo=documentLogo();
+    const st=structureFromCtc(d.offerCtc);
+    const w=window.open('','_blank');
+    if(!w){ toast('Allow pop-ups for this site.'); return; }
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Offer — ${esc(d.name)}</title>
+    <style>@page{size:A4;margin:18mm;}body{font-family:Arial,sans-serif;font-size:10pt;color:#12233f;line-height:1.6;margin:0;}
+    .lh{display:flex;gap:14px;align-items:center;border-bottom:2pt solid #0B2A5B;padding-bottom:10px;margin-bottom:20px;}
+    .lh img{max-height:52px;max-width:130px;object-fit:contain;}
+    .co{font-size:14pt;font-weight:800;color:#0B2A5B;}.ad{font-size:8pt;color:#41567E;}
+    h2{text-align:center;font-size:12pt;letter-spacing:2pt;color:#0B2A5B;margin:18px 0;}
+    table{width:100%;border-collapse:collapse;margin:14px 0;font-size:9.5pt;}
+    th{background:#0B2A5B;color:#fff;text-align:left;padding:6px;font-size:8pt;text-transform:uppercase;}
+    td{padding:5px 6px;border-bottom:.6pt solid #e2e9f2;}.r{text-align:right;}
+    .sign{margin-top:40px;display:flex;justify-content:space-between;}
+    .sign div{width:45%;border-top:.8pt solid #0B2A5B;padding-top:6px;font-size:9pt;}
+    .noprint{text-align:center;padding:14px;background:#0B2A5B;color:#fff;}
+    .noprint button{background:#E0B44E;color:#0B2A5B;border:none;padding:10px 24px;border-radius:100px;font-weight:700;cursor:pointer;}
+    @media print{.noprint{display:none;}}</style></head><body>
+    <div class="noprint"><button onclick="window.print()">Save as PDF / Print</button></div>
+    <div class="lh">${logo?`<img src="${logo}">`:''}<div><div class="co">${esc(co.legalName||data.brandName)}</div>
+      <div class="ad">${esc(companyAddressLines().join(', '))}</div></div></div>
+    <div style="text-align:right;font-size:9pt;">Date: ${new Date().toLocaleDateString()}</div>
+    <h2>LETTER OF OFFER</h2>
+    <p>Dear ${esc(d.name)},</p>
+    <p>Further to our discussions, we are pleased to offer you the position of
+      <b>${esc(d.designation||'')}</b>${d.grade?` (Grade ${esc(d.grade)})`:''} with
+      ${esc(co.legalName||data.brandName)}${d.joiningDate?`, with effect from <b>${new Date(d.joiningDate).toLocaleDateString()}</b>`:''}.</p>
+    <p>Your annual cost to company will be <b>${rupee(d.offerCtc)}</b>, made up as follows:</p>
+    <table><thead><tr><th>Component</th><th class="r">Per Month</th><th class="r">Per Annum</th></tr></thead><tbody>
+      <tr><td>Basic</td><td class="r">${rupee(st.basic)}</td><td class="r">${rupee(st.basic*12)}</td></tr>
+      <tr><td>House Rent Allowance</td><td class="r">${rupee(st.hra)}</td><td class="r">${rupee(st.hra*12)}</td></tr>
+      <tr><td>Conveyance</td><td class="r">${rupee(st.conveyance)}</td><td class="r">${rupee(st.conveyance*12)}</td></tr>
+      <tr><td>Special Allowance</td><td class="r">${rupee(st.special)}</td><td class="r">${rupee(st.special*12)}</td></tr>
+      <tr><td><b>Total</b></td><td class="r"><b>${rupee(num(d.offerCtc)/12)}</b></td><td class="r"><b>${rupee(d.offerCtc)}</b></td></tr>
+    </tbody></table>
+    <p>Statutory deductions and employer contributions will apply in accordance with the law and with
+      company policy in force from time to time.</p>
+    <p>This offer is subject to verification of your documents and references, and to your acceptance of the
+      company's terms of employment and policies.</p>
+    <p>Please confirm your acceptance by signing and returning a copy of this letter.</p>
+    <div class="sign"><div>For ${esc(co.legalName||data.brandName)}<br><br>
+      ${esc(co.signatoryName||'Authorised Signatory')}<br>
+      <span style="font-size:8pt;color:#41567E;">${esc(co.signatoryTitle||'')}</span></div>
+      <div>Accepted by<br><br>${esc(d.name)}<br>
+      <span style="font-size:8pt;color:#41567E;">Signature &amp; date</span></div></div>
+    </body></html>`);
+    w.document.close();
+  }
+
   /* ================= CONTROL TOWER & ALERTS (§31, §32) =================
      Management sees status first, not a table of employees. Every number is
      read live from records elsewhere in the system — nothing is stored here,
@@ -3707,7 +4863,7 @@ Reply with ONLY this JSON, no commentary or code fences:
 
   async function loadItems(){
     try{ const j=await api('/api/hr?what=items'); hrItems=j.items||[]; }catch(e){ hrItems=[]; }
-    renderPolicies(); renderTasks(); renderKpis(); renderAppraisals();
+    renderPolicies(); renderTasks(); renderKpis(); renderAppraisals(); renderRequisitions(); renderCandidates(); renderRewards(); renderSurveys(); renderExits();
   }
 
   function renderPolicies(){
@@ -3861,7 +5017,7 @@ Reply with ONLY this JSON, no commentary or code fences:
   }
 
   /* ---------- Skill matrix UI (§15, §16) ---------- */
-  let expandedAssess=null, expandedPolicy=null, expandedAppraisal=null;
+  let expandedAssess=null, expandedPolicy=null, expandedAppraisal=null, expandedCandidate=null, expandedSurvey=null, expandedExit=null;
   function refreshCompDropdowns(){
     const c=document.getElementById('rc-comp'), l=document.getElementById('rc-level'),
           d=document.getElementById('sm-dept');
@@ -4696,6 +5852,7 @@ Reply with ONLY this JSON, no commentary or code fences:
 
           <div class="rfq-actions" style="margin-top:16px;">
             <button class="mini-btn gold em-save" data-i="${i}">Save Employee</button>
+            <button class="mini-btn em-idcard" data-i="${i}">Print ID Card</button>
             <button class="item-delete em-del" data-i="${i}">Delete</button>
           </div>
         </div></div>`;
@@ -4726,6 +5883,9 @@ Reply with ONLY this JSON, no commentary or code fences:
       try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'employees',employee:e,reason:'edited in HR screen'})});
         toast('Employee saved'); }catch(err){ toast(err.message); }
       b.textContent='Save Employee'; b.disabled=false;
+    }));
+    host.querySelectorAll('.em-idcard').forEach(b=>b.addEventListener('click',()=>{
+      printIdCard(hrEmployees[+b.dataset.i]);
     }));
     host.querySelectorAll('.em-del').forEach(b=>b.addEventListener('click',async()=>{
       const e=hrEmployees[+b.dataset.i];
@@ -7530,6 +8690,19 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     if(tab.dataset.hrtab==='policies'){ loadItems(); }
     if(tab.dataset.hrtab==='tasks'){ refreshTaskDropdowns(); loadItems(); }
     if(tab.dataset.hrtab==='tower'){ renderTower(); }
+    if(tab.dataset.hrtab==='recruit'){ loadItems(); }
+    if(tab.dataset.hrtab==='engage'){
+      const e=document.getElementById('rw-emp');
+      if(e) e.innerHTML=hrEmployees.filter(x=>x.status!=='Exited')
+        .map(x=>`<option value="${esc(x.empId)}">${esc(x.empId)} — ${esc(x.name)}</option>`).join('');
+      loadItems();
+    }
+    if(tab.dataset.hrtab==='exit'){
+      const e=document.getElementById('ex-emp');
+      if(e) e.innerHTML=hrEmployees.filter(x=>x.status!=='Exited')
+        .map(x=>`<option value="${esc(x.empId)}">${esc(x.empId)} — ${esc(x.name)}</option>`).join('');
+      loadItems();
+    }
     if(tab.dataset.hrtab==='kpi'){
       const e=document.getElementById('ap-emp');
       if(e) e.innerHTML=hrEmployees.filter(x=>x.status!=='Exited')
@@ -7568,6 +8741,139 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   document.getElementById('lv-emp').addEventListener('change',renderLeave);
   document.getElementById('sm-dept').addEventListener('change',renderSkillMatrix);
   document.getElementById('tk-filter').addEventListener('change',renderTasks);
+  document.getElementById('hrq-ask').addEventListener('click',async function(){
+    const q=document.getElementById('hrq-q').value.trim();
+    if(!q){ toast('Type a question'); return; }
+    this.disabled=true; this.textContent='Thinking…';
+    await askHr(q);
+    this.disabled=false; this.textContent='Ask';
+  });
+  document.getElementById('hrq-q').addEventListener('keydown',e=>{
+    if(e.key==='Enter') document.getElementById('hrq-ask').click();
+  });
+  document.getElementById('demo-load').addEventListener('click',async function(){
+    if(!confirm('Load demonstration data?\n\nThis creates 5 employees, 2 job openings, 3 candidates, policies,\ntasks, KPIs, training and a month of attendance — all removable in one click.')) return;
+    this.disabled=true;
+    try{ await seedDemoData(this); renderTower(); toast('Demonstration data loaded'); }
+    catch(e){ toast('Failed: '+e.message); this.textContent='Load demonstration data'; }
+    this.disabled=false;
+  });
+  document.getElementById('demo-clear').addEventListener('click',async function(){
+    if(!confirm('Remove every demonstration record?\n\nOnly items marked as demonstration data are deleted.\nAnything you created yourself is untouched.')) return;
+    this.disabled=true;
+    try{ await clearDemoData(this); renderTower(); }
+    catch(e){ toast('Failed: '+e.message); this.textContent='Clear demonstration data'; }
+    this.disabled=false;
+  });
+  document.getElementById('rw-add').addEventListener('click',async function(){
+    const empId=document.getElementById('rw-emp').value;
+    const msg=document.getElementById('rw-msg');
+    if(!empId){ msg.textContent='Choose an employee.'; msg.style.color='#B03A2E'; return; }
+    const item={itemId:'RWD-'+Date.now().toString(36).toUpperCase(),kind:'reward',status:'Recorded',
+      empId, type:document.getElementById('rw-type').value,
+      period:document.getElementById('rw-period').value.trim(),
+      note:document.getElementById('rw-note').value.trim(),
+      recordedOn:new Date().toLocaleDateString()};
+    this.disabled=true;
+    try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'items',item,reason:'recognition recorded'})});
+      await loadItems(); document.getElementById('rw-note').value='';
+      msg.textContent='Recorded.'; msg.style.color='var(--ok)'; }
+    catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false;
+  });
+  document.getElementById('sv-create').addEventListener('click',async function(){
+    const title=document.getElementById('sv-title').value.trim();
+    const qs=document.getElementById('sv-qs').value.split('\n').map(x=>x.trim()).filter(Boolean);
+    const msg=document.getElementById('sv-msg');
+    if(!title||!qs.length){ msg.textContent='Give the survey a title and at least one question.'; msg.style.color='#B03A2E'; return; }
+    const item={itemId:'SRV-'+Date.now().toString(36).toUpperCase(),kind:'survey',status:'Open',
+      title, questions:qs, anonymous:document.getElementById('sv-anon').value==='yes', responses:[]};
+    this.disabled=true;
+    try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'items',item,reason:'survey created'})});
+      await loadItems(); document.getElementById('sv-title').value='';
+      msg.textContent='Survey created.'; msg.style.color='var(--ok)'; }
+    catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false;
+  });
+  document.getElementById('ex-create').addEventListener('click',async function(){
+    const empId=document.getElementById('ex-emp').value;
+    const lwd=document.getElementById('ex-lwd').value;
+    const msg=document.getElementById('ex-msg');
+    if(!empId||!lwd){ msg.textContent='Choose the employee and last working day.'; msg.style.color='#B03A2E'; return; }
+    const item={itemId:'EXT-'+Date.now().toString(36).toUpperCase(),kind:'exit',status:'In Progress',
+      empId, type:document.getElementById('ex-type').value, lastWorkingDay:lwd,
+      reason:document.getElementById('ex-reason').value.trim(),
+      clearance:{}, recoveries:0, exitNotes:''};
+    this.disabled=true;
+    try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'items',item,reason:'exit initiated'})});
+      await loadItems(); msg.textContent='Exit started — complete clearance below.'; msg.style.color='var(--ok)'; }
+    catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false;
+  });
+  document.getElementById('rq-jd-ai').addEventListener('click',async function(){
+    const title=document.getElementById('rq-title').value.trim();
+    const dept=document.getElementById('rq-dept').value.trim();
+    if(!title){ toast('Enter the position first'); return; }
+    this.disabled=true; this.textContent='Drafting…';
+    const prompt=`Draft a job description for a manufacturing company.
+
+POSITION: ${title}
+DEPARTMENT: ${dept||'not specified'}
+COMPETENCIES TRACKED HERE: ${(data.competencies||[]).map(c=>c.name).join(', ')||'none defined'}
+
+Cover, briefly and in plain language: job purpose; key responsibilities; authority;
+qualification; experience; technical skills; behavioural competencies; safety
+responsibilities; quality responsibilities; and the KPIs this role is measured on.
+
+Keep it under 350 words. Write it as a draft for HR to edit — do not invent
+company-specific policies, salary figures or reporting lines.`;
+    try{ const txt=await callAI(prompt,{maxTokens:900,surfaceError:true});
+      if(txt) document.getElementById('rq-jd').value=txt;
+      toast('Draft added — edit it before raising'); }
+    catch(e){ toast(e.message); }
+    this.disabled=false; this.textContent='Draft JD with AI';
+  });
+  document.getElementById('rq-create').addEventListener('click',async function(){
+    const title=document.getElementById('rq-title').value.trim();
+    const msg=document.getElementById('rq-msg');
+    if(!title){ msg.textContent='Enter the position.'; msg.style.color='#B03A2E'; return; }
+    const item={itemId:'REQ-'+Date.now().toString(36).toUpperCase(),kind:'requisition',status:'Open',
+      title, department:document.getElementById('rq-dept').value.trim(),
+      count:num(document.getElementById('rq-count').value)||1,
+      neededBy:document.getElementById('rq-by').value||null,
+      grade:document.getElementById('rq-grade').value.trim(),
+      ctcRange:document.getElementById('rq-ctc').value.trim(),
+      reason:document.getElementById('rq-reason').value,
+      raisedBy:document.getElementById('rq-by-who').value.trim(),
+      jd:document.getElementById('rq-jd').value.trim()};
+    this.disabled=true; this.textContent='Raising…';
+    try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'items',item,reason:'requisition raised'})});
+      await loadItems(); ['rq-title','rq-dept','rq-grade','rq-ctc','rq-jd'].forEach(id=>document.getElementById(id).value='');
+      msg.textContent='Requisition raised.'; msg.style.color='var(--ok)'; }
+    catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false; this.textContent='Raise Requisition';
+  });
+  document.getElementById('cd-add').addEventListener('click',async function(){
+    const name=document.getElementById('cd-name').value.trim();
+    const reqId=document.getElementById('cd-req').value;
+    const msg=document.getElementById('cd-msg');
+    if(!name||!reqId){ msg.textContent='Choose a requisition and enter a name.'; msg.style.color='#B03A2E'; return; }
+    const item={itemId:'CAND-'+Date.now().toString(36).toUpperCase(),kind:'candidate',status:'Applied',
+      name, reqId, phone:document.getElementById('cd-phone').value.trim(),
+      email:document.getElementById('cd-email').value.trim(),
+      qualification:document.getElementById('cd-qual').value.trim(),
+      experience:num(document.getElementById('cd-exp').value),
+      currentCtc:num(document.getElementById('cd-cctc').value),
+      expectedCtc:num(document.getElementById('cd-ectc').value),
+      cvText:document.getElementById('cd-cv').value.trim()};
+    this.disabled=true; this.textContent='Adding…';
+    try{ await api('/api/hr',{method:'POST',body:JSON.stringify({what:'items',item,reason:'candidate added'})});
+      await loadItems(); ['cd-name','cd-phone','cd-email','cd-qual','cd-exp','cd-cctc','cd-ectc','cd-cv']
+        .forEach(id=>document.getElementById(id).value='');
+      msg.textContent='Candidate added.'; msg.style.color='var(--ok)'; }
+    catch(e){ msg.textContent=e.message; msg.style.color='#B03A2E'; }
+    this.disabled=false; this.textContent='Add Candidate';
+  });
   document.getElementById('kp-add').addEventListener('click',async function(){
     const name=document.getElementById('kp-name').value.trim();
     const msg=document.getElementById('kp-msg');
@@ -7893,6 +9199,8 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     render();
     document.body.classList.add('booting');
     try{ await loadContent(); render(); }
+    catch(e){}
+    try{ await loadJobs(); }
     finally{ document.body.classList.remove('booting'); }
 
     if(location.hash==='#pipeline') requestLogin('pipeline');

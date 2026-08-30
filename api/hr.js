@@ -20,12 +20,42 @@ export default async function handler(req, res) {
 
   try {
     await ensureTables();
+    const q = req.query || {};
+    const preBody = req.method === 'GET' ? {} : readBody(req);
+    const askedFor = String(q.what || preBody.what || 'employees');
+
+    /* ---- PUBLIC: the careers page needs open jobs and an apply route ---- */
+    if (askedFor === 'jobs' && req.method === 'GET') {
+      const rows = await sql`SELECT item_id, data FROM hr_items
+                             WHERE kind = 'requisition' AND status = 'Open'
+                             ORDER BY created_at DESC LIMIT 100`;
+      // only fields a candidate should see
+      return res.status(200).json({ ok: true, jobs: rows.map(r => ({
+        id: r.item_id, title: r.data.title, department: r.data.department,
+        grade: r.data.grade, ctcRange: r.data.ctcRange, count: r.data.count,
+        neededBy: r.data.neededBy, jd: r.data.jd })) });
+    }
+    if (askedFor === 'apply' && req.method === 'POST') {
+      const c = preBody.candidate || {};
+      if (!c.name || !c.reqId || !(c.phone || c.email))
+        return res.status(400).json({ ok: false, error: 'Name, position and a contact are required.' });
+      const item = Object.assign({}, c, {
+        itemId: 'CAND-' + Date.now().toString(36).toUpperCase(),
+        kind: 'candidate', status: 'Applied', appliedOn: new Date().toISOString().slice(0, 10),
+        source: 'Careers page' });
+      await sql`INSERT INTO hr_items (item_id, kind, data, status)
+                VALUES (${item.itemId}, 'candidate', ${JSON.stringify(item)}::jsonb, 'Applied')`;
+      await audit('careers-page', 'candidate.apply', item.itemId, null,
+        { name: item.name, reqId: item.reqId }, 'applied through the careers page');
+      return res.status(200).json({ ok: true, ref: item.itemId });
+    }
+
     const token = req.headers['x-auth-token'];
     if (!(await checkToken(token)))
       return res.status(401).json({ ok: false, error: 'Not signed in.' });
     const me = await tokenUser(token);
-    const body = req.method === 'GET' ? {} : readBody(req);
-    const what = String((req.query && req.query.what) || body.what || 'employees');
+    const body = preBody;
+    const what = askedFor;
 
     /* ---------------- EMPLOYEES ---------------- */
     if (what === 'employees') {

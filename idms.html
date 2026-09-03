@@ -175,6 +175,43 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="grn">
+      <div class="card">
+        <h4>Goods Receipt Note</h4>
+        <div class="hint" style="margin-bottom:10px;">The GRN number is issued by the database when you
+          save, using this company's document prefix. Two people saving at the same moment cannot be
+          given the same number.</div>
+        <div class="row four">
+          <div><label>Supplier</label><input id="gr-sup"></div>
+          <div><label>Invoice / DC number</label><input id="gr-inv"></div>
+          <div><label>Received on</label><input type="date" id="gr-date"></div>
+          <div><label>Vehicle number</label><input id="gr-veh"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Part</label><select id="gr-part"></select></div>
+          <div><label>Material / description</label><input id="gr-desc"></div>
+          <div><label>Quantity received</label><input class="num" id="gr-qty"></div>
+          <div><label>Unit</label><select id="gr-uom">
+            <option>Nos</option><option>Kg</option><option>Metre</option><option>Litre</option>
+            <option>Set</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Quantity accepted</label><input class="num" id="gr-acc"></div>
+          <div><label>Quantity rejected</label><input class="num" id="gr-rej"></div>
+          <div style="grid-column:span 2;"><label>Remarks</label><input id="gr-rem"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="gr-save">Save GRN</button>
+          <button class="btn" id="gr-clear">Clear</button>
+        </div>
+        <div class="note" id="gr-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Received</h4>
+        <div id="gr-list"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="profile">
       <div class="card">
         <h4>Company profile</h4>
@@ -239,7 +276,7 @@
       ['sales_plan','📈','Sales Plan'],['capacity_plan','⚙','Capacity Plan'],
       ['production_plan','🏭','Production Plan'],['machine_loading','🔩','Machine Loading Plan']]],
     ['mmd','📦','MMD','Material Movement',[
-      ['grn','📥','GRN — Goods Receipt'],['dc','📤','Delivery Challan'],
+      ['grn','📥','GRN — Goods Receipt',1],['dc','📤','Delivery Challan'],
       ['sheet_rawmat','🪨','Raw Material Stock'],['bom','🧾','Bill of Materials']]],
     ['prod','🏭','Production','Shop Floor',[
       ['entry_prod','📝','Production Entry'],['dwm','📊','DWM — Daily Work Management'],
@@ -324,6 +361,7 @@
     }
     if (s === 'home')    loadHome();
     if (s === 'parts')   loadParts();
+    if (s === 'grn')     loadGrn();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -427,6 +465,90 @@
     });
   }
 
+  /* ---------------- GRN — the first module off browser storage ----------------
+     Every field is saved to idms_docs. The number comes from the database
+     counter and this company's prefix, so nothing here is company-specific and
+     no two receipts can share a number. */
+  async function loadGrn(){
+    var dsel = document.getElementById('gr-date');
+    if (!dsel.value) dsel.value = new Date().toISOString().slice(0,10);
+
+    /* a GRN may be against a known part, or loose material with no part */
+    try {
+      var parts = await C.idms.parts();
+      document.getElementById('gr-part').innerHTML =
+        '<option value="">— not against a part —</option>' +
+        parts.map(function(p){
+          return '<option value="'+esc(p.part_id)+'">'+esc(p.part_no||p.part_name)+
+            (p.customer?' · '+esc(p.customer):'')+'</option>';
+        }).join('');
+    } catch(e){ /* the list is a convenience, not a requirement */ }
+
+    var host = document.getElementById('gr-list');
+    host.innerHTML = '<div class="hint">Loading…</div>';
+    var rows;
+    try { rows = await C.idms.docs('grn'); }
+    catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; return; }
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>No goods received yet</b>' +
+        'Save a receipt above and it appears here with its number.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>GRN No</th><th>Date</th><th>Supplier</th>' +
+      '<th>Material</th><th class="r">Received</th><th class="r">Accepted</th><th class="r">Rejected</th>' +
+      '<th></th></tr></thead><tbody>' + rows.map(function(r){
+        var v = r.data || {};
+        return '<tr><td><b>'+esc(r.doc_no||'—')+'</b></td>'+
+          '<td class="hint">'+C.fmtDate(v.date)+'</td>'+
+          '<td>'+esc(v.supplier||'—')+'<div class="hint">'+esc(v.invoice||'')+'</div></td>'+
+          '<td>'+esc(v.description||'—')+'</td>'+
+          '<td class="r">'+C.inr(v.qty)+' '+esc(v.uom||'')+'</td>'+
+          '<td class="r">'+C.inr(v.accepted)+'</td>'+
+          '<td class="r">'+(C.num(v.rejected)?'<b style="color:var(--bad)">'+C.inr(v.rejected)+'</b>':'—')+'</td>'+
+          '<td><button class="btn gr-print" data-id="'+esc(r.doc_id)+'">Print</button></td></tr>';
+      }).join('') + '</tbody></table>';
+
+    host.querySelectorAll('.gr-print').forEach(function(b){
+      b.addEventListener('click', function(){
+        var r = rows.filter(function(x){ return x.doc_id === b.dataset.id; })[0];
+        printGrn(r);
+      });
+    });
+  }
+
+  function printGrn(r){
+    var v = r.data || {};
+    C.openReport({
+      title: 'Goods Receipt Note',
+      kind: 'GRN',
+      subtitle: r.doc_no + ' · ' + C.fmtDate(v.date),
+      sections: [
+        { type:'pairs', title:'Receipt', rows:[
+          ['GRN Number', '<b>'+esc(r.doc_no)+'</b>'],
+          ['Received on', C.fmtDate(v.date)],
+          ['Supplier', esc(v.supplier||'—')],
+          ['Invoice / DC number', esc(v.invoice||'—')],
+          ['Vehicle number', esc(v.vehicle||'—')],
+          ['Against part', esc(v.partLabel||'Not against a part')]]},
+        { type:'table', title:'Material', columns:[
+            {label:'Description'},{label:'Unit'},{label:'Received',align:'r'},
+            {label:'Accepted',align:'r'},{label:'Rejected',align:'r'}],
+          rows:[[esc(v.description||'—'), esc(v.uom||''), C.inr(v.qty),
+                 C.inr(v.accepted), C.inr(v.rejected)]],
+          note: C.num(v.rejected)
+            ? 'Rejected material must not be issued to production until it is dispositioned.'
+            : '' },
+        { type:'pairs', title:'Record', rows:[
+          ['Remarks', esc(v.remarks||'—')],
+          ['Entered by', esc(r.updated_by||'—')],
+          ['Entered on', new Date(r.updated_at).toLocaleString('en-GB')],
+          ['Status', esc(r.status||'')]]},
+        { type:'text', title:'Signatures',
+          body:'Stores                              Quality                              Approved by' }
+      ]
+    });
+  }
+
   /* ---------------- profile ---------------- */
   async function loadProfileScreen(){
     var p = await C.loadProfile();
@@ -504,6 +626,7 @@
         ? '<img src="'+p.logo+'" alt="">'
         : '<div class="mark">'+esc(p.docPrefix.slice(0,2))+'</div>';
       document.title = (p.name ? p.name + ' — ' : '') + 'IDMS';
+      C.setFavicon(p.logo || '');       // the tab icon follows the company logo
     } catch(e){ /* the profile is decoration here, not a blocker */ }
 
     try { settings = await C.idms.settings(); dbState(true, 'Database: connected'); }
@@ -594,6 +717,61 @@
       go('home');
     });
     f.click();
+  });
+
+  document.getElementById('gr-clear').addEventListener('click', function(){
+    ['gr-sup','gr-inv','gr-veh','gr-desc','gr-qty','gr-acc','gr-rej','gr-rem']
+      .forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('gr-msg').style.display='none';
+  });
+
+  /* accepted defaults to the received quantity, so the common case is one field */
+  document.getElementById('gr-qty').addEventListener('input', function(){
+    var acc = document.getElementById('gr-acc');
+    if (!acc.dataset.touched) acc.value = this.value;
+  });
+  document.getElementById('gr-acc').addEventListener('input', function(){ this.dataset.touched='1'; });
+
+  document.getElementById('gr-save').addEventListener('click', async function(){
+    var msg = document.getElementById('gr-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var qty = C.num(g('gr-qty')), acc = C.num(g('gr-acc')), rej = C.num(g('gr-rej'));
+
+    if (!g('gr-sup'))  return say('Name the supplier.');
+    if (!g('gr-desc')) return say('Say what was received.');
+    if (qty <= 0)      return say('The quantity received must be more than zero.');
+    /* a receipt that does not balance is a counting error, and it must not be
+       saved quietly — the stock figure downstream depends on it */
+    if (Math.abs((acc + rej) - qty) > 0.001)
+      return say('Accepted (' + C.inr(acc) + ') plus rejected (' + C.inr(rej) + ') is ' +
+                 C.inr(acc+rej) + ', but ' + C.inr(qty) + ' was received. These must agree.');
+
+    this.disabled = true;
+    var partSel = document.getElementById('gr-part');
+    try {
+      var docNo = await C.docNumber('grn');
+      await C.idms.saveDoc({
+        kind: 'grn',
+        docNo: docNo,
+        partId: partSel.value || '',
+        status: rej > 0 ? 'With rejection' : 'Received',
+        data: {
+          supplier: g('gr-sup'), invoice: g('gr-inv'), date: g('gr-date'),
+          vehicle: g('gr-veh'), description: g('gr-desc'),
+          partLabel: partSel.value ? partSel.options[partSel.selectedIndex].text : '',
+          qty: qty, uom: document.getElementById('gr-uom').value,
+          accepted: acc, rejected: rej, remarks: g('gr-rem')
+        }
+      }, 'goods received');
+      say('Saved as <b>' + esc(docNo) + '</b>.', true);
+      ['gr-sup','gr-inv','gr-veh','gr-desc','gr-qty','gr-acc','gr-rej','gr-rem']
+        .forEach(function(id){ document.getElementById(id).value=''; });
+      document.getElementById('gr-acc').dataset.touched = '';
+      loadGrn();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
   });
 
   document.getElementById('p-add').addEventListener('click', async function(){

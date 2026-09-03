@@ -245,6 +245,53 @@
     setTimeout(() => { try { w.print(); } catch (e) { /* the user can print manually */ } }, 350);
   }
 
+  /* ---------------- browser tab icon ----------------
+     Follows the logo from the site profile. A logo is wide and often has a
+     transparent background, which makes a poor icon, so it is drawn centred on
+     a square white tile first. Every existing icon link is removed rather than
+     another added — with several <link rel="icon"> tags the browser picks one
+     of its own accord and the bundled file wins. */
+  let faviconFor = null;
+  function applyFavicon(href) {
+    document.querySelectorAll('link[rel~="icon"],link[rel="shortcut icon"],link[rel="apple-touch-icon"]')
+      .forEach(l => l.parentNode.removeChild(l));
+    const link = document.createElement('link');
+    link.rel = 'icon'; link.type = 'image/png'; link.sizes = '64x64'; link.href = href;
+    document.head.appendChild(link);
+    const touch = document.createElement('link');
+    touch.rel = 'apple-touch-icon'; touch.href = href;
+    document.head.appendChild(touch);
+  }
+  function bundledFavicon() {
+    document.querySelectorAll('link[rel~="icon"],link[rel="shortcut icon"],link[rel="apple-touch-icon"]')
+      .forEach(l => l.parentNode.removeChild(l));
+    const l = document.createElement('link');
+    l.rel = 'icon'; l.type = 'image/svg+xml'; l.href = '/favicon.svg';
+    document.head.appendChild(l);
+  }
+  function setFavicon(src) {
+    if (faviconFor === (src || '')) return;
+    faviconFor = src || '';
+    if (!src) { bundledFavicon(); return; }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const S = 64, c = document.createElement('canvas');
+        c.width = S; c.height = S;
+        const x = c.getContext('2d');
+        x.fillStyle = '#ffffff'; x.fillRect(0, 0, S, S);
+        const pad = 4, box = S - pad * 2;
+        const r = Math.min(box / img.width, box / img.height);
+        const w = Math.max(1, img.width * r), h = Math.max(1, img.height * r);
+        x.drawImage(img, (S - w) / 2, (S - h) / 2, w, h);
+        applyFavicon(c.toDataURL('image/png'));
+      } catch (e) { applyFavicon(src); }   // tainted canvas — use the file as it is
+    };
+    img.onerror = () => bundledFavicon();
+    img.src = src;
+  }
+
   /* ---------------- tolerant reader for AI replies ----------------
      Models put real line breaks inside quoted strings, which JSON.parse
      rejects outright. Escape the control characters that sit inside a string
@@ -351,6 +398,7 @@
     api: api, signIn: signIn, verifyCode: verifyCode, setToken: setToken, getToken: getToken,
     idms: idms, loadProfile: loadProfile, getProfile: getProfile, docNumber: docNumber,
     openReport: openReport, parseAiJson: parseAiJson, stripMarkup: stripMarkup,
+    setFavicon: setFavicon,
     capturePhoto: capturePhoto
   };
 })(window);

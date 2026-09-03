@@ -40,7 +40,8 @@
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   html{scroll-behavior:smooth;}
-  body{background:var(--white);color:var(--navy);font-family:var(--body);font-size:var(--fs-body);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+  html{overflow-x:hidden;max-width:100%;}
+  body{background:var(--white);color:var(--navy);font-family:var(--body);font-size:var(--fs-body);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;max-width:100%;}
   img,svg{display:block;max-width:100%;}
   a{color:inherit;text-decoration:none;}
   button{font-family:inherit;cursor:pointer;}
@@ -94,10 +95,9 @@
     overflow:hidden;text-overflow:ellipsis;}
   .brand-suffix{font-family:var(--mono);font-size:var(--fs-micro);color:var(--gold);letter-spacing:.18em;display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-  .nav-scroll{flex:1 1 100%;width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;}
-  .nav-scroll::-webkit-scrollbar{display:none;}
-  nav.links{display:flex;gap:8px;align-items:center;width:max-content;padding:2px 0;}
-  nav.links a{font-weight:600;font-size:calc(var(--font-base)*.8);height:42px;min-width:118px;padding:0 15px;border-radius:100px;
+  .nav-scroll{flex:1 1 100%;width:100%;max-width:100%;min-width:0;overflow:visible;}
+  nav.links{display:flex;gap:8px;align-items:center;width:100%;max-width:100%;flex-wrap:wrap;padding:2px 0;}
+  nav.links a{font-weight:600;font-size:calc(var(--font-base)*.8);height:40px;min-width:104px;padding:0 14px;border-radius:100px;
     display:inline-flex;align-items:center;justify-content:center;text-align:center;white-space:nowrap;flex:0 0 auto;
     background:var(--white);color:var(--navy);border:1px solid var(--line-strong);box-shadow:0 4px 0 rgba(11,42,91,.12);
     transition:transform .16s cubic-bezier(.2,.8,.3,1),box-shadow .16s,border-color .2s,color .2s;}
@@ -618,7 +618,14 @@
      These screens are data entry, not marketing. Text is a little larger than the
      site's small print, padding is tighter, and every field is sized to what it
      actually holds instead of stretching to the column. */
-  #hr-page,#ppc-page,#staff-page{--fs-micro:11.8px;--fs-label:12px;}
+  #hr-page,#ppc-page,#staff-page{--fs-micro:11.8px;--fs-label:12px;max-width:100vw;}
+  #hr-page .staff-body,#ppc-page .staff-body,#staff-page .staff-body{max-width:100%;overflow-x:hidden;}
+  #hr-page .hr-panel,#ppc-page .hr-panel{max-width:100%;}
+  /* free text from the AI can carry very long unbroken strings */
+  #hr-page .feas-line,#hr-page .dx,#hr-page .dx-body,#hr-page .warn-box,
+  #ppc-page .feas-line{overflow-wrap:anywhere;max-width:100%;}
+  #hr-page .cs-t{width:100%;max-width:100%;}
+  #hr-page pre,#ppc-page pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;}
   #hr-page .staff-body,#ppc-page .staff-body{padding-top:18px;}
 
   #hr-page .qb,#ppc-page .qb{padding:13px 14px;margin-top:11px;}
@@ -668,6 +675,19 @@
   #hr-page details.fold>summary .sum{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);}
   #hr-page details.fold>*:not(summary){margin-left:14px;margin-right:14px;}
   #hr-page details.fold[open]{padding-bottom:14px;}
+
+  /* live camera capture */
+  .cam-modal{position:fixed;inset:0;z-index:9999;background:rgba(6,16,34,.82);display:flex;
+    align-items:center;justify-content:center;padding:16px;}
+  .cam-box{background:var(--white);border-radius:14px;padding:16px;width:min(420px,100%);
+    box-shadow:0 24px 60px rgba(0,0,0,.4);}
+  .cam-head{font-family:var(--disp);font-weight:800;color:var(--navy);font-size:16px;margin-bottom:10px;}
+  .cam-box video,.cam-box img.shot{width:100%;aspect-ratio:5/6;object-fit:cover;background:#0d1b30;
+    border-radius:10px;display:block;transform:scaleX(-1);}
+  .cam-box img.shot{transform:none;}
+  .cam-msg{font-size:12px;color:var(--ink-soft);margin:10px 0;line-height:1.5;}
+  .cam-btns{display:flex;gap:8px;flex-wrap:wrap;}
+  .photo-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 
   #hr-page .cs-sub-toggle{cursor:pointer;user-select:none;}
   #hr-page .cs-sub-toggle:hover{color:var(--navy);}
@@ -3304,6 +3324,123 @@ and suggest nothing rather than inventing problems.`;
      line break inside a quoted string, which JSON.parse rejects outright with
      "bad control character". Strip any fences, take the outermost object, then escape
      control characters that are sitting inside a string before parsing. */
+  /* The screening reply carries a long free-text section. Asking for that inside JSON
+     was a mistake: the model writes "layout inspection" in quotes, the JSON breaks, and
+     the old code fell back to printing the whole raw reply — braces, code fences and
+     all — into the candidate card. It is asked for as a labelled block now, and this
+     reads either shape and never lets scaffolding reach the screen. */
+  function stripMarkup(t){
+    return String(t==null?'':t)
+      .replace(/```[a-z]*|```/gi,'')
+      .replace(/\*\*(.+?)\*\*/g,'$1')      // bold
+      .replace(/(^|\s)\*(\S[^*]*?)\*(?=\s|$|[.,;:)])/g,'$1$2')  // italics
+      .replace(/^\s*#{1,6}\s*/gm,'')
+      .replace(/\n{3,}/g,'\n\n')
+      .trim();
+  }
+  function parseMatchReply(text){
+    const raw=String(text==null?'':text);
+    let pct=null, verdict='', detail='';
+    const m=raw.match(/^\s*MATCH\s*:\s*(null|\d{1,3})/im);
+    const v=raw.match(/^\s*VERDICT\s*:\s*(.+)$/im);
+    const dt=raw.match(/^\s*DETAIL\s*:\s*([\s\S]*)$/im);
+    if(m||v||dt){
+      if(m) pct=/null/i.test(m[1])?null:Math.max(0,Math.min(100,parseInt(m[1],10)));
+      verdict=v?v[1].trim():'';
+      detail=dt?dt[1]:'';
+    } else {
+      try{                                   // an older build may still answer in JSON
+        const j=parseAiJson(raw);
+        pct=(j.matchPct===null||j.matchPct===undefined)?null:Math.round(num(j.matchPct));
+        verdict=j.recommendation||'';
+        detail=j.detail||'';
+      }catch(_){
+        /* Neither shape parsed. Salvage the numbers and strip the scaffolding so the
+           user never sees a broken JSON object. */
+        const pm=raw.match(/"?matchPct"?\s*[:=]\s*(\d{1,3})/i);
+        const rm=raw.match(/"?recommendation"?\s*[:=]\s*"?([^"\n]+)/i);
+        if(pm) pct=Math.max(0,Math.min(100,parseInt(pm[1],10)));
+        if(rm) verdict=rm[1].replace(/[",]+$/,'').trim();
+        detail=raw
+          .replace(/^[\s\S]*?"?detail"?\s*[:=]\s*"?/i,'')
+          .replace(/^\s*[{}\[\]]\s*$/gm,'')
+          .replace(/^\s*"?(matchPct|recommendation|detail)"?\s*[:=].*$/gim,'');
+      }
+    }
+    return {pct, verdict:stripMarkup(verdict).replace(/^["']|["',]+$/g,'').trim(),
+            detail:stripMarkup(detail)};
+  }
+
+  /* A photo taken on the spot, for people who have no photo file to hand.
+     getUserMedia only works on https (or localhost), so if the page is on http the
+     box says so plainly instead of failing with nothing on screen. Returns a data
+     URL, or null if the person cancels. */
+  function capturePhoto(){
+    return new Promise(resolve=>{
+      const secure=(location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1');
+      const wrap=document.createElement('div');
+      wrap.className='cam-modal';
+      wrap.innerHTML=`<div class="cam-box">
+        <div class="cam-head">Take a photo</div>
+        <video class="cam-v" autoplay playsinline muted></video>
+        <img class="shot" style="display:none;">
+        <div class="cam-msg">Face the camera in good light. The picture is cropped to the shape of the ID card photo.</div>
+        <div class="cam-btns">
+          <button class="mini-btn gold cam-shoot">Capture</button>
+          <button class="mini-btn cam-again" style="display:none;">Retake</button>
+          <button class="mini-btn green cam-use" style="display:none;">Use this photo</button>
+          <button class="mini-btn cam-x">Cancel</button>
+        </div></div>`;
+      document.body.appendChild(wrap);
+      const v=wrap.querySelector('.cam-v'), img=wrap.querySelector('.shot'),
+            msg=wrap.querySelector('.cam-msg'),
+            bShoot=wrap.querySelector('.cam-shoot'), bAgain=wrap.querySelector('.cam-again'),
+            bUse=wrap.querySelector('.cam-use'), bX=wrap.querySelector('.cam-x');
+      let stream=null, shot=null;
+      const stop=()=>{ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } };
+      const close=r=>{ stop(); wrap.remove(); resolve(r||null); };
+      const fail=t=>{ msg.textContent=t; msg.style.color='#B03A2E'; bShoot.disabled=true; };
+
+      if(!secure){
+        fail('A camera can only be opened over https. Use Choose file instead, or open this page on its https address.');
+      } else if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+        fail('This browser cannot open a camera. Use Choose file instead.');
+      } else {
+        navigator.mediaDevices.getUserMedia({video:{facingMode:'user',
+            width:{ideal:1280},height:{ideal:1280}},audio:false})
+          .then(st=>{ stream=st; v.srcObject=st; })
+          .catch(e=>fail('The camera did not open: '+(e.message||e.name)
+            +'. Allow camera access for this site, or use Choose file.'));
+      }
+
+      bShoot.addEventListener('click',()=>{
+        const w=v.videoWidth, h=v.videoHeight;
+        if(!w){ fail('The camera has not started yet. Wait a moment and try again.'); return; }
+        const cv=document.createElement('canvas');
+        cv.width=600; cv.height=720;                       // 5:6, the ID card photo box
+        const x=cv.getContext('2d');
+        const srcH=Math.min(h, w*(720/600)), srcW=srcH*(600/720);
+        x.translate(cv.width,0); x.scale(-1,1);            // un-mirror the preview
+        x.drawImage(v,(w-srcW)/2,(h-srcH)/2,srcW,srcH,0,0,cv.width,cv.height);
+        shot=cv.toDataURL('image/jpeg',0.85);
+        img.src=shot; img.style.display=''; v.style.display='none';
+        stop();
+        msg.textContent='Use this one, or take it again.';
+        bShoot.style.display='none'; bAgain.style.display=''; bUse.style.display='';
+      });
+      bAgain.addEventListener('click',()=>{
+        img.style.display='none'; v.style.display=''; shot=null;
+        bShoot.style.display=''; bAgain.style.display='none'; bUse.style.display='none';
+        msg.textContent='Face the camera in good light.'; msg.style.color='';
+        navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false})
+          .then(st=>{ stream=st; v.srcObject=st; }).catch(e=>fail('The camera did not reopen: '+e.message));
+      });
+      bUse.addEventListener('click',()=>close(shot));
+      bX.addEventListener('click',()=>close(null));
+      wrap.addEventListener('click',e=>{ if(e.target===wrap) close(null); });
+    });
+  }
+
   function parseAiJson(text){
     let t=String(text==null?'':text).replace(/```json|```/g,'').trim();
     const a=t.indexOf('{'), b=t.lastIndexOf('}');
@@ -5015,6 +5152,16 @@ ${sections}
         <div><label>Expected CTC (annual)</label><input id="ap-ectc" class="num"></div></div>
       <div class="field" style="margin-top:12px;"><label>Resume — PDF or Word</label>
         <input type="file" id="ap-file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+      </div>
+      <div class="cs-row" style="margin-top:10px;"><div>
+        <label>Your Photo (optional)</label>
+        <div class="photo-row">
+          <input type="file" id="ap-photo" accept="image/*">
+          <button type="button" class="mini-btn" id="ap-photocam">Take photo now</button>
+          <span id="ap-photo-state" class="t-micro"></span>
+        </div>
+        <img id="ap-photo-prev" style="display:none;width:90px;aspect-ratio:5/6;object-fit:cover;
+          border-radius:8px;margin-top:8px;border:1px solid var(--line);">
         <div class="field-hint">Up to 3MB. PDFs can be read by our system automatically; Word files are
           stored and read by a person.</div></div>
       <div class="field" style="margin-top:10px;"><label>Anything you would like us to know</label>
@@ -5022,6 +5169,26 @@ ${sections}
       <button class="btn btn-primary" id="ap-submit" style="width:100%;margin-top:16px;">Submit Application</button>
       <div class="field-hint" id="ap-msg" style="margin-top:10px;"></div>`;
     document.getElementById('job-modal').classList.add('open');
+
+    /* the applicant's photo: a file, or one taken on the spot */
+    let apPhoto='';
+    const apPrev=document.getElementById('ap-photo-prev'),
+          apState=document.getElementById('ap-photo-state');
+    const showPhoto=()=>{
+      if(apPhoto){ apPrev.src=apPhoto; apPrev.style.display=''; apState.textContent='Photo attached'; }
+      else { apPrev.style.display='none'; apState.textContent=''; }
+    };
+    document.getElementById('ap-photo').addEventListener('change',async ev=>{
+      const pf=ev.target.files[0]; if(!pf) return;
+      if(pf.size>3*1024*1024){ apState.textContent='That image is over 3MB.'; return; }
+      apPhoto=await new Promise((ok,no)=>{ const rd=new FileReader();
+        rd.onload=()=>ok(rd.result); rd.onerror=()=>no(new Error('x')); rd.readAsDataURL(pf); });
+      showPhoto();
+    });
+    document.getElementById('ap-photocam').addEventListener('click',async()=>{
+      const shot=await capturePhoto();
+      if(shot){ apPhoto=shot; document.getElementById('ap-photo').value=''; showPhoto(); }
+    });
 
     document.getElementById('ap-submit').addEventListener('click',async function(){
       const name=document.getElementById('ap-name').value.trim();
@@ -5036,6 +5203,7 @@ ${sections}
         experience:num(document.getElementById('ap-exp').value),
         expectedCtc:num(document.getElementById('ap-ectc').value),
         note:document.getElementById('ap-note').value.trim(),
+        photo:apPhoto||'',
         positionTitle:j.title};
       try{
         if(f){
@@ -5184,12 +5352,16 @@ ${sections}
           </div>
           <div id="scr-${esc(c.item_id)}">${d.screening?`<div class="dx" style="margin-top:10px;">
             <div class="dx-head"><b>Match against stated requirements</b><span class="t-micro">${esc(d.screenedOn||'')}</span></div>
+            <div class="t-micro" style="margin-bottom:8px;color:var(--ink-soft);">Measured against
+              ${d.screenedFrom==='form'?'<b>the application form details</b> — no readable CV was attached'
+                :'<b>the attached CV</b>'}.</div>
             ${d.matchPct!==undefined&&d.matchPct!==null?`<div class="feas-banner ${d.matchPct>=70?'go':d.matchPct>=40?'unk':'no'}" style="margin-bottom:10px;">
               <div class="feas-title">${d.matchPct}% of stated requirements evidenced</div>
               <div class="feas-line">${esc(d.recommendation||'')}</div></div>`:''}
             <div class="feas-line" style="white-space:pre-wrap;">${esc(d.screening)}</div>
-            <div class="t-micro" style="margin-top:8px;color:var(--ink-soft);">This measures the CV against the
-              requirements written in the JD. It does not assess the person, and the hiring decision is yours.</div></div>`:''}</div>
+            <div class="t-micro" style="margin-top:8px;color:var(--ink-soft);">This measures
+              ${d.screenedFrom==='form'?'the stated details':'the CV'} against the requirements written in the
+              JD. It does not assess the person, and the hiring decision is yours.</div></div>`:''}</div>
 
           <div class="cs-sub">Interview &amp; Assessment</div>
           <div class="cs-row four">
@@ -5229,10 +5401,29 @@ ${sections}
             <button class="mini-btn cd-quick" data-id="${esc(c.item_id)}" data-tpl="regret">Send “Not selected”</button>
           </div>
 
+          ${d.offerCtc?`
+          <div class="cs-sub">Offer Terms &amp; Conditions</div>
+          <div class="cs-row"><div style="grid-column:1/-1;">
+            <div class="cs-row four" style="margin-bottom:8px;">
+              <div><label>Load a template</label>
+                <select class="cd-tpl" data-id="${esc(c.item_id)}" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+                  <option value="">— choose —</option>
+                  ${TT().map((t,i)=>`<option value="${i}">${esc(t.name||'Untitled')}${num(HM().termsDefault)===i?' (default)':''}</option>`).join('')}
+                </select></div>
+              <div style="align-self:end;"><button class="mini-btn ai cd-terms" data-id="${esc(c.item_id)}">AI draft terms</button></div>
+              <div style="align-self:end;"><button class="mini-btn cd-terms-reset" data-id="${esc(c.item_id)}">Reset to default</button></div>
+              <div style="align-self:end;"><span class="t-micro">${d.offerTerms?'Edited for this candidate':'Using the default template'}</span></div>
+            </div>
+            <textarea class="cd-terms-box" data-id="${esc(c.item_id)}" rows="10"
+              style="width:100%;font-family:var(--mono);font-size:11.5px;line-height:1.6;padding:10px;
+              border:1px solid var(--line);border-radius:6px;">${esc(d.offerTerms||defaultTerms())}</textarea>
+            <div class="field-hint">This exact text is printed on the offer letter. Edit it freely —
+              press Save to keep it. Templates are managed on the Statutory &amp; Masters tab.</div>
+          </div></div>`:''}
+
           <div class="rfq-actions" style="margin-top:14px;">
             <button class="mini-btn gold cd-save" data-id="${esc(c.item_id)}">Save</button>
-            ${d.offerCtc?`<button class="mini-btn gold cd-offer" data-id="${esc(c.item_id)}">Generate Offer Letter</button>
-              <button class="mini-btn ai cd-terms" data-id="${esc(c.item_id)}">AI draft terms</button>`:''}
+            ${d.offerCtc?`<button class="mini-btn gold cd-offer" data-id="${esc(c.item_id)}">Generate Offer Letter</button>`:''}
             ${['Selected','Offer Made','Joined'].includes(c.status)&&!d.empId
               ?`<button class="mini-btn green cd-join" data-id="${esc(c.item_id)}">Convert to Employee</button>`:''}
             ${d.empId?`<span class="order-badge go">Employee ${esc(d.empId)}</span>`:''}
@@ -5278,13 +5469,26 @@ ${sections}
         const m=String(d.resumeData).match(/^data:([^;,]+);base64,(.+)$/);
         if(m) attachment={mime:m[1],b64:m[2]};
       }
-      if(!attachment&&!d.cvText){
+      /* No readable CV is not a dead end. Everything the candidate typed into the
+         careers form is still evidence, so score against that and say plainly that
+         is what was measured. */
+      const formFacts=[
+        d.qualification?'Qualification: '+d.qualification:'',
+        num(d.experience)?'Experience: '+d.experience+' years':'',
+        d.designation?'Applied for: '+d.designation:'',
+        d.currentEmployer?'Current employer: '+d.currentEmployer:'',
+        d.skills?'Skills stated: '+d.skills:'',
+        d.note?'Candidate note: '+d.note:''
+      ].filter(Boolean).join('\n');
+      const fromForm=!attachment&&!d.cvText;
+      if(fromForm&&!formFacts){
         toast(d.resumeName
-          ? 'Could not read that file — it may be a scan with no text layer, or a Word file. Paste the text below.'
-          : 'No resume attached and no CV text.');
+          ? 'Could not read that file, and the application form has nothing to score either.'
+          : 'No resume and no details on the application form — nothing to measure.');
         b.textContent='Evaluate against the role'; b.disabled=false;
         return;
       }
+      if(fromForm) toast('No readable CV — scoring the application form details instead.');
       b.textContent='Reading…'; b.disabled=true;
       const prompt=`Compare a CV against the written requirements of a role. Be factual and specific.
 
@@ -5292,39 +5496,47 @@ ROLE: ${req?(req.data||req).title:'not specified'}
 STATED REQUIREMENTS (this is the only standard to measure against):
 ${req?((req.data||req).jd||'No written requirements — say so and measure nothing.'):'not specified'}
 
-CANDIDATE DETAILS: ${d.qualification||'qualification not stated'}, ${d.experience||0} years experience.
-CV: ${attachment?'attached as a PDF — read it':'\n'+(d.cvText||'(none supplied)')}
+WHAT YOU ARE MEASURING: ${fromForm
+  ? 'the details the candidate typed into the application form. There is no CV. Say so in your answer, and do not assume anything the form does not state.'
+  : 'the attached CV.'}
 
-Reply with ONLY this JSON, no commentary or code fences:
-{
- "matchPct": 0,
- "recommendation": "",
- "detail": ""
-}
+DETAILS FROM THE APPLICATION FORM:
+${formFacts||'(nothing entered)'}
+${fromForm?'':'CV: '+(attachment?'attached as a PDF — read it':'\n'+(d.cvText||'(none supplied)'))}
 
-How to fill it:
-- "matchPct": of the requirements actually written in the JD, what percentage does the CV evidence?
-  Count only requirements stated in the JD. If the JD lists no requirements, return null.
-- "recommendation": one short sentence, and it must be one of these three shapes:
-  "Meets the stated requirements — worth interviewing"
-  "Partially meets the requirements — interview to clarify [what]"
-  "Does not evidence the stated requirements — [what is missing]"
-- "detail": plain text with four short sections: Requirements evidenced / Requirements not evidenced /
-  Gaps to probe at interview / Three questions to ask.
+Reply in EXACTLY this shape. Three labels, nothing before or after, no JSON, no code fences,
+no asterisks and no markdown of any kind:
+
+MATCH: <a whole number 0-100, or the word null if the JD lists no requirements>
+VERDICT: <one sentence, in one of these three shapes>
+  Meets the stated requirements — worth interviewing
+  Partially meets the requirements — interview to clarify [what]
+  Does not evidence the stated requirements — [what is missing]
+DETAIL:
+Requirements evidenced
+- ...
+Requirements not evidenced
+- ...
+Gaps to probe at interview
+- ...
+Three questions to ask
+1. ...
+
+MATCH is the percentage of the requirements actually written in the JD that are evidenced.
+Count only requirements stated in the JD.
 
 Rules you must follow:
-- Judge the CV against the written requirements only. Never assess the person's worth, potential or fit.
+- Judge the evidence against the written requirements only. Never assess the person's worth, potential or fit.
 - Never mention or infer age, sex, marital status, religion, caste, region, community, disability or health.
 - If the CV does not state something, say it is not evidenced rather than assuming either way.
 - A low percentage means the document lacks evidence, not that the person is unsuitable.`;
       try{
         const txt=await callAI(prompt,{maxTokens:1100,attachment,surfaceError:true});
-        try{
-          const j=parseAiJson(txt);
-          d.matchPct=(j.matchPct===null||j.matchPct===undefined)?null:Math.round(num(j.matchPct));
-          d.recommendation=j.recommendation||'';
-          d.screening=j.detail||txt||'';
-        }catch(_){ d.screening=txt||''; d.matchPct=null; d.recommendation=''; }
+        const r=parseMatchReply(txt);
+        d.matchPct=r.pct;
+        d.recommendation=r.verdict;
+        d.screening=r.detail||stripMarkup(txt);
+        d.screenedFrom=fromForm?'form':'cv';
         d.screenedOn=new Date().toLocaleString();
         await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:c.item_id,patch:d,
           status:c.status==='Applied'?'Screened':c.status,reason:'AI screening summary generated'})});
@@ -5422,6 +5634,25 @@ ${co.phone||co.mobile||''}`;
       const c=cands.find(x=>x.item_id===b.dataset.id), d=c.data||c;
       printOfferLetter(d,reqs.find(r=>r.item_id===d.reqId));
     }));
+    host.querySelectorAll('.cd-terms-box').forEach(t=>t.addEventListener('input',()=>{
+      const c=cands.find(x=>x.item_id===t.dataset.id); (c.data=c.data||c).offerTerms=t.value;
+    }));
+    host.querySelectorAll('.cd-tpl').forEach(sel=>sel.addEventListener('change',()=>{
+      if(sel.value==='') return;
+      const c=cands.find(x=>x.item_id===sel.dataset.id), d=c.data||c;
+      const box=host.querySelector('.cd-terms-box[data-id="'+sel.dataset.id+'"]');
+      if(box && (!box.value.trim() || confirm('Replace the terms in the box with this template?'))){
+        d.offerTerms=(TT()[+sel.value]||{}).body||''; box.value=d.offerTerms;
+        toast('Template loaded — press Save to keep it');
+      }
+      sel.value='';
+    }));
+    host.querySelectorAll('.cd-terms-reset').forEach(b=>b.addEventListener('click',()=>{
+      const c=cands.find(x=>x.item_id===b.dataset.id), d=c.data||c;
+      const box=host.querySelector('.cd-terms-box[data-id="'+b.dataset.id+'"]');
+      if(!confirm('Put the default template back? Anything typed here is lost.')) return;
+      d.offerTerms=defaultTerms(); if(box) box.value=d.offerTerms;
+    }));
     host.querySelectorAll('.cd-terms').forEach(b=>b.addEventListener('click',async()=>{
       const c=cands.find(x=>x.item_id===b.dataset.id), d=c.data||c;
       const req=reqs.find(r=>r.item_id===d.reqId);
@@ -5443,11 +5674,15 @@ Rules:
 - This is a draft for HR to review, not final legal wording.`;
       try{
         const txt=await callAI(prompt,{maxTokens:800,surfaceError:true});
-        if(txt){ d.offerTerms=txt;
-          await api('/api/hr',{method:'PATCH',body:JSON.stringify({what:'items',itemId:c.item_id,patch:d,
-            reason:'offer terms drafted'})});
-          await loadItems();
-          toast('Terms drafted — read them before issuing the letter'); }
+        if(txt){
+          /* the draft goes into the editor, not straight onto the letter — it is read
+             and edited first, and only Save commits it */
+          const clean=stripMarkup(txt);
+          const box=host.querySelector('.cd-terms-box[data-id="'+c.item_id+'"]');
+          d.offerTerms=clean;
+          if(box) box.value=clean;
+          toast('Draft placed in the box — read and edit it, then press Save');
+        }
       }catch(e){ toast(e.message); }
       b.textContent='AI draft terms'; b.disabled=false;
     }));
@@ -5460,7 +5695,7 @@ Rules:
       try{ const j=await api('/api/hr?what=employees'); hrEmployees=j.employees||[]; }catch(err){}
       const empId=nextEmpId();
       const e=blankEmployee();
-      Object.assign(e,{empId,name:d.name,phone:d.phone,email:d.email,
+      Object.assign(e,{empId,name:d.name,phone:d.phone,email:d.email,photo:d.photo||'',
         designation:d.designation||'',grade:d.grade||'',doj:d.joiningDate||'',
         department:(reqs.find(r=>r.item_id===d.reqId)||{data:{}}).data.department||'',
         ctcAnnual:num(d.offerCtc),status:'Probation'});
@@ -5502,7 +5737,7 @@ Rules:
     const w=window.open('','_blank');
     if(!w){ toast('Allow pop-ups for this site.'); return; }
 
-    const terms=d.offerTerms||`1. APPOINTMENT
+    const terms=d.offerTerms||defaultTerms()||`1. APPOINTMENT
 Your appointment is on the terms set out in this letter and in the company's standing orders and policies,
 as amended from time to time.
 
@@ -6957,6 +7192,47 @@ within seven days.</p>
     ['employmentTypes','Employment Types'],['bloodGroups','Blood Groups'],['genders','Gender Options'],
     ['locations','Locations'],['relationships','Relationships']
   ];
+  let ttEdit=0;
+  /* the wording used when nobody has set up a template yet */
+  const DEFAULT_TERMS=`1. APPOINTMENT
+Your appointment is on the terms set out in this letter and in the company's standing orders and
+policies, as amended from time to time.
+
+2. PROBATION
+You will be on probation for six months from your date of joining. The company may extend this
+period. Confirmation in writing follows satisfactory completion.
+
+3. HOURS OF WORK
+You will work the shift assigned to you. Working hours, weekly off and holidays are as per the
+company's attendance policy and the Factories Act.
+
+4. LEAVE
+Leave entitlement is as per the company leave policy in force. Leave must be applied for in advance
+except in a genuine emergency.
+
+5. STATUTORY DEDUCTIONS
+Provident Fund, ESI, Professional Tax and income tax will be deducted as required by law.
+
+6. CONFIDENTIALITY
+Drawings, specifications, customer names, prices and processes are confidential. They may not be
+copied, photographed or shared, during employment or after it ends.
+
+7. NOTICE PERIOD
+Either side may end this appointment by giving notice as stated in this letter, or salary in lieu.
+
+8. CONDUCT AND SAFETY
+You will follow the company's safety rules and wear the protective equipment issued to you.
+
+9. VERIFICATION
+This offer is subject to verification of your documents, and may be withdrawn if anything stated is
+found to be untrue.`;
+  const TT=()=>{ const m=(data.hrMasters=data.hrMasters||{});
+    if(!Array.isArray(m.termsTemplates)||!m.termsTemplates.length)
+      m.termsTemplates=[{name:'Standard appointment',body:DEFAULT_TERMS}];
+    if(m.termsDefault===undefined) m.termsDefault=0;
+    return m.termsTemplates; };
+  function defaultTerms(){ const l=TT(); return (l[num(HM().termsDefault)]||l[0]||{}).body||DEFAULT_TERMS; }
+
   function renderMasters(){
     const host=document.getElementById('hr-masters'); if(!host) return;
     const m=HM();
@@ -7035,10 +7311,57 @@ within seven days.</p>
           <option value="ignore" ${PM().excessTreatment==='ignore'?'selected':''}>Record only — never deduct</option>
         </select></div></div>
 
+      <h4 style="margin-top:20px;">Offer Letter — Terms &amp; Conditions templates</h4>
+      <div class="field-hint" style="margin-bottom:10px;">The clauses printed on an offer letter.
+        Keep one per grade or per type of appointment. The one marked <b>Default</b> is loaded when a
+        candidate has no terms of their own; AI drafts land in the candidate's own editor and never
+        overwrite what is stored here.</div>
+      <div class="cs-row four">
+        <div><label>Template</label>
+          <select id="tt-pick" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-micro);">
+            ${TT().map((t,i)=>`<option value="${i}" ${ttEdit===i?'selected':''}>${esc(t.name||'Untitled')}${HM().termsDefault===i?' — default':''}</option>`).join('')
+              ||'<option value="-1">No templates yet</option>'}
+          </select></div>
+        <div><label>Name</label><input id="tt-name" value="${esc((TT()[ttEdit]||{}).name||'')}" placeholder="Workmen — permanent"></div>
+        <div style="align-self:end;"><button class="mini-btn" id="tt-add">+ New template</button></div>
+        <div style="align-self:end;">
+          <button class="mini-btn green" id="tt-default">Make this the default</button>
+          ${TT().length>1?'<button class="qb-del" id="tt-del" style="margin-left:6px;">×</button>':''}</div>
+      </div>
+      <div class="cs-row" style="margin-top:10px;"><div style="grid-column:1/-1;">
+        <label>Clauses</label>
+        <textarea id="tt-body" rows="12" style="width:100%;font-family:var(--mono);font-size:11.5px;line-height:1.6;
+          padding:10px;border:1px solid var(--line);border-radius:6px;">${esc((TT()[ttEdit]||{}).body||'')}</textarea>
+        <div class="field-hint">Plain numbered clauses. This is company wording, not legal advice —
+          have it checked before it goes out under your letterhead.</div>
+      </div></div>
+
       <button class="add-btn solid" id="hm-save" style="margin-top:18px;">Save Masters</button>
       <div class="field-hint" id="hm-msg" style="margin-top:8px;"></div></div>`;
 
     const M=()=>{ data.hrMasters=data.hrMasters||{}; return data.hrMasters; };
+    /* terms templates */
+    const ttPick=host.querySelector('#tt-pick');
+    if(ttPick) ttPick.addEventListener('change',()=>{ ttEdit=+ttPick.value; renderMasters(); });
+    const ttName=host.querySelector('#tt-name');
+    if(ttName) ttName.addEventListener('input',()=>{ const t=TT()[ttEdit]; if(t){ t.name=ttName.value; markDirty(); }});
+    const ttBody=host.querySelector('#tt-body');
+    if(ttBody) ttBody.addEventListener('input',()=>{ const t=TT()[ttEdit]; if(t){ t.body=ttBody.value; markDirty(); }});
+    const ttAdd=host.querySelector('#tt-add');
+    if(ttAdd) ttAdd.addEventListener('click',()=>{
+      const list=TT(); list.push({name:'New template',body:DEFAULT_TERMS});
+      ttEdit=list.length-1; markDirty(); renderMasters();
+    });
+    const ttDef=host.querySelector('#tt-default');
+    if(ttDef) ttDef.addEventListener('click',()=>{ M().termsDefault=ttEdit; markDirty(); renderMasters();
+      toast('Default template set — save masters to keep it'); });
+    const ttDel=host.querySelector('#tt-del');
+    if(ttDel) ttDel.addEventListener('click',()=>{
+      if(!confirm('Delete this terms template?')) return;
+      TT().splice(ttEdit,1);
+      if(num(M().termsDefault)>=TT().length) M().termsDefault=0;
+      ttEdit=Math.max(0,ttEdit-1); markDirty(); renderMasters();
+    });
     const PMset=()=>{ data.leavePolicy=data.leavePolicy||{};
       data.leavePolicy.permission=data.leavePolicy.permission||{}; return data.leavePolicy.permission; };
     host.querySelectorAll('.hm-pm').forEach(i=>i.addEventListener('input',()=>{
@@ -7880,7 +8203,10 @@ Rules:
     hrEmployees.forEach((e,ix)=>{
       const wrap=document.getElementById('emp-photo-'+e.empId); if(!wrap) return;
       wrap.innerHTML=`${e.photo?`<img src="${e.photo}" class="thumb">`:'<div class="thumb placeholder">None</div>'}
-        <input type="file" accept="image/*" class="em-photo" data-i="${ix}">
+        <div class="photo-row">
+          <input type="file" accept="image/*" class="em-photo" data-i="${ix}">
+          <button type="button" class="mini-btn em-photocam" data-i="${ix}">Take photo</button>
+        </div>
         ${e.photo?`<button type="button" class="link-btn em-photodel" data-i="${ix}">Remove</button>`:''}`;
     });
     host.querySelectorAll('.em-photo').forEach(inp=>inp.addEventListener('change',async ev=>{
@@ -7889,6 +8215,12 @@ Rules:
       toast('Uploading photo…');
       e.photo=await storeImage(f,400,0.85);
       renderEmployees(); toast('Photo added — press Save Employee');
+    }));
+    host.querySelectorAll('.em-photocam').forEach(b=>b.addEventListener('click',async()=>{
+      const shot=await capturePhoto();
+      if(!shot) return;
+      hrEmployees[+b.dataset.i].photo=shot; renderEmployees();
+      toast('Photo captured — press Save Employee to keep it');
     }));
     host.querySelectorAll('.em-photodel').forEach(b=>b.addEventListener('click',()=>{
       hrEmployees[+b.dataset.i].photo=''; renderEmployees();

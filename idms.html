@@ -10,53 +10,152 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/core.css">
+<style>
+/* ---- application chrome: top bar, menu tree, banner, quick access ----
+   Laid out to match the screen the team already works to, but every name,
+   logo and tagline is read from the database rather than written in. */
+.top{background:linear-gradient(135deg,var(--navy),var(--navy-deep));color:#fff;
+  padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.top .id{display:flex;align-items:center;gap:11px;min-width:0;}
+.top .id img{height:40px;width:40px;object-fit:contain;background:#fff;border-radius:8px;padding:3px;}
+.top .id .mark{height:40px;width:40px;border-radius:8px;background:var(--gold);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:15px;}
+.top .id .co{font-family:var(--disp);font-weight:800;font-size:15px;line-height:1.15;}
+.top .id .tag{font-family:var(--mono);font-size:10px;opacity:.7;letter-spacing:.04em;}
+.top .spacer{flex:1 1 auto;}
+.top .chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.18);border-radius:100px;padding:5px 13px;font-size:11.5px;}
+.top .chip.on{border-color:rgba(31,157,107,.65);}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:0 0 8px;}
+.dot.off{background:#E06B5E;}
+.top .who{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.18);border-radius:100px;padding:4px 14px 4px 5px;}
+.top .who .av{width:28px;height:28px;border-radius:50%;background:var(--gold);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;}
+.top .who b{font-size:12px;line-height:1.15;display:block;}
+.top .who span{font-family:var(--mono);font-size:9.5px;opacity:.7;}
+.themes{display:flex;gap:5px;}
+.themes button{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+  cursor:pointer;padding:0;}
+.themes button.on{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.25);}
+
+.menubar{background:var(--white);border-bottom:1px solid var(--line);padding:6px 14px;
+  display:flex;flex-wrap:wrap;gap:3px;position:relative;z-index:50;box-shadow:var(--shadow-sm);}
+.mgroup{position:relative;}
+.mgroup>button{background:transparent;border:0;cursor:pointer;padding:8px 13px;border-radius:8px;
+  font-family:var(--body);font-weight:600;font-size:12.5px;color:var(--navy);
+  display:flex;align-items:center;gap:6px;}
+.mgroup>button:hover{background:var(--sky-wash);}
+.mgroup.open>button{background:var(--sky-wash);color:var(--sky-deep);}
+.mgroup>button .ar{font-size:9px;opacity:.55;}
+.mgroup .drop{display:none;position:absolute;top:100%;left:0;min-width:268px;background:var(--white);
+  border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-md);padding:7px;z-index:60;}
+.mgroup.open .drop{display:block;}
+.drop .sec{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-soft);padding:6px 10px 4px;}
+.drop a{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:7px 10px;
+  border-radius:7px;font-size:12.5px;color:var(--navy);text-decoration:none;cursor:pointer;}
+.drop a:hover{background:var(--sky-wash);}
+.drop a .soon{font-family:var(--mono);font-size:9px;color:var(--ink-soft);
+  border:1px solid var(--line);border-radius:100px;padding:1px 7px;}
+
+.banner{position:relative;margin:16px 0;border-radius:var(--radius);overflow:hidden;min-height:210px;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  background:linear-gradient(135deg,var(--sky-wash),var(--sky-light));padding:34px 22px;}
+.banner img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.banner .veil{position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.88));}
+.banner .in{position:relative;}
+.banner h1{font-family:var(--disp);font-size:clamp(20px,3.2vw,34px);color:var(--navy);line-height:1.2;}
+.banner .sub{font-family:var(--disp);font-size:clamp(14px,1.8vw,19px);color:var(--sky-deep);margin-top:6px;}
+.banner .strap{font-size:12.5px;color:var(--ink-mid);margin-top:10px;}
+.banner .edit{position:absolute;top:12px;right:12px;z-index:3;}
+
+.qa-head{display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px;gap:10px;}
+.qa-head h3{font-family:var(--disp);font-size:14px;color:var(--navy);text-transform:uppercase;
+  letter-spacing:.06em;}
+.qa{display:grid;gap:11px;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));}
+.qa a{background:var(--white);border:1px solid var(--line);border-radius:11px;padding:14px 12px;
+  text-align:center;text-decoration:none;color:var(--navy);cursor:pointer;
+  box-shadow:var(--shadow-sm);transition:.15s;display:block;}
+.qa a:hover{border-color:var(--gold);transform:translateY(-2px);}
+.qa a .ic{font-size:21px;display:block;margin-bottom:6px;}
+.qa a b{font-size:12px;font-weight:600;line-height:1.3;display:block;}
+.qa a span{font-family:var(--mono);font-size:9px;color:var(--ink-soft);}
+
+.stat{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:6px;}
+.stat .b{background:var(--white);border:1px solid var(--line);border-radius:11px;padding:13px;}
+.stat .b b{font-family:var(--disp);font-size:23px;color:var(--navy);display:block;}
+.stat .b span{font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-soft);}
+</style>
 </head>
 <body>
 
-<!-- ============================ sign in ============================ -->
 <div class="gate" id="gate">
   <div class="box">
-    <h1 id="gate-brand">IDMS</h1>
+    <h1>IDMS</h1>
     <p>Intelligent Digital Manufacturing System. Sign in with your usual account.</p>
     <div class="row">
       <div><label>Username</label><input id="g-user" autocomplete="username"></div>
       <div><label>Password</label><input id="g-pass" type="password" autocomplete="current-password"></div>
-      <div id="g-code-row" style="display:none;">
-        <label>6-digit code</label><input id="g-code" inputmode="numeric" maxlength="6">
-      </div>
+      <div id="g-code-row" style="display:none;"><label>6-digit code</label>
+        <input id="g-code" inputmode="numeric" maxlength="6"></div>
       <div><button class="btn gold" id="g-go" style="width:100%;">Sign in</button></div>
     </div>
     <div class="note bad" id="g-msg" style="display:none;"></div>
-    <div class="hint" style="margin-top:14px;">
-      This system holds live manufacturing and quality records. Everything you change is
-      recorded against your name.
-    </div>
+    <div class="hint" style="margin-top:14px;">This system holds live manufacturing and quality
+      records. Everything you change is recorded against your name.</div>
   </div>
 </div>
 
-<!-- ============================ the app ============================ -->
 <div id="app" style="display:none;">
-  <div class="app-head">
-    <div class="brand" id="hd-brand">IDMS<span id="hd-co"></span></div>
-    <div class="acts">
-      <button class="btn ghost" id="hd-refresh">Refresh</button>
-      <a class="btn ghost" href="/" style="text-decoration:none;line-height:1.9;">Website</a>
-      <button class="btn gold" id="hd-out">Sign out</button>
+
+  <div class="top">
+    <div class="id">
+      <div id="t-logo"></div>
+      <div><div class="co" id="t-co">—</div><div class="tag" id="t-tag"></div></div>
     </div>
+    <div class="spacer"></div>
+    <div class="themes" id="t-themes"></div>
+    <button class="btn ghost" id="t-export">Export JSON</button>
+    <button class="btn ghost" id="t-import">Import JSON</button>
+    <div class="chip" id="t-db"><span class="dot off"></span><span id="t-dbtext">Checking…</span></div>
+    <div class="who"><div class="av" id="t-av">?</div>
+      <div><b id="t-user">—</b><span id="t-role"></span></div></div>
+    <a class="btn ghost" href="/" style="text-decoration:none;line-height:1.9;">Website</a>
+    <button class="btn gold" id="t-out">Sign out</button>
   </div>
 
-  <div class="app-body">
-    <div class="nav-groups" id="nav-groups"></div>
-    <div class="nav-tabs" id="nav-tabs"></div>
+  <div class="menubar" id="menubar"></div>
 
-    <!-- ---------------- Parts ---------------- -->
+  <div class="app-body">
+
+    <div class="panel on" data-panel="home">
+      <div class="banner">
+        <img class="bg" id="bn-img" style="display:none;" alt="">
+        <div class="veil" id="bn-veil" style="display:none;"></div>
+        <button class="btn edit" id="bn-edit">Change banner</button>
+        <div class="in">
+          <h1 id="bn-title">—</h1>
+          <div class="sub" id="bn-sub"></div>
+          <div class="strap">Intelligent Digital Manufacturing System</div>
+        </div>
+      </div>
+      <div class="stat" id="home-stats"></div>
+      <div class="qa-head">
+        <h3>⚡ Quick Access</h3>
+        <button class="btn" id="qa-edit">Edit shortcuts</button>
+      </div>
+      <div class="qa" id="qa-grid"></div>
+      <div class="hint" id="qa-hint" style="margin-top:10px;"></div>
+    </div>
+
     <div class="panel" data-panel="parts">
       <div class="card">
         <h4>Add a part</h4>
-        <div class="hint" style="margin-bottom:10px;">
-          A part is created automatically when a quotation is won on the website. Add one by
-          hand only for work that did not come through the enquiry route.
-        </div>
+        <div class="hint" style="margin-bottom:10px;">A part is created automatically when a quotation
+          is won on the website. Add one by hand only for work that did not come through that route.</div>
         <div class="row four">
           <div><label>Customer</label><input id="p-cust"></div>
           <div><label>Part number</label><input id="p-no"></div>
@@ -65,54 +164,41 @@
         </div>
         <div class="note" id="p-msg" style="display:none;"></div>
       </div>
-
       <div class="card">
         <h4>Parts</h4>
         <div class="row four" style="margin-bottom:8px;">
-          <div><label>Show</label>
-            <select id="p-filter">
-              <option value="">All stages</option>
-              <option value="New">New</option>
-              <option value="APQP">APQP</option>
-              <option value="Sample">Sample</option>
-              <option value="PPAP">PPAP</option>
-              <option value="Series">Series</option>
-            </select></div>
+          <div><label>Show</label><select id="p-filter">
+            <option value="">All stages</option><option>New</option><option>APQP</option>
+            <option>Sample</option><option>PPAP</option><option>Series</option></select></div>
         </div>
         <div id="p-list"></div>
       </div>
     </div>
 
-    <!-- ---------------- everything still to be built ---------------- -->
-    <div class="panel" data-panel="placeholder">
-      <div class="card"><div class="empty">
-        <b id="ph-name">Not built yet</b>
-        This screen is part of a later phase. The database and the shared core it will use
-        are already in place, so it can be added without changing anything you are using now.
-      </div></div>
-    </div>
-
-    <!-- ---------------- Company profile ---------------- -->
     <div class="panel" data-panel="profile">
       <div class="card">
         <h4>Company profile</h4>
-        <div class="hint" style="margin-bottom:10px;">
-          Read from the website's admin panel — one profile serves both systems. Every printed
-          document takes its letterhead and its document prefix from here, so nothing in the
-          software carries a company name.
-        </div>
+        <div class="hint" style="margin-bottom:10px;">Read from the website's admin panel — one profile
+          serves both systems. Every printed document takes its letterhead and its document prefix from
+          here, so nothing in the software carries a company name.</div>
         <table class="t" id="prof-table"></table>
-        <div class="note" style="margin-top:12px;">
-          To change any of this, use <b>Site Admin</b> on the website. Document numbers are built
-          as <b>PREFIX-KIND-0001</b> with the prefix shown above and a counter held in the database,
-          so two people saving at the same moment can never be given the same number.
-        </div>
+        <div class="note" style="margin-top:12px;">To change any of this, use <b>Site Admin</b> on the
+          website. Document numbers are built as <b>PREFIX-KIND-0001</b> using the prefix above and a
+          counter held in the database, so two people saving at the same moment can never be given the
+          same number.</div>
       </div>
       <div class="card">
         <h4>Recent activity</h4>
         <div class="hint" style="margin-bottom:8px;">Every create, change and deletion, with who did it and why.</div>
         <div id="audit-list"></div>
       </div>
+    </div>
+
+    <div class="panel" data-panel="placeholder">
+      <div class="card"><div class="empty">
+        <b id="ph-name">Not built yet</b>
+        <span id="ph-note"></span>
+      </div></div>
     </div>
 
   </div>
@@ -122,157 +208,255 @@
 <script>
 (function(){
   'use strict';
-  /* If the shared core did not load — a bad deploy, a cached half-file, a
-     blocked request — say so on screen. Without this the page simply dies at
-     the first line and shows a sign-in box that can never work. */
   if (!window.Core) {
     document.body.innerHTML =
       '<div class="gate"><div class="box"><h1>Cannot start</h1>' +
       '<p>The shared core file did not load, so nothing on this page will work.</p>' +
-      '<div class="note bad">Check that <b>/core.js</b> and <b>/core.css</b> were deployed ' +
-      'alongside this page, then reload. If you have just deployed, try a hard refresh.</div>' +
-      '<button class="btn gold" onclick="location.reload()" style="width:100%;margin-top:12px;">Reload</button>' +
-      '</div></div>';
+      '<div class="note bad">Check that <b>/core.js</b> and <b>/core.css</b> were deployed alongside ' +
+      'this page, then reload.</div><button class="btn gold" onclick="location.reload()" ' +
+      'style="width:100%;margin-top:12px;">Reload</button></div></div>';
     return;
   }
-  var C = window.Core;
-  var esc = C.esc, toast = C.toast;
+  var C = window.Core, esc = C.esc, toast = C.toast;
 
-  /* The screens, grouped the way someone actually works. Only Parts and the
-     profile are live in this phase; the rest are declared so the navigation is
-     the real one from the start and does not have to be rebuilt later. */
-  var GROUPS = [
-    ['npd',      'NPD & APQP',  [['parts','Parts'],['apqp','APQP Programme'],['pfd','Process Flow'],
-                                 ['pfmea','PFMEA'],['cp','Control Plan'],['msa','MSA'],['ppap','PPAP']]],
-    ['planning', 'Planning',    [['sales_plan','Sales Plan'],['prod_plan','Production Plan'],
-                                 ['loading','Machine Loading'],['capacity','Capacity']]],
-    ['prod',     'Production',  [['entry','Production Entry'],['self_insp','Self Inspection'],
-                                 ['setup','Setup Approval'],['dwm','DWM']]],
-    ['stores',   'Stores',      [['grn','GRN'],['inward','Inward Inspection'],['dc','Delivery Challan'],
-                                 ['rawmat','Raw Material']]],
-    ['people',   'People',      [['hr','HR & Payroll'],['skills','Skill Matrix'],['training','Training']]],
-    ['setup2',   'Setup',       [['profile','Company Profile'],['docs','Document Master'],
-                                 ['calib','Calibration']]]
+  /* The menu, in the shape the team already works to. A trailing 1 marks a
+     screen backed by the database today; the rest are declared so the
+     navigation is real from the start and says plainly what is not built. */
+  var MENU = [
+    ['entry','✏️','Entry','Key Process',[
+      ['form','🔑','Key Process Input'],['entry_supplier','🏭','Supplier Addition'],
+      ['entry_rawmat','🪨','Raw Material Addition'],['entry_customer','👤','Customer Addition'],
+      ['entry_machine','⚙','Machine Addition']]],
+    ['pm','🎛','Process Master','Configuration',[
+      ['process_master','🎛','Process Master Configuration'],['machine_process','⚙','Machine & Process'],
+      ['pfmea_master','🧠','PFMEA Master'],['dim_entry','📐','Dimensions Master'],
+      ['pp_spec_master','📋','PP Spec Master']]],
+    ['npd','🗂','NPD & APQP','New Part Development',[
+      ['parts','📦','Parts',1],['apqp','🗂','APQP Programme'],['pfd','🔵','Process Flow Diagram'],
+      ['fmea','⚠','PFMEA'],['control_plan','📋','Control Plan'],['msa','🔬','MSA'],
+      ['ppap','📦','PPAP'],['spc','📈','SPC']]],
+    ['planning','📈','Planning','Plan',[
+      ['sales_plan','📈','Sales Plan'],['capacity_plan','⚙','Capacity Plan'],
+      ['production_plan','🏭','Production Plan'],['machine_loading','🔩','Machine Loading Plan']]],
+    ['mmd','📦','MMD','Material Movement',[
+      ['grn','📥','GRN — Goods Receipt'],['dc','📤','Delivery Challan'],
+      ['sheet_rawmat','🪨','Raw Material Stock'],['bom','🧾','Bill of Materials']]],
+    ['prod','🏭','Production','Shop Floor',[
+      ['entry_prod','📝','Production Entry'],['dwm','📊','DWM — Daily Work Management'],
+      ['task_list','✅','Task List']]],
+    ['hr','🏢','HR & Competency','Organisation',[
+      ['hrm','👥','HR & Payroll'],['org_chart','🏗','Organisation Chart'],
+      ['skill_matrix','📊','Skill Matrix'],['roles_resp','📋','Roles & Responsibilities'],
+      ['competency_map','🎯','Competency Mapping'],['tni','📚','Training Need Identification'],
+      ['training_plan_actual','📅','Training Plan vs Actual'],['gap_analysis','📈','Skill Gap Analysis'],
+      ['training_effectiveness','✅','Training Effectiveness'],['succession_plan','🎖','Succession Planning'],
+      ['supplier_competency','🤝','Supplier Competency']]],
+    ['reports','📊','Reports','Inspection Reports',[
+      ['report_self_inspection','🔍','Self Inspection Report'],
+      ['report_inward_inspection','📥','Inward Inspection Report'],
+      ['report_inprocess_inspection','⚙','In-Process Inspection Report'],
+      ['report_pdi','✓','PDI Report'],['report_setup_approval','✅','Setup Approval Report'],
+      ['report_tool_history','🔧','Tool History Card'],
+      ['report_machine_checksheet','⚙','Machine Check Sheet'],
+      ['report_calibration','📏','Calibration Report'],['report_msa','🔬','MSA Study Report'],
+      ['report_control_charts','📊','Control Charts']]],
+    ['qms','📋','QMS','Quality Management System',[
+      ['qms_level1','📜','Level-1 — Policy'],['qms_level2','📄','Level-2 — Procedures'],
+      ['qms_level3','📝','Level-3 — Work Instructions'],['qms_level4','🗂','Level-4 — Records'],
+      ['compliance_audit_trail','📋','Compliance & Audit Trail']]],
+    ['masters','🗂','Masters','Organisation',[
+      ['profile','🏢','Company Profile',1],['dept_master','🏢','Department Master'],
+      ['desig_master','🎖','Designation Master'],['position_master','📌','Position Master'],
+      ['doc_format_master','📄','Document Format Numbers'],['signatories','✍','Signatories Master'],
+      ['cft_master','👥','CFT Members Master'],['doc_master_pfd','📑','Master List — PFD'],
+      ['doc_master_pfmea','📑','Master List — PFMEA'],['doc_master_cp','📑','Master List — Control Plan'],
+      ['users','👥','User Management']]],
+    ['dash','📊','Dashboard','Overview',[
+      ['home','🏠','Home',1],['dashboard','📊','Production Dashboard'],['accounts_pl','💹','P&L']]]
   ];
-  var LIVE = { parts:1, profile:1 };
-  var group = 'npd', tab = 'parts';
 
-  function drawNav(){
-    document.getElementById('nav-groups').innerHTML = GROUPS.map(function(g){
-      return '<button data-g="'+g[0]+'" class="'+(group===g[0]?'active':'')+'">'+
-        esc(g[1])+'<span class="n">'+g[2].length+'</span></button>';
-    }).join('');
-    var set = (GROUPS.filter(function(g){return g[0]===group;})[0]||GROUPS[0])[2];
-    document.getElementById('nav-tabs').innerHTML = set.map(function(t){
-      return '<button data-t="'+t[0]+'" class="'+(tab===t[0]?'active':'')+'">'+esc(t[1])+
-        (LIVE[t[0]]?'':' ·') + '</button>';
-    }).join('');
-    document.querySelectorAll('#nav-groups button').forEach(function(b){
-      b.addEventListener('click',function(){
-        group=b.dataset.g;
-        tab=(GROUPS.filter(function(g){return g[0]===group;})[0])[2][0][0];
-        drawNav(); show();
+  var LIVE = {}, LABEL = {}, ICON = {};
+  MENU.forEach(function(g){ g[4].forEach(function(it){
+    LABEL[it[0]] = it[2]; ICON[it[0]] = it[1]; if (it[3]) LIVE[it[0]] = 1;
+  });});
+
+  function drawMenu(){
+    var bar = document.getElementById('menubar');
+    bar.innerHTML = '<div class="mgroup"><button data-home="1">🏠 Home</button></div>' +
+      MENU.map(function(g,gi){
+        return '<div class="mgroup" data-gi="'+gi+'"><button>'+g[1]+' '+esc(g[2])+
+          ' <span class="ar">▼</span></button><div class="drop"><div class="sec">'+esc(g[3])+'</div>'+
+          g[4].map(function(it){
+            return '<a data-s="'+it[0]+'"><span>'+it[1]+' '+esc(it[2])+'</span>'+
+              (it[3]?'':'<span class="soon">soon</span>')+'</a>';
+          }).join('')+'</div></div>';
+      }).join('');
+    bar.querySelector('[data-home]').addEventListener('click', function(){ go('home'); });
+    bar.querySelectorAll('.mgroup[data-gi] > button').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        var g = b.parentNode, was = g.classList.contains('open');
+        bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
+        if (!was) g.classList.add('open');
       });
     });
-    document.querySelectorAll('#nav-tabs button').forEach(function(b){
-      b.addEventListener('click',function(){ tab=b.dataset.t; drawNav(); show(); });
+    bar.querySelectorAll('.drop a').forEach(function(a){
+      a.addEventListener('click', function(){
+        bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
+        go(a.dataset.s);
+      });
+    });
+    document.addEventListener('click', function(){
+      bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
     });
   }
 
-  function label(key){
-    for (var i=0;i<GROUPS.length;i++)
-      for (var j=0;j<GROUPS[i][2].length;j++)
-        if (GROUPS[i][2][j][0]===key) return GROUPS[i][2][j][1];
-    return key;
-  }
-
-  function show(){
-    var want = LIVE[tab] ? tab : 'placeholder';
+  function go(s){
+    var want = LIVE[s] ? s : 'placeholder';
     document.querySelectorAll('.panel').forEach(function(p){
-      p.classList.toggle('on', p.dataset.panel===want);
+      p.classList.toggle('on', p.dataset.panel === want);
     });
-    if (want==='placeholder') document.getElementById('ph-name').textContent = label(tab);
-    if (tab==='parts')   loadParts();
-    if (tab==='profile') loadProfileScreen();
+    if (want === 'placeholder') {
+      document.getElementById('ph-name').textContent = (ICON[s]||'') + ' ' + (LABEL[s]||s);
+      document.getElementById('ph-note').textContent =
+        'This screen is part of a later phase. The database, the sign-in and the shared core it will ' +
+        'use are already in place, so it can be added without disturbing anything you use today.';
+    }
+    if (s === 'home')    loadHome();
+    if (s === 'parts')   loadParts();
+    if (s === 'profile') loadProfileScreen();
   }
 
-  /* ---------------- Parts ---------------- */
-  var parts = [];
+  /* ---------------- themes ---------------- */
+  var THEMES = [['navy','#0B2A5B'],['forest','#1F6F4A'],['plum','#5B2BB8']];
+  function applyTheme(name, save){
+    var t = THEMES.filter(function(x){ return x[0]===name; })[0] || THEMES[0];
+    document.documentElement.style.setProperty('--navy', t[1]);
+    document.querySelectorAll('#t-themes button').forEach(function(b){
+      b.classList.toggle('on', b.dataset.t === t[0]);
+    });
+    if (save) C.idms.saveSetting('theme', { name: t[0] }).catch(function(){});
+  }
+  function drawThemes(current){
+    document.getElementById('t-themes').innerHTML = THEMES.map(function(t){
+      return '<button data-t="'+t[0]+'" style="background:'+t[1]+'" title="'+t[0]+'"></button>';
+    }).join('');
+    document.querySelectorAll('#t-themes button').forEach(function(b){
+      b.addEventListener('click', function(){ applyTheme(b.dataset.t, true); });
+    });
+    applyTheme(current || 'navy', false);
+  }
+
+  /* ---------------- home ---------------- */
+  var settings = {};
+  var DEFAULT_SHORTCUTS = ['parts','form','pfd','fmea','control_plan','production_plan','grn','skill_matrix'];
+
+  async function loadHome(){
+    var p = C.getProfile();
+    document.getElementById('bn-title').textContent = p.name || 'Your company';
+    document.getElementById('bn-sub').textContent = (settings.banner && settings.banner.tagline) || '';
+    var img = document.getElementById('bn-img'), veil = document.getElementById('bn-veil');
+    if (settings.banner && settings.banner.image) {
+      img.src = settings.banner.image; img.style.display = ''; veil.style.display = '';
+    } else { img.style.display = 'none'; veil.style.display = 'none'; }
+
+    try {
+      var parts = await C.idms.parts(), by = {};
+      parts.forEach(function(x){ by[x.lifecycle] = (by[x.lifecycle]||0) + 1; });
+      document.getElementById('home-stats').innerHTML =
+        [['Parts', parts.length], ['In APQP', by.APQP||0], ['Awaiting PPAP', by.PPAP||0],
+         ['In series', by.Series||0]]
+        .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('');
+    } catch(e){
+      document.getElementById('home-stats').innerHTML = '<div class="note bad">'+esc(e.message)+'</div>';
+    }
+    drawQuick();
+  }
+
+  function drawQuick(){
+    var ids = (settings.shortcuts && settings.shortcuts.ids) || DEFAULT_SHORTCUTS;
+    document.getElementById('qa-grid').innerHTML = ids.map(function(id){
+      return '<a data-s="'+esc(id)+'"><span class="ic">'+(ICON[id]||'▪')+'</span><b>'+
+        esc(LABEL[id]||id)+'</b><span>'+(LIVE[id]?'open':'soon')+'</span></a>';
+    }).join('');
+    document.querySelectorAll('#qa-grid a').forEach(function(a){
+      a.addEventListener('click', function(){ go(a.dataset.s); });
+    });
+    document.getElementById('qa-hint').textContent =
+      'Shortcuts are saved to the database against this company, so everyone signing in sees the same set.';
+  }
+
+  /* ---------------- parts ---------------- */
+  var NEXT = { New:'APQP', APQP:'Sample', Sample:'PPAP', PPAP:'Series', Series:null };
   function stageBadge(s){
-    var cls = {New:'new',APQP:'apqp',Sample:'sample',PPAP:'ppap',Series:'series'}[s]||'new';
+    var cls = {New:'new',APQP:'apqp',Sample:'sample',PPAP:'ppap',Series:'series'}[s] || 'new';
     return '<span class="badge '+cls+'">'+esc(s)+'</span>';
   }
-  var NEXT = { New:'APQP', APQP:'Sample', Sample:'PPAP', PPAP:'Series', Series:null };
-
   async function loadParts(){
     var host = document.getElementById('p-list');
     host.innerHTML = '<div class="hint">Loading…</div>';
-    try {
-      parts = await C.idms.parts(document.getElementById('p-filter').value);
-    } catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; return; }
+    var parts;
+    try { parts = await C.idms.parts(document.getElementById('p-filter').value); }
+    catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; return; }
     if (!parts.length){
-      host.innerHTML = '<div class="empty"><b>No parts yet</b>'+
-        'Parts arrive here when a quotation is won on the website, or you can add one above.</div>';
+      host.innerHTML = '<div class="empty"><b>No parts yet</b>Parts arrive here when a quotation is ' +
+        'won on the website, or you can add one above.</div>';
       return;
     }
-    host.innerHTML = '<table class="t"><thead><tr>'+
-      '<th>Part</th><th>Customer</th><th>Quotation</th><th class="c">Stage</th><th>Added</th><th></th>'+
-      '</tr></thead><tbody>'+ parts.map(function(p){
-        var nxt = NEXT[p.lifecycle];
+    host.innerHTML = '<table class="t"><thead><tr><th>Part</th><th>Customer</th><th>Quotation</th>' +
+      '<th class="c">Stage</th><th>Added</th><th></th></tr></thead><tbody>' +
+      parts.map(function(p){
+        var n = NEXT[p.lifecycle];
         return '<tr><td><b>'+esc(p.part_no||'—')+'</b><div class="hint">'+esc(p.part_name||'')+'</div></td>'+
-          '<td>'+esc(p.customer||'—')+'</td>'+
-          '<td class="hint">'+esc(p.quote_ref||'—')+'</td>'+
+          '<td>'+esc(p.customer||'—')+'</td><td class="hint">'+esc(p.quote_ref||'—')+'</td>'+
           '<td class="c">'+stageBadge(p.lifecycle)+'</td>'+
-          '<td class="hint">'+C.fmtDate(p.created_at)+'</td>'+
-          '<td>'+(nxt?'<button class="btn adv" data-id="'+esc(p.part_id)+'" data-next="'+nxt+'">Move to '+nxt+'</button>':'')+'</td></tr>';
+          '<td class="hint">'+C.fmtDate(p.created_at)+'</td><td>'+
+          (n?'<button class="btn adv" data-id="'+esc(p.part_id)+'" data-next="'+n+'">Move to '+n+'</button>':'')+
+          '</td></tr>';
       }).join('') + '</tbody></table>';
-
     host.querySelectorAll('.adv').forEach(function(b){
       b.addEventListener('click', async function(){
-        var why = prompt('Moving this part to '+b.dataset.next+'. What is the evidence?');
-        if (why===null) return;
+        var why = prompt('Moving this part to ' + b.dataset.next + '. What is the evidence?');
+        if (why === null) return;
         if (!why.trim()) { toast('State a reason — it goes on the record.'); return; }
         b.disabled = true;
-        try {
-          await C.idms.setLifecycle(b.dataset.id, b.dataset.next, why.trim());
-          toast('Moved to '+b.dataset.next);
-          loadParts();
-        } catch(e){ toast(e.message); b.disabled = false; }
+        try { await C.idms.setLifecycle(b.dataset.id, b.dataset.next, why.trim());
+              toast('Moved to ' + b.dataset.next); loadParts(); }
+        catch(e){ toast(e.message); b.disabled = false; }
       });
     });
   }
 
-  /* ---------------- Company profile ---------------- */
+  /* ---------------- profile ---------------- */
   async function loadProfileScreen(){
     var p = await C.loadProfile();
-    document.getElementById('prof-table').innerHTML =
-      '<tbody>' +
-      [['Company', p.name || '(not set on the website)'],
-       ['Address', p.address || '—'],
-       ['GSTIN', p.gstin || '—'],
+    document.getElementById('prof-table').innerHTML = '<tbody>' +
+      [['Company', esc(p.name || '(not set on the website)')],
+       ['Address', esc(p.address || '—')],
+       ['GSTIN', esc(p.gstin || '—')],
        ['Document prefix', '<b>'+esc(p.docPrefix)+'</b>'],
        ['Logo', p.logo ? '<img src="'+p.logo+'" style="max-height:34px;">' : '—']]
-      .map(function(r){ return '<tr><th style="width:32%;">'+esc(r[0])+'</th><td>'+r[1]+'</td></tr>'; })
+      .map(function(r){ return '<tr><th style="width:32%;">'+r[0]+'</th><td>'+r[1]+'</td></tr>'; })
       .join('') + '</tbody>';
-
     var host = document.getElementById('audit-list');
     try {
       var rows = await C.idms.audit();
       host.innerHTML = rows.length
-        ? '<table class="t"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Action</th><th>Reason</th></tr></thead><tbody>'+
-          rows.slice(0,40).map(function(a){
-            return '<tr><td class="hint">'+new Date(a.at).toLocaleString('en-GB')+'</td>'+
-              '<td>'+esc(a.who)+'</td><td>'+esc(a.kind)+'<div class="hint">'+esc(a.ref)+'</div></td>'+
-              '<td>'+esc(a.action)+'</td><td class="hint">'+esc(a.reason||'')+'</td></tr>';
-          }).join('')+'</tbody></table>'
+        ? '<table class="t"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Action</th>' +
+          '<th>Reason</th></tr></thead><tbody>' + rows.slice(0,40).map(function(a){
+            return '<tr><td class="hint">'+new Date(a.at).toLocaleString('en-GB')+'</td><td>'+
+              esc(a.who)+'</td><td>'+esc(a.kind)+'<div class="hint">'+esc(a.ref)+'</div></td><td>'+
+              esc(a.action)+'</td><td class="hint">'+esc(a.reason||'')+'</td></tr>';
+          }).join('') + '</tbody></table>'
         : '<div class="empty"><b>Nothing recorded yet</b>Activity appears here as soon as work starts.</div>';
     } catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; }
   }
 
   /* ---------------- sign in ---------------- */
-  var pendingUser = null;
-  function gateMsg(t){
+  var pendingUser = null, me = { user:'', role:'' };
+  function gateMsg(t, good){
     var el = document.getElementById('g-msg');
+    el.className = good ? 'note' : 'note bad';
     el.style.display = t ? '' : 'none';
     el.textContent = t || '';
   }
@@ -281,61 +465,142 @@
     b.disabled = true; gateMsg('');
     try {
       var j;
-      if (pendingUser) {
-        j = await C.verifyCode(pendingUser, document.getElementById('g-code').value.trim());
-      } else {
+      if (pendingUser) j = await C.verifyCode(pendingUser, document.getElementById('g-code').value.trim());
+      else {
         j = await C.signIn(document.getElementById('g-user').value.trim(),
                            document.getElementById('g-pass').value);
         if (j.needCode) {
           pendingUser = j.user;
           document.getElementById('g-code-row').style.display = '';
           b.textContent = 'Verify code';
-          gateMsg(j.note || 'A code has been sent to you.');
-          document.getElementById('g-msg').className = 'note';
-          b.disabled = false;
-          return;
+          gateMsg(j.note || 'A code has been sent to you.', true);
+          b.disabled = false; return;
         }
       }
-      if (j.token) start();
-    } catch(e){
-      document.getElementById('g-msg').className = 'note bad';
-      gateMsg(e.message);
-    }
+      if (j.token) { me = { user: j.user, role: j.role }; start(); }
+    } catch(e){ gateMsg(e.message); }
     b.disabled = false;
+  }
+
+  function dbState(ok, text){
+    var chip = document.getElementById('t-db');
+    chip.classList.toggle('on', !!ok);
+    chip.querySelector('.dot').className = 'dot' + (ok ? '' : ' off');
+    document.getElementById('t-dbtext').textContent = text;
   }
 
   async function start(){
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = '';
+    document.getElementById('t-user').textContent = me.user || 'Signed in';
+    document.getElementById('t-role').textContent = me.role || '';
+    document.getElementById('t-av').textContent = (me.user || '?').charAt(0).toUpperCase();
+
     try {
       var p = await C.loadProfile();
-      if (p.name) {
-        document.getElementById('hd-co').textContent = p.name;
-        document.title = p.name + ' — IDMS';
-      }
+      document.getElementById('t-co').textContent = p.name || 'Company not set';
+      document.getElementById('t-tag').textContent = p.address || '';
+      document.getElementById('t-logo').innerHTML = p.logo
+        ? '<img src="'+p.logo+'" alt="">'
+        : '<div class="mark">'+esc(p.docPrefix.slice(0,2))+'</div>';
+      document.title = (p.name ? p.name + ' — ' : '') + 'IDMS';
     } catch(e){ /* the profile is decoration here, not a blocker */ }
-    drawNav(); show();
+
+    try { settings = await C.idms.settings(); dbState(true, 'Database: connected'); }
+    catch(e){ dbState(false, 'Database: ' + e.message); }
+
+    drawThemes(settings.theme && settings.theme.name);
+    drawMenu();
+    go('home');
   }
 
+  /* ---------------- wiring ---------------- */
   document.getElementById('g-go').addEventListener('click', doSignIn);
   ['g-user','g-pass','g-code'].forEach(function(id){
     document.getElementById(id).addEventListener('keydown', function(e){
       if (e.key === 'Enter') doSignIn();
     });
   });
-  document.getElementById('hd-out').addEventListener('click', function(){
-    C.setToken(''); location.reload();
-  });
-  document.getElementById('hd-refresh').addEventListener('click', show);
+  document.getElementById('t-out').addEventListener('click', function(){ C.setToken(''); location.reload(); });
   document.getElementById('p-filter').addEventListener('change', loadParts);
+
+  document.getElementById('bn-edit').addEventListener('click', async function(){
+    var url = prompt('Paste an image address for the banner, or leave blank to remove it.',
+      (settings.banner && settings.banner.image) || '');
+    if (url === null) return;
+    var tagline = prompt('A line under the company name (optional).',
+      (settings.banner && settings.banner.tagline) || '');
+    if (tagline === null) tagline = '';
+    settings.banner = { image: url.trim(), tagline: tagline.trim() };
+    try { await C.idms.saveSetting('banner', settings.banner);
+          toast('Banner saved for everyone'); loadHome(); }
+    catch(e){ toast(e.message); }
+  });
+
+  document.getElementById('qa-edit').addEventListener('click', async function(){
+    var all = Object.keys(LABEL);
+    var current = ((settings.shortcuts && settings.shortcuts.ids) || DEFAULT_SHORTCUTS).join(', ');
+    var next = prompt('Shortcuts to show, separated by commas.\n\nAvailable:\n' + all.join(', '), current);
+    if (next === null) return;
+    var ids = next.split(',').map(function(x){ return x.trim(); })
+      .filter(function(x){ return LABEL[x]; });
+    if (!ids.length) { toast('None of those names matched a screen.'); return; }
+    settings.shortcuts = { ids: ids };
+    try { await C.idms.saveSetting('shortcuts', settings.shortcuts); toast('Shortcuts saved'); drawQuick(); }
+    catch(e){ toast(e.message); }
+  });
+
+  /* Export and import are a safety net for taking a copy off-site. The
+     database remains the record — this is not where the data lives. */
+  document.getElementById('t-export').addEventListener('click', async function(){
+    this.disabled = true;
+    try {
+      var dump = { exportedAt: new Date().toISOString(),
+        parts: await C.idms.parts(), docs: await C.idms.docs(), settings: settings };
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(dump,null,2)], {type:'application/json'}));
+      a.download = 'idms-backup-' + new Date().toISOString().slice(0,10) + '.json';
+      a.click();
+      toast('Backup downloaded');
+    } catch(e){ toast(e.message); }
+    this.disabled = false;
+  });
+
+  document.getElementById('t-import').addEventListener('click', function(){
+    var f = document.createElement('input');
+    f.type = 'file'; f.accept = '.json,application/json';
+    f.addEventListener('change', async function(){
+      var file = f.files[0]; if (!file) return;
+      var dump;
+      try { dump = JSON.parse(await file.text()); }
+      catch(e){ toast('That file is not valid JSON.'); return; }
+      var n = (dump.parts||[]).length + (dump.docs||[]).length;
+      if (!confirm('Restore ' + n + ' records into the database?\n\nExisting records with the same id ' +
+                   'are overwritten. This cannot be undone.')) return;
+      var ok = 0, bad = 0, i;
+      for (i = 0; i < (dump.parts||[]).length; i++) {
+        var p = dump.parts[i];
+        try { await C.idms.savePart({ partId:p.part_id, customer:p.customer, partNo:p.part_no,
+                partName:p.part_name, lifecycle:p.lifecycle, quoteRef:p.quote_ref, data:p.data },
+                'restored from a backup file'); ok++; } catch(e){ bad++; }
+      }
+      for (i = 0; i < (dump.docs||[]).length; i++) {
+        var dd = dump.docs[i];
+        try { await C.idms.saveDoc({ docId:dd.doc_id, kind:dd.kind, partId:dd.part_id, docNo:dd.doc_no,
+                rev:dd.rev, status:dd.status, data:dd.data }, 'restored from a backup file'); ok++; }
+        catch(e){ bad++; }
+      }
+      toast('Restored ' + ok + ' record(s)' + (bad ? ', ' + bad + ' failed' : ''));
+      go('home');
+    });
+    f.click();
+  });
 
   document.getElementById('p-add').addEventListener('click', async function(){
     var msg = document.getElementById('p-msg');
-    var part = {
-      customer: document.getElementById('p-cust').value.trim(),
-      partNo:   document.getElementById('p-no').value.trim(),
-      partName: document.getElementById('p-name').value.trim()
-    };
+    var part = { customer: document.getElementById('p-cust').value.trim(),
+                 partNo:   document.getElementById('p-no').value.trim(),
+                 partName: document.getElementById('p-name').value.trim() };
     if (!part.partNo && !part.partName){
       msg.style.display=''; msg.className='note bad';
       msg.textContent='Give the part a number or a name.'; return;
@@ -343,19 +608,17 @@
     this.disabled = true;
     try {
       await C.idms.savePart(part, 'added by hand in the IDMS');
-      msg.style.display=''; msg.className='note good';
-      msg.textContent='Added. It starts at stage New.';
+      msg.style.display=''; msg.className='note good'; msg.textContent='Added. It starts at stage New.';
       ['p-cust','p-no','p-name'].forEach(function(id){ document.getElementById(id).value=''; });
       loadParts();
-    } catch(e){
-      msg.style.display=''; msg.className='note bad'; msg.textContent=e.message;
-    }
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent=e.message; }
     this.disabled = false;
   });
 
-  /* An existing session means the sign-in screen is skipped. */
   if (C.getToken()) {
-    C.idms.settings().then(start).catch(function(){ C.setToken(''); });
+    C.api('/api/idms?what=settings')
+      .then(function(j){ settings = j.settings || {}; start(); })
+      .catch(function(){ C.setToken(''); });
   }
 })();
 </script>

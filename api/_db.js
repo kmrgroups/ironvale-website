@@ -74,6 +74,65 @@ export async function ensureTables() {
     data JSONB NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now()
   )`;
+  /* ---------------------------------------------------------------
+     IDMS — the manufacturing system that runs alongside the website.
+     One generic document store keyed by kind, exactly as hr_items works,
+     so a new module needs no migration. part_id on every row is what
+     makes the digital thread real: one query returns everything ever
+     recorded against a customer part number.
+     ---------------------------------------------------------------- */
+  await sql`CREATE TABLE IF NOT EXISTS idms_parts (
+    part_id TEXT PRIMARY KEY,
+    tenant TEXT NOT NULL DEFAULT 'default',
+    customer TEXT DEFAULT '',
+    part_no TEXT DEFAULT '',
+    part_name TEXT DEFAULT '',
+    lifecycle TEXT NOT NULL DEFAULT 'New',
+    quote_ref TEXT DEFAULT '',
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS idms_parts_life ON idms_parts (lifecycle, customer)`;
+
+  await sql`CREATE TABLE IF NOT EXISTS idms_docs (
+    doc_id TEXT PRIMARY KEY,
+    tenant TEXT NOT NULL DEFAULT 'default',
+    kind TEXT NOT NULL,
+    part_id TEXT DEFAULT '',
+    doc_no TEXT DEFAULT '',
+    rev TEXT DEFAULT '0',
+    status TEXT NOT NULL DEFAULT 'Draft',
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    updated_by TEXT DEFAULT ''
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS idms_docs_kind ON idms_docs (kind, status)`;
+  await sql`CREATE INDEX IF NOT EXISTS idms_docs_part ON idms_docs (part_id)`;
+
+  /* Serials are incremented in the database, not in a browser variable —
+     two people saving a GRN at the same moment must not get one number. */
+  await sql`CREATE TABLE IF NOT EXISTS idms_counters (
+    name TEXT PRIMARY KEY,
+    value BIGINT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ DEFAULT now()
+  )`;
+
+  await sql`CREATE TABLE IF NOT EXISTS idms_settings (
+    key TEXT PRIMARY KEY,
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ DEFAULT now()
+  )`;
+
+  await sql`CREATE TABLE IF NOT EXISTS idms_audit (
+    id BIGSERIAL PRIMARY KEY,
+    who TEXT, kind TEXT, ref TEXT, action TEXT,
+    before_val JSONB, after_val JSONB,
+    reason TEXT, at TIMESTAMPTZ DEFAULT now()
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS idms_audit_ref ON idms_audit (kind, ref)`;
+
   await sql`CREATE TABLE IF NOT EXISTS auth (
     id INT PRIMARY KEY DEFAULT 1,
     user_name TEXT NOT NULL,

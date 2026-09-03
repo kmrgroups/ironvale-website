@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IDMS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/core.css">
+</head>
+<body>
+
+<!-- ============================ sign in ============================ -->
+<div class="gate" id="gate">
+  <div class="box">
+    <h1 id="gate-brand">IDMS</h1>
+    <p>Intelligent Digital Manufacturing System. Sign in with your usual account.</p>
+    <div class="row">
+      <div><label>Username</label><input id="g-user" autocomplete="username"></div>
+      <div><label>Password</label><input id="g-pass" type="password" autocomplete="current-password"></div>
+      <div id="g-code-row" style="display:none;">
+        <label>6-digit code</label><input id="g-code" inputmode="numeric" maxlength="6">
+      </div>
+      <div><button class="btn gold" id="g-go" style="width:100%;">Sign in</button></div>
+    </div>
+    <div class="note bad" id="g-msg" style="display:none;"></div>
+    <div class="hint" style="margin-top:14px;">
+      This system holds live manufacturing and quality records. Everything you change is
+      recorded against your name.
+    </div>
+  </div>
+</div>
+
+<!-- ============================ the app ============================ -->
+<div id="app" style="display:none;">
+  <div class="app-head">
+    <div class="brand" id="hd-brand">IDMS<span id="hd-co"></span></div>
+    <div class="acts">
+      <button class="btn ghost" id="hd-refresh">Refresh</button>
+      <a class="btn ghost" href="/" style="text-decoration:none;line-height:1.9;">Website</a>
+      <button class="btn gold" id="hd-out">Sign out</button>
+    </div>
+  </div>
+
+  <div class="app-body">
+    <div class="nav-groups" id="nav-groups"></div>
+    <div class="nav-tabs" id="nav-tabs"></div>
+
+    <!-- ---------------- Parts ---------------- -->
+    <div class="panel" data-panel="parts">
+      <div class="card">
+        <h4>Add a part</h4>
+        <div class="hint" style="margin-bottom:10px;">
+          A part is created automatically when a quotation is won on the website. Add one by
+          hand only for work that did not come through the enquiry route.
+        </div>
+        <div class="row four">
+          <div><label>Customer</label><input id="p-cust"></div>
+          <div><label>Part number</label><input id="p-no"></div>
+          <div><label>Part name</label><input id="p-name"></div>
+          <div style="align-self:end;"><button class="btn gold" id="p-add">Add part</button></div>
+        </div>
+        <div class="note" id="p-msg" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <h4>Parts</h4>
+        <div class="row four" style="margin-bottom:8px;">
+          <div><label>Show</label>
+            <select id="p-filter">
+              <option value="">All stages</option>
+              <option value="New">New</option>
+              <option value="APQP">APQP</option>
+              <option value="Sample">Sample</option>
+              <option value="PPAP">PPAP</option>
+              <option value="Series">Series</option>
+            </select></div>
+        </div>
+        <div id="p-list"></div>
+      </div>
+    </div>
+
+    <!-- ---------------- everything still to be built ---------------- -->
+    <div class="panel" data-panel="placeholder">
+      <div class="card"><div class="empty">
+        <b id="ph-name">Not built yet</b>
+        This screen is part of a later phase. The database and the shared core it will use
+        are already in place, so it can be added without changing anything you are using now.
+      </div></div>
+    </div>
+
+    <!-- ---------------- Company profile ---------------- -->
+    <div class="panel" data-panel="profile">
+      <div class="card">
+        <h4>Company profile</h4>
+        <div class="hint" style="margin-bottom:10px;">
+          Read from the website's admin panel — one profile serves both systems. Every printed
+          document takes its letterhead and its document prefix from here, so nothing in the
+          software carries a company name.
+        </div>
+        <table class="t" id="prof-table"></table>
+        <div class="note" style="margin-top:12px;">
+          To change any of this, use <b>Site Admin</b> on the website. Document numbers are built
+          as <b>PREFIX-KIND-0001</b> with the prefix shown above and a counter held in the database,
+          so two people saving at the same moment can never be given the same number.
+        </div>
+      </div>
+      <div class="card">
+        <h4>Recent activity</h4>
+        <div class="hint" style="margin-bottom:8px;">Every create, change and deletion, with who did it and why.</div>
+        <div id="audit-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="/core.js"></script>
+<script>
+(function(){
+  'use strict';
+  /* If the shared core did not load — a bad deploy, a cached half-file, a
+     blocked request — say so on screen. Without this the page simply dies at
+     the first line and shows a sign-in box that can never work. */
+  if (!window.Core) {
+    document.body.innerHTML =
+      '<div class="gate"><div class="box"><h1>Cannot start</h1>' +
+      '<p>The shared core file did not load, so nothing on this page will work.</p>' +
+      '<div class="note bad">Check that <b>/core.js</b> and <b>/core.css</b> were deployed ' +
+      'alongside this page, then reload. If you have just deployed, try a hard refresh.</div>' +
+      '<button class="btn gold" onclick="location.reload()" style="width:100%;margin-top:12px;">Reload</button>' +
+      '</div></div>';
+    return;
+  }
+  var C = window.Core;
+  var esc = C.esc, toast = C.toast;
+
+  /* The screens, grouped the way someone actually works. Only Parts and the
+     profile are live in this phase; the rest are declared so the navigation is
+     the real one from the start and does not have to be rebuilt later. */
+  var GROUPS = [
+    ['npd',      'NPD & APQP',  [['parts','Parts'],['apqp','APQP Programme'],['pfd','Process Flow'],
+                                 ['pfmea','PFMEA'],['cp','Control Plan'],['msa','MSA'],['ppap','PPAP']]],
+    ['planning', 'Planning',    [['sales_plan','Sales Plan'],['prod_plan','Production Plan'],
+                                 ['loading','Machine Loading'],['capacity','Capacity']]],
+    ['prod',     'Production',  [['entry','Production Entry'],['self_insp','Self Inspection'],
+                                 ['setup','Setup Approval'],['dwm','DWM']]],
+    ['stores',   'Stores',      [['grn','GRN'],['inward','Inward Inspection'],['dc','Delivery Challan'],
+                                 ['rawmat','Raw Material']]],
+    ['people',   'People',      [['hr','HR & Payroll'],['skills','Skill Matrix'],['training','Training']]],
+    ['setup2',   'Setup',       [['profile','Company Profile'],['docs','Document Master'],
+                                 ['calib','Calibration']]]
+  ];
+  var LIVE = { parts:1, profile:1 };
+  var group = 'npd', tab = 'parts';
+
+  function drawNav(){
+    document.getElementById('nav-groups').innerHTML = GROUPS.map(function(g){
+      return '<button data-g="'+g[0]+'" class="'+(group===g[0]?'active':'')+'">'+
+        esc(g[1])+'<span class="n">'+g[2].length+'</span></button>';
+    }).join('');
+    var set = (GROUPS.filter(function(g){return g[0]===group;})[0]||GROUPS[0])[2];
+    document.getElementById('nav-tabs').innerHTML = set.map(function(t){
+      return '<button data-t="'+t[0]+'" class="'+(tab===t[0]?'active':'')+'">'+esc(t[1])+
+        (LIVE[t[0]]?'':' ·') + '</button>';
+    }).join('');
+    document.querySelectorAll('#nav-groups button').forEach(function(b){
+      b.addEventListener('click',function(){
+        group=b.dataset.g;
+        tab=(GROUPS.filter(function(g){return g[0]===group;})[0])[2][0][0];
+        drawNav(); show();
+      });
+    });
+    document.querySelectorAll('#nav-tabs button').forEach(function(b){
+      b.addEventListener('click',function(){ tab=b.dataset.t; drawNav(); show(); });
+    });
+  }
+
+  function label(key){
+    for (var i=0;i<GROUPS.length;i++)
+      for (var j=0;j<GROUPS[i][2].length;j++)
+        if (GROUPS[i][2][j][0]===key) return GROUPS[i][2][j][1];
+    return key;
+  }
+
+  function show(){
+    var want = LIVE[tab] ? tab : 'placeholder';
+    document.querySelectorAll('.panel').forEach(function(p){
+      p.classList.toggle('on', p.dataset.panel===want);
+    });
+    if (want==='placeholder') document.getElementById('ph-name').textContent = label(tab);
+    if (tab==='parts')   loadParts();
+    if (tab==='profile') loadProfileScreen();
+  }
+
+  /* ---------------- Parts ---------------- */
+  var parts = [];
+  function stageBadge(s){
+    var cls = {New:'new',APQP:'apqp',Sample:'sample',PPAP:'ppap',Series:'series'}[s]||'new';
+    return '<span class="badge '+cls+'">'+esc(s)+'</span>';
+  }
+  var NEXT = { New:'APQP', APQP:'Sample', Sample:'PPAP', PPAP:'Series', Series:null };
+
+  async function loadParts(){
+    var host = document.getElementById('p-list');
+    host.innerHTML = '<div class="hint">Loading…</div>';
+    try {
+      parts = await C.idms.parts(document.getElementById('p-filter').value);
+    } catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; return; }
+    if (!parts.length){
+      host.innerHTML = '<div class="empty"><b>No parts yet</b>'+
+        'Parts arrive here when a quotation is won on the website, or you can add one above.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr>'+
+      '<th>Part</th><th>Customer</th><th>Quotation</th><th class="c">Stage</th><th>Added</th><th></th>'+
+      '</tr></thead><tbody>'+ parts.map(function(p){
+        var nxt = NEXT[p.lifecycle];
+        return '<tr><td><b>'+esc(p.part_no||'—')+'</b><div class="hint">'+esc(p.part_name||'')+'</div></td>'+
+          '<td>'+esc(p.customer||'—')+'</td>'+
+          '<td class="hint">'+esc(p.quote_ref||'—')+'</td>'+
+          '<td class="c">'+stageBadge(p.lifecycle)+'</td>'+
+          '<td class="hint">'+C.fmtDate(p.created_at)+'</td>'+
+          '<td>'+(nxt?'<button class="btn adv" data-id="'+esc(p.part_id)+'" data-next="'+nxt+'">Move to '+nxt+'</button>':'')+'</td></tr>';
+      }).join('') + '</tbody></table>';
+
+    host.querySelectorAll('.adv').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Moving this part to '+b.dataset.next+'. What is the evidence?');
+        if (why===null) return;
+        if (!why.trim()) { toast('State a reason — it goes on the record.'); return; }
+        b.disabled = true;
+        try {
+          await C.idms.setLifecycle(b.dataset.id, b.dataset.next, why.trim());
+          toast('Moved to '+b.dataset.next);
+          loadParts();
+        } catch(e){ toast(e.message); b.disabled = false; }
+      });
+    });
+  }
+
+  /* ---------------- Company profile ---------------- */
+  async function loadProfileScreen(){
+    var p = await C.loadProfile();
+    document.getElementById('prof-table').innerHTML =
+      '<tbody>' +
+      [['Company', p.name || '(not set on the website)'],
+       ['Address', p.address || '—'],
+       ['GSTIN', p.gstin || '—'],
+       ['Document prefix', '<b>'+esc(p.docPrefix)+'</b>'],
+       ['Logo', p.logo ? '<img src="'+p.logo+'" style="max-height:34px;">' : '—']]
+      .map(function(r){ return '<tr><th style="width:32%;">'+esc(r[0])+'</th><td>'+r[1]+'</td></tr>'; })
+      .join('') + '</tbody>';
+
+    var host = document.getElementById('audit-list');
+    try {
+      var rows = await C.idms.audit();
+      host.innerHTML = rows.length
+        ? '<table class="t"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Action</th><th>Reason</th></tr></thead><tbody>'+
+          rows.slice(0,40).map(function(a){
+            return '<tr><td class="hint">'+new Date(a.at).toLocaleString('en-GB')+'</td>'+
+              '<td>'+esc(a.who)+'</td><td>'+esc(a.kind)+'<div class="hint">'+esc(a.ref)+'</div></td>'+
+              '<td>'+esc(a.action)+'</td><td class="hint">'+esc(a.reason||'')+'</td></tr>';
+          }).join('')+'</tbody></table>'
+        : '<div class="empty"><b>Nothing recorded yet</b>Activity appears here as soon as work starts.</div>';
+    } catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; }
+  }
+
+  /* ---------------- sign in ---------------- */
+  var pendingUser = null;
+  function gateMsg(t){
+    var el = document.getElementById('g-msg');
+    el.style.display = t ? '' : 'none';
+    el.textContent = t || '';
+  }
+  async function doSignIn(){
+    var b = document.getElementById('g-go');
+    b.disabled = true; gateMsg('');
+    try {
+      var j;
+      if (pendingUser) {
+        j = await C.verifyCode(pendingUser, document.getElementById('g-code').value.trim());
+      } else {
+        j = await C.signIn(document.getElementById('g-user').value.trim(),
+                           document.getElementById('g-pass').value);
+        if (j.needCode) {
+          pendingUser = j.user;
+          document.getElementById('g-code-row').style.display = '';
+          b.textContent = 'Verify code';
+          gateMsg(j.note || 'A code has been sent to you.');
+          document.getElementById('g-msg').className = 'note';
+          b.disabled = false;
+          return;
+        }
+      }
+      if (j.token) start();
+    } catch(e){
+      document.getElementById('g-msg').className = 'note bad';
+      gateMsg(e.message);
+    }
+    b.disabled = false;
+  }
+
+  async function start(){
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = '';
+    try {
+      var p = await C.loadProfile();
+      if (p.name) {
+        document.getElementById('hd-co').textContent = p.name;
+        document.title = p.name + ' — IDMS';
+      }
+    } catch(e){ /* the profile is decoration here, not a blocker */ }
+    drawNav(); show();
+  }
+
+  document.getElementById('g-go').addEventListener('click', doSignIn);
+  ['g-user','g-pass','g-code'].forEach(function(id){
+    document.getElementById(id).addEventListener('keydown', function(e){
+      if (e.key === 'Enter') doSignIn();
+    });
+  });
+  document.getElementById('hd-out').addEventListener('click', function(){
+    C.setToken(''); location.reload();
+  });
+  document.getElementById('hd-refresh').addEventListener('click', show);
+  document.getElementById('p-filter').addEventListener('change', loadParts);
+
+  document.getElementById('p-add').addEventListener('click', async function(){
+    var msg = document.getElementById('p-msg');
+    var part = {
+      customer: document.getElementById('p-cust').value.trim(),
+      partNo:   document.getElementById('p-no').value.trim(),
+      partName: document.getElementById('p-name').value.trim()
+    };
+    if (!part.partNo && !part.partName){
+      msg.style.display=''; msg.className='note bad';
+      msg.textContent='Give the part a number or a name.'; return;
+    }
+    this.disabled = true;
+    try {
+      await C.idms.savePart(part, 'added by hand in the IDMS');
+      msg.style.display=''; msg.className='note good';
+      msg.textContent='Added. It starts at stage New.';
+      ['p-cust','p-no','p-name'].forEach(function(id){ document.getElementById(id).value=''; });
+      loadParts();
+    } catch(e){
+      msg.style.display=''; msg.className='note bad'; msg.textContent=e.message;
+    }
+    this.disabled = false;
+  });
+
+  /* An existing session means the sign-in screen is skipped. */
+  if (C.getToken()) {
+    C.idms.settings().then(start).catch(function(){ C.setToken(''); });
+  }
+})();
+</script>
+</body>
+</html>

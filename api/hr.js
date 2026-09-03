@@ -50,6 +50,78 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, ref: item.itemId });
     }
 
+    /* ---- PUBLIC: employee self-service. Identity is employee ID + date of
+       birth. That is deliberately limited — it returns only that person's own
+       attendance and pay position, never anyone else's, and it can change
+       nothing. Treat it as a convenience, not a secure login. ---- */
+    if (askedFor === 'me' && req.method === 'POST') {
+      const empId = String(preBody.empId || '').trim().toUpperCase();
+      const dob = String(preBody.dob || '').trim();
+      if (!empId || !dob)
+        return res.status(400).json({ ok: false, error: 'Employee ID and date of birth are required.' });
+
+      const rows = await sql`SELECT data FROM hr_employees WHERE upper(emp_id) = ${empId}`;
+      const emp = rows.length ? rows[0].data : null;
+      // one message for both failures, so the form cannot be used to discover valid IDs
+      if (!emp || String(emp.dob || '') !== dob)
+        return res.status(401).json({ ok: false, error: 'Those details do not match our records.' });
+
+      const period = String(preBody.period || new Date().toISOString().slice(0, 10)).slice(0, 7);
+      const [yy, mm] = period.split('-').map(Number);
+      const last = new Date(yy, mm, 0).getDate();
+      const att = await sql`SELECT data FROM hr_attendance WHERE emp_id = ${emp.empId}
+                            AND day >= ${period + '-01'} AND day <= ${period + '-' + String(last).padStart(2, '0')}
+                            ORDER BY day`;
+      const lv = await sql`SELECT data, status FROM hr_leave WHERE emp_id = ${emp.empId}`;
+
+      return res.status(200).json({ ok: true,
+        employee: {
+          empId: emp.empId, name: emp.name, designation: emp.designation,
+          department: emp.department, doj: emp.doj, photo: emp.photo || '',
+          bloodGroup: emp.bloodGroup || '', shift: emp.shift || '',
+          structure: emp.structure || {}, monthlyTds: emp.monthlyTds || 0,
+          otherDeduction: emp.otherDeduction || 0,
+          taxRegime: emp.taxRegime || 'New', declaredDeductions: emp.declaredDeductions || 0,
+          uan: emp.uan || '', pfNumber: emp.pfNumber || '', esiNumber: emp.esiNumber || '',
+          pan: emp.pan || '', bankName: emp.bankName || '', bankAcc: emp.bankAcc || '', ifsc: emp.ifsc || '',
+          pfApplicable: emp.pfApplicable !== false, esiApplicable: emp.esiApplicable !== false
+        },
+        attendance: att.map(r => r.data),
+        leave: lv.map(r => Object.assign({}, r.data, { status: r.status })),
+        period
+      });
+    }
+
+    /* an employee applying for their own leave from the portal */
+    if (askedFor === 'meLeave' && req.method === 'POST') {
+      const empId = String(preBody.empId || '').trim().toUpperCase();
+      const dob = String(preBody.dob || '').trim();
+      const rows = await sql`SELECT data FROM hr_employees WHERE upper(emp_id) = ${empId}`;
+      const emp = rows.length ? rows[0].data : null;
+      if (!emp || String(emp.dob || '') !== dob)
+        return res.status(401).json({ ok: false, error: 'Those details do not match our records.' });
+
+      const l = preBody.leave || {};
+      if (!l.from || !l.to || !l.type)
+        return res.status(400).json({ ok: false, error: 'Dates and leave type are required.' });
+      const leaveId = 'LV-' + Date.now().toString(36).toUpperCase();
+      const rec = { leaveId, empId: emp.empId, type: l.type, from: l.from, to: l.to,
+        reason: l.reason || '', status: 'Pending', appliedVia: 'Employee portal' };
+      // a permission is a few hours inside one working day, not a day off —
+      // the times and hours must survive or payroll cannot see it
+      if (l.kind) rec.kind = String(l.kind);
+      if (l.fromTime) rec.fromTime = String(l.fromTime);
+      if (l.toTime) rec.toTime = String(l.toTime);
+      if (l.hours) rec.hours = Number(l.hours) || 0;
+      if (l.dayFraction !== undefined) rec.dayFraction = Number(l.dayFraction);
+      if (rec.kind === 'permission') { rec.type = 'PERM'; rec.to = rec.from; }
+      await sql`INSERT INTO hr_leave (leave_id, emp_id, data, status)
+                VALUES (${leaveId}, ${emp.empId}, ${JSON.stringify(rec)}::jsonb, 'Pending')`;
+      await audit(emp.empId, 'leave.apply.portal', leaveId, null,
+        { from: l.from, to: l.to, type: l.type }, 'applied by the employee from the portal');
+      return res.status(200).json({ ok: true, leaveId });
+    }
+
     const token = req.headers['x-auth-token'];
     if (!(await checkToken(token)))
       return res.status(401).json({ ok: false, error: 'Not signed in.' });

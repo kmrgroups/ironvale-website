@@ -73,7 +73,9 @@ export async function sendNotification(event, payload = {}, notifyEmail, notifyW
 
   } else if (event === 'custom') {
     // free-form message composed by the site (quotation, clarification, etc.)
-    toEmail = payload.to || '';
+    // With no explicit recipient, it goes to the owner — that is how internal
+    // alerts such as "new job application" reach the recruiter.
+    toEmail = payload.to || ownerEmail || '';
     toWa    = payload.whatsapp || ownerWa || '';
     subject = payload.subject || 'Message';
     text    = payload.text || '';

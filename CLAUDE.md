@@ -119,8 +119,8 @@ idempotent — once sent, the button is replaced by a confirmation.
 
 **Live in the IDMS:** Home (with loadable sample data), Customer Addition,
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
-Process Flow Diagram, PFMEA, GRN, Delivery Challan, People (HR records),
-Company Profile.
+Process Flow Diagram, PFMEA, Control Plan, GRN, Delivery Challan, People (HR
+records), Company Profile.
 
 **Sample data.** The home screen loads one worked example — customer, part,
 priced link, four operations, seven dimensions including two CC and one SC.
@@ -159,9 +159,16 @@ each line is copied from the dimension record, not taken from the model's reply.
 S, O and D land as editable numbers with the RPN recalculating live, and the
 document is stored **separate from its sign-off**: printing before a CFT is named
 stamps the copy `DRAFT — NOT APPROVED` and states it must not go to a customer.
-Sign-off requires named people. Apply the same pattern to the control plan and
-CNC generation: generate a draft, show what it was derived from, never let an
-unreviewed artefact leave the building looking approved.
+Sign-off requires named people. The **control plan** follows the same pattern and adds one rule: it cannot be
+generated without a PFMEA, because an auditor cross-checks the two and controls
+written from nothing answer nothing. It carries the source PFMEA's document
+number and whether that PFMEA was signed, records product characteristics
+(technique, sample size, frequency, control method, reaction plan, poka-yoke)
+and process parameters (tool spec, tool life, speed, feed, depth of cut,
+clamping pressure, coolant and concentration), and reports any RPN-100+ failure
+mode left without a control. Apply the same pattern to CNC generation: draft,
+show what it was derived from, never let an unreviewed artefact leave the
+building looking approved.
 
 Everything the AI generation stages need is now in place: the routing says what
 happens and where, the dimensions say what must be held and how it is measured.

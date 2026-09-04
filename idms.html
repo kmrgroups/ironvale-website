@@ -307,6 +307,41 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="control_plan">
+      <div class="card">
+        <h4>Control Plan</h4>
+        <div class="hint" style="margin-bottom:10px;">Built from the PFMEA, the routing and the
+          dimensions, so every control answers a failure mode that was actually ranked. An auditor
+          cross-checks the two documents against each other — generating the control plan from
+          anything else is how they come apart.</div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>Part</label><select id="cp-part"></select></div>
+          <div><label>Stage</label><select id="cp-stage">
+            <option>Prototype</option><option>Pre-launch</option>
+            <option selected>Production</option></select></div>
+          <div style="align-self:end;">
+            <button class="btn ai-btn" id="cp-gen">Draft with AI</button>
+            <button class="btn" id="cp-print" style="margin-left:6px;">Print</button></div>
+        </div>
+        <div class="note" id="cp-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4 id="cp-title">Control Plan</h4>
+        <div id="cp-body"></div>
+      </div>
+      <div class="card" id="cp-signoff" style="display:none;">
+        <h4>Approval</h4>
+        <div class="hint" style="margin-bottom:10px;">A control plan is what the shop floor is held
+          to. Until it is approved the printed copy is stamped DRAFT.</div>
+        <div class="row four">
+          <div><label>Approved by</label><input id="cp-by" placeholder="names, comma separated"></div>
+          <div><label>Date</label><input type="date" id="cp-on"></div>
+          <div><label>Revision</label><input id="cp-rev" placeholder="00"></div>
+          <div style="align-self:end;"><button class="btn green" id="cp-approve">Record approval</button></div>
+        </div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="fmea">
       <div class="card">
         <h4>Process FMEA</h4>
@@ -577,7 +612,7 @@
       ['pp_spec_master','📋','PP Spec Master']]],
     ['npd','🗂','NPD & APQP','New Part Development',[
       ['parts','📦','Parts',1],['apqp','🗂','APQP Programme'],['pfd','🔵','Process Flow Diagram',1],
-      ['fmea','⚠','PFMEA',1],['control_plan','📋','Control Plan'],['msa','🔬','MSA'],
+      ['fmea','⚠','PFMEA',1],['control_plan','📋','Control Plan',1],['msa','🔬','MSA'],
       ['ppap','📦','PPAP'],['spc','📈','SPC']]],
     ['planning','📈','Planning','Plan',[
       ['sales_plan','📈','Sales Plan'],['capacity_plan','⚙','Capacity Plan'],
@@ -676,6 +711,7 @@
     if (s === 'dim_entry')      loadDimensions();
     if (s === 'pfd')            loadPfd();
     if (s === 'fmea')           loadFmea();
+    if (s === 'control_plan')   loadCp();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -1175,6 +1211,295 @@
       loadHome();
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Remove sample data';
+  }
+
+  /* ---------------- Control Plan ----------------
+     Generated from the PFMEA so the controls answer the failure modes that were
+     ranked. Process parameters — tool, feed, speed, clamping, coolant — sit
+     alongside the product characteristics, because a control plan that says what
+     to measure but not what to set is only half a document. */
+  var cpDoc = null;
+
+  async function loadCp(){
+    await fetchParts();
+    var sel = document.getElementById('cp-part');
+    sel.innerHTML = partOptions(sel.value);
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
+    await loadCpDoc();
+  }
+
+  async function loadCpDoc(){
+    var partId = document.getElementById('cp-part').value;
+    cpDoc = null; fmeaDoc = null;
+    if (partId){
+      try { cpDoc = (await C.idms.docs('control_plan', partId))[0] || null; } catch(e){}
+      try { fmeaDoc = (await C.idms.docs('pfmea', partId))[0] || null; } catch(e){}
+    }
+    drawCp();
+  }
+
+  function drawCp(){
+    var partId = document.getElementById('cp-part').value;
+    var host = document.getElementById('cp-body');
+    var title = document.getElementById('cp-title');
+    document.getElementById('cp-signoff').style.display = 'none';
+    if (!partId){
+      title.textContent = 'Control Plan';
+      host.innerHTML = '<div class="empty"><b>Choose a part</b>' +
+        'Its control plan is built from the PFMEA held against it.</div>';
+      return;
+    }
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    title.textContent = 'Control Plan for ' + (p.part_no||'') + ' — ' + (p.part_name||'');
+
+    if (!cpDoc){
+      /* Without a PFMEA there is nothing for the controls to answer. Say so
+         rather than generating something that looks complete. */
+      host.innerHTML = fmeaDoc
+        ? '<div class="empty"><b>No control plan drafted yet</b>' +
+          'The PFMEA on this part has ' + (((fmeaDoc.data||{}).rows)||[]).length + ' line(s)' +
+          ((fmeaDoc.data||{}).reviewedBy ? ', signed off' : ', still in draft') +
+          '. Press <b>Draft with AI</b> and each control will answer one of them.</div>'
+        : '<div class="empty"><b>No PFMEA on this part</b>' +
+          'A control plan states how the failure modes are controlled. Draft the PFMEA first — ' +
+          'otherwise the controls answer nothing and the two documents will not cross-check.</div>';
+      return;
+    }
+
+    var v = cpDoc.data || {}, rows = v.rows || [], params = v.params || [];
+    var approved = v.approvedBy;
+    host.innerHTML =
+      (approved
+        ? '<div class="note good">Approved by <b>'+esc(approved)+'</b> on '+C.fmtDate(v.approvedOn)+
+          ' · revision '+esc(v.rev||'00')+' · '+esc(v.stage||'Production')+' stage</div>'
+        : '<div class="note"><b>Draft — not approved.</b> Drafted '+C.fmtDate(v.generatedOn)+
+          ' from the PFMEA. Check every reaction plan is one your shop floor can actually carry ' +
+          'out, then record the approval below.</div>') +
+      '<div style="overflow-x:auto;"><table class="t"><thead><tr>' +
+      '<th class="c">Op</th><th>Process / machine</th><th>Characteristic</th><th class="c">Class</th>' +
+      '<th>Specification</th><th>Technique</th><th class="c">Size</th><th>Frequency</th>' +
+      '<th>Control method</th><th>Reaction plan</th><th class="c">Poka-yoke</th>' +
+      '</tr></thead><tbody>' + rows.map(function(r){
+        return '<tr><td class="c">'+esc(r.opNo)+'</td>' +
+          '<td>'+esc(r.process||'')+'<div class="hint">'+esc(r.machine||'')+'</div></td>' +
+          '<td>'+esc(r.characteristic||'')+'</td>' +
+          '<td class="c">'+(r.cls?'<span class="badge '+(r.cls==='CC'?'apqp':'sample')+'">'+
+            esc(r.cls)+'</span>':'')+'</td>' +
+          '<td class="hint">'+esc(r.spec||'')+'</td>' +
+          '<td>'+esc(r.technique||'')+'</td>' +
+          '<td class="c">'+esc(r.sampleSize||'')+'</td>' +
+          '<td>'+esc(r.frequency||'')+'</td>' +
+          '<td class="hint">'+esc(r.method||'')+'</td>' +
+          '<td class="hint">'+esc(r.reaction||'')+'</td>' +
+          '<td class="c">'+(r.pokaYoke?'<span class="badge series">Yes</span>':'—')+'</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      (params.length
+        ? '<div class="sub" style="margin-top:16px;">Process parameters</div>' +
+          '<div style="overflow-x:auto;"><table class="t"><thead><tr><th class="c">Op</th>' +
+          '<th>Tool specification</th><th class="r">Tool life</th><th class="r">Speed</th>' +
+          '<th class="r">Feed</th><th class="r">Depth of cut</th><th class="r">Clamping</th>' +
+          '<th>Coolant</th><th class="r">Concentration</th></tr></thead><tbody>' +
+          params.map(function(q){
+            return '<tr><td class="c">'+esc(q.opNo)+'</td><td>'+esc(q.tool||'—')+'</td>' +
+              '<td class="r">'+esc(q.toolLife||'—')+'</td><td class="r">'+esc(q.speed||'—')+'</td>' +
+              '<td class="r">'+esc(q.feed||'—')+'</td><td class="r">'+esc(q.doc||'—')+'</td>' +
+              '<td class="r">'+esc(q.clamping||'—')+'</td><td>'+esc(q.coolant||'—')+'</td>' +
+              '<td class="r">'+esc(q.coolantConc||'—')+'</td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '') +
+      '<div class="hint" style="margin-top:10px;">' + rows.length + ' control(s)' +
+      (params.length ? ' · ' + params.length + ' operation(s) with parameters set' : '') + '</div>';
+
+    document.getElementById('cp-signoff').style.display = '';
+    document.getElementById('cp-by').value  = approved || '';
+    document.getElementById('cp-on').value  = v.approvedOn || '';
+    document.getElementById('cp-rev').value = v.rev || '00';
+    if (v.stage) document.getElementById('cp-stage').value = v.stage;
+  }
+
+  async function generateCp(){
+    var partId = document.getElementById('cp-part').value;
+    var msg = document.getElementById('cp-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    if (!partId) return say('Choose the part first.');
+    if (!fmeaDoc || !((fmeaDoc.data||{}).rows||[]).length)
+      return say('This part has no PFMEA. Draft that first — a control plan written without one ' +
+                 'controls nothing in particular, and an auditor cross-checks the two.');
+    if (cpDoc && !confirm('This part already has a control plan.\n\nDrafting again replaces every ' +
+        'line. Continue?')) return;
+
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var ops = opsFor(partId);
+    var frows = (fmeaDoc.data||{}).rows || [];
+    var btn = document.getElementById('cp-gen');
+    btn.disabled = true; btn.textContent = 'Drafting…';
+    say('Building controls for ' + frows.length + ' failure mode(s).', true);
+
+    var opText = ops.map(function(o){
+      var v = o.data || {};
+      var dims = dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
+      return 'OPERATION ' + v.opNo + ': ' + (v.name||'') + ' on ' + (v.machine||'machine not stated') +
+        (C.num(v.cycleSec) ? ' (cycle ' + v.cycleSec + 's)' : '') +
+        '\n  ' + (v.description||'') +
+        dims.map(function(d){ var q=d.data||{};
+          return '\n  CHARACTERISTIC: ' + (q.description||'') + ' = ' + q.nominal + (q.unit||'') +
+            ' ' + (q.upper||'0') + '/' + (q.lower||'0') +
+            (q.cls ? ' [' + q.cls + ']' : '') + ', gauge ' + (q.gauge||'not stated') +
+            ', frequency ' + (q.frequency||'not stated'); }).join('');
+    }).join('\n\n');
+
+    var fmeaText = frows.map(function(r){
+      return 'Op ' + r.opNo + ' — ' + r.failureMode + ' (cause: ' + r.cause +
+        '; S' + r.sev + ' O' + r.occ + ' D' + r.det + ' RPN ' + (r.sev*r.occ*r.det) + ')';
+    }).join('\n');
+
+    var prompt =
+'You are drafting a Control Plan to AIAG practice for a Tier-2 automotive machining company.\n\n' +
+'PART: ' + (p.part_no||'') + ' — ' + (p.part_name||'') +
+  ((p.data||{}).rawMaterial ? '\nRAW MATERIAL: ' + (p.data||{}).rawMaterial : '') +
+  '\nSTAGE: ' + document.getElementById('cp-stage').value + '\n\n' +
+'THE PROCESS AS RECORDED:\n' + opText + '\n\n' +
+'THE FAILURE MODES ALREADY RANKED IN THE PFMEA:\n' + fmeaText + '\n\n' +
+'Give one CONTROL block per characteristic, and one PARAM block per operation. ' +
+'Reply in exactly this shape and nothing else — no JSON, no markdown, no asterisks:\n\n' +
+'CONTROL\nOP: <operation number from above>\nCHAR: <the characteristic, copied from above, ' +
+'or a process characteristic such as "programme loaded">\n' +
+'SPEC: <the specification and tolerance>\nTECHNIQUE: <how it is measured — name the gauge above ' +
+'where one is recorded>\nSIZE: <sample size, a number or 100%>\nFREQ: <how often>\n' +
+'METHOD: <control method — check sheet, SPC chart, first-off approval, automatic gauging>\n' +
+'REACTION: <what the operator does when it is out — must be a specific instruction, including ' +
+'what happens to the parts already made since the last good check>\n' +
+'POKA: <yes or no — is there a mistake-proofing device>\nEND\n\n' +
+'PARAM\nOP: <operation number>\nTOOL: <insert or tool specification>\nLIFE: <tool life in pieces>\n' +
+'SPEED: <spindle speed or surface speed with units>\nFEED: <feed with units>\n' +
+'DOC: <depth of cut with units>\nCLAMP: <clamping pressure with units>\n' +
+'COOLANT: <coolant specification>\nCONC: <coolant concentration, e.g. 6-8%>\nEND\n\n' +
+'Rules you must follow:\n' +
+'- Use only the operations and characteristics listed. Never invent one.\n' +
+'- Every CC characteristic must be controlled at 100% or with an automatic device, and must have ' +
+'a poka-yoke answer of yes or a reaction plan that contains 100% containment.\n' +
+'- Every failure mode with RPN 100 or above must be answered by at least one control.\n' +
+'- Reaction plans must say what happens to suspect parts already produced, not just "inform ' +
+'supervisor".\n' +
+'- Give realistic machining parameters for the material and operation. If an operation is manual ' +
+'or inspection only, give a PARAM block with TOOL: not applicable.';
+
+    try {
+      var txt = await C.callAI(prompt, { maxTokens: 3500 });
+      var parsed = parseCpReply(txt, ops);
+      if (!parsed.rows.length) throw new Error('The reply could not be read as control plan lines.');
+
+      var doc = { kind:'control_plan', partId: partId, status:'Draft',
+        docNo: cpDoc ? cpDoc.doc_no : await C.docNumber('cp'),
+        data:{ partId: partId, rows: parsed.rows, params: parsed.params,
+               stage: document.getElementById('cp-stage').value,
+               fmeaRef: fmeaDoc.doc_no || '', fmeaApproved: !!(fmeaDoc.data||{}).reviewedBy,
+               generatedOn: new Date().toISOString().slice(0,10),
+               approvedBy:'', approvedOn:'', rev:'00' } };
+      if (cpDoc) doc.docId = cpDoc.doc_id;
+      await C.idms.saveDoc(doc, 'control plan drafted from the PFMEA');
+      await loadCpDoc();
+
+      /* an unanswered high-RPN mode is the thing an auditor finds, so it is
+         reported here rather than left to be discovered */
+      var unanswered = frows.filter(function(r){
+        if (r.sev*r.occ*r.det < 100) return false;
+        return !parsed.rows.some(function(c){ return C.num(c.opNo) === C.num(r.opNo); }); });
+      say('Drafted ' + parsed.rows.length + ' control(s) and parameters for ' + parsed.params.length +
+          ' operation(s).' +
+          (unanswered.length ? ' <b>' + unanswered.length + ' failure mode(s) at RPN 100+ have no ' +
+            'control against their operation</b> — add one before approving.' : '') +
+          (!(fmeaDoc.data||{}).reviewedBy
+            ? ' Note the PFMEA behind this is still an unsigned draft.' : ''), true);
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Draft with AI';
+  }
+
+  function parseCpReply(txt, ops){
+    var valid = {};
+    ops.forEach(function(o){ valid[String((o.data||{}).opNo)] = o; });
+    var rows = [], params = [];
+    var get = function(block, k){
+      var m = block.match(new RegExp('^\\s*' + k + '\\s*:\\s*(.+)$','mi'));
+      return m ? C.stripMarkup(m[1]).trim() : '';
+    };
+    String(txt||'').split(/^\s*(?=CONTROL\s*$|PARAM\s*$)/mi).forEach(function(block){
+      var isParam = /^\s*PARAM\s*$/mi.test(block.split('\n')[0]);
+      var op = get(block,'OP').replace(/[^0-9]/g,'');
+      if (!op || !valid[op]) return;                 // never a control over a step that does not exist
+      var o = valid[op].data || {};
+      if (isParam){
+        params.push({ opNo:C.num(op), tool:get(block,'TOOL'), toolLife:get(block,'LIFE'),
+          speed:get(block,'SPEED'), feed:get(block,'FEED'), doc:get(block,'DOC'),
+          clamping:get(block,'CLAMP'), coolant:get(block,'COOLANT'), coolantConc:get(block,'CONC') });
+      } else {
+        var chr = get(block,'CHAR');
+        if (!chr) return;
+        /* the class comes from the dimension on file, not from the reply */
+        var dim = dimensions.filter(function(d){
+          var q = d.data||{};
+          return C.num(q.opNo) === C.num(op) && q.description &&
+                 q.description.toLowerCase().indexOf(chr.toLowerCase().slice(0,18)) >= 0; })[0];
+        rows.push({ opNo:C.num(op), process:o.name||'', machine:o.machine||'',
+          characteristic:chr, cls:(dim && (dim.data||{}).cls) || '',
+          spec:get(block,'SPEC'), technique:get(block,'TECHNIQUE'),
+          sampleSize:get(block,'SIZE'), frequency:get(block,'FREQ'),
+          method:get(block,'METHOD'), reaction:get(block,'REACTION'),
+          pokaYoke:/^y/i.test(get(block,'POKA')) });
+      }
+    });
+    rows.sort(function(a,b){ return a.opNo - b.opNo; });
+    params.sort(function(a,b){ return a.opNo - b.opNo; });
+    return { rows: rows, params: params };
+  }
+
+  function printCp(){
+    if (!cpDoc) { toast('Draft the control plan first.'); return; }
+    var partId = document.getElementById('cp-part').value;
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var v = cpDoc.data || {}, rows = v.rows || [], params = v.params || [];
+    var sections = [
+      { type:'table', title:(v.stage||'Production') + ' control plan', dense:true,
+        columns:[{label:'Op',align:'c'},{label:'Process'},{label:'Machine / device'},
+          {label:'Characteristic'},{label:'Class',align:'c'},{label:'Specification'},
+          {label:'Technique'},{label:'Size',align:'c'},{label:'Frequency'},
+          {label:'Control method'},{label:'Reaction plan'},{label:'Poka-yoke',align:'c'}],
+        rows: rows.map(function(r){
+          return [r.opNo, esc(r.process||''), esc(r.machine||''), esc(r.characteristic||''),
+            r.cls?{v:'<b>'+esc(r.cls)+'</b>'}:'', esc(r.spec||''), esc(r.technique||''),
+            esc(r.sampleSize||''), esc(r.frequency||''), esc(r.method||''), esc(r.reaction||''),
+            r.pokaYoke?'Yes':'—'];
+        }),
+        note:'Prepared from PFMEA ' + esc(v.fmeaRef||'') +
+             (v.fmeaApproved ? '.' : ' — that PFMEA is an unsigned draft.') }
+    ];
+    if (params.length) sections.push({ type:'table', title:'Process parameters', dense:true,
+      columns:[{label:'Op',align:'c'},{label:'Tool specification'},{label:'Tool life',align:'r'},
+        {label:'Speed',align:'r'},{label:'Feed',align:'r'},{label:'Depth of cut',align:'r'},
+        {label:'Clamping',align:'r'},{label:'Coolant'},{label:'Concentration',align:'r'}],
+      rows: params.map(function(q){
+        return [q.opNo, esc(q.tool||'—'), esc(q.toolLife||'—'), esc(q.speed||'—'), esc(q.feed||'—'),
+          esc(q.doc||'—'), esc(q.clamping||'—'), esc(q.coolant||'—'), esc(q.coolantConc||'—')];
+      }),
+      note:'Settings to be confirmed at first-off approval and held for the run.' });
+    sections.push({ type:'pairs', title:'Record', rows:[
+      ['Stage', esc(v.stage||'Production')],
+      ['Drafted', C.fmtDate(v.generatedOn)],
+      ['Approved by', esc(v.approvedBy || 'not yet approved')],
+      ['Approved on', v.approvedOn ? C.fmtDate(v.approvedOn) : '—'],
+      ['Source PFMEA', esc(v.fmeaRef||'—')],
+      ['Characteristics controlled', rows.length],
+      ['Of which CC or SC', rows.filter(function(r){ return r.cls; }).length]] });
+
+    C.openReport({
+      title: 'Control Plan' + (v.approvedBy ? '' : ' — DRAFT, NOT APPROVED'),
+      kind: v.approvedBy ? 'Control Plan' : 'Control Plan (draft)',
+      landscape: true,
+      subtitle: (p.part_no||'') + ' · ' + (p.part_name||'') + ' · ' + esc(cpDoc.doc_no||'') +
+        ' · rev ' + (v.rev||'00'),
+      sections: sections });
   }
 
   /* ---------------- PFMEA ----------------
@@ -2076,6 +2401,31 @@
       go('home');
     });
     f.click();
+  });
+
+  document.getElementById('cp-part').addEventListener('change', loadCpDoc);
+  document.getElementById('cp-gen').addEventListener('click', generateCp);
+  document.getElementById('cp-print').addEventListener('click', printCp);
+  document.getElementById('cp-approve').addEventListener('click', async function(){
+    if (!cpDoc) return;
+    var by = document.getElementById('cp-by').value.trim();
+    var msg = document.getElementById('cp-msg');
+    if (!by){
+      msg.style.display=''; msg.className='note bad';
+      msg.textContent='Name who approved it. This is the document the shop floor is held to.'; return;
+    }
+    this.disabled = true;
+    try {
+      await C.idms.saveDoc({ docId: cpDoc.doc_id, kind:'control_plan',
+        partId: document.getElementById('cp-part').value, status:'Approved',
+        data: Object.assign({}, cpDoc.data, { approvedBy: by,
+          approvedOn: document.getElementById('cp-on').value || new Date().toISOString().slice(0,10),
+          rev: document.getElementById('cp-rev').value || '00',
+          stage: document.getElementById('cp-stage').value }) }, 'control plan approved by ' + by);
+      await loadCpDoc();
+      toast('Approval recorded');
+    } catch(e){ toast(e.message); }
+    this.disabled = false;
   });
 
   document.getElementById('fm-part').addEventListener('change', loadFmeaDoc);

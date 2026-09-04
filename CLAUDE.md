@@ -120,11 +120,22 @@ idempotent — once sent, the button is replaced by a confirmation.
 **Live in the IDMS:** Home, Customer Addition, Parts, GRN, Delivery Challan,
 People (HR records), Company Profile.
 
-**The NPD chain** is being built in this order, each level hanging off the one
-above: customer → part (price, HSN, drawing, raw material) → process/routing →
-dimensions per process → BOM → PFD → PFMEA (AI) → control plan (AI, AIAG) →
-CNC program (AI). Customer and part are done. A won quotation on the website
-now creates **both** the customer (with address and contact) and the parts.
+**The NPD chain**, each level hanging off the one above: customer → part →
+customer-part link (their number, their price) → process/routing → dimensions
+per process → BOM → PFD → PFMEA (AI) → control plan (AI, AIAG) → CNC program
+(AI). Customer, part and the priced link are done.
+
+**Part identity — important.** A part is *ours*, not a customer's. Its internal
+number is issued by the database in one continuous series (`ELIX-PART-0001`) and
+is never typed. The customer's own part number, their drawing number, HSN and
+**their price** live on a separate `idms_docs` record of kind `cust_part`, so one
+part can be sold to several customers at different prices with a single APQP
+record behind it. Rules enforced: one drawing number = one part; one customer =
+one live price per part.
+
+A won quotation on the website creates all three — customer (with address and
+contact from the enquiry), part (reusing an existing one if the drawing matches),
+and the priced link. Nothing in that path is typed by hand.
 **Declared but not built:** 65 further screens, marked `soon` in the menu, each
 showing an explanation rather than a blank page. The menu structure mirrors the
 system the team already uses.

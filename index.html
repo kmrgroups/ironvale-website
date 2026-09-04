@@ -10173,7 +10173,12 @@ Reply with ONLY this JSON, no commentary or code fences:
       /* The customer is the head of the chain — a part cannot hang off nothing.
          Create it once here if it is not already on file, so the IDMS opens with
          the address and contact already filled rather than being retyped. */
-      let customerId='';
+      let customerId='', prefix='';
+      try{
+        const co=CO()||{};
+        prefix=String(co.docPrefix||co.shortName||
+          (co.legalName||data.brandName||'DOC').replace(/[^A-Za-z]/g,'').slice(0,4)).toUpperCase();
+      }catch(e){ prefix='DOC'; }
       try{
         const ex=(await api('/api/idms?what=docs&kind=customer')).docs||[];
         const hit=ex.find(c=>((c.data||{}).name||'').toLowerCase()===customer.toLowerCase());
@@ -10194,19 +10199,52 @@ Reply with ONLY this JSON, no commentary or code fences:
       }catch(e){ /* a missing customer record must not stop the parts transferring */ }
 
       const made=[], failed=[];
+      /* One quotation line becomes: the part (if this drawing is not already on
+         file) and a priced link from this customer to it. The same part sold to
+         a second customer reuses the part and adds a second link, so there is
+         one APQP record however many customers buy it. */
+      let existing=[];
+      try{ existing=(await api('/api/idms?what=parts')).parts||[]; }catch(e){}
       for(const line of lines){
         try{
-          const j=await api('/api/idms',{method:'POST',body:JSON.stringify({what:'parts',
-            part:{customer, partNo:String(line.code||line.desc||'').slice(0,60),
-              partName:String(line.desc||'').slice(0,120), lifecycle:'New',
-              quoteRef:q.number||r.ref,
-              data:{ rfqRef:r.ref, customerId, quotedQty:line.qty||'', unit:line.unit||'',
-                     quotedRate:line.rate||'', price:parseFloat(line.rate)||0,
-                     uom:line.unit||'Nos', hsn:line.hsn||'', drawingNo:line.drawing||'',
-                     quotedOn:q.date||'',
-                     contact:r.name||'', email:r.email||'', phone:r.phone||'' }},
-            reason:'quotation '+(q.number||r.ref)+' approved by the customer'})});
-          made.push(j.partId);
+          const drg=String(line.drawing||'').trim();
+          const custNo=String(line.code||'').trim();
+          const name=String(line.desc||'').slice(0,120);
+
+          let part = drg
+            ? existing.find(p=>String((p.data||{}).drawingNo||'').toLowerCase()===drg.toLowerCase())
+            : null;
+          if(!part && !drg)
+            part = existing.find(p=>String(p.part_name||'').toLowerCase()===name.toLowerCase());
+
+          if(!part){
+            const sj=await api('/api/idms',{method:'POST',
+              body:JSON.stringify({what:'serial',name:'part'})});
+            const internal=(prefix||'DOC')+'-PART-'+String(sj.value).padStart(4,'0');
+            const pj=await api('/api/idms',{method:'POST',body:JSON.stringify({what:'parts',
+              part:{customer:'', partNo:internal, partName:name, lifecycle:'New',
+                quoteRef:q.number||r.ref,
+                data:{ drawingNo:drg, drawingRev:String(line.rev||''),
+                       uom:line.unit||'Nos', rawMaterial:String(line.material||''),
+                       rfqRef:r.ref, quotedOn:q.date||'' }},
+              reason:'part created from won quotation '+(q.number||r.ref)})});
+            part={part_id:pj.partId, part_no:internal, part_name:name,
+                  data:{drawingNo:drg}, lifecycle:'New'};
+            existing.push(part);
+          }
+
+          await api('/api/idms',{method:'POST',body:JSON.stringify({what:'docs',
+            doc:{kind:'cust_part', partId:part.part_id, status:'Active', docNo:custNo,
+              data:{ partId:part.part_id, internalNo:part.part_no,
+                     customerId, customerName:customer,
+                     custPartNo:custNo, custDrawingNo:drg,
+                     hsn:String(line.hsn||''), price:parseFloat(line.rate)||0,
+                     uom:line.unit||'Nos', quotedQty:line.qty||'',
+                     quoteRef:q.number||r.ref, rfqRef:r.ref,
+                     effectiveFrom:q.date||new Date().toISOString().slice(0,10) }},
+            reason:'price agreed on quotation '+(q.number||r.ref)})});
+
+          made.push(part.part_id);
         }catch(e){ failed.push(String(line.desc).slice(0,40)+' — '+e.message); }
       }
 

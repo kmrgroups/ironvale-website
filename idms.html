@@ -157,26 +157,48 @@
         <div class="hint" style="margin-bottom:10px;">A part is created automatically when a quotation
           is won on the website. Add one by hand only for work that did not come through that route.</div>
         <div class="row four">
-          <div><label>Customer</label><select id="p-cust"></select></div>
-          <div><label>Part number</label><input id="p-no"></div>
+          <div><label>Internal part number</label><input id="p-no" readonly>
+            <div class="hint">Issued by the database — never typed.</div></div>
           <div><label>Part name</label><input id="p-name"></div>
           <div><label>Drawing number</label><input id="p-drg"></div>
-        </div>
-        <div class="row four" style="margin-top:9px;">
           <div><label>Drawing revision</label><input id="p-rev" placeholder="00"></div>
-          <div><label>HSN code</label><input id="p-hsn"></div>
-          <div><label>Selling price</label><input class="num" id="p-price"></div>
-          <div><label>Unit</label><select id="p-uom">
-            <option>Nos</option><option>Kg</option><option>Set</option><option>Metre</option></select></div>
         </div>
         <div class="row four" style="margin-top:9px;">
           <div><label>Raw material</label><input id="p-rm" placeholder="EN8 bright bar Ø25"></div>
           <div><label>Net weight (kg)</label><input class="num" id="p-netwt"></div>
           <div><label>Gross weight (kg)</label><input class="num" id="p-grosswt"></div>
+          <div><label>Unit</label><select id="p-uom">
+            <option>Nos</option><option>Kg</option><option>Set</option><option>Metre</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
           <div style="align-self:end;"><button class="btn gold" id="p-add">Add part</button></div>
+          <div style="grid-column:span 3;align-self:end;"><span class="hint">A part is yours, not a
+            customer's. Customers, their own part numbers and their prices are added to the part
+            once it exists — one part can go to several customers at different prices.</span></div>
         </div>
         <div class="note" id="p-msg" style="display:none;"></div>
       </div>
+      <div class="card" id="p-links" style="display:none;">
+        <h4 id="p-links-title">Customers for this part</h4>
+        <div class="hint" style="margin-bottom:10px;">The same part can go to several customers, each
+          with their own part number and their own price. Adding a customer here does not change the
+          part itself.</div>
+        <div class="row four">
+          <div><label>Customer</label><select id="pl-cust"></select></div>
+          <div><label>Their part number</label><input id="pl-no"></div>
+          <div><label>Price</label><input class="num" id="pl-price"></div>
+          <div><label>HSN code</label><input id="pl-hsn"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Their drawing number</label><input id="pl-drg"></div>
+          <div><label>Effective from</label><input type="date" id="pl-from"></div>
+          <div style="align-self:end;"><button class="btn gold" id="pl-add">Add customer</button></div>
+          <div style="align-self:end;"><button class="btn" id="pl-close">Close</button></div>
+        </div>
+        <div class="note" id="pl-msg" style="display:none;"></div>
+        <div id="pl-list" style="margin-top:10px;"></div>
+      </div>
+
       <div class="card">
         <h4>Parts</h4>
         <div class="row four" style="margin-bottom:8px;">
@@ -585,10 +607,10 @@
   async function loadParts(){
     var host = document.getElementById('p-list');
     host.innerHTML = '<div class="hint">Loading…</div>';
-    /* a part belongs to a customer, so that list loads with this screen */
+    /* a part is customer-independent; the links carry who buys it and at what */
     await fetchCustomers();
-    var csel = document.getElementById('p-cust');
-    csel.innerHTML = customerOptions(csel.value);
+    try { custParts = await C.idms.docs('cust_part'); } catch(e){ custParts = []; }
+    document.getElementById('p-no').value = await nextPartNumber();
     var parts;
     try { parts = await C.idms.parts(document.getElementById('p-filter').value); }
     catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; return; }
@@ -597,21 +619,31 @@
         'won on the website, or you can add one above.</div>';
       return;
     }
-    host.innerHTML = '<table class="t"><thead><tr><th>Part</th><th>Customer</th><th>Quotation</th>' +
-      '<th class="r">Price</th><th class="c">Stage</th><th>Added</th><th></th></tr></thead><tbody>' +
+    host.innerHTML = '<table class="t"><thead><tr><th>Internal No</th><th>Part</th>' +
+      '<th>Customers</th><th class="c">Stage</th><th>Added</th><th></th></tr></thead><tbody>' +
       parts.map(function(p){
         var n = NEXT[p.lifecycle];
         var v = p.data || {};
-        return '<tr><td><b>'+esc(p.part_no||'—')+'</b><div class="hint">'+esc(p.part_name||'')+
-          (v.drawingNo?' · drg '+esc(v.drawingNo)+(v.drawingRev?' rev '+esc(v.drawingRev):''):'')+'</div></td>'+
-          '<td>'+esc(p.customer||'—')+'</td><td class="hint">'+esc(p.quote_ref||'—')+'</td>'+
-          '<td class="r">'+(C.num(v.price)?C.rate(v.price):'—')+
-          (v.hsn?'<div class="hint">HSN '+esc(v.hsn)+'</div>':'')+'</td>'+
+        var links = custParts.filter(function(cp){ return (cp.data||{}).partId === p.part_id; });
+        return '<tr><td><b>'+esc(p.part_no||'—')+'</b></td>'+
+          '<td>'+esc(p.part_name||'—')+'<div class="hint">'+
+            (v.drawingNo?'drg '+esc(v.drawingNo)+(v.drawingRev?' rev '+esc(v.drawingRev):''):'no drawing')+
+            (v.rawMaterial?' · '+esc(v.rawMaterial):'')+'</div></td>'+
+          '<td>'+(links.length
+            ? links.map(function(cp){ var q=cp.data||{};
+                return '<div>'+esc(q.customerName||'—')+
+                  ' <span class="hint">'+esc(q.custPartNo||'')+' · '+C.rate(q.price)+'</span></div>'; }).join('')
+            : '<span class="hint">none yet</span>')+'</td>'+
           '<td class="c">'+stageBadge(p.lifecycle)+'</td>'+
           '<td class="hint">'+C.fmtDate(p.created_at)+'</td><td>'+
+          '<button class="btn p-link" data-id="'+esc(p.part_id)+'">Customers</button> '+
           (n?'<button class="btn adv" data-id="'+esc(p.part_id)+'" data-next="'+n+'">Move to '+n+'</button>':'')+
           '</td></tr>';
       }).join('') + '</tbody></table>';
+    window.__parts = parts;
+    host.querySelectorAll('.p-link').forEach(function(b){
+      b.addEventListener('click', function(){ openLinks(b.dataset.id); });
+    });
     host.querySelectorAll('.adv').forEach(function(b){
       b.addEventListener('click', async function(){
         var why = prompt('Moving this part to ' + b.dataset.next + '. What is the evidence?');
@@ -707,6 +739,54 @@
           body:'Stores                              Quality                              Approved by' }
       ]
     });
+  }
+
+  /* ---------------- Part numbering and customer links ----------------
+     The internal number is issued by the database in one continuous series, so
+     it is never typed and never repeated. A customer's own part number and
+     price live on a link record instead, because the same part is sold to
+     several customers at different prices. */
+  var custParts = [], plPart = null;
+
+  async function nextPartNumber(){
+    try {
+      var p = await C.loadProfile();
+      var counters = (await C.api('/api/idms?what=serial')).counters || [];
+      var cur = counters.filter(function(c){ return c.name === 'part'; })[0];
+      return p.docPrefix + '-PART-' + String((cur ? Number(cur.value) : 0) + 1).padStart(4,'0');
+    } catch(e){ return '(issued on save)'; }
+  }
+
+  function openLinks(partId){
+    var p = (window.__parts||[]).filter(function(x){ return x.part_id === partId; })[0];
+    if (!p) return;
+    plPart = p;
+    document.getElementById('p-links-title').textContent =
+      'Customers for ' + (p.part_no||'') + ' — ' + (p.part_name||'');
+    document.getElementById('pl-cust').innerHTML = customerOptions('');
+    document.getElementById('p-links').style.display = '';
+    document.getElementById('pl-msg').style.display = 'none';
+    drawLinks();
+  }
+
+  function drawLinks(){
+    var host = document.getElementById('pl-list');
+    var rows = custParts.filter(function(cp){ return (cp.data||{}).partId === plPart.part_id; });
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>No customer buys this part yet</b>' +
+        'Add one above, or win a quotation for it on the website.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Customer</th><th>Their part no</th>' +
+      '<th>Their drawing</th><th>HSN</th><th class="r">Price</th><th>From</th><th>Quotation</th>' +
+      '</tr></thead><tbody>' + rows.map(function(cp){
+        var v = cp.data || {};
+        return '<tr><td>'+esc(v.customerName||'—')+'</td><td><b>'+esc(v.custPartNo||'—')+'</b></td>'+
+          '<td class="hint">'+esc(v.custDrawingNo||'—')+'</td><td class="hint">'+esc(v.hsn||'—')+'</td>'+
+          '<td class="r">'+C.rate(v.price)+'</td>'+
+          '<td class="hint">'+(v.effectiveFrom?C.fmtDate(v.effectiveFrom):'—')+'</td>'+
+          '<td class="hint">'+esc(v.quoteRef||'—')+'</td></tr>';
+      }).join('') + '</tbody></table>';
   }
 
   /* ---------------- Customers ----------------
@@ -1392,37 +1472,77 @@
     var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
                                  msg.innerHTML=t; };
     var g = function(id){ return document.getElementById(id).value.trim(); };
-    var csel = document.getElementById('p-cust');
-    var cust = customers.filter(function(c){ return c.doc_id === csel.value; })[0];
+    if (!g('p-name')) return say('Give the part a name.');
 
-    if (!csel.value)
-      return say('Choose the customer first. Everything below a part — processes, dimensions, ' +
-                 'control plan — is traced back through the customer, so a part cannot be loose.');
-    if (!g('p-no') && !g('p-name')) return say('Give the part a number or a name.');
-
-    /* the same part number twice under one customer means two APQP records for
-       one component, and nobody can tell which is current */
-    var existing = (await C.idms.parts()).filter(function(p){
-      return p.customer === (cust.data||{}).name &&
-             p.part_no && p.part_no.toLowerCase() === g('p-no').toLowerCase(); })[0];
-    if (existing && g('p-no'))
-      return say('<b>'+esc(g('p-no'))+'</b> already exists for this customer at stage <b>'+
-                 esc(existing.lifecycle)+'</b>. Use that part rather than creating a second one.');
+    /* the same drawing entered twice is two APQP records for one component and
+       nobody can say which is current */
+    var all = await C.idms.parts();
+    if (g('p-drg')){
+      var clash = all.filter(function(p){
+        return ((p.data||{}).drawingNo||'').toLowerCase() === g('p-drg').toLowerCase(); })[0];
+      if (clash)
+        return say('Drawing <b>'+esc(g('p-drg'))+'</b> is already part <b>'+esc(clash.part_no)+
+                   '</b> at stage <b>'+esc(clash.lifecycle)+'</b>. Open its Customers instead of ' +
+                   'creating a second part for the same drawing.');
+    }
 
     this.disabled = true;
     try {
+      var internal = await C.docNumber('part');
       await C.idms.savePart({
-        customer: (cust.data||{}).name || '',
-        partNo: g('p-no'), partName: g('p-name'), lifecycle:'New',
-        data:{ customerId: csel.value,
-               drawingNo:g('p-drg'), drawingRev:g('p-rev'), hsn:g('p-hsn'),
-               price:C.num(g('p-price')), uom:document.getElementById('p-uom').value,
+        customer:'', partNo: internal, partName: g('p-name'), lifecycle:'New',
+        data:{ drawingNo:g('p-drg'), drawingRev:g('p-rev'),
+               uom:document.getElementById('p-uom').value,
                rawMaterial:g('p-rm'), netWeight:C.num(g('p-netwt')),
                grossWeight:C.num(g('p-grosswt')) }
-      }, 'added by hand in the IDMS');
-      say('Added at stage <b>New</b>. Next: add the processes, then the dimensions against each.', true);
-      ['p-no','p-name','p-drg','p-rev','p-hsn','p-price','p-rm','p-netwt','p-grosswt']
+      }, 'part created in the IDMS');
+      say('Created as <b>'+esc(internal)+'</b>. Open its <b>Customers</b> to add who buys it and ' +
+          'at what price.', true);
+      ['p-name','p-drg','p-rev','p-rm','p-netwt','p-grosswt']
         .forEach(function(id){ document.getElementById(id).value=''; });
+      loadParts();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+
+  document.getElementById('pl-close').addEventListener('click', function(){
+    document.getElementById('p-links').style.display='none'; plPart=null;
+  });
+
+  document.getElementById('pl-add').addEventListener('click', async function(){
+    if (!plPart) return;
+    var msg = document.getElementById('pl-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var sel = document.getElementById('pl-cust');
+    var cust = customers.filter(function(c){ return c.doc_id === sel.value; })[0];
+    if (!cust) return say('Choose the customer.');
+    if (!C.num(g('pl-price'))) return say('A price is needed — that is the point of the link.');
+
+    /* one customer, one live price for a part. A second link would leave two
+       prices and no way to know which one to invoice. */
+    var dup = custParts.filter(function(cp){
+      var v = cp.data||{};
+      return v.partId === plPart.part_id && v.customerId === sel.value; })[0];
+    if (dup)
+      return say('<b>'+esc((cust.data||{}).name)+'</b> is already linked to this part at <b>'+
+                 C.rate((dup.data||{}).price)+'</b>. Remove that link before adding another price.');
+
+    this.disabled = true;
+    try {
+      await C.idms.saveDoc({ kind:'cust_part', partId: plPart.part_id, status:'Active',
+        docNo: g('pl-no') || (cust.data||{}).code || '',
+        data:{ partId: plPart.part_id, internalNo: plPart.part_no,
+               customerId: sel.value, customerName: (cust.data||{}).name || '',
+               custPartNo: g('pl-no'), custDrawingNo: g('pl-drg'), hsn: g('pl-hsn'),
+               price: C.num(g('pl-price')), effectiveFrom: g('pl-from') }
+      }, 'customer linked to part');
+      say('Linked.', true);
+      ['pl-no','pl-price','pl-hsn','pl-drg'].forEach(function(id){
+        document.getElementById(id).value=''; });
+      custParts = await C.idms.docs('cust_part');
+      drawLinks();
       loadParts();
     } catch(e){ say(esc(e.message)); }
     this.disabled = false;

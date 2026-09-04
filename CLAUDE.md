@@ -135,7 +135,10 @@ one live price per part.
 
 A won quotation on the website creates all three — customer (with address and
 contact from the enquiry), part (reusing an existing one if the drawing matches),
-and the priced link. Nothing in that path is typed by hand.
+and the priced link. Nothing in that path is typed by hand: the quotation line
+carries the customer's part number, drawing number, revision and HSN, and
+"Add to quotation" on the costing screen fills those from the title block the AI
+already read off the drawing.
 **Declared but not built:** 65 further screens, marked `soon` in the menu, each
 showing an explanation rather than a blank page. The menu structure mirrors the
 system the team already uses.

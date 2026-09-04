@@ -9563,7 +9563,8 @@ Reply with ONLY this JSON, no commentary or code fences:
   }
   function blankQuoteDoc(r){
     return {number:'',date:new Date().toISOString().slice(0,10),
-      items:[{desc:r&&r.message?String(r.message).slice(0,90):'',qty:'',unit:'nos',rate:''}],
+      items:[{desc:r&&r.message?String(r.message).slice(0,90):'',code:'',drawing:'',rev:'',hsn:'',
+              qty:'',unit:'nos',rate:''}],
       leadTime:'',notes:'',discount:''};
   }
   function quoteTotals(q){
@@ -9808,15 +9809,24 @@ Reply with ONLY this JSON, no commentary or code fences:
         ${(()=>{const q=r.quoteDoc; if(!q) return '';
           const t=quoteTotals(q);
           return `<div class="qb"><h4>Quotation Document — ${esc(q.number||'not numbered yet')}</h4>
-          <table class="qb-items"><thead><tr><th>Description</th><th style="width:62px">Qty</th>
+          <table class="qb-items"><thead><tr><th>Description</th>
+          <th style="width:104px">Their part no</th><th style="width:104px">Drawing</th>
+          <th style="width:52px">Rev</th><th style="width:84px">HSN</th>
+          <th style="width:62px">Qty</th>
           <th style="width:62px">Unit</th><th style="width:88px">Rate</th><th style="width:34px"></th></tr></thead>
           <tbody>${(q.items||[]).map((it,ii)=>`<tr>
             <td><input class="qi" data-i="${i}" data-ii="${ii}" data-k="desc" value="${esc(it.desc)}"></td>
+            <td><input class="qi" data-i="${i}" data-ii="${ii}" data-k="code" value="${esc(it.code||'')}" placeholder="customer's"></td>
+            <td><input class="qi" data-i="${i}" data-ii="${ii}" data-k="drawing" value="${esc(it.drawing||'')}"></td>
+            <td><input class="qi" data-i="${i}" data-ii="${ii}" data-k="rev" value="${esc(it.rev||'')}"></td>
+            <td><input class="qi" data-i="${i}" data-ii="${ii}" data-k="hsn" value="${esc(it.hsn||'')}"></td>
             <td><input class="qi num" data-i="${i}" data-ii="${ii}" data-k="qty" value="${esc(it.qty)}"></td>
             <td><input class="qi" data-i="${i}" data-ii="${ii}" data-k="unit" value="${esc(it.unit)}"></td>
             <td><input class="qi num" data-i="${i}" data-ii="${ii}" data-k="rate" value="${esc(it.rate)}"></td>
             <td><button class="qb-del" data-i="${i}" data-ii="${ii}" title="Remove line">×</button></td></tr>`).join('')}</tbody></table>
           <button class="qb-add" data-i="${i}">+ Add line item</button>
+          <div class="field-hint">Their part number, drawing and HSN are carried straight into the
+            IDMS when the quotation is won, so nobody types them a second time.</div>
           <div class="qb-grid">
             <div><label>Lead Time</label><input class="qf" data-i="${i}" data-k="leadTime" value="${esc(q.leadTime)}" placeholder="e.g. 4 weeks from PO"></div>
             <div><label>Discount (${esc(QC().currencySymbol||'')})</label><input class="qf num" data-i="${i}" data-k="discount" value="${esc(q.discount)}"></div>
@@ -10046,7 +10056,13 @@ Reply with ONLY this JSON, no commentary or code fences:
     host.querySelectorAll('[data-act="costtoquote"]').forEach(b=>b.addEventListener('click',async()=>{
       const idx=+b.dataset.i,r=rfqs[idx],t=computeCosting(r.costing);
       const desc=extractSummaryLine(r.extract||{})||r.costing.material.grade||'Machined component';
-      const line={desc,qty:String(t.qty),unit:'nos',rate:t.sellingPrice.toFixed(2)};
+      /* The AI already read the title block when it costed the drawing. Carrying
+         those fields onto the quotation line is what makes the handover into the
+         IDMS typing-free — the part number, drawing and revision are the
+         customer's own, straight off their drawing. */
+      const px=((r.extract||{}).part)||{};
+      const line={desc, code:px.number||'', drawing:px.drawingNumber||'', rev:px.revision||'',
+        hsn:'', qty:String(t.qty), unit:'nos', rate:t.sellingPrice.toFixed(2)};
       if(!r.quoteDoc){
         const doc=blankQuoteDoc(r); doc.number=nextQuoteNumber(); doc.items=[line];
         data.quoteCfg.nextSeq=(parseInt(data.quoteCfg.nextSeq,10)||1)+1;

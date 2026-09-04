@@ -330,12 +330,22 @@
      visible failure. */
   async function callAI(prompt, opts) {
     opts = opts || {};
-    const res = await fetch('/api/ai', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt, system: opts.system,
-        attachment: opts.attachment, maxTokens: opts.maxTokens || 2000 })
-    });
-    const j = await res.json();
+    let res;
+    try {
+      res = await fetch('/api/ai', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt, system: opts.system,
+          attachment: opts.attachment, maxTokens: opts.maxTokens || 2000 })
+      });
+    } catch (e) {
+      /* the request never left the browser — a dropped connection, not the AI */
+      throw new Error('Could not reach the server — the request never left this browser. ' +
+        'Check the internet connection and try again. Nothing is wrong with the AI settings.');
+    }
+    let j;
+    try { j = await res.json(); }
+    catch (e) { throw new Error('The server answered but not with a result (' + res.status + '). ' +
+      'If this keeps happening, check the deployment.'); }
     if (j.ok && j.text) return j.text;
     if (j.notConfigured)
       throw new Error('No AI provider is configured. Add a key in Site Admin on the website.');

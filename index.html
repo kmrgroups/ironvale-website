@@ -9110,7 +9110,14 @@ Reply with ONLY this JSON, no commentary or code fences:
     let p;
     try{
       p=parseAiJson(text);
-    }catch(e){ return {error:'Could not understand the AI route plan.'}; }
+    }catch(e){
+      /* keep enough of the reply to see what actually came back — a bare
+         "could not understand" tells nobody anything */
+      const peek=String(text).replace(/\s+/g,' ').trim().slice(0,180);
+      return {error:'The AI answered, but not in the shape the costing needs. It said: "'+peek+
+        (String(text).length>180?'…':'')+'" — press Planning route again, or check the AI model '+
+        'configured in Site Admin.'};
+    }
 
     const c=blankCosting(r);
     c.qty=qty; c.batchQty=qty;
@@ -9905,7 +9912,8 @@ Reply with ONLY this JSON, no commentary or code fences:
       const idx=+b.dataset.i,r=rfqs[idx];
       b.textContent='Planning route…'; b.disabled=true;
       const c=await generateCosting(r);
-      const log=[`${new Date().toLocaleString()} — cost sheet ${c.error?'failed':'generated'}`].concat(r.log||[]);
+      const log=[`${new Date().toLocaleString()} — cost sheet ${c.error?'failed: '+
+        String(c.error).replace(/\s+/g,' ').slice(0,120):'generated'}`].concat(r.log||[]);
       const u=await patch(r.ref,{costing:c,log});
       if(u) rfqs[idx]=u; else r.costing=c;
       renderRfqAdmin();
@@ -10324,8 +10332,20 @@ Reply with ONLY this JSON, no commentary or code fences:
   async function callAI(prompt,opts={}){
     // 1) this site's own AI endpoint (key stays on the server)
     try{
-      const r=await fetch(API+'/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({prompt,attachment:opts.attachment,system:opts.system,maxTokens:opts.maxTokens})});
+      let r;
+      try{
+        r=await fetch(API+'/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({prompt,attachment:opts.attachment,system:opts.system,maxTokens:opts.maxTokens})});
+      }catch(netErr){
+        /* fetch only throws like this when the request never reached the server —
+           dropped wi-fi, DNS, a reset connection. Saying "the AI failed" here
+           sends someone hunting through API keys for a broken network. */
+        aiReady=false;
+        if(opts.surfaceError)
+          throw new Error('Could not reach the server — the request never left this browser. '+
+            'Check the internet connection and try again. (Nothing is wrong with the AI settings.)');
+        return '';
+      }
       const j=await r.json();
       if(j.ok&&j.text){ aiReady=true; return j.text; }
       if(j.notConfigured){ aiReady=false; }

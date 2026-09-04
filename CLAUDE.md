@@ -119,8 +119,18 @@ idempotent — once sent, the button is replaced by a confirmation.
 
 **Live in the IDMS:** Home (with loadable sample data), Customer Addition,
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
-Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, GRN, Delivery
-Challan, People (HR records), Company Profile.
+Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
+GRN, Delivery Challan, People (HR records), Company Profile.
+
+**Setup approval** is the first shop-floor screen and the pattern for the rest:
+what gets checked comes from the **control plan** for that operation (falling
+back to the recorded dimensions, and saying so when there is no plan), limits are
+computed from nominal plus tolerance, and a reading outside them **blocks
+approval** rather than warning. Partial sheets cannot be approved either — an
+approval on partial evidence is not an approval. A bad setup can still be
+recorded as *rejected*, with its readings, because that is a quality record. The
+out-of-tolerance message names the characteristic and warns that parts run since
+the last approval are suspect.
 
 **The NPD chain is now complete end to end**: a won quotation on the website
 produces customer, part and price; routing and dimensions are entered against

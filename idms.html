@@ -958,15 +958,36 @@
   document.getElementById('gr-clear').addEventListener('click', function(){
     ['gr-sup','gr-inv','gr-veh','gr-desc','gr-qty','gr-acc','gr-rej','gr-rem']
       .forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('gr-acc').dataset.touched = '';
     document.getElementById('gr-msg').style.display='none';
   });
 
-  /* accepted defaults to the received quantity, so the common case is one field */
-  document.getElementById('gr-qty').addEventListener('input', function(){
+  /* the offer in the error message */
+  document.getElementById('gr-msg').addEventListener('click', function(e){
+    if (!e.target || e.target.id !== 'gr-fix') return;
+    e.preventDefault();
     var acc = document.getElementById('gr-acc');
-    if (!acc.dataset.touched) acc.value = this.value;
+    acc.value = Math.max(0, C.num(document.getElementById('gr-qty').value) -
+                            C.num(document.getElementById('gr-rej').value));
+    acc.dataset.touched = '';
+    this.style.display = 'none';
   });
-  document.getElementById('gr-acc').addEventListener('input', function(){ this.dataset.touched='1'; });
+
+  /* Accepted is worked out for you: received minus rejected. Type 2323 received
+     and 23 rejected and accepted becomes 2300 on its own. It stops calculating
+     the moment you type an accepted figure yourself, because then you mean it. */
+  function grnBalance(){
+    var acc = document.getElementById('gr-acc');
+    if (acc.dataset.touched) return;
+    var qty = C.num(document.getElementById('gr-qty').value);
+    var rej = C.num(document.getElementById('gr-rej').value);
+    acc.value = qty ? Math.max(0, qty - rej) : '';
+  }
+  document.getElementById('gr-qty').addEventListener('input', grnBalance);
+  document.getElementById('gr-rej').addEventListener('input', grnBalance);
+  document.getElementById('gr-acc').addEventListener('input', function(){
+    this.dataset.touched = this.value === '' ? '' : '1';   // clearing it hands control back
+  });
 
   document.getElementById('gr-save').addEventListener('click', async function(){
     var msg = document.getElementById('gr-msg');
@@ -982,7 +1003,9 @@
        saved quietly — the stock figure downstream depends on it */
     if (Math.abs((acc + rej) - qty) > 0.001)
       return say('Accepted (' + C.inr(acc) + ') plus rejected (' + C.inr(rej) + ') is ' +
-                 C.inr(acc+rej) + ', but ' + C.inr(qty) + ' was received. These must agree.');
+                 C.inr(acc+rej) + ', but ' + C.inr(qty) + ' was received. ' +
+                 'Accepted should be <b>' + C.inr(Math.max(0, qty - rej)) + '</b>' +
+                 ' — <a href="#" id="gr-fix" style="color:var(--sky-deep);">put that in for me</a>.');
 
     this.disabled = true;
     var partSel = document.getElementById('gr-part');

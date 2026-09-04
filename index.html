@@ -2326,7 +2326,7 @@ I would recommend this company as a place to work</textarea></div></div>
   const makeId=()=>'id'+Math.random().toString(36).slice(2,9);
   const slug=s=>'sec-'+String(s||'section').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,30);
   const makeRef=()=>'RFQ-'+Date.now().toString(36).toUpperCase().slice(-4)+Math.random().toString(36).slice(2,4).toUpperCase();
-  const STAGES=["Received","Quote Drafted","Awaiting Approval","Approved & Sent","Closed"];
+  const STAGES=["Received","Quote Drafted","Awaiting Approval","Approved & Sent","Won","Closed"];
   const LAYOUT_DEFAULTS={fontBase:16,titleScale:1,gutter:26,sectionPad:84,cardMin:300,cardGap:22,cardPad:24,
     mediaH:220,portraitH:300,radius:14,barHeight:78,logoMax:230};
 
@@ -9833,6 +9833,9 @@ Reply with ONLY this JSON, no commentary or code fences:
             <button class="mini-btn" data-act="mailquote" data-i="${i}">Email customer</button>
             <button class="mini-btn" data-act="waquote" data-i="${i}">WhatsApp customer</button>
             <button class="mini-btn green" data-act="approve" data-i="${i}">Approve &amp; send automatically</button>
+            ${r.idmsParts&&r.idmsParts.length
+              ? `<span class="t-micro" style="align-self:center;color:var(--ok);">✓ ${r.idmsParts.length} part(s) sent to the IDMS</span>`
+              : `<button class="mini-btn gold" data-act="won" data-i="${i}">Customer approved — send to IDMS</button>`}
           </div></div>`;})()}
         ${!r.quoteDoc?`<div class="rfq-actions"><button class="mini-btn" data-act="startquote" data-i="${i}">Start quotation document</button></div>`:''}
         <select class="status-select" data-i="${i}">${STAGES.map(s=>`<option ${((r.status||'Received')===s)?'selected':''}>${s}</option>`).join('')}</select>
@@ -10149,6 +10152,48 @@ Reply with ONLY this JSON, no commentary or code fences:
     }));
     host.querySelectorAll('[data-act="pdf"]').forEach(b=>b.addEventListener('click',()=>{
       openQuotationPdf(rfqs[+b.dataset.i]);
+    }));
+
+    /* ---- the seam between the two systems ----
+       Winning a quotation is the moment a part comes into existence. One line
+       on the quotation becomes one part in the IDMS, carrying the customer and
+       the quotation number with it, so nobody retypes anything and the whole
+       APQP record downstream can be traced back to the price that was agreed. */
+    host.querySelectorAll('[data-act="won"]').forEach(b=>b.addEventListener('click',async()=>{
+      const i=+b.dataset.i, r=rfqs[i], q=r.quoteDoc||{};
+      const lines=(q.items||[]).filter(x=>String(x.desc||'').trim());
+      if(!lines.length){ toast('The quotation has no lines to turn into parts.'); return; }
+      const customer=r.company||r.name||'';
+      if(!confirm('Create '+lines.length+' part'+(lines.length>1?'s':'')+' in the IDMS from quotation '
+        +(q.number||r.ref)+'?\n\n'+lines.map(x=>'  • '+String(x.desc).slice(0,60)).join('\n')
+        +'\n\nEach starts at stage New, ready for APQP.')) return;
+
+      b.disabled=true; b.textContent='Sending…';
+      const made=[], failed=[];
+      for(const line of lines){
+        try{
+          const j=await api('/api/idms',{method:'POST',body:JSON.stringify({what:'parts',
+            part:{customer, partNo:String(line.code||line.desc||'').slice(0,60),
+              partName:String(line.desc||'').slice(0,120), lifecycle:'New',
+              quoteRef:q.number||r.ref,
+              data:{ rfqRef:r.ref, quotedQty:line.qty||'', unit:line.unit||'',
+                     quotedRate:line.rate||'', quotedOn:q.date||'',
+                     contact:r.name||'', email:r.email||'', phone:r.phone||'' }},
+            reason:'quotation '+(q.number||r.ref)+' approved by the customer'})});
+          made.push(j.partId);
+        }catch(e){ failed.push(String(line.desc).slice(0,40)+' — '+e.message); }
+      }
+
+      if(made.length){
+        const log=[`${new Date().toLocaleString()} — customer approved; ${made.length} part(s) created in the IDMS`]
+          .concat(r.log||[]);
+        const u=await patch(r.ref,{status:'Won', idmsParts:made, log});
+        if(u) rfqs[i]=u;
+        renderRfqAdmin();
+      }
+      if(failed.length) toast('Some lines did not transfer: '+failed[0]);
+      else toast(made.length+' part(s) now waiting in the IDMS');
+      b.disabled=false;
     }));
     host.querySelectorAll('.quote-text').forEach(t=>t.addEventListener('input',()=>{
       const r=rfqs[+t.dataset.i]; r.quote=t.value;

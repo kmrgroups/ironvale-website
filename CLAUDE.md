@@ -120,7 +120,8 @@ idempotent — once sent, the button is replaced by a confirmation.
 **Live in the IDMS:** Home (with loadable sample data), Customer Addition,
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
 Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
-Self Inspection, GRN, Delivery Challan, People (HR records), Company Profile.
+Self Inspection, Inward Inspection, GRN, Delivery Challan, People (HR records),
+Company Profile.
 
 **Setup approval** is the first shop-floor screen and the pattern for the rest:
 what gets checked comes from the **control plan** for that operation (falling
@@ -140,6 +141,16 @@ containment is refused. One sheet per part/operation/date/shift, keyed so
 reopening continues it rather than starting a second record for the same shift.
 Both screens share `limitsOf()` and `verdict()`; keep them shared, because two
 implementations of "is this in tolerance" would eventually disagree.
+
+**Inward inspection** hangs off the goods receipt rather than standing alone: a
+GRN appears on a pending list until it is inspected, and the inspection writes
+the outcome back onto the GRN (`status` becomes `Inspected — <disposition>`,
+`data.inspected = true`) so stores can see whether material is released. Rules:
+accepted + rejected must equal received, same as the GRN itself; a disposition
+is mandatory, because a rejection that ends nowhere is how material creeps back
+into stores; non-conforming material cannot be plainly accepted — it needs a
+deviation with a **named approver**, or return, rework or scrap. The print
+carries a segregation instruction whenever anything was rejected.
 
 **The NPD chain is now complete end to end**: a won quotation on the website
 produces customer, part and price; routing and dimensions are entered against

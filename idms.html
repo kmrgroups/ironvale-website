@@ -307,6 +307,66 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="report_inward_inspection">
+      <div class="card">
+        <h4>Inward Inspection</h4>
+        <div class="hint" style="margin-bottom:10px;">Material that has been received but not yet
+          inspected is listed below. Nothing here is typed twice — supplier, invoice, material and
+          quantity come from the goods receipt. Until a receipt is inspected it should not be issued
+          to production.</div>
+        <div id="ii-pending"></div>
+      </div>
+      <div class="card" id="ii-sheet" style="display:none;">
+        <h4 id="ii-title">Inspection</h4>
+        <div class="row four">
+          <div><label>Sample size</label><input class="num" id="ii-sample"></div>
+          <div><label>Inspected by</label><input id="ii-by"></div>
+          <div><label>Test certificate number</label><input id="ii-tc"></div>
+          <div><label>Heat / batch number</label><input id="ii-heat"></div>
+        </div>
+        <div class="sub">Characteristics checked</div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>What was checked</label>
+            <input id="ii-what" placeholder="Bar diameter, chemistry per test certificate"></div>
+          <div><label>Specification</label><input id="ii-spec" placeholder="Ø25 -0/+0.1"></div>
+          <div><label>Observed</label><input id="ii-obs"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Result</label><select id="ii-res">
+            <option value="ok">Conforms</option><option value="no">Does not conform</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="ii-addline">Add line</button></div>
+          <div style="grid-column:span 2;align-self:end;"><span class="hint">Add one line per thing
+            checked. A material certificate on its own is a line too.</span></div>
+        </div>
+        <div id="ii-lines" style="margin-top:10px;"></div>
+
+        <div class="sub">Decision</div>
+        <div class="row four">
+          <div><label>Accepted quantity</label><input class="num" id="ii-acc"></div>
+          <div><label>Rejected quantity</label><input class="num" id="ii-rej"></div>
+          <div><label>Disposition</label><select id="ii-disp">
+            <option value="">— choose —</option>
+            <option value="accept">Accept</option>
+            <option value="deviation">Accept under deviation</option>
+            <option value="return">Return to supplier</option>
+            <option value="rework">Rework at supplier's cost</option>
+            <option value="scrap">Scrap</option></select></div>
+          <div><label>Deviation approved by</label><input id="ii-dev" placeholder="required for a deviation"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
+          <label>Remarks</label><input id="ii-remarks"></div></div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="ii-save">Record inspection</button>
+          <button class="btn" id="ii-cancel">Cancel</button>
+        </div>
+        <div class="note" id="ii-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Inspected</h4>
+        <div id="ii-list"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="report_self_inspection">
       <div class="card">
         <h4>Self Inspection — in process</h4>
@@ -820,7 +880,7 @@
       ['supplier_competency','🤝','Supplier Competency']]],
     ['reports','📊','Reports','Inspection Reports',[
       ['report_self_inspection','🔍','Self Inspection Report',1],
-      ['report_inward_inspection','📥','Inward Inspection Report'],
+      ['report_inward_inspection','📥','Inward Inspection Report',1],
       ['report_inprocess_inspection','⚙','In-Process Inspection Report'],
       ['report_pdi','✓','PDI Report'],['report_setup_approval','✅','Setup Approval Report',1],
       ['report_tool_history','🔧','Tool History Card'],
@@ -904,6 +964,7 @@
     if (s === 'ppap')           loadPpap();
     if (s === 'report_setup_approval') loadSetup();
     if (s === 'report_self_inspection') loadSelfInsp();
+    if (s === 'report_inward_inspection') loadInward();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -1403,6 +1464,230 @@
       loadHome();
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Remove sample data';
+  }
+
+  /* ---------------- Inward inspection ----------------
+     Hung off the goods receipt rather than standing alone, so a receipt cannot
+     quietly become good material. The GRN carries its own status through to
+     inspected, and a rejection has to end somewhere — returned, reworked,
+     scrapped, or accepted under a named deviation. */
+  var iiGrns = [], iiDocs = [], iiCurrent = null, iiLines = [];
+
+  async function loadInward(){
+    try { iiGrns = await C.idms.docs('grn'); } catch(e){ iiGrns = []; }
+    try { iiDocs = await C.idms.docs('inward'); } catch(e){ iiDocs = []; }
+    drawInwardPending();
+    drawInwardList();
+  }
+
+  function inspectedIds(){
+    var m = {};
+    iiDocs.forEach(function(x){ m[(x.data||{}).grnId] = x; });
+    return m;
+  }
+
+  function drawInwardPending(){
+    var host = document.getElementById('ii-pending');
+    var done = inspectedIds();
+    var pending = iiGrns.filter(function(g){ return !done[g.doc_id]; });
+    if (!pending.length){
+      host.innerHTML = '<div class="empty"><b>Nothing waiting for inspection</b>' +
+        (iiGrns.length ? 'Every goods receipt on file has been inspected.'
+                       : 'Goods receipts appear here as soon as stores record them.') + '</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>GRN</th><th>Date</th><th>Supplier</th>' +
+      '<th>Material</th><th class="r">Received</th><th class="c">Stores flagged</th><th></th>' +
+      '</tr></thead><tbody>' + pending.map(function(g){
+        var v = g.data || {};
+        return '<tr><td><b>'+esc(g.doc_no||'')+'</b></td>' +
+          '<td class="hint">'+C.fmtDate(v.date)+'</td>' +
+          '<td>'+esc(v.supplier||'—')+'<div class="hint">'+esc(v.invoice||'')+'</div></td>' +
+          '<td>'+esc(v.description||'—')+'</td>' +
+          '<td class="r">'+C.qty(v.qty)+' '+esc(v.uom||'')+'</td>' +
+          '<td class="c">'+(C.num(v.rejected)
+            ? '<span class="badge sample">'+C.qty(v.rejected)+' rejected</span>'
+            : '<span class="hint">none</span>')+'</td>' +
+          '<td><button class="btn gold ii-go" data-id="'+esc(g.doc_id)+'">Inspect</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.ii-go').forEach(function(b){
+      b.addEventListener('click', function(){ openInward(b.dataset.id); });
+    });
+  }
+
+  function openInward(grnId){
+    iiCurrent = iiGrns.filter(function(g){ return g.doc_id === grnId; })[0] || null;
+    if (!iiCurrent) return;
+    var v = iiCurrent.data || {};
+    iiLines = [];
+    document.getElementById('ii-title').textContent =
+      'Inspecting ' + (iiCurrent.doc_no||'') + ' — ' + (v.supplier||'') + ' · ' + (v.description||'');
+    document.getElementById('ii-sheet').style.display = '';
+    document.getElementById('ii-msg').style.display = 'none';
+    /* stores may already have set aside a quantity; carry it in rather than
+       making quality retype it, but let them change it */
+    document.getElementById('ii-acc').value = C.num(v.accepted) || C.num(v.qty) || '';
+    document.getElementById('ii-rej').value = C.num(v.rejected) || '';
+    ['ii-sample','ii-by','ii-tc','ii-heat','ii-what','ii-spec','ii-obs','ii-dev','ii-remarks']
+      .forEach(function(id){ document.getElementById(id).value = ''; });
+    document.getElementById('ii-disp').value = '';
+    drawInwardLines();
+  }
+
+  function drawInwardLines(){
+    var host = document.getElementById('ii-lines');
+    if (!iiLines.length){
+      host.innerHTML = '<div class="hint">No lines yet. A receipt inspected against nothing is not ' +
+        'an inspection.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Checked</th><th>Specification</th>' +
+      '<th>Observed</th><th class="c">Result</th><th></th></tr></thead><tbody>' +
+      iiLines.map(function(l, i){
+        return '<tr><td>'+esc(l.what)+'</td><td class="hint">'+esc(l.spec||'—')+'</td>' +
+          '<td>'+esc(l.observed||'—')+'</td>' +
+          '<td class="c">'+(l.result==='ok'
+            ? '<span class="badge series">Conforms</span>'
+            : '<span class="badge ab" style="background:#FDECEA;color:#B03A2E;">Does not</span>')+'</td>' +
+          '<td><button class="btn del ii-rm" data-i="'+i+'">Remove</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.ii-rm').forEach(function(b){
+      b.addEventListener('click', function(){ iiLines.splice(+b.dataset.i,1); drawInwardLines(); });
+    });
+  }
+
+  function drawInwardList(){
+    var host = document.getElementById('ii-list');
+    if (!iiDocs.length){
+      host.innerHTML = '<div class="empty"><b>No inspections recorded yet</b></div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>GRN</th><th>Supplier</th><th>Material</th>' +
+      '<th class="r">Accepted</th><th class="r">Rejected</th><th>Disposition</th><th>By</th><th></th>' +
+      '</tr></thead><tbody>' + iiDocs.slice(0,25).map(function(r){
+        var v = r.data || {};
+        var badge = { accept:'series', deviation:'sample', return:'ab', rework:'sample', scrap:'ab' }[v.disposition] || 'new';
+        return '<tr><td><b>'+esc(v.grnNo||'')+'</b></td><td>'+esc(v.supplier||'—')+'</td>' +
+          '<td>'+esc(v.description||'—')+'</td>' +
+          '<td class="r">'+C.qty(v.accepted)+'</td>' +
+          '<td class="r">'+(C.num(v.rejected)?'<b style="color:var(--bad)">'+C.qty(v.rejected)+'</b>':'—')+'</td>' +
+          '<td><span class="badge '+badge+'">'+esc(v.dispositionLabel||v.disposition||'')+'</span>' +
+            (v.deviationBy?'<div class="hint">'+esc(v.deviationBy)+'</div>':'')+'</td>' +
+          '<td class="hint">'+esc(v.inspectedBy||'')+'</td>' +
+          '<td><button class="btn ii-p" data-id="'+esc(r.doc_id)+'">Print</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.ii-p').forEach(function(b){
+      b.addEventListener('click', function(){
+        printInward(iiDocs.filter(function(x){ return x.doc_id === b.dataset.id; })[0]);
+      });
+    });
+  }
+
+  var DISPO = { accept:'Accepted', deviation:'Accepted under deviation', return:'Returned to supplier',
+                rework:'Rework at supplier', scrap:'Scrapped' };
+
+  async function saveInward(){
+    var msg = document.getElementById('ii-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    if (!iiCurrent) return;
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var v = iiCurrent.data || {};
+    var acc = C.num(g('ii-acc')), rej = C.num(g('ii-rej')), recd = C.num(v.qty);
+    var disp = document.getElementById('ii-disp').value;
+
+    if (!g('ii-by')) return say('Name who inspected it.');
+    if (!iiLines.length) return say('Add at least one line. A receipt inspected against nothing is ' +
+                                    'not an inspection.');
+    /* the same arithmetic rule as the goods receipt — a count that does not
+       balance corrupts stock and the supplier's rating together */
+    if (Math.abs((acc + rej) - recd) > 0.001)
+      return say('Accepted (' + C.qty(acc) + ') plus rejected (' + C.qty(rej) + ') is ' +
+                 C.qty(acc + rej) + ', but ' + C.qty(recd) + ' was received. These must agree.');
+    if (!disp) return say('Choose a disposition. A rejection that ends nowhere is how material ' +
+                          'creeps back into stores.');
+    if (disp === 'deviation' && !g('ii-dev'))
+      return say('A deviation needs a name against it. Accepting non-conforming material is ' +
+                 'somebody\'s decision, not a status.');
+    var failed = iiLines.filter(function(l){ return l.result !== 'ok'; }).length;
+    if (failed && disp === 'accept')
+      return say('<b>' + failed + ' line(s) do not conform</b>, so this cannot simply be accepted. ' +
+                 'Use a deviation with a name, or return, rework or scrap it.');
+    if (rej > 0 && disp === 'accept')
+      return say('You have rejected ' + C.qty(rej) + ' but chosen plain acceptance. Say what happens ' +
+                 'to the rejected material.');
+
+    var btn = document.getElementById('ii-save');
+    btn.disabled = true;
+    try {
+      await C.idms.saveDoc({ kind:'inward', partId:'', status: rej > 0 ? 'With rejection' : 'Accepted',
+        docNo: await C.docNumber('ii'),
+        data:{ grnId: iiCurrent.doc_id, grnNo: iiCurrent.doc_no,
+               supplier: v.supplier||'', invoice: v.invoice||'', description: v.description||'',
+               received: recd, uom: v.uom||'', accepted: acc, rejected: rej,
+               disposition: disp, dispositionLabel: DISPO[disp] || disp,
+               deviationBy: g('ii-dev'), sample: C.num(g('ii-sample')),
+               testCert: g('ii-tc'), heat: g('ii-heat'),
+               lines: iiLines.slice(), inspectedBy: g('ii-by'),
+               remarks: g('ii-remarks'), at: new Date().toISOString() } },
+        'inward inspection recorded');
+
+      /* the receipt carries the outcome, so stores can see at a glance whether
+         material has been released */
+      await C.idms.saveDoc({ docId: iiCurrent.doc_id, kind:'grn', partId: iiCurrent.part_id||'',
+        docNo: iiCurrent.doc_no, status: 'Inspected — ' + (DISPO[disp]||disp),
+        data: Object.assign({}, v, { inspected:true, inspectionDisposition: disp,
+          inspectedOn: new Date().toISOString().slice(0,10) }) },
+        'goods receipt marked inspected');
+
+      say('Recorded. The goods receipt is now marked <b>' + esc(DISPO[disp]||disp) + '</b>.', true);
+      document.getElementById('ii-sheet').style.display = 'none';
+      iiCurrent = null; iiLines = [];
+      await loadInward();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+
+  function printInward(rec){
+    if (!rec) return;
+    var v = rec.data || {};
+    C.openReport({
+      title:'Inward Inspection Report',
+      kind:'Incoming', 
+      subtitle:(v.grnNo||'') + ' · ' + (v.supplier||'') + ' · ' + (v.description||''),
+      sections:[
+        { type:'pairs', title:'Consignment', rows:[
+          ['Goods receipt', esc(v.grnNo||'—')],
+          ['Supplier', esc(v.supplier||'—')],
+          ['Invoice / DC', esc(v.invoice||'—')],
+          ['Material', esc(v.description||'—')],
+          ['Quantity received', C.qty(v.received) + ' ' + esc(v.uom||'')],
+          ['Sample size', v.sample ? C.qty(v.sample) : '—'],
+          ['Test certificate', esc(v.testCert||'—')],
+          ['Heat / batch', esc(v.heat||'—')]]},
+        { type:'table', title:'Checks', columns:[{label:'Checked'},{label:'Specification'},
+            {label:'Observed'},{label:'Result',align:'c'}],
+          rows:(v.lines||[]).map(function(l){
+            return [esc(l.what), esc(l.spec||'—'), esc(l.observed||'—'),
+                    l.result==='ok' ? 'Conforms' : { v:'<b>DOES NOT CONFORM</b>', cls:'ab' }];
+          }) },
+        { type:'pairs', title:'Decision', rows:[
+          ['Accepted', C.qty(v.accepted) + ' ' + esc(v.uom||'')],
+          ['Rejected', C.qty(v.rejected) + ' ' + esc(v.uom||'')],
+          ['Disposition', '<b>' + esc(v.dispositionLabel||'') + '</b>'],
+          ['Deviation approved by', esc(v.deviationBy||'—')],
+          ['Inspected by', esc(v.inspectedBy||'—')],
+          ['Date', new Date(v.at||rec.updated_at).toLocaleString('en-GB')],
+          ['Remarks', esc(v.remarks||'—')]],
+        },
+        { type:'text', title:'Note',
+          body: C.num(v.rejected)
+            ? 'Rejected material must be segregated and identified. It must not be issued to ' +
+              'production under any circumstances until the disposition above has been carried out.'
+            : 'Material released to stores.' },
+        { type:'text', title:'Signatures',
+          body:'Inspected by                              Stores                              Quality' }
+      ]});
   }
 
   /* ---------------- Self inspection ----------------
@@ -3816,6 +4101,20 @@
       go('home');
     });
     f.click();
+  });
+
+  document.getElementById('ii-addline').addEventListener('click', function(){
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    if (!g('ii-what')) { toast('Say what was checked.'); return; }
+    iiLines.push({ what:g('ii-what'), spec:g('ii-spec'), observed:g('ii-obs'),
+                   result:document.getElementById('ii-res').value });
+    ['ii-what','ii-spec','ii-obs'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('ii-res').value = 'ok';
+    drawInwardLines();
+  });
+  document.getElementById('ii-save').addEventListener('click', saveInward);
+  document.getElementById('ii-cancel').addEventListener('click', function(){
+    document.getElementById('ii-sheet').style.display='none'; iiCurrent=null; iiLines=[];
   });
 
   document.getElementById('si-part').addEventListener('change', function(){

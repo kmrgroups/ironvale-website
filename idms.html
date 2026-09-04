@@ -212,6 +212,53 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="dc">
+      <div class="card">
+        <h4>Delivery Challan</h4>
+        <div class="hint" style="margin-bottom:10px;">Material going out to a customer. The challan
+          number is issued by the database when you save. Add lines before saving — one challan can
+          carry several parts.</div>
+        <div class="row four">
+          <div><label>Customer</label><input id="dc-cust"></div>
+          <div><label>Despatch date</label><input type="date" id="dc-date"></div>
+          <div><label>Vehicle number</label><input id="dc-veh"></div>
+          <div><label>Customer PO / reference</label><input id="dc-po"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div style="grid-column:span 2;"><label>Despatch address</label><input id="dc-addr"></div>
+          <div><label>Returnable</label><select id="dc-ret">
+            <option value="no">No — sale</option>
+            <option value="yes">Yes — returnable</option></select></div>
+          <div><label>E-way bill number</label><input id="dc-eway"></div>
+        </div>
+
+        <div class="sub">Lines</div>
+        <div class="row four">
+          <div><label>Part</label><select id="dc-part"></select></div>
+          <div><label>Description</label><input id="dc-desc"></div>
+          <div><label>Quantity</label><input class="num" id="dc-qty"></div>
+          <div><label>Unit</label><select id="dc-uom">
+            <option>Nos</option><option>Kg</option><option>Set</option><option>Metre</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Rate (optional)</label><input class="num" id="dc-rate"></div>
+          <div><label>Batch / heat number</label><input id="dc-batch"></div>
+          <div style="align-self:end;"><button class="btn" id="dc-addline">Add line</button></div>
+        </div>
+        <div id="dc-lines" style="margin-top:10px;"></div>
+
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="dc-save">Save Challan</button>
+          <button class="btn" id="dc-clear">Clear</button>
+        </div>
+        <div class="note" id="dc-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Despatched</h4>
+        <div id="dc-list"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="profile">
       <div class="card">
         <h4>Company profile</h4>
@@ -276,7 +323,7 @@
       ['sales_plan','📈','Sales Plan'],['capacity_plan','⚙','Capacity Plan'],
       ['production_plan','🏭','Production Plan'],['machine_loading','🔩','Machine Loading Plan']]],
     ['mmd','📦','MMD','Material Movement',[
-      ['grn','📥','GRN — Goods Receipt',1],['dc','📤','Delivery Challan'],
+      ['grn','📥','GRN — Goods Receipt',1],['dc','📤','Delivery Challan',1],
       ['sheet_rawmat','🪨','Raw Material Stock'],['bom','🧾','Bill of Materials']]],
     ['prod','🏭','Production','Shop Floor',[
       ['entry_prod','📝','Production Entry'],['dwm','📊','DWM — Daily Work Management'],
@@ -362,6 +409,7 @@
     if (s === 'home')    loadHome();
     if (s === 'parts')   loadParts();
     if (s === 'grn')     loadGrn();
+    if (s === 'dc')      loadDc();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -549,6 +597,118 @@
     });
   }
 
+  /* ---------------- Delivery Challan ----------------
+     Material leaving the works. A challan carries several lines, so the lines
+     are collected in the page and written as one document — a part despatched
+     on one challan must not be split across two numbers. */
+  var dcLines = [];
+
+  function drawDcLines(){
+    var host = document.getElementById('dc-lines');
+    if (!dcLines.length){
+      host.innerHTML = '<div class="hint">No lines yet. Fill the row above and press Add line.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Part</th><th>Description</th>' +
+      '<th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th>Batch</th><th></th>' +
+      '</tr></thead><tbody>' + dcLines.map(function(l,i){
+        return '<tr><td>'+esc(l.partLabel||'—')+'</td><td>'+esc(l.description)+'</td>'+
+          '<td class="r">'+C.inr(l.qty)+'</td><td>'+esc(l.uom)+'</td>'+
+          '<td class="r">'+(C.num(l.rate)?C.inr(l.rate):'—')+'</td>'+
+          '<td class="hint">'+esc(l.batch||'—')+'</td>'+
+          '<td><button class="btn del dc-rm" data-i="'+i+'">Remove</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.dc-rm').forEach(function(b){
+      b.addEventListener('click', function(){ dcLines.splice(+b.dataset.i,1); drawDcLines(); });
+    });
+  }
+
+  async function loadDc(){
+    var dsel = document.getElementById('dc-date');
+    if (!dsel.value) dsel.value = new Date().toISOString().slice(0,10);
+    try {
+      var parts = await C.idms.parts();
+      document.getElementById('dc-part').innerHTML =
+        '<option value="">— no part —</option>' + parts.map(function(p){
+          return '<option value="'+esc(p.part_id)+'">'+esc(p.part_no||p.part_name)+
+            (p.customer?' · '+esc(p.customer):'')+'</option>';
+        }).join('');
+    } catch(e){ /* the list is a convenience, not a requirement */ }
+    drawDcLines();
+
+    var host = document.getElementById('dc-list');
+    host.innerHTML = '<div class="hint">Loading…</div>';
+    var rows;
+    try { rows = await C.idms.docs('dc'); }
+    catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; return; }
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>Nothing despatched yet</b>' +
+        'Save a challan above and it appears here with its number.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>DC No</th><th>Date</th><th>Customer</th>' +
+      '<th class="c">Lines</th><th class="r">Total qty</th><th class="c">Type</th><th></th>' +
+      '</tr></thead><tbody>' + rows.map(function(r){
+        var v = r.data || {}, lines = v.lines || [];
+        var tot = lines.reduce(function(t,l){ return t + C.num(l.qty); }, 0);
+        return '<tr><td><b>'+esc(r.doc_no||'—')+'</b></td>'+
+          '<td class="hint">'+C.fmtDate(v.date)+'</td>'+
+          '<td>'+esc(v.customer||'—')+'<div class="hint">'+esc(v.po||'')+'</div></td>'+
+          '<td class="c">'+lines.length+'</td><td class="r">'+C.inr(tot)+'</td>'+
+          '<td class="c">'+(v.returnable==='yes'
+            ? '<span class="badge sample">Returnable</span>' : '<span class="badge series">Sale</span>')+'</td>'+
+          '<td><button class="btn dc-print" data-id="'+esc(r.doc_id)+'">Print</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.dc-print').forEach(function(b){
+      b.addEventListener('click', function(){
+        printDc(rows.filter(function(x){ return x.doc_id === b.dataset.id; })[0]);
+      });
+    });
+  }
+
+  function printDc(r){
+    var v = r.data || {}, lines = v.lines || [];
+    var tot = lines.reduce(function(t,l){ return t + C.num(l.qty); }, 0);
+    var value = lines.reduce(function(t,l){ return t + C.num(l.qty) * C.num(l.rate); }, 0);
+    C.openReport({
+      title: 'Delivery Challan',
+      kind: v.returnable === 'yes' ? 'Returnable Challan' : 'Delivery Challan',
+      subtitle: r.doc_no + ' · ' + C.fmtDate(v.date),
+      sections: [
+        { type:'pairs', title:'Despatch', rows:[
+          ['Challan Number', '<b>'+esc(r.doc_no)+'</b>'],
+          ['Date', C.fmtDate(v.date)],
+          ['Customer', esc(v.customer||'—')],
+          ['Despatch address', esc(v.address||'—')],
+          ['Customer PO / reference', esc(v.po||'—')],
+          ['Vehicle number', esc(v.vehicle||'—')],
+          ['E-way bill', esc(v.eway||'—')],
+          ['Nature', v.returnable==='yes'
+            ? 'Returnable — material to be returned to the works'
+            : 'Sale']]},
+        { type:'table', title:'Material despatched', columns:[
+            {label:'Part'},{label:'Description'},{label:'Batch / heat'},
+            {label:'Qty',align:'r'},{label:'Unit'},{label:'Rate',align:'r'},{label:'Value',align:'r'}],
+          rows: lines.map(function(l){
+            return [esc(l.partLabel||'—'), esc(l.description), esc(l.batch||'—'),
+                    C.inr(l.qty), esc(l.uom),
+                    C.num(l.rate)?C.inr(l.rate):'—',
+                    C.num(l.rate)?C.inr(C.num(l.qty)*C.num(l.rate)):'—'];
+          }).concat([[{v:'<b>Total</b>'},'','',{v:'<b>'+C.inr(tot)+'</b>'},'','',
+                      {v: value ? '<b>'+C.inr(value)+'</b>' : ''}]]),
+          note: v.returnable==='yes'
+            ? 'Returnable challan — this material remains the property of the consignor and must be returned.'
+            : '' },
+        { type:'pairs', title:'Record', rows:[
+          ['Remarks', esc(v.remarks||'—')],
+          ['Raised by', esc(r.updated_by||'—')],
+          ['Raised on', new Date(r.updated_at).toLocaleString('en-GB')]]},
+        { type:'text', title:'Signatures',
+          body:'Prepared by                    Authorised signatory                    Received by' }
+      ]
+    });
+  }
+
   /* ---------------- profile ---------------- */
   async function loadProfileScreen(){
     var p = await C.loadProfile();
@@ -717,6 +877,82 @@
       go('home');
     });
     f.click();
+  });
+
+  document.getElementById('dc-addline').addEventListener('click', function(){
+    var msg = document.getElementById('dc-msg');
+    var sel = document.getElementById('dc-part');
+    var desc = document.getElementById('dc-desc').value.trim();
+    var qty = C.num(document.getElementById('dc-qty').value);
+    if (!desc && !sel.value){
+      msg.style.display=''; msg.className='note bad';
+      msg.textContent='Choose a part or type a description for the line.'; return;
+    }
+    if (qty <= 0){
+      msg.style.display=''; msg.className='note bad';
+      msg.textContent='The line needs a quantity greater than zero.'; return;
+    }
+    msg.style.display='none';
+    dcLines.push({
+      partId: sel.value || '',
+      partLabel: sel.value ? sel.options[sel.selectedIndex].text : '',
+      description: desc || (sel.value ? sel.options[sel.selectedIndex].text : ''),
+      qty: qty, uom: document.getElementById('dc-uom').value,
+      rate: C.num(document.getElementById('dc-rate').value),
+      batch: document.getElementById('dc-batch').value.trim()
+    });
+    ['dc-desc','dc-qty','dc-rate','dc-batch'].forEach(function(id){
+      document.getElementById(id).value=''; });
+    drawDcLines();
+  });
+
+  document.getElementById('dc-clear').addEventListener('click', function(){
+    dcLines = [];
+    ['dc-cust','dc-veh','dc-po','dc-addr','dc-eway','dc-desc','dc-qty','dc-rate','dc-batch']
+      .forEach(function(id){ document.getElementById(id).value=''; });
+    drawDcLines();
+    document.getElementById('dc-msg').style.display='none';
+  });
+
+  document.getElementById('dc-save').addEventListener('click', async function(){
+    var msg = document.getElementById('dc-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var cust = document.getElementById('dc-cust').value.trim();
+    if (!cust) return say('Name the customer the material is going to.');
+    /* a challan with no lines is a number issued for nothing, and the number
+       cannot be reused — so refuse before one is taken */
+    if (!dcLines.length) return say('Add at least one line before saving.');
+
+    this.disabled = true;
+    try {
+      var docNo = await C.docNumber('dc');
+      /* a challan for a single part is linked to it, so the part's own history
+         shows what left the works; a mixed challan is linked to none */
+      var ids = dcLines.map(function(l){ return l.partId; }).filter(Boolean);
+      var onlyPart = (ids.length && ids.every(function(x){ return x === ids[0]; })) ? ids[0] : '';
+      await C.idms.saveDoc({
+        kind: 'dc', docNo: docNo, partId: onlyPart,
+        status: document.getElementById('dc-ret').value === 'yes' ? 'Returnable' : 'Despatched',
+        data: {
+          customer: cust,
+          date: document.getElementById('dc-date').value,
+          vehicle: document.getElementById('dc-veh').value.trim(),
+          po: document.getElementById('dc-po').value.trim(),
+          address: document.getElementById('dc-addr').value.trim(),
+          eway: document.getElementById('dc-eway').value.trim(),
+          returnable: document.getElementById('dc-ret').value,
+          lines: dcLines.slice()
+        }
+      }, 'material despatched');
+      say('Saved as <b>' + esc(docNo) + '</b> with ' + dcLines.length + ' line(s).', true);
+      dcLines = [];
+      ['dc-cust','dc-veh','dc-po','dc-addr','dc-eway'].forEach(function(id){
+        document.getElementById(id).value=''; });
+      drawDcLines();
+      loadDc();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
   });
 
   document.getElementById('gr-clear').addEventListener('click', function(){

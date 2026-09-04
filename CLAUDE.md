@@ -117,7 +117,7 @@ idempotent — once sent, the button is replaced by a confirmation.
 
 ## Current state
 
-**Live in the IDMS:** Home, Parts, GRN, Company Profile.
+**Live in the IDMS:** Home, Parts, GRN, Delivery Challan, Company Profile.
 **Declared but not built:** 65 further screens, marked `soon` in the menu, each
 showing an explanation rather than a blank page. The menu structure mirrors the
 system the team already uses.
@@ -172,16 +172,15 @@ Useful smoke checks after any change:
 
 ## Suggested next work, in dependency order
 
-1. **Delivery Challan** — mirrors GRN, completes material movement.
-2. **Move HR and PPC into `idms.html`** — the API (`api/hr.js`) is already
+1. **Move HR and PPC into `idms.html`** — the API (`api/hr.js`) is already
    shared, so this relocates front-end code only; **no data migration**. Keep
    the redirects above.
-3. **APQP programme** — timing plan, phase gates, CFT, hung off `part_id`.
-4. **PFMEA → control plan → MSA → PPAP** — one chain; PFMEA feeds the control
+2. **APQP programme** — timing plan, phase gates, CFT, hung off `part_id`.
+3. **PFMEA → control plan → MSA → PPAP** — one chain; PFMEA feeds the control
    plan, the control plan defines what MSA proves.
-5. **Planning** — sales plan, production plan, machine loading, capacity. Only
+4. **Planning** — sales plan, production plan, machine loading, capacity. Only
    after parts carry routings and cycle times, since planning depends on them.
-6. **Production entry, inspections, dispatch.**
+5. **Production entry and inspections.**
 
 ---
 

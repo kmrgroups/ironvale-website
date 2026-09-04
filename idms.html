@@ -294,6 +294,80 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="process_master">
+      <div class="card">
+        <h4>Processes against a part</h4>
+        <div class="hint" style="margin-bottom:10px;">The route the part takes through the works, in
+          order. Operation numbers step in tens so an operation can be inserted later without
+          renumbering everything after it. This routing is what the PFD, the PFMEA and the control
+          plan are all built from — nothing downstream can be generated until it exists.</div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>Part</label><select id="pr-part"></select></div>
+          <div><label>Operation number</label><input class="num" id="pr-op"></div>
+          <div><label>Operation name</label><input id="pr-name" placeholder="CNC turning — Op 1"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Machine / work centre</label><input id="pr-machine"></div>
+          <div><label>Setup time (min)</label><input class="num" id="pr-setup"></div>
+          <div><label>Cycle time (sec)</label><input class="num" id="pr-cycle"></div>
+          <div><label>Carried out by</label><select id="pr-where">
+            <option value="in">In house</option><option value="sub">Sub-contract</option></select></div>
+        </div>
+        <div class="row" style="margin-top:9px;">
+          <div style="grid-column:1/-1;"><label>What happens at this operation</label>
+            <input id="pr-desc" placeholder="Rough and finish turn OD, face, chamfer, part off"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="pr-add">Add operation</button>
+          <button class="btn" id="pr-clear">Clear</button>
+        </div>
+        <div class="note" id="pr-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4 id="pr-list-title">Routing</h4>
+        <div id="pr-list"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="dim_entry">
+      <div class="card">
+        <h4>Dimensions against an operation</h4>
+        <div class="hint" style="margin-bottom:10px;">Every characteristic produced or checked at an
+          operation. A dimension marked <b>significant</b> or <b>critical</b> is carried into the
+          PFMEA and the control plan with the tighter treatment those require.</div>
+        <div class="row four">
+          <div><label>Part</label><select id="dm-part"></select></div>
+          <div><label>Operation</label><select id="dm-op"></select></div>
+          <div><label>Balloon / item number</label><input id="dm-no"></div>
+          <div><label>Characteristic</label><input id="dm-desc" placeholder="OD after finish turn"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Nominal</label><input class="num" id="dm-nom"></div>
+          <div><label>Upper tolerance</label><input class="num" id="dm-up" placeholder="+0.05"></div>
+          <div><label>Lower tolerance</label><input class="num" id="dm-lo" placeholder="-0.05"></div>
+          <div><label>Unit</label><select id="dm-unit">
+            <option>mm</option><option>µm</option><option>deg</option><option>Ra</option>
+            <option>HRC</option><option>N·m</option><option>g</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Measured with</label><input id="dm-gauge" placeholder="Micrometer 25-50mm"></div>
+          <div><label>Class</label><select id="dm-class">
+            <option value="">Normal</option>
+            <option value="SC">Significant (SC)</option>
+            <option value="CC">Critical (CC)</option></select></div>
+          <div><label>Check frequency</label><input id="dm-freq" placeholder="5 pcs / hour"></div>
+          <div style="align-self:end;">
+            <button class="btn gold" id="dm-add">Add dimension</button>
+            <button class="btn" id="dm-clear" style="margin-left:6px;">Clear</button></div>
+        </div>
+        <div class="note" id="dm-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4 id="dm-list-title">Dimensions</h4>
+        <div id="dm-list"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="entry_customer">
       <div class="card">
         <h4>Customer</h4>
@@ -436,8 +510,8 @@
       ['entry_rawmat','🪨','Raw Material Addition'],['entry_customer','👤','Customer Addition',1],
       ['entry_machine','⚙','Machine Addition']]],
     ['pm','🎛','Process Master','Configuration',[
-      ['process_master','🎛','Process Master Configuration'],['machine_process','⚙','Machine & Process'],
-      ['pfmea_master','🧠','PFMEA Master'],['dim_entry','📐','Dimensions Master'],
+      ['process_master','🎛','Process Master Configuration',1],['machine_process','⚙','Machine & Process'],
+      ['pfmea_master','🧠','PFMEA Master'],['dim_entry','📐','Dimensions Master',1],
       ['pp_spec_master','📋','PP Spec Master']]],
     ['npd','🗂','NPD & APQP','New Part Development',[
       ['parts','📦','Parts',1],['apqp','🗂','APQP Programme'],['pfd','🔵','Process Flow Diagram'],
@@ -536,6 +610,8 @@
     if (s === 'dc')      loadDc();
     if (s === 'hrm')     loadHrm();
     if (s === 'entry_customer') loadCustomers();
+    if (s === 'process_master') loadProcesses();
+    if (s === 'dim_entry')      loadDimensions();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -738,6 +814,178 @@
         { type:'text', title:'Signatures',
           body:'Stores                              Quality                              Approved by' }
       ]
+    });
+  }
+
+  /* ---------------- Routing and dimensions ----------------
+     Operations hang off the part, dimensions hang off an operation. Both are
+     idms_docs rows carrying part_id, so one query returns a part's whole
+     manufacturing definition — which is exactly what the PFMEA and the control
+     plan will be generated from. */
+  var allParts = [], processes = [], dimensions = [];
+
+  async function fetchParts(){
+    try { allParts = await C.idms.parts(); } catch(e){ allParts = []; }
+    return allParts;
+  }
+  function partOptions(selected){
+    return '<option value="">— choose a part —</option>' + allParts.map(function(p){
+      return '<option value="'+esc(p.part_id)+'"'+(selected===p.part_id?' selected':'')+'>'+
+        esc(p.part_no)+' · '+esc(p.part_name||'')+'</option>';
+    }).join('');
+  }
+  function opsFor(partId){
+    return processes.filter(function(x){ return (x.data||{}).partId === partId; })
+      .sort(function(a,b){ return C.num((a.data||{}).opNo) - C.num((b.data||{}).opNo); });
+  }
+
+  /* ---- routing ---- */
+  async function loadProcesses(){
+    await fetchParts();
+    var sel = document.getElementById('pr-part');
+    sel.innerHTML = partOptions(sel.value);
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    drawProcesses();
+  }
+
+  function drawProcesses(){
+    var partId = document.getElementById('pr-part').value;
+    var host = document.getElementById('pr-list');
+    var title = document.getElementById('pr-list-title');
+    if (!partId){
+      title.textContent = 'Routing';
+      host.innerHTML = '<div class="empty"><b>Choose a part</b>Its operations appear here in order.</div>';
+      document.getElementById('pr-op').value = '';
+      return;
+    }
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    title.textContent = 'Routing for ' + (p.part_no||'') + ' — ' + (p.part_name||'');
+    var ops = opsFor(partId);
+    /* the next operation number, stepping in tens */
+    document.getElementById('pr-op').value = ops.length
+      ? String(C.num((ops[ops.length-1].data||{}).opNo) + 10) : '10';
+    if (!ops.length){
+      host.innerHTML = '<div class="empty"><b>No operations yet</b>' +
+        'Add the first one above. Nothing downstream — PFD, PFMEA, control plan — can be built ' +
+        'until the routing exists.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th class="c">Op</th><th>Operation</th>' +
+      '<th>Machine</th><th class="r">Setup</th><th class="r">Cycle</th><th class="c">Where</th>' +
+      '<th class="c">Dims</th><th></th></tr></thead><tbody>' + ops.map(function(o){
+        var v = o.data || {};
+        var dims = dimensions.filter(function(x){ return (x.data||{}).processId === o.doc_id; }).length;
+        return '<tr><td class="c"><b>'+esc(v.opNo)+'</b></td>'+
+          '<td>'+esc(v.name||'—')+'<div class="hint">'+esc(v.description||'')+'</div></td>'+
+          '<td>'+esc(v.machine||'—')+'</td>'+
+          '<td class="r">'+(C.num(v.setupMin)?C.qty(v.setupMin)+' min':'—')+'</td>'+
+          '<td class="r">'+(C.num(v.cycleSec)?C.qty(v.cycleSec)+' s':'—')+'</td>'+
+          '<td class="c">'+(v.where==='sub'?'<span class="badge sample">Sub-con</span>'
+                                            :'<span class="badge series">In house</span>')+'</td>'+
+          '<td class="c">'+(dims||'<span class="hint">none</span>')+'</td>'+
+          '<td><button class="btn del pr-del" data-id="'+esc(o.doc_id)+'">Remove</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.pr-del').forEach(function(b){
+      b.addEventListener('click', function(){ removeOperation(b.dataset.id); });
+    });
+  }
+
+  async function removeOperation(docId){
+    var op = processes.filter(function(x){ return x.doc_id === docId; })[0];
+    if (!op) return;
+    /* an operation with dimensions on it cannot simply vanish — those
+       characteristics would be orphaned and silently dropped from the control plan */
+    var dims = dimensions.filter(function(x){ return (x.data||{}).processId === docId; });
+    if (dims.length){
+      alert('Operation ' + (op.data||{}).opNo + ' has ' + dims.length + ' dimension(s) on it.\n\n' +
+            'Remove those first — deleting the operation would leave them belonging to nothing.');
+      return;
+    }
+    var why = prompt('Removing operation ' + (op.data||{}).opNo + '. Why?');
+    if (why === null) return;
+    if (!why.trim()) { toast('State a reason — it goes on the record.'); return; }
+    try {
+      await C.idms.patchDoc({ docId: docId, remove: true, reason: why.trim() });
+      processes = await C.idms.docs('process');
+      drawProcesses();
+      toast('Operation removed');
+    } catch(e){ toast(e.message); }
+  }
+
+  /* ---- dimensions ---- */
+  async function loadDimensions(){
+    await fetchParts();
+    var sel = document.getElementById('dm-part');
+    sel.innerHTML = partOptions(sel.value);
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
+    drawOpChoices();
+    drawDimensions();
+  }
+
+  function drawOpChoices(){
+    var partId = document.getElementById('dm-part').value;
+    var ops = opsFor(partId);
+    document.getElementById('dm-op').innerHTML = ops.length
+      ? '<option value="">— choose an operation —</option>' + ops.map(function(o){
+          var v=o.data||{};
+          return '<option value="'+esc(o.doc_id)+'">'+esc(v.opNo)+' · '+esc(v.name||'')+'</option>';
+        }).join('')
+      : '<option value="">no operations on this part yet</option>';
+  }
+
+  function drawDimensions(){
+    var partId = document.getElementById('dm-part').value;
+    var host = document.getElementById('dm-list');
+    var title = document.getElementById('dm-list-title');
+    if (!partId){
+      title.textContent = 'Dimensions';
+      host.innerHTML = '<div class="empty"><b>Choose a part</b>' +
+        'Its characteristics appear here, grouped by operation.</div>';
+      return;
+    }
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    title.textContent = 'Dimensions for ' + (p.part_no||'') + ' — ' + (p.part_name||'');
+    var ops = opsFor(partId);
+    if (!ops.length){
+      host.innerHTML = '<div class="empty"><b>No operations on this part</b>' +
+        'Add the routing first — a dimension has to belong to an operation.</div>';
+      return;
+    }
+    var out = ops.map(function(o){
+      var v = o.data || {};
+      var rows = dimensions.filter(function(x){ return (x.data||{}).processId === o.doc_id; });
+      return '<div class="sub">Op ' + esc(v.opNo) + ' · ' + esc(v.name||'') + '</div>' +
+        (rows.length
+          ? '<table class="t"><thead><tr><th class="c">No</th><th>Characteristic</th>' +
+            '<th class="r">Nominal</th><th class="c">Tolerance</th><th class="c">Class</th>' +
+            '<th>Measured with</th><th>Frequency</th><th></th></tr></thead><tbody>' +
+            rows.map(function(dm){
+              var q = dm.data || {};
+              var cls = q.cls==='CC' ? '<span class="badge apqp">CC</span>'
+                      : q.cls==='SC' ? '<span class="badge sample">SC</span>' : '';
+              return '<tr><td class="c">'+esc(q.balloon||'—')+'</td>'+
+                '<td>'+esc(q.description||'—')+'</td>'+
+                '<td class="r">'+C.qty(q.nominal)+' '+esc(q.unit||'')+'</td>'+
+                '<td class="c">'+(q.upper||q.lower
+                    ? esc(q.upper||'0')+' / '+esc(q.lower||'0') : '—')+'</td>'+
+                '<td class="c">'+cls+'</td>'+
+                '<td class="hint">'+esc(q.gauge||'—')+'</td>'+
+                '<td class="hint">'+esc(q.frequency||'—')+'</td>'+
+                '<td><button class="btn del dm-del" data-id="'+esc(dm.doc_id)+'">Remove</button></td></tr>';
+            }).join('') + '</tbody></table>'
+          : '<div class="hint" style="padding:6px 0 10px;">No dimensions recorded at this operation.</div>');
+    }).join('');
+    host.innerHTML = out;
+    host.querySelectorAll('.dm-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        if (!confirm('Remove this dimension?')) return;
+        try {
+          await C.idms.patchDoc({ docId:b.dataset.id, remove:true, reason:'dimension removed' });
+          dimensions = await C.idms.docs('dimension');
+          drawDimensions();
+        } catch(e){ toast(e.message); }
+      });
     });
   }
 
@@ -1239,6 +1487,103 @@
       go('home');
     });
     f.click();
+  });
+
+  /* ---- routing wiring ---- */
+  document.getElementById('pr-part').addEventListener('change', drawProcesses);
+  document.getElementById('pr-clear').addEventListener('click', function(){
+    ['pr-name','pr-machine','pr-setup','pr-cycle','pr-desc'].forEach(function(id){
+      document.getElementById(id).value=''; });
+    document.getElementById('pr-msg').style.display='none';
+  });
+  document.getElementById('pr-add').addEventListener('click', async function(){
+    var msg = document.getElementById('pr-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var partId = document.getElementById('pr-part').value;
+    if (!partId) return say('Choose the part this operation belongs to.');
+    if (!g('pr-name')) return say('Give the operation a name.');
+    var opNo = C.num(g('pr-op'));
+    if (opNo <= 0) return say('The operation number must be greater than zero.');
+
+    /* two operations with the same number is an ambiguous route — the control
+       plan and the shop paperwork would disagree about what runs when */
+    var clash = opsFor(partId).filter(function(o){ return C.num((o.data||{}).opNo) === opNo; })[0];
+    if (clash)
+      return say('Operation <b>'+opNo+'</b> already exists on this part ('+
+                 esc((clash.data||{}).name||'')+'). Give this one a different number.');
+
+    this.disabled = true;
+    try {
+      await C.idms.saveDoc({ kind:'process', partId: partId, status:'Active',
+        docNo: String(opNo),
+        data:{ partId: partId, opNo: opNo, name: g('pr-name'), machine: g('pr-machine'),
+               setupMin: C.num(g('pr-setup')), cycleSec: C.num(g('pr-cycle')),
+               where: document.getElementById('pr-where').value, description: g('pr-desc') }
+      }, 'operation added to the routing');
+      say('Operation <b>'+opNo+'</b> added.', true);
+      ['pr-name','pr-machine','pr-setup','pr-cycle','pr-desc'].forEach(function(id){
+        document.getElementById(id).value=''; });
+      processes = await C.idms.docs('process');
+      drawProcesses();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+
+  /* ---- dimension wiring ---- */
+  document.getElementById('dm-part').addEventListener('change', function(){
+    drawOpChoices(); drawDimensions();
+  });
+  document.getElementById('dm-clear').addEventListener('click', function(){
+    ['dm-no','dm-desc','dm-nom','dm-up','dm-lo','dm-gauge','dm-freq'].forEach(function(id){
+      document.getElementById(id).value=''; });
+    document.getElementById('dm-msg').style.display='none';
+  });
+  document.getElementById('dm-add').addEventListener('click', async function(){
+    var msg = document.getElementById('dm-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var partId = document.getElementById('dm-part').value;
+    var opId = document.getElementById('dm-op').value;
+    if (!partId) return say('Choose the part.');
+    if (!opId)   return say('Choose the operation this characteristic is produced or checked at.');
+    if (!g('dm-desc')) return say('Say what the characteristic is.');
+    if (!g('dm-nom'))  return say('A nominal value is needed — without it there is nothing to control.');
+
+    var up = C.num(g('dm-up')), lo = C.num(g('dm-lo'));
+    /* a lower limit above the upper one describes a tolerance nothing can meet,
+       and it would be carried into the control plan as gospel */
+    if ((g('dm-up') || g('dm-lo')) && lo > up)
+      return say('The lower tolerance ('+g('dm-lo')+') is above the upper ('+g('dm-up')+
+                 '). Nothing could ever pass. Lower limits are usually negative, e.g. -0.05.');
+
+    var cls = document.getElementById('dm-class').value;
+    /* a critical or significant characteristic with no gauge and no frequency
+       is a control plan that cannot be executed on the shop floor */
+    if (cls && (!g('dm-gauge') || !g('dm-freq')))
+      return say('A '+(cls==='CC'?'critical':'significant')+' characteristic needs both a gauge and '+
+                 'a check frequency, or the control plan cannot be worked to.');
+
+    this.disabled = true;
+    try {
+      var op = processes.filter(function(x){ return x.doc_id === opId; })[0] || {};
+      await C.idms.saveDoc({ kind:'dimension', partId: partId, status:'Active',
+        docNo: g('dm-no'),
+        data:{ partId: partId, processId: opId, opNo: (op.data||{}).opNo,
+               balloon: g('dm-no'), description: g('dm-desc'),
+               nominal: C.num(g('dm-nom')), upper: g('dm-up'), lower: g('dm-lo'),
+               unit: document.getElementById('dm-unit').value,
+               gauge: g('dm-gauge'), cls: cls, frequency: g('dm-freq') }
+      }, 'dimension added');
+      say('Added to operation <b>'+esc((op.data||{}).opNo)+'</b>.', true);
+      ['dm-no','dm-desc','dm-nom','dm-up','dm-lo'].forEach(function(id){
+        document.getElementById(id).value=''; });
+      dimensions = await C.idms.docs('dimension');
+      drawDimensions();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
   });
 
   document.getElementById('cu-clear').addEventListener('click', clearCustomerForm);

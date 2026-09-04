@@ -117,13 +117,27 @@ idempotent — once sent, the button is replaced by a confirmation.
 
 ## Current state
 
-**Live in the IDMS:** Home, Customer Addition, Parts, GRN, Delivery Challan,
-People (HR records), Company Profile.
+**Live in the IDMS:** Home, Customer Addition, Parts (+ customer/price links),
+Process Master (routing), Dimensions Master, GRN, Delivery Challan, People (HR
+records), Company Profile.
 
 **The NPD chain**, each level hanging off the one above: customer → part →
 customer-part link (their number, their price) → process/routing → dimensions
 per process → BOM → PFD → PFMEA (AI) → control plan (AI, AIAG) → CNC program
-(AI). Customer, part and the priced link are done.
+(AI). Customer, part, priced link, routing and dimensions are done.
+
+**Routing and dimensions.** Operations are `idms_docs` kind `process`, keyed by
+`partId`, numbered in tens so one can be inserted later without renumbering.
+Dimensions are kind `dimension`, carrying both `partId` and `processId`, plus
+`cls` = `SC`/`CC` for significant and critical characteristics. Rules enforced:
+no two operations share a number on one part; a lower tolerance above the upper
+is refused; an SC or CC characteristic must have a gauge and a check frequency,
+or the control plan cannot be worked to; and an operation carrying dimensions
+cannot be deleted, because those characteristics would be orphaned and silently
+dropped from the control plan.
+
+Everything the AI generation stages need is now in place: the routing says what
+happens and where, the dimensions say what must be held and how it is measured.
 
 **Part identity — important.** A part is *ours*, not a customer's. Its internal
 number is issued by the database in one continuous series (`ELIX-PART-0001`) and

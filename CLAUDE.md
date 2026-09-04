@@ -120,8 +120,8 @@ idempotent — once sent, the button is replaced by a confirmation.
 **Live in the IDMS:** Home (with loadable sample data), Customer Addition,
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
 Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
-Self Inspection, Inward Inspection, GRN, Delivery Challan, People (HR records),
-Company Profile.
+Self Inspection, Inward Inspection, Calibration, GRN, Delivery Challan, People
+(HR records), Company Profile.
 
 **Setup approval** is the first shop-floor screen and the pattern for the rest:
 what gets checked comes from the **control plan** for that operation (falling
@@ -151,6 +151,17 @@ is mandatory, because a rejection that ends nowhere is how material creeps back
 into stores; non-conforming material cannot be plainly accepted — it needs a
 deviation with a **named approver**, or return, rework or scrap. The print
 carries a segregation instruction whenever anything was rejected.
+
+**Calibration** is a gauge register that is *checked against the control plans*
+rather than kept beside them: it lists gauges named in a control plan's
+`technique` field that are missing from the register, which is the first thing an
+auditor looks for. Due dates are derived from last-calibrated plus frequency, so
+they cannot drift out of step. Recording a calibration is one action from the
+list and demands a certificate number — a calibration with no certificate cannot
+be evidenced. Withdrawing a gauge needs a reason and correctly *reopens* the
+control-plan gap, because the plan still calls for it. An overdue gauge is
+reported as a recall question, not a red row: readings taken with it since its
+last valid calibration are in doubt.
 
 **The NPD chain is now complete end to end**: a won quotation on the website
 produces customer, part and price; routing and dimensions are entered against

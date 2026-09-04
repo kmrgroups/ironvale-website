@@ -307,6 +307,54 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="report_calibration">
+      <div class="card">
+        <h4>Gauge register and calibration</h4>
+        <div class="hint" style="margin-bottom:10px;">Every gauge named on a control plan needs a
+          calibration status. The check below compares the register against the gauges your control
+          plans actually call for — a gauge in use and not on the register is the first thing an
+          auditor finds.</div>
+        <div id="cal-gap"></div>
+        <div class="row four" style="margin-top:10px;">
+          <div><label>Gauge number</label><input id="cal-no" placeholder="left blank = generated"></div>
+          <div style="grid-column:span 2;"><label>Description</label>
+            <input id="cal-desc" placeholder="Micrometer 25-50mm"></div>
+          <div><label>Type</label><select id="cal-type">
+            <option>Micrometer</option><option>Vernier</option><option>Bore gauge</option>
+            <option>Dial gauge</option><option>Height gauge</option><option>Plug gauge</option>
+            <option>Snap gauge</option><option>Air gauge</option><option>CMM</option>
+            <option>Surface roughness tester</option><option>Hardness tester</option>
+            <option>Torque wrench</option><option>Weighing scale</option><option>Other</option>
+          </select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Range</label><input id="cal-range" placeholder="25-50 mm"></div>
+          <div><label>Least count</label><input id="cal-lc" placeholder="0.001 mm"></div>
+          <div><label>Location / owner</label><input id="cal-loc"></div>
+          <div><label>Frequency (months)</label><input class="num" id="cal-freq" value="12"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Last calibrated</label><input type="date" id="cal-last"></div>
+          <div><label>Calibrated by</label><input id="cal-agency" placeholder="agency, NABL accredited"></div>
+          <div><label>Certificate number</label><input id="cal-cert"></div>
+          <div style="align-self:end;">
+            <button class="btn gold" id="cal-save">Save gauge</button>
+            <button class="btn" id="cal-clear" style="margin-left:6px;">Clear</button></div>
+        </div>
+        <div class="note" id="cal-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <div class="row four" style="margin-bottom:8px;">
+          <div><label>Show</label><select id="cal-filter">
+            <option value="">All gauges</option><option value="overdue">Overdue</option>
+            <option value="due">Due within 30 days</option><option value="ok">In date</option>
+            <option value="scrapped">Withdrawn</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="cal-print">Print register</button></div>
+        </div>
+        <div id="cal-list"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="report_inward_inspection">
       <div class="card">
         <h4>Inward Inspection</h4>
@@ -885,7 +933,7 @@
       ['report_pdi','✓','PDI Report'],['report_setup_approval','✅','Setup Approval Report',1],
       ['report_tool_history','🔧','Tool History Card'],
       ['report_machine_checksheet','⚙','Machine Check Sheet'],
-      ['report_calibration','📏','Calibration Report'],['report_msa','🔬','MSA Study Report'],
+      ['report_calibration','📏','Calibration Report',1],['report_msa','🔬','MSA Study Report'],
       ['report_control_charts','📊','Control Charts']]],
     ['qms','📋','QMS','Quality Management System',[
       ['qms_level1','📜','Level-1 — Policy'],['qms_level2','📄','Level-2 — Procedures'],
@@ -965,6 +1013,7 @@
     if (s === 'report_setup_approval') loadSetup();
     if (s === 'report_self_inspection') loadSelfInsp();
     if (s === 'report_inward_inspection') loadInward();
+    if (s === 'report_calibration') loadCalibration();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -1464,6 +1513,240 @@
       loadHome();
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Remove sample data';
+  }
+
+  /* ---------------- Calibration ----------------
+     A gauge register that is checked against the control plans rather than kept
+     beside them. An out-of-calibration gauge does not only fail an audit — every
+     reading taken with it since the last good calibration is in question, so the
+     screen says that rather than colouring a row red and leaving it. */
+  var gauges = [], calEditing = null;
+
+  function calDue(g){
+    if (!g.lastCalibrated) return null;
+    var d = new Date(g.lastCalibrated);
+    d.setMonth(d.getMonth() + (C.num(g.frequencyMonths) || 12));
+    return d;
+  }
+  function calState(rec){
+    var g = rec.data || {};
+    if (rec.status === 'Withdrawn') return { key:'scrapped', label:'Withdrawn', cls:'new' };
+    var due = calDue(g);
+    if (!due) return { key:'due', label:'Never calibrated', cls:'ab' };
+    var days = Math.floor((due - new Date()) / 86400000);
+    if (days < 0) return { key:'overdue', label:'Overdue by ' + (-days) + ' days', cls:'ab', days:days };
+    if (days <= 30) return { key:'due', label:'Due in ' + days + ' days', cls:'sample', days:days };
+    return { key:'ok', label:'In date', cls:'series', days:days };
+  }
+
+  async function loadCalibration(){
+    try { gauges = await C.idms.docs('gauge'); } catch(e){ gauges = []; }
+    await drawCalGap();
+    drawCalList();
+  }
+
+  /* the question an auditor actually asks: is every gauge you say you use
+     on the register, and is it in date? */
+  async function drawCalGap(){
+    var host = document.getElementById('cal-gap');
+    var named = {};
+    try {
+      var plans = await C.idms.docs('control_plan');
+      plans.forEach(function(cp){
+        ((cp.data||{}).rows||[]).forEach(function(r){
+          var t = String(r.technique||'').trim();
+          if (t && !/^n\/?a$/i.test(t)) named[t.toLowerCase()] = t;
+        });
+      });
+    } catch(e){}
+    var keys = Object.keys(named);
+    if (!keys.length){
+      host.innerHTML = '<div class="hint">No control plans name a gauge yet, so there is nothing to ' +
+        'check the register against.</div>';
+      return;
+    }
+    var have = gauges.filter(function(g){ return g.status !== 'Withdrawn'; })
+      .map(function(g){ return String((g.data||{}).description||'').toLowerCase(); });
+    var missing = keys.filter(function(k){
+      return !have.some(function(h){ return h && (h.indexOf(k.slice(0,12)) >= 0 || k.indexOf(h.slice(0,12)) >= 0); });
+    });
+    var bad = gauges.filter(function(g){
+      var st = calState(g); return st.key === 'overdue' || st.label === 'Never calibrated'; });
+
+    host.innerHTML =
+      (missing.length
+        ? '<div class="note bad"><b>' + missing.length + ' gauge(s) are called for by a control plan ' +
+          'but are not on the register:</b> ' + missing.map(function(k){ return esc(named[k]); }).join(', ') +
+          '. Add them, or the control plan is asking for measurements nobody can prove are valid.</div>'
+        : '<div class="note good">Every gauge named on a control plan is on the register.</div>') +
+      (bad.length
+        ? '<div class="note bad"><b>' + bad.length + ' gauge(s) are overdue or never calibrated.</b> ' +
+          'Readings taken with them since the last valid calibration are in question — that is a ' +
+          'recall decision, not a paperwork one.</div>'
+        : '');
+  }
+
+  function drawCalList(){
+    var host = document.getElementById('cal-list');
+    var f = document.getElementById('cal-filter').value;
+    var rows = gauges.filter(function(g){ return !f || calState(g).key === f; });
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>' +
+        (gauges.length ? 'No gauges match that filter' : 'No gauges on the register yet') + '</b>' +
+        (gauges.length ? '' : 'Add the ones your control plans call for.') + '</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Number</th><th>Gauge</th><th>Range</th>' +
+      '<th>Location</th><th>Last</th><th>Due</th><th class="c">Status</th><th></th>' +
+      '</tr></thead><tbody>' + rows.map(function(rec){
+        var g = rec.data || {}, st = calState(rec), due = calDue(g);
+        return '<tr><td><b>'+esc(rec.doc_no||'')+'</b></td>' +
+          '<td>'+esc(g.description||'')+'<div class="hint">'+esc(g.type||'')+
+            (g.leastCount?' · '+esc(g.leastCount):'')+'</div></td>' +
+          '<td class="hint">'+esc(g.range||'—')+'</td>' +
+          '<td class="hint">'+esc(g.location||'—')+'</td>' +
+          '<td class="hint">'+(g.lastCalibrated?C.fmtDate(g.lastCalibrated):'—')+'</td>' +
+          '<td class="hint">'+(due?C.fmtDate(due):'—')+'</td>' +
+          '<td class="c"><span class="badge '+st.cls+'">'+esc(st.label)+'</span></td>' +
+          '<td><button class="btn cal-edit" data-id="'+esc(rec.doc_id)+'">Edit</button> ' +
+          (rec.status==='Withdrawn' ? '' :
+            '<button class="btn cal-cal" data-id="'+esc(rec.doc_id)+'">Calibrated</button>') +
+          '</td></tr>';
+      }).join('') + '</tbody></table>';
+
+    host.querySelectorAll('.cal-edit').forEach(function(b){
+      b.addEventListener('click', function(){ editGauge(b.dataset.id); });
+    });
+    /* recording a calibration is one action, not a trip through the whole form */
+    host.querySelectorAll('.cal-cal').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var rec = gauges.filter(function(x){ return x.doc_id === b.dataset.id; })[0];
+        if (!rec) return;
+        var when = prompt('Date it was calibrated (YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+        if (when === null) return;
+        var cert = prompt('Certificate number:', (rec.data||{}).certificate || '');
+        if (cert === null) return;
+        if (!String(cert).trim()){
+          toast('A calibration without a certificate number cannot be evidenced.'); return;
+        }
+        var hist = ((rec.data||{}).history || []).slice();
+        hist.unshift({ on:when, certificate:cert.trim(), by:(rec.data||{}).agency||'' });
+        try {
+          await C.idms.saveDoc({ docId:rec.doc_id, kind:'gauge', docNo:rec.doc_no, status:'Active',
+            data: Object.assign({}, rec.data, { lastCalibrated:when, certificate:cert.trim(),
+              history:hist }) }, 'gauge calibrated, certificate ' + cert.trim());
+          toast('Recorded');
+          await loadCalibration();
+        } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
+  function editGauge(id){
+    var rec = gauges.filter(function(x){ return x.doc_id === id; })[0];
+    if (!rec) return;
+    calEditing = id;
+    var g = rec.data || {}, set = function(f,v){ document.getElementById(f).value = v == null ? '' : v; };
+    set('cal-no', rec.doc_no); set('cal-desc', g.description); set('cal-range', g.range);
+    set('cal-lc', g.leastCount); set('cal-loc', g.location); set('cal-freq', g.frequencyMonths);
+    set('cal-last', g.lastCalibrated); set('cal-agency', g.agency); set('cal-cert', g.certificate);
+    if (g.type) document.getElementById('cal-type').value = g.type;
+    var m = document.getElementById('cal-msg');
+    m.style.display=''; m.className='note';
+    m.innerHTML = 'Editing <b>'+esc(rec.doc_no||'')+'</b>. ' +
+      ((rec.data||{}).history||[]).length + ' calibration(s) on record. ' +
+      (rec.status === 'Withdrawn' ? 'This gauge is withdrawn.' :
+        '<a href="#" id="cal-withdraw" style="color:var(--bad);">Withdraw it from use</a>.');
+    var w = document.getElementById('cal-withdraw');
+    if (w) w.addEventListener('click', async function(e){
+      e.preventDefault();
+      var why = prompt('Withdrawing ' + rec.doc_no + ' from use. Why?');
+      if (why === null) return;
+      if (!why.trim()) { toast('State a reason.'); return; }
+      try {
+        await C.idms.saveDoc({ docId:rec.doc_id, kind:'gauge', docNo:rec.doc_no, status:'Withdrawn',
+          data: Object.assign({}, rec.data, { withdrawnReason:why.trim(),
+            withdrawnOn:new Date().toISOString().slice(0,10) }) }, 'gauge withdrawn: ' + why.trim());
+        clearGaugeForm(); await loadCalibration(); toast('Withdrawn');
+      } catch(e2){ toast(e2.message); }
+    });
+  }
+
+  function clearGaugeForm(){
+    calEditing = null;
+    ['cal-no','cal-desc','cal-range','cal-lc','cal-loc','cal-last','cal-agency','cal-cert']
+      .forEach(function(id){ document.getElementById(id).value = ''; });
+    document.getElementById('cal-freq').value = '12';
+    document.getElementById('cal-msg').style.display = 'none';
+  }
+
+  async function saveGauge(){
+    var msg = document.getElementById('cal-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    if (!g('cal-desc')) return say('Describe the gauge — an entry with no description cannot be found ' +
+                                   'on a shop floor.');
+    if (!C.num(g('cal-freq'))) return say('A calibration frequency is needed, or nothing is ever due.');
+
+    /* the same gauge entered twice means two calibration histories and no way to
+       know which one the shop floor is holding */
+    var clash = gauges.filter(function(x){
+      return x.doc_id !== calEditing &&
+        String((x.data||{}).description||'').toLowerCase() === g('cal-desc').toLowerCase() &&
+        String((x.data||{}).range||'').toLowerCase() === g('cal-range').toLowerCase(); })[0];
+    if (clash)
+      return say('<b>'+esc(g('cal-desc'))+'</b> at that range is already on the register as <b>'+
+                 esc(clash.doc_no)+'</b>. Edit that one rather than starting a second history.');
+
+    var no = g('cal-no');
+    try {
+      if (!no && !calEditing) no = await C.docNumber('gauge');
+      var prev = calEditing ? (gauges.filter(function(x){ return x.doc_id===calEditing; })[0]||{}) : {};
+      await C.idms.saveDoc({ docId: calEditing || '', kind:'gauge', docNo: no || prev.doc_no,
+        status: prev.status === 'Withdrawn' ? 'Withdrawn' : 'Active',
+        data: Object.assign({}, prev.data||{}, {
+          description:g('cal-desc'), type:document.getElementById('cal-type').value,
+          range:g('cal-range'), leastCount:g('cal-lc'), location:g('cal-loc'),
+          frequencyMonths:C.num(g('cal-freq')), lastCalibrated:g('cal-last'),
+          agency:g('cal-agency'), certificate:g('cal-cert') }) },
+        calEditing ? 'gauge updated' : 'gauge added to the register');
+      say('Saved as <b>'+esc(no || prev.doc_no)+'</b>.', true);
+      clearGaugeForm();
+      await loadCalibration();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  function printCalibration(){
+    var f = document.getElementById('cal-filter').value;
+    var rows = gauges.filter(function(g){ return !f || calState(g).key === f; });
+    if (!rows.length) { toast('Nothing to print.'); return; }
+    var overdue = gauges.filter(function(g){ return calState(g).key === 'overdue'; }).length;
+    C.openReport({
+      title:'Gauge Calibration Register', kind:'Register', landscape:true,
+      subtitle:(f ? 'Filtered: ' + f : 'All gauges') + ' · ' + rows.length + ' item(s)',
+      sections:[
+        { type:'table', title:'Register',
+          columns:[{label:'Number'},{label:'Gauge'},{label:'Type'},{label:'Range'},
+            {label:'Least count'},{label:'Location'},{label:'Frequency',align:'c'},
+            {label:'Last calibrated'},{label:'Due'},{label:'Certificate'},{label:'Status'}],
+          rows: rows.map(function(rec){
+            var g = rec.data||{}, st = calState(rec), due = calDue(g);
+            return [esc(rec.doc_no||''), esc(g.description||''), esc(g.type||''),
+              esc(g.range||'—'), esc(g.leastCount||'—'), esc(g.location||'—'),
+              (C.num(g.frequencyMonths)||12) + ' mo',
+              g.lastCalibrated ? C.fmtDate(g.lastCalibrated) : '—',
+              due ? C.fmtDate(due) : '—', esc(g.certificate||'—'),
+              st.key === 'overdue' || st.label === 'Never calibrated'
+                ? { v:'<b>'+esc(st.label)+'</b>', cls:'ab' } : esc(st.label)];
+          }),
+          note: overdue
+            ? overdue + ' gauge(s) are overdue. Readings taken with them since their last valid ' +
+              'calibration are in question.'
+            : 'All gauges shown are within their calibration interval.' },
+        { type:'text', title:'Signatures',
+          body:'Prepared by                              Quality                              Date' }
+      ]});
   }
 
   /* ---------------- Inward inspection ----------------
@@ -4102,6 +4385,11 @@
     });
     f.click();
   });
+
+  document.getElementById('cal-save').addEventListener('click', saveGauge);
+  document.getElementById('cal-clear').addEventListener('click', clearGaugeForm);
+  document.getElementById('cal-filter').addEventListener('change', drawCalList);
+  document.getElementById('cal-print').addEventListener('click', printCalibration);
 
   document.getElementById('ii-addline').addEventListener('click', function(){
     var g = function(id){ return document.getElementById(id).value.trim(); };

@@ -307,6 +307,49 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="cnc">
+      <div class="card">
+        <h4>CNC Programme</h4>
+        <div class="note bad" style="margin-bottom:12px;">
+          <b>Read this before you use anything on this screen.</b> A drafted programme is a starting
+          point for a programmer, not a programme to run. It has not been simulated, the offsets and
+          work coordinates are assumptions, and no machine here knows your fixtures. Post it to a
+          control without proving it out and you will crash a spindle. Every file this screen
+          produces carries that warning inside it, and it cannot be marked proven until someone puts
+          their name to a dry run.</div>
+        <div class="row four">
+          <div><label>Part</label><select id="cn-part"></select></div>
+          <div><label>Operation</label><select id="cn-op"></select></div>
+          <div><label>Control</label><select id="cn-ctrl">
+            <option>Fanuc</option><option>Siemens 828D</option><option>Haas</option>
+            <option>Mazak Mazatrol EIA</option><option>Mitsubishi</option></select></div>
+          <div style="align-self:end;">
+            <button class="btn ai-btn" id="cn-gen">Draft programme</button></div>
+        </div>
+        <div class="note" id="cn-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4 id="cn-title">Programme</h4>
+        <div id="cn-body"></div>
+      </div>
+      <div class="card" id="cn-proof" style="display:none;">
+        <h4>Prove-out record</h4>
+        <div class="hint" style="margin-bottom:10px;">Filled in <b>after</b> the programme has been
+          run in single block with feed override down and the first part measured. Until then the
+          programme stays marked unproven wherever it appears.</div>
+        <div class="row four">
+          <div><label>Proved out by</label><input id="cn-by" placeholder="programmer / setter name"></div>
+          <div><label>On machine</label><input id="cn-machine"></div>
+          <div><label>Date</label><input type="date" id="cn-on"></div>
+          <div style="align-self:end;"><button class="btn green" id="cn-prove">Record prove-out</button></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
+          <label>What was changed at the machine</label>
+          <input id="cn-changes" placeholder="offsets set, approach moved clear of the tailstock, feed reduced on the bore">
+        </div></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="control_plan">
       <div class="card">
         <h4>Control Plan</h4>
@@ -621,7 +664,7 @@
       ['grn','📥','GRN — Goods Receipt',1],['dc','📤','Delivery Challan',1],
       ['sheet_rawmat','🪨','Raw Material Stock'],['bom','🧾','Bill of Materials']]],
     ['prod','🏭','Production','Shop Floor',[
-      ['entry_prod','📝','Production Entry'],['dwm','📊','DWM — Daily Work Management'],
+      ['cnc','⌨','CNC Programme',1],['entry_prod','📝','Production Entry'],['dwm','📊','DWM — Daily Work Management'],
       ['task_list','✅','Task List']]],
     ['hr','🏢','HR & Competency','Organisation',[
       ['hrm','👥','HR & Payroll',1],['org_chart','🏗','Organisation Chart'],
@@ -712,6 +755,7 @@
     if (s === 'pfd')            loadPfd();
     if (s === 'fmea')           loadFmea();
     if (s === 'control_plan')   loadCp();
+    if (s === 'cnc')            loadCnc();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -1211,6 +1255,279 @@
       loadHome();
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Remove sample data';
+  }
+
+  /* ---------------- CNC programme ----------------
+     The one place in this system where a wrong answer breaks metal rather than
+     paperwork. So: the warning is written into the file itself, not only shown
+     on screen; the programme is never marked proven by the software; and the
+     prove-out record asks what was changed at the machine, because that is the
+     information the next person needs. */
+  var cncDoc = null;
+
+  var CNC_WARNING = [
+    '(------------------------------------------------------------)',
+    '( UNPROVEN DRAFT - DO NOT RUN WITHOUT PROVING OUT             )',
+    '( Generated from the routing and control plan. Not simulated. )',
+    '( Work offsets, tool numbers and approach moves are ASSUMED.  )',
+    '( Verify against the drawing, run in single block with feed   )',
+    '( override at 10 percent, and measure the first part.         )',
+    '(------------------------------------------------------------)'
+  ].join('\n');
+
+  async function loadCnc(){
+    await fetchParts();
+    var sel = document.getElementById('cn-part');
+    sel.innerHTML = partOptions(sel.value);
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
+    drawCncOps();
+    await loadCncDoc();
+  }
+
+  function drawCncOps(){
+    var partId = document.getElementById('cn-part').value;
+    var ops = opsFor(partId).filter(function(o){
+      /* an inspection or hand operation has no programme */
+      return !isInspection(o.data||{}) && (o.data||{}).where !== 'sub'; });
+    document.getElementById('cn-op').innerHTML = ops.length
+      ? '<option value="">— choose an operation —</option>' + ops.map(function(o){
+          var v=o.data||{};
+          return '<option value="'+esc(o.doc_id)+'">'+esc(v.opNo)+' · '+esc(v.name||'')+
+            (v.machine?' ('+esc(v.machine)+')':'')+'</option>'; }).join('')
+      : '<option value="">no machining operations on this part</option>';
+  }
+
+  async function loadCncDoc(){
+    var opId = document.getElementById('cn-op').value;
+    cncDoc = null;
+    if (opId){
+      try {
+        cncDoc = (await C.idms.docs('cnc')).filter(function(x){
+          return (x.data||{}).processId === opId; })[0] || null;
+      } catch(e){}
+    }
+    drawCnc();
+  }
+
+  function drawCnc(){
+    var host = document.getElementById('cn-body');
+    var title = document.getElementById('cn-title');
+    var opId = document.getElementById('cn-op').value;
+    document.getElementById('cn-proof').style.display = 'none';
+    if (!opId){
+      title.textContent = 'Programme';
+      host.innerHTML = '<div class="empty"><b>Choose a part and an operation</b>' +
+        'Inspection and sub-contract operations are not offered — they have no programme.</div>';
+      return;
+    }
+    var op = processes.filter(function(x){ return x.doc_id === opId; })[0] || {};
+    var v = op.data || {};
+    title.textContent = 'Op ' + (v.opNo||'') + ' · ' + (v.name||'') + ' — ' + (v.machine||'');
+
+    if (!cncDoc){
+      var dims = dimensions.filter(function(d){ return (d.data||{}).processId === opId; });
+      host.innerHTML = '<div class="empty"><b>No programme drafted for this operation</b>' +
+        'It has ' + dims.length + ' characteristic(s) recorded. ' +
+        (dims.length ? 'Press <b>Draft programme</b>.'
+                     : 'Add its dimensions first, or the programme has no sizes to cut to.') + '</div>';
+      return;
+    }
+
+    var d = cncDoc.data || {};
+    host.innerHTML =
+      (d.provedBy
+        ? '<div class="note good">Proved out by <b>'+esc(d.provedBy)+'</b> on '+
+          esc(d.provedMachine||'')+', '+C.fmtDate(d.provedOn)+'.' +
+          (d.changes ? ' Changed at the machine: '+esc(d.changes) : '') + '</div>'
+        : '<div class="note bad"><b>Unproven.</b> This has never been run. Do not post it to a ' +
+          'control until it has been proved out and the record below is filled in.</div>') +
+      '<div class="row four" style="margin-bottom:10px;">' +
+      '<div style="align-self:end;"><button class="btn" id="cn-copy">Copy to clipboard</button></div>' +
+      '<div style="align-self:end;"><button class="btn" id="cn-dl">Download .nc</button></div>' +
+      '<div style="align-self:end;"><button class="btn" id="cn-print">Print</button></div>' +
+      '<div style="align-self:end;"><span class="hint">'+esc(d.control||'')+' · drafted '+
+        C.fmtDate(d.generatedOn)+'</span></div></div>' +
+      (d.tools && d.tools.length
+        ? '<div class="sub">Tools assumed</div><table class="t"><thead><tr><th class="c">T</th>' +
+          '<th>Tool</th><th class="r">Offset</th><th>Notes</th></tr></thead><tbody>' +
+          d.tools.map(function(t){
+            return '<tr><td class="c"><b>'+esc(t.no)+'</b></td><td>'+esc(t.desc)+'</td>' +
+              '<td class="r">'+esc(t.offset||'—')+'</td><td class="hint">'+esc(t.note||'')+'</td></tr>';
+          }).join('') + '</tbody></table>' : '') +
+      '<div class="sub">Programme</div>' +
+      '<pre style="background:var(--paper);border:1px solid var(--line);border-radius:8px;' +
+      'padding:12px;font-family:var(--mono);font-size:11.5px;line-height:1.55;max-height:460px;' +
+      'overflow:auto;">' + esc(d.code||'') + '</pre>';
+
+    document.getElementById('cn-proof').style.display = '';
+    document.getElementById('cn-by').value = d.provedBy || '';
+    document.getElementById('cn-machine').value = d.provedMachine || v.machine || '';
+    document.getElementById('cn-on').value = d.provedOn || '';
+    document.getElementById('cn-changes').value = d.changes || '';
+
+    var fileName = ((allParts.filter(function(x){ return x.part_id === cncDoc.part_id; })[0]||{}).part_no
+      || 'part') + '-OP' + (v.opNo||'') + '.nc';
+    var payload = CNC_WARNING + '\n' + (d.code||'');
+
+    document.getElementById('cn-copy').addEventListener('click', function(){
+      /* the warning goes with it — a programme pasted without it loses the one
+         thing that stops someone running it cold */
+      if (navigator.clipboard) navigator.clipboard.writeText(payload)
+        .then(function(){ toast('Copied, warning header included'); })
+        .catch(function(){ toast('Could not copy — select the text instead'); });
+      else toast('This browser will not copy automatically — select the text instead');
+    });
+    document.getElementById('cn-dl').addEventListener('click', function(){
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([payload], {type:'text/plain'}));
+      a.download = fileName; a.click();
+      toast('Downloaded ' + fileName);
+    });
+    document.getElementById('cn-print').addEventListener('click', printCnc);
+  }
+
+  async function generateCnc(){
+    var msg = document.getElementById('cn-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var partId = document.getElementById('cn-part').value;
+    var opId = document.getElementById('cn-op').value;
+    if (!partId) return say('Choose the part.');
+    if (!opId)   return say('Choose the operation.');
+
+    var op = processes.filter(function(x){ return x.doc_id === opId; })[0] || {};
+    var v = op.data || {};
+    var dims = dimensions.filter(function(d){ return (d.data||{}).processId === opId; });
+    if (!dims.length)
+      return say('This operation has no dimensions recorded. A programme drafted without sizes ' +
+                 'would be invented from nothing — add the characteristics first.');
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+
+    if (cncDoc && !confirm('This operation already has a programme' +
+        ((cncDoc.data||{}).provedBy ? ', and it has been proved out' : '') +
+        '.\n\nDrafting again replaces it and clears the prove-out record. Continue?')) return;
+
+    /* the parameters agreed on the control plan, if there is one */
+    var params = null;
+    try {
+      var cp = (await C.idms.docs('control_plan', partId))[0];
+      if (cp) params = ((cp.data||{}).params||[]).filter(function(q){
+        return C.num(q.opNo) === C.num(v.opNo); })[0] || null;
+    } catch(e){}
+
+    var btn = document.getElementById('cn-gen');
+    btn.disabled = true; btn.textContent = 'Drafting…';
+    say('Drafting for ' + (v.machine||'the machine') + '. This is a draft for a programmer.', true);
+
+    var prompt =
+'You are drafting a CNC part programme for a Tier-2 automotive machining company. It will be read ' +
+'and corrected by a programmer before it ever reaches a machine.\n\n' +
+'CONTROL: ' + document.getElementById('cn-ctrl').value + '\n' +
+'MACHINE: ' + (v.machine||'not stated') + '\n' +
+'PART: ' + (p.part_no||'') + ' — ' + (p.part_name||'') +
+  ((p.data||{}).rawMaterial ? '\nRAW MATERIAL: ' + (p.data||{}).rawMaterial : '') + '\n' +
+'OPERATION ' + (v.opNo||'') + ': ' + (v.name||'') + '\n' +
+'WHAT HAPPENS: ' + (v.description||'not stated') + '\n\n' +
+'SIZES TO BE HELD:\n' + dims.map(function(d){
+  var q = d.data||{};
+  return '  - ' + (q.description||'') + ' = ' + q.nominal + (q.unit||'') + ' ' +
+    (q.upper||'0') + '/' + (q.lower||'0') + (q.cls ? ' [' + q.cls + ']' : ''); }).join('\n') +
+(params ? '\n\nPARAMETERS AGREED ON THE CONTROL PLAN — use these, do not invent your own:' +
+  '\n  Tool: ' + (params.tool||'not stated') +
+  '\n  Speed: ' + (params.speed||'not stated') +
+  '\n  Feed: ' + (params.feed||'not stated') +
+  '\n  Depth of cut: ' + (params.doc||'not stated') +
+  '\n  Coolant: ' + (params.coolant||'not stated') : '') + '\n\n' +
+'Reply in exactly this shape, nothing else — no markdown, no explanation outside the blocks:\n\n' +
+'TOOLS\nT<number> | <tool description> | <offset register> | <note>\n' +
+'(one line per tool)\nEND\n\n' +
+'PROGRAM\n<the programme, one block per line, in the dialect of the control named above>\nEND\n\n' +
+'Rules you must follow:\n' +
+'- Put a comment block at the top naming the part, the operation and every size being held.\n' +
+'- Comment each tool change and each feature so a setter can follow it.\n' +
+'- Cut to the middle of the tolerance, not the nominal, where the tolerance is one-sided.\n' +
+'- Use G54 for the work offset and say so in a comment, since the real offset is unknown to you.\n' +
+'- Retract clear before every tool change and end with the tool clear of the part.\n' +
+'- Do not use canned cycles the named control does not support.\n' +
+'- Where you have had to assume something — stock size, chuck clearance, tailstock — write it as a ' +
+'comment beginning ASSUMED so the programmer can find it.';
+
+    try {
+      var txt = await C.callAI(prompt, { maxTokens: 3000 });
+      var parsed = parseCncReply(txt);
+      if (!parsed.code) throw new Error('The reply contained no programme.');
+
+      var doc = { kind:'cnc', partId: partId, status:'Unproven',
+        docNo: cncDoc ? cncDoc.doc_no : await C.docNumber('cnc'),
+        data:{ partId: partId, processId: opId, opNo: v.opNo,
+               control: document.getElementById('cn-ctrl').value,
+               machine: v.machine||'', code: parsed.code, tools: parsed.tools,
+               usedControlPlan: !!params,
+               generatedOn: new Date().toISOString().slice(0,10),
+               provedBy:'', provedOn:'', provedMachine:'', changes:'' } };
+      if (cncDoc) doc.docId = cncDoc.doc_id;
+      await C.idms.saveDoc(doc, 'CNC programme drafted — unproven');
+      await loadCncDoc();
+      var assumptions = (parsed.code.match(/ASSUMED/g)||[]).length;
+      say('Drafted' + (params ? ' using the control plan parameters' : '') + '. ' +
+          (assumptions ? '<b>' + assumptions + ' assumption(s)</b> are marked ASSUMED in the code — ' +
+            'find each one before you run it. ' : '') +
+          '<b>It has not been simulated.</b> Prove it out before it goes near a spindle.', true);
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Draft programme';
+  }
+
+  function parseCncReply(txt){
+    var t = String(txt||'');
+    var tools = [];
+    var tm = t.match(/^\s*TOOLS\s*$([\s\S]*?)^\s*END\s*$/mi);
+    if (tm) tm[1].split('\n').forEach(function(l){
+      var parts = l.split('|').map(function(x){ return x.trim(); });
+      if (parts.length >= 2 && /^T?\d/i.test(parts[0]))
+        tools.push({ no:parts[0].replace(/^T/i,''), desc:parts[1],
+                     offset:parts[2]||'', note:parts[3]||'' });
+    });
+    var pm = t.match(/^\s*PROGRAM\s*$([\s\S]*?)^\s*END\s*$/mi);
+    var code = pm ? pm[1].replace(/^\n+|\n+$/g,'') : '';
+    /* if the model ignored the shape, keep whatever looks like code rather than
+       losing the work — but strip any prose above the first block */
+    if (!code){
+      var lines = t.split('\n');
+      var first = lines.findIndex(function(l){ return /^\s*[ONGMT]\d|^\s*\(/.test(l); });
+      if (first >= 0) code = lines.slice(first).join('\n').replace(/^\s*END\s*$/mi,'').trim();
+    }
+    return { tools: tools, code: code };
+  }
+
+  function printCnc(){
+    if (!cncDoc) return;
+    var d = cncDoc.data || {};
+    var p = allParts.filter(function(x){ return x.part_id === cncDoc.part_id; })[0] || {};
+    C.openReport({
+      title: 'CNC Programme' + (d.provedBy ? '' : ' — UNPROVEN, DO NOT RUN'),
+      kind: d.provedBy ? 'Programme' : 'Programme (unproven)',
+      subtitle: (p.part_no||'') + ' · Op ' + (d.opNo||'') + ' · ' + (d.machine||'') +
+        ' · ' + (d.control||''),
+      sections:[
+        { type:'pairs', title:'Record', rows:[
+          ['Part', esc((p.part_no||'') + ' — ' + (p.part_name||''))],
+          ['Operation', esc(String(d.opNo||''))],
+          ['Machine', esc(d.machine||'—')],
+          ['Control', esc(d.control||'—')],
+          ['Parameters from control plan', d.usedControlPlan ? 'Yes' : 'No — drafted without them'],
+          ['Drafted', C.fmtDate(d.generatedOn)],
+          ['Proved out by', esc(d.provedBy || 'NOT PROVED OUT')],
+          ['Proved on machine', esc(d.provedMachine || '—')],
+          ['Changed at the machine', esc(d.changes || '—')]]},
+        (d.tools && d.tools.length) ? { type:'table', title:'Tools',
+          columns:[{label:'T',align:'c'},{label:'Tool'},{label:'Offset',align:'r'},{label:'Note'}],
+          rows: d.tools.map(function(t){
+            return [esc(t.no), esc(t.desc), esc(t.offset||'—'), esc(t.note||'')]; }) } : null,
+        { type:'html', title:'Programme',
+          html:'<pre style="font-size:7pt;line-height:1.35;white-space:pre-wrap;">' +
+            esc(CNC_WARNING + '\n' + (d.code||'')) + '</pre>' }
+      ].filter(Boolean) });
   }
 
   /* ---------------- Control Plan ----------------
@@ -2401,6 +2718,35 @@
       go('home');
     });
     f.click();
+  });
+
+  document.getElementById('cn-part').addEventListener('change', function(){
+    drawCncOps(); loadCncDoc();
+  });
+  document.getElementById('cn-op').addEventListener('change', loadCncDoc);
+  document.getElementById('cn-gen').addEventListener('click', generateCnc);
+  document.getElementById('cn-prove').addEventListener('click', async function(){
+    if (!cncDoc) return;
+    var by = document.getElementById('cn-by').value.trim();
+    var msg = document.getElementById('cn-msg');
+    if (!by){
+      msg.style.display=''; msg.className='note bad';
+      msg.textContent='Name who proved it out. A programme marked proven with nobody behind it is ' +
+        'the most dangerous record in this system.'; return;
+    }
+    this.disabled = true;
+    try {
+      await C.idms.saveDoc({ docId: cncDoc.doc_id, kind:'cnc', partId: cncDoc.part_id,
+        status:'Proved',
+        data: Object.assign({}, cncDoc.data, { provedBy: by,
+          provedMachine: document.getElementById('cn-machine').value.trim(),
+          provedOn: document.getElementById('cn-on').value || new Date().toISOString().slice(0,10),
+          changes: document.getElementById('cn-changes').value.trim() }) },
+        'CNC programme proved out by ' + by);
+      await loadCncDoc();
+      toast('Prove-out recorded');
+    } catch(e){ toast(e.message); }
+    this.disabled = false;
   });
 
   document.getElementById('cp-part').addEventListener('change', loadCpDoc);

@@ -119,8 +119,14 @@ idempotent — once sent, the button is replaced by a confirmation.
 
 **Live in the IDMS:** Home (with loadable sample data), Customer Addition,
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
-Process Flow Diagram, PFMEA, Control Plan, GRN, Delivery Challan, People (HR
-records), Company Profile.
+Process Flow Diagram, PFMEA, Control Plan, CNC Programme, GRN, Delivery
+Challan, People (HR records), Company Profile.
+
+**The NPD chain is now complete end to end**: a won quotation on the website
+produces customer, part and price; routing and dimensions are entered against
+the part; PFD draws itself; PFMEA is drafted from the routing and dimensions;
+the control plan is drafted from the PFMEA; the CNC programme is drafted from
+the operation and the control plan parameters.
 
 **Sample data.** The home screen loads one worked example — customer, part,
 priced link, four operations, seven dimensions including two CC and one SC.
@@ -166,9 +172,16 @@ number and whether that PFMEA was signed, records product characteristics
 (technique, sample size, frequency, control method, reaction plan, poka-yoke)
 and process parameters (tool spec, tool life, speed, feed, depth of cut,
 clamping pressure, coolant and concentration), and reports any RPN-100+ failure
-mode left without a control. Apply the same pattern to CNC generation: draft,
-show what it was derived from, never let an unreviewed artefact leave the
-building looking approved.
+mode left without a control. **CNC generation** carries the same pattern plus more, because it is the only
+output here that breaks metal rather than paperwork. The warning is written
+**into the file** (`CNC_WARNING`), so it travels with every copy, download and
+print — a programme pasted into a control without it loses the one thing that
+stops someone running it cold. Status starts at `Unproven` and only a named
+prove-out changes it; the record asks *what was changed at the machine*, which
+is what the next person needs. Inspection and sub-contract operations are not
+offered a programme at all. The model is told to mark every assumption with
+`ASSUMED` and the count is reported back to the user. Do not add a path that
+marks a programme proven without a name against it.
 
 Everything the AI generation stages need is now in place: the routing says what
 happens and where, the dimensions say what must be held and how it is measured.

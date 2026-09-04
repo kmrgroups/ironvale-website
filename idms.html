@@ -307,6 +307,38 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="fmea">
+      <div class="card">
+        <h4>Process FMEA</h4>
+        <div class="hint" style="margin-bottom:10px;">Drafted by AI from the routing and the
+          dimensions already on the part — every line is tied to a real operation and a real
+          characteristic. Severity, occurrence and detection are <b>starting points for your CFT to
+          argue with</b>, not answers. Nothing here is approved until a named team signs it.</div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>Part</label><select id="fm-part"></select></div>
+          <div style="align-self:end;"><button class="btn ai-btn" id="fm-gen">Draft with AI</button></div>
+          <div style="align-self:end;"><button class="btn" id="fm-print">Print</button></div>
+        </div>
+        <div class="note" id="fm-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4 id="fm-title">PFMEA</h4>
+        <div id="fm-body"></div>
+      </div>
+      <div class="card" id="fm-signoff" style="display:none;">
+        <h4>Cross-functional team sign-off</h4>
+        <div class="hint" style="margin-bottom:10px;">A PFMEA is a team judgement, not a document one
+          person produces. Record who reviewed it — the printed copy shows this, and until it is
+          filled the print is stamped DRAFT.</div>
+        <div class="row four">
+          <div><label>Reviewed by</label><input id="fm-by" placeholder="names, comma separated"></div>
+          <div><label>Date</label><input type="date" id="fm-on"></div>
+          <div><label>Revision</label><input id="fm-rev" placeholder="00"></div>
+          <div style="align-self:end;"><button class="btn green" id="fm-approve">Record sign-off</button></div>
+        </div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="pfd">
       <div class="card">
         <h4>Process Flow Diagram</h4>
@@ -545,7 +577,7 @@
       ['pp_spec_master','📋','PP Spec Master']]],
     ['npd','🗂','NPD & APQP','New Part Development',[
       ['parts','📦','Parts',1],['apqp','🗂','APQP Programme'],['pfd','🔵','Process Flow Diagram',1],
-      ['fmea','⚠','PFMEA'],['control_plan','📋','Control Plan'],['msa','🔬','MSA'],
+      ['fmea','⚠','PFMEA',1],['control_plan','📋','Control Plan'],['msa','🔬','MSA'],
       ['ppap','📦','PPAP'],['spc','📈','SPC']]],
     ['planning','📈','Planning','Plan',[
       ['sales_plan','📈','Sales Plan'],['capacity_plan','⚙','Capacity Plan'],
@@ -643,6 +675,7 @@
     if (s === 'process_master') loadProcesses();
     if (s === 'dim_entry')      loadDimensions();
     if (s === 'pfd')            loadPfd();
+    if (s === 'fmea')           loadFmea();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -1142,6 +1175,289 @@
       loadHome();
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Remove sample data';
+  }
+
+  /* ---------------- PFMEA ----------------
+     Drafted from the routing and dimensions, then argued with by a team. The
+     rankings are the part that must never be taken on trust: an occurrence of 2
+     invented by a model, left unchallenged, becomes a control plan that does not
+     inspect something it should. So the draft is stored separately from the
+     sign-off, and the print is stamped DRAFT until a team is named. */
+  var fmeaDoc = null;
+
+  function rpn(r){ return C.num(r.sev) * C.num(r.occ) * C.num(r.det); }
+  function rpnCls(v){ return v >= 100 ? 'ab' : v >= 40 ? 'sample' : ''; }
+
+  async function loadFmea(){
+    await fetchParts();
+    var sel = document.getElementById('fm-part');
+    sel.innerHTML = partOptions(sel.value);
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
+    await loadFmeaDoc();
+  }
+
+  async function loadFmeaDoc(){
+    var partId = document.getElementById('fm-part').value;
+    fmeaDoc = null;
+    if (partId){
+      try {
+        fmeaDoc = (await C.idms.docs('pfmea', partId))[0] || null;
+      } catch(e){ fmeaDoc = null; }
+    }
+    drawFmea();
+  }
+
+  function drawFmea(){
+    var partId = document.getElementById('fm-part').value;
+    var host = document.getElementById('fm-body');
+    var title = document.getElementById('fm-title');
+    document.getElementById('fm-signoff').style.display = 'none';
+    if (!partId){
+      title.textContent = 'PFMEA';
+      host.innerHTML = '<div class="empty"><b>Choose a part</b>' +
+        'Its PFMEA is drafted from the routing and dimensions held against it.</div>';
+      return;
+    }
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    title.textContent = 'PFMEA for ' + (p.part_no||'') + ' — ' + (p.part_name||'');
+
+    var ops = opsFor(partId);
+    if (!ops.length){
+      host.innerHTML = '<div class="empty"><b>No routing on this part</b>' +
+        'A PFMEA reasons about operations. Add the routing first.</div>';
+      return;
+    }
+    if (!fmeaDoc){
+      var dims = dimensions.filter(function(d){ return (d.data||{}).partId === partId; });
+      host.innerHTML = '<div class="empty"><b>No PFMEA drafted yet</b>' +
+        'This part has ' + ops.length + ' operation(s) and ' + dims.length + ' dimension(s). ' +
+        'Press <b>Draft with AI</b> and every line will be tied to one of them.</div>';
+      return;
+    }
+
+    var rows = (fmeaDoc.data||{}).rows || [];
+    var signed = (fmeaDoc.data||{}).reviewedBy;
+    var high = rows.filter(function(r){ return rpn(r) >= 100; }).length;
+
+    host.innerHTML =
+      (signed
+        ? '<div class="note good">Signed off by <b>'+esc(signed)+'</b> on '+
+          C.fmtDate((fmeaDoc.data||{}).reviewedOn)+' · revision '+esc((fmeaDoc.data||{}).rev||'00')+'</div>'
+        : '<div class="note"><b>Draft — not approved.</b> Drafted ' +
+          C.fmtDate((fmeaDoc.data||{}).generatedOn) + '. Work through every line with your CFT, ' +
+          'change the rankings you disagree with, then record the sign-off below. The printed copy ' +
+          'is stamped DRAFT until you do.</div>') +
+      (high ? '<div class="note bad"><b>' + high + ' line(s) at RPN 100 or above.</b> These need an ' +
+              'action and a target date before the control plan is written.</div>' : '') +
+      '<div style="overflow-x:auto;"><table class="t"><thead><tr>' +
+      '<th class="c">Op</th><th>Function / requirement</th><th>Failure mode</th><th>Effect</th>' +
+      '<th class="c">S</th><th>Cause</th><th class="c">O</th><th>Prevention</th><th>Detection</th>' +
+      '<th class="c">D</th><th class="c">RPN</th><th>Action</th></tr></thead><tbody>' +
+      rows.map(function(r,i){
+        var v = rpn(r);
+        return '<tr><td class="c">'+esc(r.opNo)+'</td>' +
+          '<td>'+esc(r.requirement||'')+(r.characteristic?'<div class="hint">'+esc(r.characteristic)+
+            (r.cls?' · <b>'+esc(r.cls)+'</b>':'')+'</div>':'')+'</td>' +
+          '<td>'+esc(r.failureMode||'')+'</td><td>'+esc(r.effect||'')+'</td>' +
+          '<td class="c"><input class="num fm-n" data-i="'+i+'" data-k="sev" value="'+esc(r.sev)+'" style="width:44px;text-align:center;"></td>' +
+          '<td>'+esc(r.cause||'')+'</td>' +
+          '<td class="c"><input class="num fm-n" data-i="'+i+'" data-k="occ" value="'+esc(r.occ)+'" style="width:44px;text-align:center;"></td>' +
+          '<td class="hint">'+esc(r.prevention||'')+'</td><td class="hint">'+esc(r.detection||'')+'</td>' +
+          '<td class="c"><input class="num fm-n" data-i="'+i+'" data-k="det" value="'+esc(r.det)+'" style="width:44px;text-align:center;"></td>' +
+          '<td class="c"><b class="fm-rpn" data-i="'+i+'">'+v+'</b></td>' +
+          '<td><input class="fm-act" data-i="'+i+'" value="'+esc(r.action||'')+'"></td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' +
+      '<button class="btn gold" id="fm-save">Save changes</button>' +
+      '<span class="hint" style="align-self:center;">' + rows.length + ' line(s) · ' +
+      'S × O × D is recalculated as you type.</span></div>';
+
+    document.getElementById('fm-signoff').style.display = '';
+    document.getElementById('fm-by').value  = signed || '';
+    document.getElementById('fm-on').value  = (fmeaDoc.data||{}).reviewedOn || '';
+    document.getElementById('fm-rev').value = (fmeaDoc.data||{}).rev || '00';
+
+    host.querySelectorAll('.fm-n').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        var i = +inp.dataset.i;
+        rows[i][inp.dataset.k] = C.num(inp.value);
+        var v = rpn(rows[i]);
+        var cell = host.querySelector('.fm-rpn[data-i="'+i+'"]');
+        cell.textContent = v;
+        cell.style.color = v >= 100 ? 'var(--bad)' : v >= 40 ? 'var(--warn)' : '';
+      });
+    });
+    host.querySelectorAll('.fm-act').forEach(function(inp){
+      inp.addEventListener('input', function(){ rows[+inp.dataset.i].action = inp.value; });
+    });
+    var save = document.getElementById('fm-save');
+    if (save) save.addEventListener('click', async function(){
+      this.disabled = true;
+      try {
+        await C.idms.saveDoc({ docId: fmeaDoc.doc_id, kind:'pfmea', partId: partId,
+          status: signed ? 'Approved' : 'Draft',
+          data: Object.assign({}, fmeaDoc.data, { rows: rows }) }, 'PFMEA rankings edited');
+        toast('Saved');
+      } catch(e){ toast(e.message); }
+      this.disabled = false;
+    });
+  }
+
+  async function generateFmea(){
+    var partId = document.getElementById('fm-part').value;
+    var msg = document.getElementById('fm-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    if (!partId) return say('Choose the part first.');
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var ops = opsFor(partId);
+    if (!ops.length) return say('This part has no routing. A PFMEA has nothing to reason about.');
+
+    if (fmeaDoc && !confirm('This part already has a PFMEA.\n\nDrafting again replaces every line, ' +
+        'including any rankings your team has changed. Continue?')) return;
+
+    var btn = document.getElementById('fm-gen');
+    btn.disabled = true; btn.textContent = 'Drafting…';
+    say('Working through ' + ops.length + ' operation(s). This takes a moment.', true);
+
+    /* The model is given only what is on file. It is told not to invent
+       operations or characteristics, because a PFMEA line that refers to a step
+       which does not exist is worse than a missing line — it looks like control. */
+    var context = ops.map(function(o){
+      var v = o.data || {};
+      var dims = dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
+      return 'OPERATION ' + v.opNo + ': ' + (v.name||'') +
+        '\n  Machine: ' + (v.machine||'not stated') +
+        '\n  What happens: ' + (v.description||'not stated') +
+        '\n  Characteristics produced or checked here:' +
+        (dims.length ? dims.map(function(d){
+          var q = d.data || {};
+          return '\n    - ' + (q.description||'') + ' — nominal ' + q.nominal + (q.unit||'') +
+            ' tol ' + (q.upper||'0') + '/' + (q.lower||'0') +
+            (q.cls ? ' [' + q.cls + ' — ' + (q.cls==='CC'?'critical':'significant') + ']' : '') +
+            ', measured with ' + (q.gauge||'not stated') +
+            ', checked ' + (q.frequency||'frequency not stated');
+        }).join('') : '\n    (none recorded)');
+    }).join('\n\n');
+
+    var prompt =
+'You are helping a Tier-2 automotive machining company draft a Process FMEA to AIAG-VDA practice.\n\n' +
+'PART: ' + (p.part_no||'') + ' — ' + (p.part_name||'') +
+  ((p.data||{}).rawMaterial ? '\nRAW MATERIAL: ' + (p.data||{}).rawMaterial : '') + '\n\n' +
+'THE PROCESS AS IT IS ACTUALLY RECORDED:\n' + context + '\n\n' +
+'Produce PFMEA lines. Reply in EXACTLY this shape, one block per line, nothing else — ' +
+'no JSON, no markdown, no asterisks:\n\n' +
+'LINE\nOP: <operation number, must be one of the numbers above>\n' +
+'CHAR: <the characteristic this line concerns, copied from above, or "process" if it concerns the step itself>\n' +
+'REQUIREMENT: <what the step must achieve>\n' +
+'MODE: <how it can fail — a physical failure of the characteristic, not a cause>\n' +
+'EFFECT: <consequence, stated for the end customer where it reaches them>\n' +
+'SEV: <1-10>\nCAUSE: <a cause on the shop floor, specific to the machine or method above>\n' +
+'OCC: <1-10>\nPREVENTION: <control that stops the cause happening>\n' +
+'DETECTION: <control that catches it if it happens — name the gauge above where there is one>\n' +
+'DET: <1-10>\nACTION: <recommended action if RPN is high, otherwise leave blank>\nEND\n\n' +
+'Rules you must follow:\n' +
+'- Use only the operations and characteristics listed above. Never invent a step, a gauge or a ' +
+'feature that is not there.\n' +
+'- Give every characteristic marked CC or SC at least one line, and rate severity for those no ' +
+'lower than 8 for CC and 5 for SC.\n' +
+'- Where an operation records no characteristics, still give at least one line for the process ' +
+'itself (handling, setup, tooling).\n' +
+'- Severity is the effect only. Occurrence is how often the cause arises. Detection is how likely ' +
+'the control is to catch it before despatch — a high number means poor detection.\n' +
+'- Be concrete. "Operator error" is not a cause; "programme edited at the machine without a setup ' +
+'approval" is.\n' +
+'- 2 to 4 lines per operation. Do not pad.';
+
+    try {
+      var txt = await C.callAI(prompt, { maxTokens: 3000 });
+      var rows = parseFmeaReply(txt, ops);
+      if (!rows.length) throw new Error('The reply could not be read as PFMEA lines.');
+
+      var doc = { kind:'pfmea', partId: partId, status:'Draft',
+        docNo: await C.docNumber('pfmea'),
+        data:{ partId: partId, rows: rows, generatedOn: new Date().toISOString().slice(0,10),
+               reviewedBy:'', reviewedOn:'', rev:'00' } };
+      if (fmeaDoc) { doc.docId = fmeaDoc.doc_id; doc.docNo = fmeaDoc.doc_no; }
+      await C.idms.saveDoc(doc, 'PFMEA drafted by AI from the routing and dimensions');
+      await loadFmeaDoc();
+      say('Drafted ' + rows.length + ' line(s). <b>Read every one.</b> The rankings are a starting ' +
+          'point, and the document is not approved until your CFT signs it below.', true);
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Draft with AI';
+  }
+
+  /* Reads the labelled blocks. A line naming an operation that does not exist is
+     dropped rather than shown — it would be a control over nothing. */
+  function parseFmeaReply(txt, ops){
+    var valid = {};
+    ops.forEach(function(o){ valid[String((o.data||{}).opNo)] = true; });
+    var out = [];
+    String(txt||'').split(/^\s*LINE\s*$/mi).forEach(function(block){
+      var get = function(k){
+        var m = block.match(new RegExp('^\\s*' + k + '\\s*:\\s*(.+)$','mi'));
+        return m ? C.stripMarkup(m[1]).trim() : '';
+      };
+      var op = get('OP').replace(/[^0-9]/g,'');
+      if (!op || !valid[op]) return;
+      var mode = get('MODE');
+      if (!mode) return;
+      var clamp = function(v){ var n = C.num(v); return n < 1 ? 1 : n > 10 ? 10 : Math.round(n); };
+      out.push({ opNo: C.num(op), characteristic: get('CHAR'), requirement: get('REQUIREMENT'),
+        failureMode: mode, effect: get('EFFECT'), sev: clamp(get('SEV')),
+        cause: get('CAUSE'), occ: clamp(get('OCC')),
+        prevention: get('PREVENTION'), detection: get('DETECTION'), det: clamp(get('DET')),
+        action: get('ACTION') });
+    });
+    /* carry the SC/CC class across from the dimension it names, so the table
+       shows it without the model having to be trusted to repeat it */
+    out.forEach(function(r){
+      var d = dimensions.filter(function(x){
+        var q = x.data||{};
+        return C.num(q.opNo) === r.opNo && q.description &&
+               r.characteristic && q.description.toLowerCase().indexOf(
+                 r.characteristic.toLowerCase().slice(0,18)) >= 0; })[0];
+      if (d) r.cls = (d.data||{}).cls || '';
+    });
+    return out.sort(function(a,b){ return a.opNo - b.opNo; });
+  }
+
+  function printFmea(){
+    if (!fmeaDoc) { toast('Draft the PFMEA first.'); return; }
+    var partId = document.getElementById('fm-part').value;
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var v = fmeaDoc.data || {}, rows = v.rows || [];
+    C.openReport({
+      title: 'Process FMEA' + (v.reviewedBy ? '' : ' — DRAFT, NOT APPROVED'),
+      kind: v.reviewedBy ? 'PFMEA' : 'PFMEA (draft)',
+      landscape: true,
+      subtitle: (p.part_no||'') + ' · ' + (p.part_name||'') + ' · ' + esc(fmeaDoc.doc_no||'') +
+        ' · rev ' + (v.rev||'00'),
+      sections:[
+        { type:'table', title:'Failure modes and effects analysis', dense:true,
+          columns:[{label:'Op',align:'c'},{label:'Requirement'},{label:'Characteristic'},
+            {label:'Failure mode'},{label:'Effect'},{label:'S',align:'c'},{label:'Cause'},
+            {label:'O',align:'c'},{label:'Prevention control'},{label:'Detection control'},
+            {label:'D',align:'c'},{label:'RPN',align:'c'},{label:'Action'}],
+          rows: rows.map(function(r){
+            var n = rpn(r);
+            return [r.opNo, esc(r.requirement||''), esc(r.characteristic||'') +
+              (r.cls?' ['+esc(r.cls)+']':''), esc(r.failureMode||''), esc(r.effect||''),
+              r.sev, esc(r.cause||''), r.occ, esc(r.prevention||''), esc(r.detection||''),
+              r.det, { v:'<b>'+n+'</b>', cls: n>=100?'ab':'' }, esc(r.action||'')];
+          }),
+          note: v.reviewedBy
+            ? 'Reviewed by ' + v.reviewedBy + ' on ' + C.fmtDate(v.reviewedOn) + '.'
+            : 'DRAFT. Rankings were proposed from the recorded process and have not been reviewed ' +
+              'by a cross-functional team. Not to be issued to a customer in this state.' },
+        { type:'pairs', title:'Record', rows:[
+          ['Drafted', C.fmtDate(v.generatedOn)],
+          ['Reviewed by', esc(v.reviewedBy || 'not yet reviewed')],
+          ['Reviewed on', v.reviewedOn ? C.fmtDate(v.reviewedOn) : '—'],
+          ['Lines at RPN 100+', rows.filter(function(r){ return rpn(r) >= 100; }).length],
+          ['Highest RPN', rows.reduce(function(m,r){ return Math.max(m, rpn(r)); }, 0)]]}
+      ]});
   }
 
   /* ---------------- Process Flow Diagram ----------------
@@ -1760,6 +2076,31 @@
       go('home');
     });
     f.click();
+  });
+
+  document.getElementById('fm-part').addEventListener('change', loadFmeaDoc);
+  document.getElementById('fm-gen').addEventListener('click', generateFmea);
+  document.getElementById('fm-print').addEventListener('click', printFmea);
+  document.getElementById('fm-approve').addEventListener('click', async function(){
+    if (!fmeaDoc) return;
+    var by = document.getElementById('fm-by').value.trim();
+    var msg = document.getElementById('fm-msg');
+    if (!by){
+      msg.style.display=''; msg.className='note bad';
+      msg.textContent='Name the people who reviewed it. "Approved" with nobody behind it is worse ' +
+        'than an open draft.'; return;
+    }
+    this.disabled = true;
+    try {
+      await C.idms.saveDoc({ docId: fmeaDoc.doc_id, kind:'pfmea',
+        partId: document.getElementById('fm-part').value, status:'Approved',
+        data: Object.assign({}, fmeaDoc.data, { reviewedBy: by,
+          reviewedOn: document.getElementById('fm-on').value || new Date().toISOString().slice(0,10),
+          rev: document.getElementById('fm-rev').value || '00' }) }, 'PFMEA signed off by ' + by);
+      await loadFmeaDoc();
+      toast('Sign-off recorded');
+    } catch(e){ toast(e.message); }
+    this.disabled = false;
   });
 
   document.getElementById('demo-add').addEventListener('click', loadDemo);

@@ -307,6 +307,26 @@
     img.src = src;
   }
 
+  /* ---------------- the AI gateway ----------------
+     The key lives on the server; the browser never sees it. Errors are surfaced
+     rather than swallowed, because a silently empty PFMEA is worse than a
+     visible failure. */
+  async function callAI(prompt, opts) {
+    opts = opts || {};
+    const res = await fetch('/api/ai', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt, system: opts.system,
+        attachment: opts.attachment, maxTokens: opts.maxTokens || 2000 })
+    });
+    const j = await res.json();
+    if (j.ok && j.text) return j.text;
+    if (j.notConfigured)
+      throw new Error('No AI provider is configured. Add a key in Site Admin on the website.');
+    const tried = (j.attempts && j.attempts.length)
+      ? '\n\nModels tried:\n• ' + j.attempts.slice(0, 6).join('\n• ') : '';
+    throw new Error((j.error || 'The AI did not answer.') + tried);
+  }
+
   /* ---------------- tolerant reader for AI replies ----------------
      Models put real line breaks inside quoted strings, which JSON.parse
      rejects outright. Escape the control characters that sit inside a string
@@ -413,7 +433,7 @@
     newId: newId, toast: toast,
     api: api, signIn: signIn, verifyCode: verifyCode, setToken: setToken, getToken: getToken,
     idms: idms, loadProfile: loadProfile, getProfile: getProfile, docNumber: docNumber,
-    openReport: openReport, parseAiJson: parseAiJson, stripMarkup: stripMarkup,
+    openReport: openReport, callAI: callAI, parseAiJson: parseAiJson, stripMarkup: stripMarkup,
     setFavicon: setFavicon,
     capturePhoto: capturePhoto
   };

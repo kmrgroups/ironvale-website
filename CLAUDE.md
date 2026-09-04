@@ -119,8 +119,8 @@ idempotent — once sent, the button is replaced by a confirmation.
 
 **Live in the IDMS:** Home (with loadable sample data), Customer Addition,
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
-Process Flow Diagram, GRN, Delivery Challan, People (HR records), Company
-Profile.
+Process Flow Diagram, PFMEA, GRN, Delivery Challan, People (HR records),
+Company Profile.
 
 **Sample data.** The home screen loads one worked example — customer, part,
 priced link, four operations, seven dimensions including two CC and one SC.
@@ -148,6 +148,20 @@ operations. Inspection steps are detected by name and drawn as diamonds. The
 screen states whether the part is ready for PFMEA — i.e. whether every operation
 has dimensions — because generating a PFMEA over operations with no
 characteristics produces a document that controls nothing.
+
+**PFMEA — how AI generation is handled here, and why.** The draft is built from
+the routing and dimensions only; the prompt forbids inventing an operation,
+gauge or feature, and any returned line naming an operation that does not exist
+is **dropped by the parser** rather than displayed, because a control over a step
+that does not exist looks like control and is not. The SC/CC class shown against
+each line is copied from the dimension record, not taken from the model's reply.
+
+S, O and D land as editable numbers with the RPN recalculating live, and the
+document is stored **separate from its sign-off**: printing before a CFT is named
+stamps the copy `DRAFT — NOT APPROVED` and states it must not go to a customer.
+Sign-off requires named people. Apply the same pattern to the control plan and
+CNC generation: generate a draft, show what it was derived from, never let an
+unreviewed artefact leave the building looking approved.
 
 Everything the AI generation stages need is now in place: the routing says what
 happens and where, the dimensions say what must be held and how it is measured.

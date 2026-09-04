@@ -225,6 +225,15 @@ release before removing it.
   See the `api()` wrapper in `core.js`.
 - Empty states say what to do next. Never render a bare table header.
 - Comments explain **why**, not what.
+- `parseAiJson` in both files is the tolerant reader for AI replies. Models break
+  JSON five ways that all occur in practice: code fences, real line breaks inside
+  strings, `//` and `/* */` comments, prose after the closing brace, and replies
+  **cut off at the token limit**. The reader scans once tracking string state so
+  it can strip comments safely, stop at the real end of the object, and close
+  what a truncated reply left open — dropping a dangling key but keeping a value
+  that was cut short. Sixteen cases are covered. If you change it, keep the
+  distinction between a truncated reply and invalid JSON in the error message:
+  they need different fixes.
 - Numbers: `Core.inr()` is whole numbers, for counts only. Use `Core.qty()` for
   anything measurable (kg, metres — keeps 3 decimals) and `Core.rate()` for
   money (always 2). A price of 82.50 printed as 83 is a real defect found in

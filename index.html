@@ -3441,28 +3441,83 @@ and suggest nothing rather than inventing problems.`;
     });
   }
 
+/* Reads JSON out of an AI reply. Models break it in five ways that all turn up
+     in practice, and each one used to lose the whole answer:
+       1. fenced in ```json blocks
+       2. real line breaks inside quoted strings
+       3. // and /* *\/ comments, which JSON does not allow
+       4. prose after the closing brace ("I have assumed a sand casting {blank}")
+       5. cut off mid-way because the reply hit the token limit
+     The scan below walks the text once, tracking whether it is inside a string,
+     so it can strip comments safely, stop at the real end of the object, and
+     close anything left open by a truncated reply. */
   function parseAiJson(text){
-    let t=String(text==null?'':text).replace(/```json|```/g,'').trim();
-    const a=t.indexOf('{'), b=t.lastIndexOf('}');
-    if(a<0||b<a) throw new Error('The reply was not JSON.');
-    t=t.slice(a,b+1);
-    let out='', inStr=false, escNext=false;
-    for(let i=0;i<t.length;i++){
-      const c=t[i], code=t.charCodeAt(i);
-      if(escNext){ out+=c; escNext=false; continue; }
-      if(c==='\\'){ out+=c; escNext=true; continue; }
-      if(c==='"'){ inStr=!inStr; out+=c; continue; }
-      if(inStr&&code<0x20){
-        out += c==='\n'?'\\n' : c==='\r'?'\\r' : c==='\t'?'\\t' : ' ';
+    let t = String(text == null ? '' : text).replace(/```[a-z]*\n?|```/gi, '').trim();
+    const start = t.search(/[{[]/);
+    if (start < 0) throw new Error('The reply contained no JSON at all.');
+    t = t.slice(start);
+
+    let out = '', inStr = false, esc = false, quote = '"';
+    const stack = [];
+    let truncated = true;
+
+    for (let i = 0; i < t.length; i++) {
+      const c = t[i], code = t.charCodeAt(i);
+
+      if (inStr) {
+        if (esc) { out += c; esc = false; continue; }
+        if (c === '\\') { out += c; esc = true; continue; }
+        if (c === quote) { inStr = false; out += '"'; continue; }
+        // a real newline or tab inside a string is not legal JSON
+        if (code < 0x20) { out += c === '\n' ? '\\n' : c === '\r' ? '\\r' : c === '\t' ? '\\t' : ' '; continue; }
+        if (c === '"') { out += '\\"'; continue; }   // a double quote inside a single-quoted string
+        out += c;
         continue;
       }
-      out+=c;
-    }
-    // a trailing comma before a closing brace or bracket is the other common slip
-    out=out.replace(/,(\s*[}\]])/g,'$1');
-    return JSON.parse(out);
-  }
 
+      // outside a string: comments are stripped rather than passed to the parser
+      if (c === '/' && t[i + 1] === '/') { while (i < t.length && t[i] !== '\n') i++; continue; }
+      if (c === '/' && t[i + 1] === '*') { i += 2; while (i < t.length && !(t[i] === '*' && t[i + 1] === '/')) i++; i++; continue; }
+
+      if (c === '"' || c === "'") { inStr = true; quote = c; out += '"'; continue; }
+      if (c === '{' || c === '[') { stack.push(c === '{' ? '}' : ']'); out += c; continue; }
+      if (c === '}' || c === ']') {
+        stack.pop(); out += c;
+        if (!stack.length) { truncated = false; break; }   // the object ended; ignore any prose after it
+        continue;
+      }
+      out += c;
+    }
+
+    // a reply that ran out of tokens leaves a string and some brackets open
+    if (truncated) {
+      if (inStr) out += '"';
+      // drop whatever fragment was half-written: a trailing comma, or a key
+      // whose value never arrived. Closing brackets over "time": produces
+      // {"name":"Turn","time"} which is not JSON either.
+      for (let n = 0; n < 5; n++) {
+        const before = out;
+        out = out.replace(/,\s*$/, '')
+                 .replace(/"(?:[^"\\]|\\.)*"\s*:\s*$/, '');
+        /* a trailing string inside an object is a key whose colon never arrived
+           — unless a colon precedes it, in which case it is a value that was
+           cut short and is worth keeping. Inside an array it is an element. */
+        if (stack[stack.length - 1] === '}' && !/:\s*"(?:[^"\\]|\\.)*"\s*$/.test(out))
+          out = out.replace(/"(?:[^"\\]|\\.)*"\s*$/, '');
+        out = out.replace(/,\s*$/, '');
+        if (out === before) break;
+      }
+      while (stack.length) out += stack.pop();
+    }
+    out = out.replace(/,(\s*[}\]])/g, '$1');              // trailing commas
+
+    try { return JSON.parse(out); }
+    catch (e) {
+      throw new Error((truncated
+        ? 'The reply was cut off before it finished, and could not be repaired. '
+        : 'The reply was not valid JSON. ') + e.message);
+    }
+  }
   function renderRateSummary(){
     const el=document.getElementById('rate-summary'); if(!el) return;
     const hrs=availableHours();
@@ -9103,7 +9158,9 @@ Reply with ONLY this JSON, no commentary or code fences:
     const qty=num((r.costing&&r.costing.qty))||num(((r.extract&&r.extract.requirements)||[])
       .find(q=>/quantity/i.test(q.category))?.requirement?.match(/\d[\d,]*/)?.[0]?.replace(/,/g,''))||1;
     let text;
-    try{ text=await callAI(ROUTE_PROMPT(r,r.extract,qty),{maxTokens:3000,surfaceError:true}); }
+    /* 3000 tokens was not enough for a multi-operation route plan, and a reply
+       cut off half way is the commonest reason this used to fail */
+    try{ text=await callAI(ROUTE_PROMPT(r,r.extract,qty),{maxTokens:4500,surfaceError:true}); }
     catch(e){ return {error:e.message}; }
     if(!text) return {error:'No response from AI. Check the AI settings in Vercel.'};
 

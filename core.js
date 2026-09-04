@@ -20,6 +20,17 @@
   };
 
   const inr = n => num(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+  /* Whole numbers are right for a count of parts and wrong for everything else.
+     A price of 82.50 must not print as 83, and 0.42 kg must not print as 0.
+     qty() keeps up to three decimals but drops trailing zeros, so 500 stays
+     500 and 0.425 stays 0.425. rate() always shows two. */
+  const qty = n => {
+    const v = num(n);
+    return v.toLocaleString('en-IN', { maximumFractionDigits: 3 });
+  };
+  const rate = n => num(n).toLocaleString('en-IN',
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const money = n => '₹' + num(n).toLocaleString('en-IN',
     { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -393,7 +404,8 @@
   }
 
   root.Core = {
-    esc: esc, num: num, inr: inr, money: money, fmtDate: fmtDate, dayKey: dayKey,
+    esc: esc, num: num, inr: inr, qty: qty, rate: rate, money: money,
+    fmtDate: fmtDate, dayKey: dayKey,
     newId: newId, toast: toast,
     api: api, signIn: signIn, verifyCode: verifyCode, setToken: setToken, getToken: getToken,
     idms: idms, loadProfile: loadProfile, getProfile: getProfile, docNumber: docNumber,

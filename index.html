@@ -10169,6 +10169,30 @@ Reply with ONLY this JSON, no commentary or code fences:
         +'\n\nEach starts at stage New, ready for APQP.')) return;
 
       b.disabled=true; b.textContent='Sending…';
+
+      /* The customer is the head of the chain — a part cannot hang off nothing.
+         Create it once here if it is not already on file, so the IDMS opens with
+         the address and contact already filled rather than being retyped. */
+      let customerId='';
+      try{
+        const ex=(await api('/api/idms?what=docs&kind=customer')).docs||[];
+        const hit=ex.find(c=>((c.data||{}).name||'').toLowerCase()===customer.toLowerCase());
+        if(hit) customerId=hit.doc_id;
+        else{
+          const code=customer.replace(/[^A-Za-z]/g,'').slice(0,4).toUpperCase()
+            +'-'+String(ex.length+1).padStart(3,'0');
+          const cj=await api('/api/idms',{method:'POST',body:JSON.stringify({what:'docs',
+            doc:{kind:'customer',docNo:code,status:'Active',
+              data:{name:customer,code,
+                billing:[r.address,r.city].filter(Boolean).join(', '),
+                despatch:[r.address,r.city].filter(Boolean).join(', '),
+                contact:r.name||'', phone:r.phone||'', email:r.email||'',
+                gstin:r.gstin||'', fromRfq:r.ref}},
+            reason:'customer created from won quotation '+(q.number||r.ref)})});
+          customerId=cj.docId||'';
+        }
+      }catch(e){ /* a missing customer record must not stop the parts transferring */ }
+
       const made=[], failed=[];
       for(const line of lines){
         try{
@@ -10176,8 +10200,10 @@ Reply with ONLY this JSON, no commentary or code fences:
             part:{customer, partNo:String(line.code||line.desc||'').slice(0,60),
               partName:String(line.desc||'').slice(0,120), lifecycle:'New',
               quoteRef:q.number||r.ref,
-              data:{ rfqRef:r.ref, quotedQty:line.qty||'', unit:line.unit||'',
-                     quotedRate:line.rate||'', quotedOn:q.date||'',
+              data:{ rfqRef:r.ref, customerId, quotedQty:line.qty||'', unit:line.unit||'',
+                     quotedRate:line.rate||'', price:parseFloat(line.rate)||0,
+                     uom:line.unit||'Nos', hsn:line.hsn||'', drawingNo:line.drawing||'',
+                     quotedOn:q.date||'',
                      contact:r.name||'', email:r.email||'', phone:r.phone||'' }},
             reason:'quotation '+(q.number||r.ref)+' approved by the customer'})});
           made.push(j.partId);

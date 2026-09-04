@@ -157,9 +157,22 @@
         <div class="hint" style="margin-bottom:10px;">A part is created automatically when a quotation
           is won on the website. Add one by hand only for work that did not come through that route.</div>
         <div class="row four">
-          <div><label>Customer</label><input id="p-cust"></div>
+          <div><label>Customer</label><select id="p-cust"></select></div>
           <div><label>Part number</label><input id="p-no"></div>
           <div><label>Part name</label><input id="p-name"></div>
+          <div><label>Drawing number</label><input id="p-drg"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Drawing revision</label><input id="p-rev" placeholder="00"></div>
+          <div><label>HSN code</label><input id="p-hsn"></div>
+          <div><label>Selling price</label><input class="num" id="p-price"></div>
+          <div><label>Unit</label><select id="p-uom">
+            <option>Nos</option><option>Kg</option><option>Set</option><option>Metre</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Raw material</label><input id="p-rm" placeholder="EN8 bright bar Ø25"></div>
+          <div><label>Net weight (kg)</label><input class="num" id="p-netwt"></div>
+          <div><label>Gross weight (kg)</label><input class="num" id="p-grosswt"></div>
           <div style="align-self:end;"><button class="btn gold" id="p-add">Add part</button></div>
         </div>
         <div class="note" id="p-msg" style="display:none;"></div>
@@ -256,6 +269,38 @@
       <div class="card">
         <h4>Despatched</h4>
         <div id="dc-list"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="entry_customer">
+      <div class="card">
+        <h4>Customer</h4>
+        <div class="hint" style="margin-bottom:10px;">Customers are created automatically when a
+          quotation is won on the website. Add one by hand only for work that did not come through
+          the enquiry route.</div>
+        <div class="row four">
+          <div><label>Customer name</label><input id="cu-name"></div>
+          <div><label>Customer code</label><input id="cu-code" placeholder="left blank = generated"></div>
+          <div><label>GSTIN</label><input id="cu-gstin"></div>
+          <div><label>Payment terms</label><input id="cu-terms" placeholder="45 days from invoice"></div>
+        </div>
+        <div class="row" style="margin-top:9px;">
+          <div><label>Billing address</label><input id="cu-bill"></div>
+          <div><label>Despatch address</label><input id="cu-ship"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Contact person</label><input id="cu-contact"></div>
+          <div><label>Phone</label><input id="cu-phone"></div>
+          <div><label>Email</label><input id="cu-email"></div>
+          <div style="align-self:end;">
+            <button class="btn gold" id="cu-save">Save customer</button>
+            <button class="btn" id="cu-clear" style="margin-left:6px;">Clear</button></div>
+        </div>
+        <div class="note" id="cu-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Customers</h4>
+        <div id="cu-list"></div>
       </div>
     </div>
 
@@ -366,7 +411,7 @@
   var MENU = [
     ['entry','✏️','Entry','Key Process',[
       ['form','🔑','Key Process Input'],['entry_supplier','🏭','Supplier Addition'],
-      ['entry_rawmat','🪨','Raw Material Addition'],['entry_customer','👤','Customer Addition'],
+      ['entry_rawmat','🪨','Raw Material Addition'],['entry_customer','👤','Customer Addition',1],
       ['entry_machine','⚙','Machine Addition']]],
     ['pm','🎛','Process Master','Configuration',[
       ['process_master','🎛','Process Master Configuration'],['machine_process','⚙','Machine & Process'],
@@ -468,6 +513,7 @@
     if (s === 'grn')     loadGrn();
     if (s === 'dc')      loadDc();
     if (s === 'hrm')     loadHrm();
+    if (s === 'entry_customer') loadCustomers();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -539,6 +585,10 @@
   async function loadParts(){
     var host = document.getElementById('p-list');
     host.innerHTML = '<div class="hint">Loading…</div>';
+    /* a part belongs to a customer, so that list loads with this screen */
+    await fetchCustomers();
+    var csel = document.getElementById('p-cust');
+    csel.innerHTML = customerOptions(csel.value);
     var parts;
     try { parts = await C.idms.parts(document.getElementById('p-filter').value); }
     catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; return; }
@@ -548,11 +598,15 @@
       return;
     }
     host.innerHTML = '<table class="t"><thead><tr><th>Part</th><th>Customer</th><th>Quotation</th>' +
-      '<th class="c">Stage</th><th>Added</th><th></th></tr></thead><tbody>' +
+      '<th class="r">Price</th><th class="c">Stage</th><th>Added</th><th></th></tr></thead><tbody>' +
       parts.map(function(p){
         var n = NEXT[p.lifecycle];
-        return '<tr><td><b>'+esc(p.part_no||'—')+'</b><div class="hint">'+esc(p.part_name||'')+'</div></td>'+
+        var v = p.data || {};
+        return '<tr><td><b>'+esc(p.part_no||'—')+'</b><div class="hint">'+esc(p.part_name||'')+
+          (v.drawingNo?' · drg '+esc(v.drawingNo)+(v.drawingRev?' rev '+esc(v.drawingRev):''):'')+'</div></td>'+
           '<td>'+esc(p.customer||'—')+'</td><td class="hint">'+esc(p.quote_ref||'—')+'</td>'+
+          '<td class="r">'+(C.num(v.price)?C.rate(v.price):'—')+
+          (v.hsn?'<div class="hint">HSN '+esc(v.hsn)+'</div>':'')+'</td>'+
           '<td class="c">'+stageBadge(p.lifecycle)+'</td>'+
           '<td class="hint">'+C.fmtDate(p.created_at)+'</td><td>'+
           (n?'<button class="btn adv" data-id="'+esc(p.part_id)+'" data-next="'+n+'">Move to '+n+'</button>':'')+
@@ -608,9 +662,9 @@
           '<td class="hint">'+C.fmtDate(v.date)+'</td>'+
           '<td>'+esc(v.supplier||'—')+'<div class="hint">'+esc(v.invoice||'')+'</div></td>'+
           '<td>'+esc(v.description||'—')+'</td>'+
-          '<td class="r">'+C.inr(v.qty)+' '+esc(v.uom||'')+'</td>'+
-          '<td class="r">'+C.inr(v.accepted)+'</td>'+
-          '<td class="r">'+(C.num(v.rejected)?'<b style="color:var(--bad)">'+C.inr(v.rejected)+'</b>':'—')+'</td>'+
+          '<td class="r">'+C.qty(v.qty)+' '+esc(v.uom||'')+'</td>'+
+          '<td class="r">'+C.qty(v.accepted)+'</td>'+
+          '<td class="r">'+(C.num(v.rejected)?'<b style="color:var(--bad)">'+C.qty(v.rejected)+'</b>':'—')+'</td>'+
           '<td><button class="btn gr-print" data-id="'+esc(r.doc_id)+'">Print</button></td></tr>';
       }).join('') + '</tbody></table>';
 
@@ -639,8 +693,8 @@
         { type:'table', title:'Material', columns:[
             {label:'Description'},{label:'Unit'},{label:'Received',align:'r'},
             {label:'Accepted',align:'r'},{label:'Rejected',align:'r'}],
-          rows:[[esc(v.description||'—'), esc(v.uom||''), C.inr(v.qty),
-                 C.inr(v.accepted), C.inr(v.rejected)]],
+          rows:[[esc(v.description||'—'), esc(v.uom||''), C.qty(v.qty),
+                 C.qty(v.accepted), C.qty(v.rejected)]],
           note: C.num(v.rejected)
             ? 'Rejected material must not be issued to production until it is dispositioned.'
             : '' },
@@ -653,6 +707,69 @@
           body:'Stores                              Quality                              Approved by' }
       ]
     });
+  }
+
+  /* ---------------- Customers ----------------
+     The head of the chain: a part hangs off a customer, processes hang off the
+     part, dimensions hang off the process. Held in idms_docs as kind
+     'customer', so a new field never needs a migration. */
+  var customers = [];
+
+  async function fetchCustomers(){
+    try { customers = await C.idms.docs('customer'); } catch(e){ customers = []; }
+    return customers;
+  }
+  function customerOptions(selected){
+    return '<option value="">— choose a customer —</option>' + customers.map(function(c){
+      var v = c.data || {};
+      return '<option value="'+esc(c.doc_id)+'"'+(selected===c.doc_id?' selected':'')+'>'+
+        esc(v.name||'(unnamed)')+(v.code?' · '+esc(v.code):'')+'</option>';
+    }).join('');
+  }
+
+  var cuEditing = null;
+  async function loadCustomers(){
+    var host = document.getElementById('cu-list');
+    host.innerHTML = '<div class="hint">Loading…</div>';
+    await fetchCustomers();
+    if (!customers.length){
+      host.innerHTML = '<div class="empty"><b>No customers yet</b>' +
+        'They arrive here when a quotation is won on the website, or add one above.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Code</th><th>Customer</th><th>GSTIN</th>' +
+      '<th>Contact</th><th>Terms</th><th></th></tr></thead><tbody>' +
+      customers.map(function(c){
+        var v = c.data || {};
+        return '<tr><td><b>'+esc(v.code||'—')+'</b></td>'+
+          '<td>'+esc(v.name||'—')+'<div class="hint">'+esc(v.billing||'')+'</div></td>'+
+          '<td class="hint">'+esc(v.gstin||'—')+'</td>'+
+          '<td>'+esc(v.contact||'—')+'<div class="hint">'+esc(v.phone||v.email||'')+'</div></td>'+
+          '<td class="hint">'+esc(v.terms||'—')+'</td>'+
+          '<td><button class="btn cu-edit" data-id="'+esc(c.doc_id)+'">Edit</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.cu-edit').forEach(function(b){
+      b.addEventListener('click', function(){ editCustomer(b.dataset.id); });
+    });
+  }
+
+  function editCustomer(id){
+    var c = customers.filter(function(x){ return x.doc_id === id; })[0];
+    if (!c) return;
+    cuEditing = id;
+    var v = c.data || {}, set = function(f,x){ document.getElementById(f).value = x || ''; };
+    set('cu-name',v.name); set('cu-code',v.code); set('cu-gstin',v.gstin); set('cu-terms',v.terms);
+    set('cu-bill',v.billing); set('cu-ship',v.despatch); set('cu-contact',v.contact);
+    set('cu-phone',v.phone); set('cu-email',v.email);
+    var m = document.getElementById('cu-msg');
+    m.style.display=''; m.className='note';
+    m.innerHTML = 'Editing <b>'+esc(v.name||'')+'</b> — saving updates this customer.';
+  }
+  function clearCustomerForm(){
+    cuEditing = null;
+    ['cu-name','cu-code','cu-gstin','cu-terms','cu-bill','cu-ship','cu-contact','cu-phone','cu-email']
+      .forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('cu-msg').style.display='none';
   }
 
   /* ---------------- Delivery Challan ----------------
@@ -671,8 +788,8 @@
       '<th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th>Batch</th><th></th>' +
       '</tr></thead><tbody>' + dcLines.map(function(l,i){
         return '<tr><td>'+esc(l.partLabel||'—')+'</td><td>'+esc(l.description)+'</td>'+
-          '<td class="r">'+C.inr(l.qty)+'</td><td>'+esc(l.uom)+'</td>'+
-          '<td class="r">'+(C.num(l.rate)?C.inr(l.rate):'—')+'</td>'+
+          '<td class="r">'+C.qty(l.qty)+'</td><td>'+esc(l.uom)+'</td>'+
+          '<td class="r">'+(C.num(l.rate)?C.rate(l.rate):'—')+'</td>'+
           '<td class="hint">'+esc(l.batch||'—')+'</td>'+
           '<td><button class="btn del dc-rm" data-i="'+i+'">Remove</button></td></tr>';
       }).join('') + '</tbody></table>';
@@ -712,7 +829,7 @@
         return '<tr><td><b>'+esc(r.doc_no||'—')+'</b></td>'+
           '<td class="hint">'+C.fmtDate(v.date)+'</td>'+
           '<td>'+esc(v.customer||'—')+'<div class="hint">'+esc(v.po||'')+'</div></td>'+
-          '<td class="c">'+lines.length+'</td><td class="r">'+C.inr(tot)+'</td>'+
+          '<td class="c">'+lines.length+'</td><td class="r">'+C.qty(tot)+'</td>'+
           '<td class="c">'+(v.returnable==='yes'
             ? '<span class="badge sample">Returnable</span>' : '<span class="badge series">Sale</span>')+'</td>'+
           '<td><button class="btn dc-print" data-id="'+esc(r.doc_id)+'">Print</button></td></tr>';
@@ -749,11 +866,11 @@
             {label:'Qty',align:'r'},{label:'Unit'},{label:'Rate',align:'r'},{label:'Value',align:'r'}],
           rows: lines.map(function(l){
             return [esc(l.partLabel||'—'), esc(l.description), esc(l.batch||'—'),
-                    C.inr(l.qty), esc(l.uom),
-                    C.num(l.rate)?C.inr(l.rate):'—',
-                    C.num(l.rate)?C.inr(C.num(l.qty)*C.num(l.rate)):'—'];
-          }).concat([[{v:'<b>Total</b>'},'','',{v:'<b>'+C.inr(tot)+'</b>'},'','',
-                      {v: value ? '<b>'+C.inr(value)+'</b>' : ''}]]),
+                    C.qty(l.qty), esc(l.uom),
+                    C.num(l.rate)?C.rate(l.rate):'—',
+                    C.num(l.rate)?C.rate(C.num(l.qty)*C.num(l.rate)):'—'];
+          }).concat([[{v:'<b>Total</b>'},'','',{v:'<b>'+C.qty(tot)+'</b>'},'','',
+                      {v: value ? '<b>'+C.rate(value)+'</b>' : ''}]]),
           note: v.returnable==='yes'
             ? 'Returnable challan — this material remains the property of the consignor and must be returned.'
             : '' },
@@ -1044,6 +1161,41 @@
     f.click();
   });
 
+  document.getElementById('cu-clear').addEventListener('click', clearCustomerForm);
+  document.getElementById('cu-save').addEventListener('click', async function(){
+    var msg = document.getElementById('cu-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var name = g('cu-name');
+    if (!name) return say('The customer needs a name.');
+
+    /* two customers with the same name is how duplicate part records start, so
+       it is caught here rather than discovered six months later */
+    var clash = customers.filter(function(c){
+      return (c.data||{}).name && (c.data.name.toLowerCase() === name.toLowerCase())
+             && c.doc_id !== cuEditing; })[0];
+    if (clash) return say('<b>'+esc(name)+'</b> is already on file. Edit that one instead of ' +
+                          'creating a second record for the same customer.');
+
+    this.disabled = true;
+    try {
+      var code = g('cu-code');
+      if (!code) code = name.replace(/[^A-Za-z]/g,'').slice(0,4).toUpperCase() +
+                        '-' + String(customers.length + 1).padStart(3,'0');
+      await C.idms.saveDoc({
+        docId: cuEditing || '', kind:'customer', docNo: code, status:'Active',
+        data:{ name:name, code:code, gstin:g('cu-gstin'), terms:g('cu-terms'),
+               billing:g('cu-bill'), despatch:g('cu-ship'),
+               contact:g('cu-contact'), phone:g('cu-phone'), email:g('cu-email') }
+      }, cuEditing ? 'customer updated' : 'customer added');
+      say('Saved as <b>'+esc(code)+'</b>.', true);
+      clearCustomerForm();
+      loadCustomers();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+
   document.getElementById('hr-q').addEventListener('input', drawHrList);
   document.getElementById('hr-filter').addEventListener('change', drawHrList);
   document.getElementById('hr-refresh').addEventListener('click', loadHrm);
@@ -1204,9 +1356,9 @@
     /* a receipt that does not balance is a counting error, and it must not be
        saved quietly — the stock figure downstream depends on it */
     if (Math.abs((acc + rej) - qty) > 0.001)
-      return say('Accepted (' + C.inr(acc) + ') plus rejected (' + C.inr(rej) + ') is ' +
-                 C.inr(acc+rej) + ', but ' + C.inr(qty) + ' was received. ' +
-                 'Accepted should be <b>' + C.inr(Math.max(0, qty - rej)) + '</b>' +
+      return say('Accepted (' + C.qty(acc) + ') plus rejected (' + C.qty(rej) + ') is ' +
+                 C.qty(acc+rej) + ', but ' + C.qty(qty) + ' was received. ' +
+                 'Accepted should be <b>' + C.qty(Math.max(0, qty - rej)) + '</b>' +
                  ' — <a href="#" id="gr-fix" style="color:var(--sky-deep);">put that in for me</a>.');
 
     this.disabled = true;
@@ -1237,20 +1389,42 @@
 
   document.getElementById('p-add').addEventListener('click', async function(){
     var msg = document.getElementById('p-msg');
-    var part = { customer: document.getElementById('p-cust').value.trim(),
-                 partNo:   document.getElementById('p-no').value.trim(),
-                 partName: document.getElementById('p-name').value.trim() };
-    if (!part.partNo && !part.partName){
-      msg.style.display=''; msg.className='note bad';
-      msg.textContent='Give the part a number or a name.'; return;
-    }
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var csel = document.getElementById('p-cust');
+    var cust = customers.filter(function(c){ return c.doc_id === csel.value; })[0];
+
+    if (!csel.value)
+      return say('Choose the customer first. Everything below a part — processes, dimensions, ' +
+                 'control plan — is traced back through the customer, so a part cannot be loose.');
+    if (!g('p-no') && !g('p-name')) return say('Give the part a number or a name.');
+
+    /* the same part number twice under one customer means two APQP records for
+       one component, and nobody can tell which is current */
+    var existing = (await C.idms.parts()).filter(function(p){
+      return p.customer === (cust.data||{}).name &&
+             p.part_no && p.part_no.toLowerCase() === g('p-no').toLowerCase(); })[0];
+    if (existing && g('p-no'))
+      return say('<b>'+esc(g('p-no'))+'</b> already exists for this customer at stage <b>'+
+                 esc(existing.lifecycle)+'</b>. Use that part rather than creating a second one.');
+
     this.disabled = true;
     try {
-      await C.idms.savePart(part, 'added by hand in the IDMS');
-      msg.style.display=''; msg.className='note good'; msg.textContent='Added. It starts at stage New.';
-      ['p-cust','p-no','p-name'].forEach(function(id){ document.getElementById(id).value=''; });
+      await C.idms.savePart({
+        customer: (cust.data||{}).name || '',
+        partNo: g('p-no'), partName: g('p-name'), lifecycle:'New',
+        data:{ customerId: csel.value,
+               drawingNo:g('p-drg'), drawingRev:g('p-rev'), hsn:g('p-hsn'),
+               price:C.num(g('p-price')), uom:document.getElementById('p-uom').value,
+               rawMaterial:g('p-rm'), netWeight:C.num(g('p-netwt')),
+               grossWeight:C.num(g('p-grosswt')) }
+      }, 'added by hand in the IDMS');
+      say('Added at stage <b>New</b>. Next: add the processes, then the dimensions against each.', true);
+      ['p-no','p-name','p-drg','p-rev','p-hsn','p-price','p-rm','p-netwt','p-grosswt']
+        .forEach(function(id){ document.getElementById(id).value=''; });
       loadParts();
-    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent=e.message; }
+    } catch(e){ say(esc(e.message)); }
     this.disabled = false;
   });
 

@@ -117,8 +117,14 @@ idempotent — once sent, the button is replaced by a confirmation.
 
 ## Current state
 
-**Live in the IDMS:** Home, Parts, GRN, Delivery Challan, People (HR records),
-Company Profile.
+**Live in the IDMS:** Home, Customer Addition, Parts, GRN, Delivery Challan,
+People (HR records), Company Profile.
+
+**The NPD chain** is being built in this order, each level hanging off the one
+above: customer → part (price, HSN, drawing, raw material) → process/routing →
+dimensions per process → BOM → PFD → PFMEA (AI) → control plan (AI, AIAG) →
+CNC program (AI). Customer and part are done. A won quotation on the website
+now creates **both** the customer (with address and contact) and the parts.
 **Declared but not built:** 65 further screens, marked `soon` in the menu, each
 showing an explanation rather than a blank page. The menu structure mirrors the
 system the team already uses.
@@ -144,6 +150,10 @@ release before removing it.
   See the `api()` wrapper in `core.js`.
 - Empty states say what to do next. Never render a bare table header.
 - Comments explain **why**, not what.
+- Numbers: `Core.inr()` is whole numbers, for counts only. Use `Core.qty()` for
+  anything measurable (kg, metres — keeps 3 decimals) and `Core.rate()` for
+  money (always 2). A price of 82.50 printed as 83 is a real defect found in
+  testing; do not use `inr()` for prices or weights.
 
 ---
 

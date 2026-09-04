@@ -307,6 +307,45 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="report_self_inspection">
+      <div class="card">
+        <h4>Self Inspection — in process</h4>
+        <div class="hint" style="margin-bottom:10px;">One sheet per operation per shift. The
+          characteristics and the check frequency come from the control plan. Add a check each time
+          the operator measures; anything out of tolerance has to be answered before the sheet can be
+          closed, including what happened to the parts made since the last good check.</div>
+        <div class="row four">
+          <div><label>Part</label><select id="si-part"></select></div>
+          <div><label>Operation</label><select id="si-op"></select></div>
+          <div><label>Date</label><input type="date" id="si-date"></div>
+          <div><label>Shift</label><select id="si-shift">
+            <option>A</option><option>B</option><option>C</option><option>General</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Operator</label><input id="si-operator"></div>
+          <div><label>Machine</label><input id="si-machine"></div>
+          <div style="align-self:end;"><button class="btn" id="si-open">Open sheet</button></div>
+          <div style="align-self:end;"><button class="btn" id="si-print">Print</button></div>
+        </div>
+        <div class="note" id="si-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4 id="si-title">Sheet</h4>
+        <div id="si-body"></div>
+      </div>
+      <div class="card" id="si-close-box" style="display:none;">
+        <h4>Close the sheet</h4>
+        <div class="hint" style="margin-bottom:10px;">Closing is the operator's statement that the
+          shift ran to the control plan. A sheet with an unanswered rejection cannot be closed.</div>
+        <div class="row four">
+          <div><label>Pieces made this shift</label><input class="num" id="si-made"></div>
+          <div><label>Pieces rejected</label><input class="num" id="si-rej"></div>
+          <div><label>Closed by</label><input id="si-by"></div>
+          <div style="align-self:end;"><button class="btn green" id="si-close">Close sheet</button></div>
+        </div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="report_setup_approval">
       <div class="card">
         <h4>Setup Approval — first-off</h4>
@@ -780,7 +819,7 @@
       ['training_effectiveness','✅','Training Effectiveness'],['succession_plan','🎖','Succession Planning'],
       ['supplier_competency','🤝','Supplier Competency']]],
     ['reports','📊','Reports','Inspection Reports',[
-      ['report_self_inspection','🔍','Self Inspection Report'],
+      ['report_self_inspection','🔍','Self Inspection Report',1],
       ['report_inward_inspection','📥','Inward Inspection Report'],
       ['report_inprocess_inspection','⚙','In-Process Inspection Report'],
       ['report_pdi','✓','PDI Report'],['report_setup_approval','✅','Setup Approval Report',1],
@@ -864,6 +903,7 @@
     if (s === 'cnc')            loadCnc();
     if (s === 'ppap')           loadPpap();
     if (s === 'report_setup_approval') loadSetup();
+    if (s === 'report_self_inspection') loadSelfInsp();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -1363,6 +1403,280 @@
       loadHome();
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Remove sample data';
+  }
+
+  /* ---------------- Self inspection ----------------
+     The same characteristics as the setup sheet, recorded repeatedly through a
+     shift. The point of difference is containment: when a check fails, the parts
+     made since the last good check are suspect, and the sheet will not close
+     until somebody has said what happened to them. */
+  var siChars = [], siDoc = null, siRounds = [];
+
+  async function loadSelfInsp(){
+    await fetchParts();
+    var sel = document.getElementById('si-part');
+    sel.innerHTML = partOptions(sel.value);
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
+    var dt = document.getElementById('si-date');
+    if (!dt.value) dt.value = new Date().toISOString().slice(0,10);
+    drawSiOps();
+  }
+
+  function drawSiOps(){
+    var partId = document.getElementById('si-part').value;
+    var ops = opsFor(partId);
+    document.getElementById('si-op').innerHTML = ops.length
+      ? '<option value="">— choose an operation —</option>' + ops.map(function(o){
+          var v=o.data||{};
+          return '<option value="'+esc(o.doc_id)+'" data-machine="'+esc(v.machine||'')+'">'+
+            esc(v.opNo)+' · '+esc(v.name||'')+'</option>'; }).join('')
+      : '<option value="">no operations on this part</option>';
+  }
+
+  async function openSiSheet(){
+    var msg = document.getElementById('si-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var partId = document.getElementById('si-part').value;
+    var opId = document.getElementById('si-op').value;
+    if (!partId) return say('Choose the part.');
+    if (!opId)   return say('Choose the operation.');
+
+    var op = processes.filter(function(x){ return x.doc_id === opId; })[0] || {};
+    var mach = document.getElementById('si-machine');
+    if (!mach.value) mach.value = (op.data||{}).machine || '';
+
+    var cp = null;
+    try { cp = (await C.idms.docs('control_plan', partId))[0] || null; } catch(e){}
+    var dims = dimensions.filter(function(d){ return (d.data||{}).processId === opId; });
+    if (!dims.length){
+      siChars = []; siDoc = null; siRounds = [];
+      document.getElementById('si-body').innerHTML =
+        '<div class="empty"><b>Nothing to check at this operation</b>' +
+        'Add its dimensions first.</div>';
+      document.getElementById('si-close-box').style.display = 'none';
+      return say('This operation has no characteristics.');
+    }
+    var cpRows = cp ? ((cp.data||{}).rows||[]).filter(function(r){
+      return C.num(r.opNo) === C.num((op.data||{}).opNo); }) : [];
+    siChars = dims.map(function(d){
+      var q = d.data || {};
+      var row = cpRows.filter(function(r){
+        return r.characteristic && q.description &&
+          r.characteristic.toLowerCase().indexOf(q.description.toLowerCase().slice(0,18)) >= 0; })[0];
+      return { balloon:q.balloon||'', description:q.description||'', nominal:q.nominal,
+        upper:q.upper, lower:q.lower, unit:q.unit||'', cls:q.cls||'',
+        gauge:(row && row.technique) || q.gauge || '',
+        frequency:(row && row.frequency) || q.frequency || '',
+        reaction:(row && row.reaction) || '' };
+    });
+
+    /* one sheet per part, operation, date and shift — reopening the same one
+       continues it rather than starting a second record for the same shift */
+    var key = opId + '|' + document.getElementById('si-date').value + '|' +
+              document.getElementById('si-shift').value;
+    siDoc = null;
+    try {
+      siDoc = (await C.idms.docs('self_insp', partId))
+        .filter(function(x){ return (x.data||{}).key === key; })[0] || null;
+    } catch(e){}
+    siRounds = siDoc ? ((siDoc.data||{}).rounds || []) : [];
+    drawSiSheet();
+    say(siDoc
+      ? 'Continuing the sheet already open for this shift — ' + siRounds.length + ' check(s) recorded.'
+      : 'New sheet. ' + siChars.length + ' characteristic(s)' +
+        (cp ? ' from the control plan.' : '. <b>No control plan for this part</b> — the frequencies ' +
+              'shown are the recorded dimensions, not an approved plan.'), !!cp);
+  }
+
+  function drawSiSheet(){
+    var host = document.getElementById('si-body');
+    if (!siChars.length){
+      host.innerHTML = '<div class="empty"><b>No sheet open</b>Choose a part and operation, then ' +
+        'press Open sheet.</div>';
+      document.getElementById('si-close-box').style.display = 'none';
+      return;
+    }
+    var closed = siDoc && siDoc.status === 'Closed';
+    var openFail = siRounds.some(function(r){
+      return r.readings.some(function(x,i){ return verdict(siChars[i], x) !== 'ok' && x !== ''; })
+        && !String(r.containment||'').trim();
+    });
+
+    host.innerHTML =
+      (closed ? '<div class="note good">Sheet closed by <b>'+esc((siDoc.data||{}).closedBy||'')+
+        '</b> — '+C.qty((siDoc.data||{}).made)+' made, '+C.qty((siDoc.data||{}).rejected)+
+        ' rejected.</div>' : '') +
+      (openFail ? '<div class="note bad"><b>A failed check has no containment recorded.</b> Say what ' +
+        'happened to the parts made since the last good check before this sheet can be closed.</div>' : '') +
+      '<div style="overflow-x:auto;"><table class="t"><thead><tr><th>Time</th>' +
+      siChars.map(function(c){
+        return '<th class="c">'+esc(c.balloon||'')+'<div class="hint" style="font-weight:400;">'+
+          esc((c.description||'').slice(0,22))+'<br>'+C.qty(c.nominal)+' '+esc(c.unit)+
+          (c.cls?' <b>'+esc(c.cls)+'</b>':'')+'</div></th>'; }).join('') +
+      '<th>Containment</th><th></th></tr></thead><tbody>' +
+      (siRounds.length ? siRounds.map(function(r, ri){
+        var anyBad = false;
+        var cells = siChars.map(function(ch, ci){
+          var val = r.readings[ci] == null ? '' : r.readings[ci];
+          var vd = verdict(ch, val);
+          if (vd && vd !== 'ok') anyBad = true;
+          return '<td class="c" style="'+(vd==='ok'?'background:#E8F5EC;':
+            vd?'background:#FDECEA;color:#B03A2E;font-weight:700;':'')+'">'+esc(val||'—')+'</td>';
+        }).join('');
+        return '<tr><td class="hint">'+esc(r.at||'')+'</td>'+cells+
+          '<td class="hint">'+(anyBad
+            ? (r.containment ? esc(r.containment)
+               : '<b style="color:var(--bad)">not recorded</b>')
+            : '')+'</td>'+
+          '<td>'+(anyBad && !closed
+            ? '<button class="btn si-cont" data-r="'+ri+'">'+(r.containment?'Edit':'Record')+'</button>'
+            : '')+'</td></tr>';
+      }).join('')
+        : '<tr><td colspan="'+(siChars.length+3)+'" class="hint">No checks recorded yet.</td></tr>') +
+      (closed ? '' :
+        '<tr><td><input type="time" id="si-at" style="width:110px;"></td>' +
+        siChars.map(function(c, ci){
+          return '<td class="c"><input class="num si-new" data-c="'+ci+'" style="width:80px;text-align:center;"></td>';
+        }).join('') + '<td colspan="2"><button class="btn gold" id="si-add">Add check</button></td></tr>') +
+      '</tbody></table></div>' +
+      '<div class="hint" style="margin-top:8px;">Frequency: ' +
+      siChars.map(function(c){ return esc(c.balloon||'?')+' — '+esc(c.frequency||'not stated'); }).join(' · ') +
+      '</div>';
+
+    var timeEl = document.getElementById('si-at');
+    if (timeEl && !timeEl.value){
+      var d = new Date();
+      timeEl.value = String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    }
+    var add = document.getElementById('si-add');
+    if (add) add.addEventListener('click', addSiRound);
+    host.querySelectorAll('.si-cont').forEach(function(b){
+      b.addEventListener('click', function(){
+        var r = siRounds[+b.dataset.r];
+        var ch = siChars.filter(function(c,i){
+          var v = r.readings[i]; return v !== '' && verdict(c, v) !== 'ok'; })
+          .map(function(c){ return c.description; }).join(', ');
+        var txt = prompt('Check at ' + r.at + ' failed on: ' + ch +
+          '\n\nWhat happened to the parts made since the last good check, and what was done to the ' +
+          'process?', r.containment || '');
+        if (txt === null) return;
+        if (!txt.trim()) { toast('Containment cannot be blank — that is the point of the record.'); return; }
+        r.containment = txt.trim();
+        saveSi(false);
+      });
+    });
+    document.getElementById('si-close-box').style.display = closed ? 'none' : '';
+  }
+
+  function addSiRound(){
+    var at = (document.getElementById('si-at')||{}).value || '';
+    if (!at) { toast('Put the time of the check in.'); return; }
+    var readings = siChars.map(function(ch, ci){
+      var el = document.querySelector('.si-new[data-c="'+ci+'"]');
+      return el ? el.value.trim() : '';
+    });
+    if (!readings.some(function(x){ return x !== ''; })) {
+      toast('Enter at least one reading.'); return;
+    }
+    siRounds.push({ at: at, readings: readings, containment: '' });
+    saveSi(false);
+  }
+
+  async function saveSi(closing){
+    var msg = document.getElementById('si-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var partId = document.getElementById('si-part').value;
+    var opId = document.getElementById('si-op').value;
+    var op = processes.filter(function(x){ return x.doc_id === opId; })[0] || {};
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var key = opId + '|' + document.getElementById('si-date').value + '|' +
+              document.getElementById('si-shift').value;
+
+    if (closing){
+      var by = document.getElementById('si-by').value.trim();
+      if (!by) return say('Name who is closing the sheet.');
+      if (!siRounds.length) return say('No checks were recorded. An empty sheet is not a record.');
+      var unanswered = siRounds.filter(function(r){
+        return r.readings.some(function(x,i){ return x !== '' && verdict(siChars[i], x) !== 'ok'; })
+          && !String(r.containment||'').trim(); });
+      if (unanswered.length)
+        return say('<b>Cannot close.</b> ' + unanswered.length + ' failed check(s) have no ' +
+                   'containment recorded. The parts made after each of them are suspect until ' +
+                   'somebody says otherwise.');
+    }
+
+    var doc = { kind:'self_insp', partId: partId,
+      status: closing ? 'Closed' : 'Open',
+      docNo: siDoc ? siDoc.doc_no : await C.docNumber('si'),
+      data:{ key:key, partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
+             processId:opId, opNo:(op.data||{}).opNo, opName:(op.data||{}).name||'',
+             date:document.getElementById('si-date').value,
+             shift:document.getElementById('si-shift').value,
+             operator:document.getElementById('si-operator').value.trim(),
+             machine:document.getElementById('si-machine').value.trim(),
+             chars:siChars, rounds:siRounds } };
+    if (siDoc) doc.docId = siDoc.doc_id;
+    if (closing){
+      doc.data.made = C.num(document.getElementById('si-made').value);
+      doc.data.rejected = C.num(document.getElementById('si-rej').value);
+      doc.data.closedBy = document.getElementById('si-by').value.trim();
+      doc.data.closedAt = new Date().toISOString();
+    }
+    try {
+      var j = await C.idms.saveDoc(doc, closing ? 'self inspection sheet closed' : 'self inspection check recorded');
+      if (!siDoc) siDoc = { doc_id:j.docId, doc_no:doc.docNo, status:doc.status, data:doc.data };
+      else { siDoc.status = doc.status; siDoc.data = doc.data; }
+      drawSiSheet();
+      if (closing) say('Sheet closed.', true);
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  function printSelfInsp(){
+    if (!siDoc) { toast('Open a sheet first.'); return; }
+    var v = siDoc.data || {}, chars = v.chars || [], rounds = v.rounds || [];
+    var cols = [{label:'Time'}].concat(chars.map(function(c){
+      return { label:(c.balloon||'') + ' ' + (c.description||'').slice(0,16), align:'c' }; }))
+      .concat([{label:'Containment'}]);
+    var fails = rounds.reduce(function(t,r){
+      return t + (r.readings.some(function(x,i){ return x!=='' && verdict(chars[i], x)!=='ok'; }) ? 1 : 0);
+    }, 0);
+    C.openReport({
+      title:'Self Inspection Report' + (siDoc.status==='Closed' ? '' : ' — SHEET STILL OPEN'),
+      kind:'In-process', landscape:true,
+      subtitle:(v.partNo||'') + ' · Op ' + (v.opNo||'') + ' · ' + C.fmtDate(v.date) + ' · shift ' + (v.shift||''),
+      sections:[
+        { type:'pairs', title:'Sheet', rows:[
+          ['Part', esc((v.partNo||'') + ' — ' + (v.partName||''))],
+          ['Operation', esc((v.opNo||'') + ' ' + (v.opName||''))],
+          ['Machine', esc(v.machine||'—')],
+          ['Operator', esc(v.operator||'—')],
+          ['Date and shift', C.fmtDate(v.date) + ' · ' + esc(v.shift||'')],
+          ['Checks recorded', String(rounds.length)],
+          ['Checks with a failure', String(fails)],
+          ['Pieces made', v.made != null ? C.qty(v.made) : '—'],
+          ['Pieces rejected', v.rejected != null ? C.qty(v.rejected) : '—'],
+          ['Closed by', esc(v.closedBy || 'NOT CLOSED')]]},
+        { type:'table', title:'Checks', dense:true, columns:cols,
+          rows: rounds.map(function(r){
+            var row = [esc(r.at||'')];
+            chars.forEach(function(ch, i){
+              var x = r.readings[i] == null ? '' : r.readings[i];
+              var vd = verdict(ch, x);
+              row.push(vd && vd !== 'ok' ? { v:'<b>'+esc(x)+'</b>', cls:'ab' } : esc(x||'—'));
+            });
+            row.push(esc(r.containment||''));
+            return row;
+          }),
+          note:'Limits: ' + chars.map(function(c){
+            var l = limitsOf(c);
+            return (c.balloon||'') + ' ' + (l.lo!=null?C.qty(l.lo):'—') + '…' +
+              (l.hi!=null?C.qty(l.hi):'—') + (c.unit?' '+c.unit:''); }).join(' · ') },
+        { type:'text', title:'Signatures',
+          body:'Operator                              Line inspector                              Quality' }
+      ]});
   }
 
   /* ---------------- Setup approval ----------------
@@ -3503,6 +3817,18 @@
     });
     f.click();
   });
+
+  document.getElementById('si-part').addEventListener('change', function(){
+    drawSiOps(); siChars=[]; siDoc=null; siRounds=[]; drawSiSheet();
+  });
+  document.getElementById('si-op').addEventListener('change', function(){
+    var o = document.getElementById('si-op').selectedOptions[0];
+    if (o && o.dataset.machine) document.getElementById('si-machine').value = o.dataset.machine;
+    siChars=[]; siDoc=null; siRounds=[]; drawSiSheet();
+  });
+  document.getElementById('si-open').addEventListener('click', openSiSheet);
+  document.getElementById('si-close').addEventListener('click', function(){ saveSi(true); });
+  document.getElementById('si-print').addEventListener('click', printSelfInsp);
 
   document.getElementById('su-part').addEventListener('change', function(){
     drawSetupOps(); setupChars=[]; drawSetupSheet();

@@ -259,6 +259,63 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="hrm">
+      <div class="card">
+        <div class="stat" id="hr-stats"></div>
+      </div>
+      <div class="card">
+        <h4>People</h4>
+        <div class="row four" style="margin-bottom:8px;">
+          <div style="grid-column:span 2;"><label>Search</label>
+            <input id="hr-q" placeholder="name, ID, designation or department"></div>
+          <div><label>Show</label><select id="hr-filter">
+            <option value="">Everyone</option><option>Active</option><option>Probation</option>
+            <option>Notice</option><option>Exited</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="hr-refresh">Refresh</button></div>
+        </div>
+        <div id="hr-list"></div>
+      </div>
+      <div class="card" id="hr-record" style="display:none;">
+        <h4 id="hr-rec-title">Employee</h4>
+        <div class="row four">
+          <div><label>Employee ID</label><input id="he-id" readonly></div>
+          <div><label>Name</label><input id="he-name"></div>
+          <div><label>Designation</label><input id="he-desig"></div>
+          <div><label>Department</label><input id="he-dept"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Date of joining</label><input type="date" id="he-doj"></div>
+          <div><label>Status</label><select id="he-status">
+            <option>Active</option><option>Probation</option><option>Notice</option>
+            <option>Exited</option></select></div>
+          <div><label>Reports to</label><input id="he-reports"></div>
+          <div><label>Shift</label><input id="he-shift"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Phone</label><input id="he-phone"></div>
+          <div><label>Email</label><input id="he-email"></div>
+          <div><label>Location</label><input id="he-loc"></div>
+          <div><label>Grade</label><input id="he-grade"></div>
+        </div>
+        <div class="sub">Pay</div>
+        <div class="row four">
+          <div><label>Monthly gross</label><input class="num" id="he-gross" readonly></div>
+          <div><label>Basic</label><input class="num" id="he-basic" readonly></div>
+          <div><label>Tax regime</label><input id="he-regime" readonly></div>
+          <div><label>PF / ESI</label><input id="he-pfesi" readonly></div>
+        </div>
+        <div class="note" style="margin-top:10px;">Pay structure, attendance, leave and payroll are
+          still edited on the website for now — this screen holds the person's record. They move here
+          in the next stage, once this one is proven against your live data.</div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="he-save">Save</button>
+          <button class="btn" id="he-card">Print details</button>
+          <button class="btn" id="he-close">Close</button>
+        </div>
+        <div class="note" id="he-msg" style="display:none;"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="profile">
       <div class="card">
         <h4>Company profile</h4>
@@ -329,7 +386,7 @@
       ['entry_prod','📝','Production Entry'],['dwm','📊','DWM — Daily Work Management'],
       ['task_list','✅','Task List']]],
     ['hr','🏢','HR & Competency','Organisation',[
-      ['hrm','👥','HR & Payroll'],['org_chart','🏗','Organisation Chart'],
+      ['hrm','👥','HR & Payroll',1],['org_chart','🏗','Organisation Chart'],
       ['skill_matrix','📊','Skill Matrix'],['roles_resp','📋','Roles & Responsibilities'],
       ['competency_map','🎯','Competency Mapping'],['tni','📚','Training Need Identification'],
       ['training_plan_actual','📅','Training Plan vs Actual'],['gap_analysis','📈','Skill Gap Analysis'],
@@ -410,6 +467,7 @@
     if (s === 'parts')   loadParts();
     if (s === 'grn')     loadGrn();
     if (s === 'dc')      loadDc();
+    if (s === 'hrm')     loadHrm();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -709,6 +767,113 @@
     });
   }
 
+  /* ---------------- People ----------------
+     The same /api/hr endpoint the website uses. Nothing is copied and no data
+     moves — this is the record opened from the IDMS instead of the website.
+     Attendance, leave and payroll follow once this is proven on live data. */
+  var hrPeople = [], hrOpen = null;
+
+  function hrStatus(s){
+    var cls = {Active:'series',Probation:'sample',Notice:'apqp',Exited:'new'}[s] || 'new';
+    return '<span class="badge '+cls+'">'+esc(s||'—')+'</span>';
+  }
+
+  async function loadHrm(){
+    var host = document.getElementById('hr-list');
+    host.innerHTML = '<div class="hint">Loading…</div>';
+    try {
+      var j = await C.api('/api/hr?what=employees');
+      hrPeople = j.employees || [];
+    } catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; return; }
+
+    var by = {};
+    hrPeople.forEach(function(p){ by[p.status||'Active'] = (by[p.status||'Active']||0)+1; });
+    document.getElementById('hr-stats').innerHTML =
+      [['On roll', hrPeople.filter(function(p){ return p.status!=='Exited'; }).length],
+       ['Active', by.Active||0], ['On probation', by.Probation||0],
+       ['Serving notice', by.Notice||0], ['Exited', by.Exited||0]]
+      .map(function(x){ return '<div class="b"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'; }).join('');
+    drawHrList();
+  }
+
+  function drawHrList(){
+    var host = document.getElementById('hr-list');
+    var q = (document.getElementById('hr-q').value||'').toLowerCase().trim();
+    var f = document.getElementById('hr-filter').value;
+    var rows = hrPeople.filter(function(p){
+      if (f && (p.status||'Active') !== f) return false;
+      if (!q) return true;
+      return [p.name,p.empId,p.designation,p.department].join(' ').toLowerCase().indexOf(q) >= 0;
+    });
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>' +
+        (hrPeople.length ? 'Nobody matches that' : 'No employees on file') + '</b>' +
+        (hrPeople.length ? 'Clear the search or change the filter.'
+                         : 'People are added on the website for now.') + '</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>ID</th><th>Name</th><th>Designation</th>' +
+      '<th>Department</th><th>Joined</th><th class="c">Status</th><th></th></tr></thead><tbody>' +
+      rows.map(function(p){
+        return '<tr><td><b>'+esc(p.empId)+'</b></td><td>'+esc(p.name)+'</td>'+
+          '<td>'+esc(p.designation||'—')+'</td><td>'+esc(p.department||'—')+'</td>'+
+          '<td class="hint">'+C.fmtDate(p.doj)+'</td>'+
+          '<td class="c">'+hrStatus(p.status)+'</td>'+
+          '<td><button class="btn hr-open" data-id="'+esc(p.empId)+'">Open</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.hr-open').forEach(function(b){
+      b.addEventListener('click', function(){ openPerson(b.dataset.id); });
+    });
+  }
+
+  function openPerson(empId){
+    var p = hrPeople.filter(function(x){ return x.empId === empId; })[0];
+    if (!p) return;
+    hrOpen = p;
+    var st = p.structure || {};
+    var gross = C.num(st.basic)+C.num(st.da)+C.num(st.hra)+C.num(st.conveyance)+
+                C.num(st.special)+C.num(st.otherAllow);
+    document.getElementById('hr-rec-title').textContent = p.empId + ' — ' + (p.name||'');
+    var set = function(id,v){ document.getElementById(id).value = v == null ? '' : v; };
+    set('he-id',p.empId); set('he-name',p.name); set('he-desig',p.designation);
+    set('he-dept',p.department); set('he-doj',p.doj?String(p.doj).slice(0,10):'');
+    set('he-reports',p.reportsTo); set('he-shift',p.shift); set('he-phone',p.phone);
+    set('he-email',p.email); set('he-loc',p.location); set('he-grade',p.grade);
+    set('he-gross',gross?C.inr(gross):''); set('he-basic',st.basic?C.inr(st.basic):'');
+    set('he-regime',p.taxRegime||'');
+    set('he-pfesi',(p.pfApplicable===false?'PF no':'PF yes')+' · '+(p.esiApplicable===false?'ESI no':'ESI yes'));
+    document.getElementById('he-status').value = p.status || 'Active';
+    document.getElementById('hr-record').style.display = '';
+    document.getElementById('he-msg').style.display = 'none';
+    document.getElementById('hr-record').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function printPerson(){
+    if (!hrOpen) return;
+    var p = hrOpen, st = p.structure || {};
+    C.openReport({
+      title:'Employee Record', kind:'Record',
+      subtitle: p.empId + ' · ' + (p.name||''),
+      sections:[
+        {type:'pairs',title:'Person',rows:[
+          ['Employee ID','<b>'+esc(p.empId)+'</b>'],['Name',esc(p.name||'')],
+          ['Designation',esc(p.designation||'—')],['Department',esc(p.department||'—')],
+          ['Grade',esc(p.grade||'—')],['Location',esc(p.location||'—')],
+          ['Date of joining',C.fmtDate(p.doj)],['Status',esc(p.status||'—')],
+          ['Reports to',esc(p.reportsTo||'—')],['Shift',esc(p.shift||'—')]]},
+        {type:'pairs',title:'Contact',rows:[
+          ['Phone',esc(p.phone||'—')],['Email',esc(p.email||'—')]]},
+        {type:'table',title:'Monthly salary structure',
+          columns:[{label:'Component'},{label:'Amount',align:'r'}],
+          rows:[['Basic',C.inr(st.basic)],['Dearness allowance',C.inr(st.da)],
+                ['House rent allowance',C.inr(st.hra)],['Conveyance',C.inr(st.conveyance)],
+                ['Special allowance',C.inr(st.special)],['Other allowance',C.inr(st.otherAllow)],
+                [{v:'<b>Gross</b>'},{v:'<b>'+C.inr(C.num(st.basic)+C.num(st.da)+C.num(st.hra)+
+                  C.num(st.conveyance)+C.num(st.special)+C.num(st.otherAllow))+'</b>'}]],
+          note:'Statutory deductions are computed at pay run from the rules in force on the day.'}
+      ]});
+  }
+
   /* ---------------- profile ---------------- */
   async function loadProfileScreen(){
     var p = await C.loadProfile();
@@ -877,6 +1042,43 @@
       go('home');
     });
     f.click();
+  });
+
+  document.getElementById('hr-q').addEventListener('input', drawHrList);
+  document.getElementById('hr-filter').addEventListener('change', drawHrList);
+  document.getElementById('hr-refresh').addEventListener('click', loadHrm);
+  document.getElementById('he-close').addEventListener('click', function(){
+    document.getElementById('hr-record').style.display='none'; hrOpen=null;
+  });
+  document.getElementById('he-card').addEventListener('click', printPerson);
+
+  document.getElementById('he-save').addEventListener('click', async function(){
+    if (!hrOpen) return;
+    var msg = document.getElementById('he-msg');
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    if (!g('he-name')){
+      msg.style.display=''; msg.className='note bad'; msg.textContent='A name is required.'; return;
+    }
+    /* Only the fields on this screen are changed. The record is sent back whole,
+       so pay structure and statutory identifiers edited on the website are not
+       wiped by saving here. */
+    var next = Object.assign({}, hrOpen, {
+      name:g('he-name'), designation:g('he-desig'), department:g('he-dept'),
+      doj:g('he-doj'), status:document.getElementById('he-status').value,
+      reportsTo:g('he-reports'), shift:g('he-shift'),
+      phone:g('he-phone'), email:g('he-email'), location:g('he-loc'), grade:g('he-grade')
+    });
+    this.disabled = true;
+    try {
+      await C.api('/api/hr',{method:'POST',body:JSON.stringify({what:'employees',
+        employee:next, reason:'edited in the IDMS'})});
+      msg.style.display=''; msg.className='note good'; msg.textContent='Saved.';
+      var i = hrPeople.findIndex(function(x){ return x.empId===next.empId; });
+      if (i>=0) hrPeople[i]=next;
+      hrOpen = next;
+      drawHrList();
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent=e.message; }
+    this.disabled = false;
   });
 
   document.getElementById('dc-addline').addEventListener('click', function(){

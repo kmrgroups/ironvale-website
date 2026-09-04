@@ -117,7 +117,8 @@ idempotent — once sent, the button is replaced by a confirmation.
 
 ## Current state
 
-**Live in the IDMS:** Home, Parts, GRN, Delivery Challan, Company Profile.
+**Live in the IDMS:** Home, Parts, GRN, Delivery Challan, People (HR records),
+Company Profile.
 **Declared but not built:** 65 further screens, marked `soon` in the menu, each
 showing an explanation rather than a blank page. The menu structure mirrors the
 system the team already uses.
@@ -172,9 +173,14 @@ Useful smoke checks after any change:
 
 ## Suggested next work, in dependency order
 
-1. **Move HR and PPC into `idms.html`** — the API (`api/hr.js`) is already
-   shared, so this relocates front-end code only; **no data migration**. Keep
-   the redirects above.
+1. **Finish moving HR into `idms.html`** — People is done and reads the same
+   `/api/hr`. Attendance, leave and payroll remain on the website. Note that HR
+   code in `index.html` is **not contiguous**: 48 HR functions are interleaved
+   with 263 unrelated ones across ~8,000 lines, so a mechanical lift is not
+   possible. Rebuild each screen against the shared API instead, one at a time,
+   and only remove the website copy once the IDMS one is proven on live data.
+   PPC is the same story — `renderPpcAdmin` depends on a planning engine
+   (`planOrder`, `machineLoad`, `partById`) tied to the website's masters.
 2. **APQP programme** — timing plan, phase gates, CFT, hung off `part_id`.
 3. **PFMEA → control plan → MSA → PPAP** — one chain; PFMEA feeds the control
    plan, the control plan defines what MSA proves.

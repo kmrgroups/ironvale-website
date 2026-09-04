@@ -119,7 +119,7 @@ idempotent — once sent, the button is replaced by a confirmation.
 
 **Live in the IDMS:** Home (with loadable sample data), Customer Addition,
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
-Process Flow Diagram, PFMEA, Control Plan, CNC Programme, GRN, Delivery
+Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, GRN, Delivery
 Challan, People (HR records), Company Profile.
 
 **The NPD chain is now complete end to end**: a won quotation on the website

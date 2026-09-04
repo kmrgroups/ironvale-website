@@ -307,6 +307,63 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="ppap">
+      <div class="card">
+        <h4>PPAP submission</h4>
+        <div class="hint" style="margin-bottom:10px;">The eighteen elements, per AIAG. What this
+          system already holds is ticked automatically and shows the document it found — the rest
+          you record as on file, not applicable, or leave outstanding. The warrant cannot be signed
+          while anything required at the chosen level is outstanding.</div>
+        <div class="row four">
+          <div><label>Part</label><select id="pp-part"></select></div>
+          <div><label>Customer</label><select id="pp-cust"></select></div>
+          <div><label>Submission level</label><select id="pp-level">
+            <option value="1">1 — warrant only</option>
+            <option value="2">2 — warrant, samples, limited data</option>
+            <option value="3" selected>3 — warrant, samples, full data</option>
+            <option value="4">4 — warrant and customer-defined requirements</option>
+            <option value="5">5 — warrant, samples, full data reviewed at our works</option>
+          </select></div>
+          <div><label>Reason for submission</label><select id="pp-reason">
+            <option>Initial submission</option><option>Engineering change</option>
+            <option>Tooling: transfer, replacement, refurbishment</option>
+            <option>Change in process or method</option>
+            <option>Change in sub-supplier or material source</option>
+            <option>Change in part processing</option>
+            <option>Parts produced at an additional location</option>
+            <option>Tooling inactive over one year</option>
+          </select></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="pp-check">Check readiness</button>
+          <button class="btn" id="pp-psw">Print warrant &amp; cover sheet</button>
+        </div>
+        <div class="note" id="pp-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4 id="pp-title">Elements</h4>
+        <div id="pp-body"></div>
+      </div>
+      <div class="card" id="pp-sign" style="display:none;">
+        <h4>Part Submission Warrant</h4>
+        <div class="row four">
+          <div><label>Parts made at</label><input id="pp-where" placeholder="plant and line"></div>
+          <div><label>Quantity submitted</label><input class="num" id="pp-qty"></div>
+          <div><label>Run at rate (pcs/hr)</label><input class="num" id="pp-rate"></div>
+          <div><label>Submitted on</label><input type="date" id="pp-on"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div style="grid-column:span 2;"><label>Signed by (our authorised person)</label>
+            <input id="pp-by" placeholder="name and title"></div>
+          <div><label>Warrant revision</label><input id="pp-rev" placeholder="00"></div>
+          <div style="align-self:end;"><button class="btn green" id="pp-submit">Sign the warrant</button></div>
+        </div>
+        <div class="hint" style="margin-top:8px;">Signing the warrant is a declaration to your
+          customer that the parts meet their requirements and were made at the production rate.
+          It is a statement someone is answerable for.</div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="cnc">
       <div class="card">
         <h4>CNC Programme</h4>
@@ -656,7 +713,7 @@
     ['npd','🗂','NPD & APQP','New Part Development',[
       ['parts','📦','Parts',1],['apqp','🗂','APQP Programme'],['pfd','🔵','Process Flow Diagram',1],
       ['fmea','⚠','PFMEA',1],['control_plan','📋','Control Plan',1],['msa','🔬','MSA'],
-      ['ppap','📦','PPAP'],['spc','📈','SPC']]],
+      ['ppap','📦','PPAP',1],['spc','📈','SPC']]],
     ['planning','📈','Planning','Plan',[
       ['sales_plan','📈','Sales Plan'],['capacity_plan','⚙','Capacity Plan'],
       ['production_plan','🏭','Production Plan'],['machine_loading','🔩','Machine Loading Plan']]],
@@ -756,6 +813,7 @@
     if (s === 'fmea')           loadFmea();
     if (s === 'control_plan')   loadCp();
     if (s === 'cnc')            loadCnc();
+    if (s === 'ppap')           loadPpap();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -1255,6 +1313,297 @@
       loadHome();
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Remove sample data';
+  }
+
+  /* ---------------- PPAP ----------------
+     The eighteen AIAG elements. Three of them this system produces itself and
+     can prove; the rest are declared by a person. The distinction is kept
+     visible, because a warrant signed against elements nobody checked is a
+     false declaration to a customer, not a paperwork slip. */
+  var ppapDoc = null;
+
+  var PPAP_ELEMENTS = [
+    { n:1,  name:'Design records', auto:'drawing' },
+    { n:2,  name:'Engineering change documents' },
+    { n:3,  name:'Customer engineering approval', levels:[3,4,5] },
+    { n:4,  name:'Design FMEA', note:'Only where we are design responsible' },
+    { n:5,  name:'Process flow diagram', auto:'pfd' },
+    { n:6,  name:'Process FMEA', auto:'pfmea' },
+    { n:7,  name:'Control plan', auto:'control_plan' },
+    { n:8,  name:'Measurement system analysis (MSA)' },
+    { n:9,  name:'Dimensional results' },
+    { n:10, name:'Material and performance test results' },
+    { n:11, name:'Initial process studies (Cpk)' },
+    { n:12, name:'Qualified laboratory documentation' },
+    { n:13, name:'Appearance approval report', note:'Only where appearance is a requirement' },
+    { n:14, name:'Sample production parts', levels:[2,3,5] },
+    { n:15, name:'Master sample' },
+    { n:16, name:'Checking aids' },
+    { n:17, name:'Customer-specific requirements' },
+    { n:18, name:'Part submission warrant', auto:'psw' }
+  ];
+
+  /* What each level actually asks to be submitted. Level 1 is the warrant
+     alone; level 3 is the full package and is the default most customers use. */
+  function requiredAt(level){
+    level = C.num(level) || 3;
+    if (level === 1) return [18];
+    if (level === 2) return [1,5,6,7,9,14,18];
+    if (level === 4) return [18];      // whatever the customer has defined
+    return [1,3,5,6,7,8,9,10,11,14,15,17,18];   // levels 3 and 5
+  }
+
+  async function loadPpap(){
+    await fetchParts();
+    await fetchCustomers();
+    /* the routing and the customer links are evidence for elements 5 and 18 —
+       without loading them the screen reports gaps that are not there */
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { custParts = await C.idms.docs('cust_part'); } catch(e){ custParts = []; }
+    var sel = document.getElementById('pp-part');
+    sel.innerHTML = partOptions(sel.value);
+    document.getElementById('pp-cust').innerHTML = customerOptions('');
+    await loadPpapDoc();
+  }
+
+  async function loadPpapDoc(){
+    var partId = document.getElementById('pp-part').value;
+    ppapDoc = null;
+    if (partId){
+      try { ppapDoc = (await C.idms.docs('ppap', partId))[0] || null; } catch(e){}
+    }
+    await drawPpap();
+  }
+
+  /* What the system can prove it holds, as opposed to what a person says. */
+  async function ppapEvidence(partId){
+    var ev = {};
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    if ((p.data||{}).drawingNo)
+      ev.drawing = { ref:(p.data||{}).drawingNo + (p.data.drawingRev ? ' rev ' + p.data.drawingRev : ''),
+                     ok:true };
+    var ops = opsFor(partId);
+    if (ops.length) ev.pfd = { ref: ops.length + ' operations', ok:true };
+    try {
+      var fm = (await C.idms.docs('pfmea', partId))[0];
+      if (fm) ev.pfmea = { ref: fm.doc_no + ((fm.data||{}).reviewedBy ? '' : ' (unsigned draft)'),
+                           ok: !!(fm.data||{}).reviewedBy };
+      var cp = (await C.idms.docs('control_plan', partId))[0];
+      if (cp) ev.control_plan = { ref: cp.doc_no + ((cp.data||{}).approvedBy ? '' : ' (unapproved draft)'),
+                                  ok: !!(cp.data||{}).approvedBy };
+    } catch(e){}
+    return ev;
+  }
+
+  async function drawPpap(){
+    var partId = document.getElementById('pp-part').value;
+    var host = document.getElementById('pp-body');
+    var title = document.getElementById('pp-title');
+    document.getElementById('pp-sign').style.display = 'none';
+    if (!partId){
+      title.textContent = 'Elements';
+      host.innerHTML = '<div class="empty"><b>Choose a part</b>' +
+        'Its eighteen elements are listed with what this system already holds.</div>';
+      return;
+    }
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    title.textContent = 'PPAP elements for ' + (p.part_no||'') + ' — ' + (p.part_name||'');
+
+    var state = (ppapDoc && (ppapDoc.data||{}).elements) || {};
+    var level = C.num(document.getElementById('pp-level').value) || 3;
+    var need = requiredAt(level);
+    var ev = await ppapEvidence(partId);
+
+    var outstanding = 0;
+    var rowsHtml = PPAP_ELEMENTS.map(function(el){
+      var st = state[el.n] || {};
+      var auto = el.auto && ev[el.auto];
+      var required = need.indexOf(el.n) >= 0;
+      var status, cls, ref;
+      if (el.auto === 'psw'){
+        status = (ppapDoc && (ppapDoc.data||{}).signedBy) ? 'Signed' : 'Not signed';
+        cls = (ppapDoc && (ppapDoc.data||{}).signedBy) ? 'series' : 'new';
+        ref = (ppapDoc && (ppapDoc.data||{}).signedBy) || '';
+        if (required && !(ppapDoc && (ppapDoc.data||{}).signedBy)) outstanding++;
+      } else if (auto){
+        status = auto.ok ? 'Held' : 'Held — draft';
+        cls = auto.ok ? 'series' : 'sample';
+        ref = auto.ref;
+        if (required && !auto.ok) outstanding++;
+      } else if (st.status === 'na'){
+        status = 'Not applicable'; cls = 'new'; ref = st.ref || '';
+      } else if (st.status === 'file'){
+        status = 'On file'; cls = 'ppap'; ref = st.ref || '';
+      } else {
+        status = 'Outstanding'; cls = ''; ref = '';
+        if (required) outstanding++;
+      }
+      return '<tr><td class="c">'+el.n+'</td>' +
+        '<td>'+esc(el.name)+(el.note?'<div class="hint">'+esc(el.note)+'</div>':'')+'</td>' +
+        '<td class="c">'+(required?'<b>Yes</b>':'—')+'</td>' +
+        '<td class="c">'+(cls?'<span class="badge '+cls+'">'+esc(status)+'</span>'
+                             :'<span style="color:var(--bad);font-weight:600;">'+esc(status)+'</span>')+'</td>' +
+        '<td class="hint">'+esc(ref)+(auto?'<div class="hint">held by this system</div>':'')+'</td>' +
+        '<td>'+(auto || el.auto==='psw' ? '<span class="hint">automatic</span>' :
+          '<select class="pp-st" data-n="'+el.n+'" style="width:118px;">' +
+          '<option value=""'+(!st.status?' selected':'')+'>Outstanding</option>' +
+          '<option value="file"'+(st.status==='file'?' selected':'')+'>On file</option>' +
+          '<option value="na"'+(st.status==='na'?' selected':'')+'>Not applicable</option></select>')+'</td>' +
+        '<td>'+(auto || el.auto==='psw' ? '' :
+          '<input class="pp-ref" data-n="'+el.n+'" value="'+esc(st.ref||'')+'" placeholder="document reference">')+'</td></tr>';
+    }).join('');
+
+    host.innerHTML =
+      (outstanding
+        ? '<div class="note bad"><b>' + outstanding + ' required element(s) outstanding at level ' +
+          level + '.</b> The warrant cannot be signed until each is on file or marked not ' +
+          'applicable — a warrant signed over a gap is a false declaration to your customer.</div>'
+        : '<div class="note good">Every element required at level ' + level + ' is accounted for. ' +
+          'The warrant can be signed.</div>') +
+      '<div style="overflow-x:auto;"><table class="t"><thead><tr><th class="c">#</th><th>Element</th>' +
+      '<th class="c">Required</th><th class="c">Status</th><th>Reference</th><th>Record</th>' +
+      '<th>Reference</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>' +
+      '<div style="margin-top:10px;"><button class="btn gold" id="pp-save">Save element status</button></div>';
+
+    host.querySelectorAll('.pp-st, .pp-ref').forEach(function(el){
+      el.addEventListener('change', function(){
+        var n = el.dataset.n;
+        state[n] = state[n] || {};
+        if (el.classList.contains('pp-st')) state[n].status = el.value;
+        else state[n].ref = el.value;
+      });
+    });
+    var save = document.getElementById('pp-save');
+    if (save) save.addEventListener('click', function(){ savePpap(state, false); });
+
+    document.getElementById('pp-sign').style.display = '';
+    var v = (ppapDoc && ppapDoc.data) || {};
+    document.getElementById('pp-where').value = v.madeAt || '';
+    document.getElementById('pp-qty').value   = v.qty || '';
+    document.getElementById('pp-rate').value  = v.rate || '';
+    document.getElementById('pp-on').value    = v.submittedOn || '';
+    document.getElementById('pp-by').value    = v.signedBy || '';
+    document.getElementById('pp-rev').value   = v.rev || '00';
+    if (v.customerId) document.getElementById('pp-cust').value = v.customerId;
+    if (v.level) document.getElementById('pp-level').value = String(v.level);
+    if (v.reason) document.getElementById('pp-reason').value = v.reason;
+  }
+
+  async function savePpap(state, sign){
+    var partId = document.getElementById('pp-part').value;
+    var msg = document.getElementById('pp-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var custId = document.getElementById('pp-cust').value;
+    if (!custId) { say('Choose the customer this is being submitted to.'); return false; }
+    var cust = customers.filter(function(c){ return c.doc_id === custId; })[0] || {};
+    var level = C.num(document.getElementById('pp-level').value) || 3;
+
+    if (sign){
+      var by = document.getElementById('pp-by').value.trim();
+      if (!by) { say('Name the person signing. A warrant is a declaration somebody is answerable for.');
+        return false; }
+      /* the readiness check is re-run at signing, not trusted from the screen */
+      var ev = await ppapEvidence(partId);
+      var need = requiredAt(level), missing = [];
+      PPAP_ELEMENTS.forEach(function(el){
+        if (need.indexOf(el.n) < 0) return;
+        if (el.auto === 'psw') return;
+        var auto = el.auto && ev[el.auto];
+        if (auto) { if (!auto.ok) missing.push(el.n + ' ' + el.name + ' (still a draft)'); return; }
+        var st = (state||{})[el.n] || {};
+        if (st.status !== 'file' && st.status !== 'na') missing.push(el.n + ' ' + el.name);
+      });
+      if (missing.length){
+        say('<b>Cannot sign.</b> Outstanding at level ' + level + ':<br>• ' +
+            missing.map(esc).join('<br>• '));
+        return false;
+      }
+    }
+
+    var doc = { kind:'ppap', partId: partId, status: sign ? 'Submitted' : 'Preparing',
+      docNo: ppapDoc ? ppapDoc.doc_no : await C.docNumber('ppap'),
+      data: Object.assign({}, (ppapDoc&&ppapDoc.data)||{}, {
+        partId: partId, customerId: custId, customerName:(cust.data||{}).name||'',
+        level: level, reason: document.getElementById('pp-reason').value,
+        elements: state || ((ppapDoc&&ppapDoc.data&&ppapDoc.data.elements)||{}),
+        madeAt: document.getElementById('pp-where').value.trim(),
+        qty: C.num(document.getElementById('pp-qty').value),
+        rate: C.num(document.getElementById('pp-rate').value),
+        rev: document.getElementById('pp-rev').value || '00' }) };
+    if (sign){
+      doc.data.signedBy = document.getElementById('pp-by').value.trim();
+      doc.data.submittedOn = document.getElementById('pp-on').value ||
+        new Date().toISOString().slice(0,10);
+    }
+    if (ppapDoc) doc.docId = ppapDoc.doc_id;
+    try {
+      await C.idms.saveDoc(doc, sign ? 'PPAP warrant signed' : 'PPAP element status saved');
+      await loadPpapDoc();
+      say(sign ? 'Warrant signed. Print it with the cover sheet for the customer.' : 'Saved.', true);
+      return true;
+    } catch(e){ say(esc(e.message)); return false; }
+  }
+
+  async function printPpap(){
+    var partId = document.getElementById('pp-part').value;
+    if (!partId) { toast('Choose a part.'); return; }
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var v = (ppapDoc && ppapDoc.data) || {};
+    var level = C.num(v.level || document.getElementById('pp-level').value) || 3;
+    var need = requiredAt(level);
+    var ev = await ppapEvidence(partId);
+    var state = v.elements || {};
+    var link = custParts.filter(function(cp){
+      return (cp.data||{}).partId === partId && (cp.data||{}).customerId === v.customerId; })[0];
+
+    C.openReport({
+      title:'Part Submission Warrant' + (v.signedBy ? '' : ' — UNSIGNED'),
+      kind: v.signedBy ? 'PSW' : 'PSW (unsigned)',
+      subtitle:(p.part_no||'') + ' · ' + (p.part_name||'') + ' · level ' + level,
+      sections:[
+        { type:'pairs', title:'Part', rows:[
+          ['Part name', esc(p.part_name||'')],
+          ['Our part number', esc(p.part_no||'')],
+          ['Customer', esc(v.customerName||'—')],
+          ['Customer part number', esc((link&&(link.data||{}).custPartNo) || '—')],
+          ['Drawing number', esc((p.data||{}).drawingNo||'—') +
+            ((p.data||{}).drawingRev ? ' rev ' + esc((p.data||{}).drawingRev) : '')],
+          ['Raw material', esc((p.data||{}).rawMaterial||'—')],
+          ['Reason for submission', esc(v.reason||'—')],
+          ['Submission level', String(level)]]},
+        { type:'pairs', title:'Submission', rows:[
+          ['Parts made at', esc(v.madeAt||'—')],
+          ['Quantity submitted', v.qty ? C.qty(v.qty) : '—'],
+          ['Production rate', v.rate ? C.qty(v.rate) + ' pcs/hr' : '—'],
+          ['Warrant revision', esc(v.rev||'00')],
+          ['Submitted on', v.submittedOn ? C.fmtDate(v.submittedOn) : '—']]},
+        { type:'table', title:'Package contents', 
+          columns:[{label:'#',align:'c'},{label:'Element'},{label:'Required',align:'c'},
+                   {label:'Status'},{label:'Reference'}],
+          rows: PPAP_ELEMENTS.map(function(el){
+            var auto = el.auto && ev[el.auto];
+            var st = state[el.n] || {};
+            var status, ref = '';
+            if (el.auto === 'psw'){ status = v.signedBy ? 'Signed' : 'Not signed'; ref = v.signedBy||''; }
+            else if (auto){ status = auto.ok ? 'Submitted' : 'Draft only'; ref = auto.ref; }
+            else if (st.status === 'na'){ status = 'Not applicable'; ref = st.ref||''; }
+            else if (st.status === 'file'){ status = 'Submitted'; ref = st.ref||''; }
+            else status = 'Outstanding';
+            return [el.n, esc(el.name), need.indexOf(el.n)>=0 ? 'Yes' : '—', status, esc(ref)];
+          }) },
+        { type:'text', title:'Declaration',
+          body: v.signedBy
+            ? 'The results reported here show that the parts submitted meet the customer drawing ' +
+              'and specification requirements, and were produced at the production rate stated ' +
+              'from production tooling on production processes. Signed by ' + v.signedBy + ' on ' +
+              (v.submittedOn ? new Date(v.submittedOn).toLocaleDateString('en-GB') : '') + '.'
+            : 'UNSIGNED. This warrant has not been signed and must not be sent to a customer in ' +
+              'this state.' },
+        { type:'text', title:'Signatures',
+          body:'Supplier authorised signatory                         Date\n\n' +
+               'Customer quality representative                        Date' }
+      ]});
   }
 
   /* ---------------- CNC programme ----------------
@@ -2718,6 +3067,23 @@
       go('home');
     });
     f.click();
+  });
+
+  document.getElementById('pp-part').addEventListener('change', loadPpapDoc);
+  document.getElementById('pp-level').addEventListener('change', drawPpap);
+  document.getElementById('pp-check').addEventListener('click', drawPpap);
+  document.getElementById('pp-psw').addEventListener('click', printPpap);
+  document.getElementById('pp-submit').addEventListener('click', async function(){
+    this.disabled = true;
+    var state = (ppapDoc && (ppapDoc.data||{}).elements) || {};
+    var host = document.getElementById('pp-body');
+    /* pick up anything typed but not yet saved */
+    host.querySelectorAll('.pp-st').forEach(function(el){
+      state[el.dataset.n] = state[el.dataset.n] || {}; state[el.dataset.n].status = el.value; });
+    host.querySelectorAll('.pp-ref').forEach(function(el){
+      state[el.dataset.n] = state[el.dataset.n] || {}; state[el.dataset.n].ref = el.value; });
+    await savePpap(state, true);
+    this.disabled = false;
   });
 
   document.getElementById('cn-part').addEventListener('change', function(){

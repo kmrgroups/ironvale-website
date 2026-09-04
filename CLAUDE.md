@@ -117,9 +117,16 @@ idempotent — once sent, the button is replaced by a confirmation.
 
 ## Current state
 
-**Live in the IDMS:** Home, Customer Addition, Parts (+ customer/price links),
-Process Master (routing), Dimensions Master, GRN, Delivery Challan, People (HR
-records), Company Profile.
+**Live in the IDMS:** Home (with loadable sample data), Customer Addition,
+Parts (+ customer/price links), Process Master (routing), Dimensions Master,
+Process Flow Diagram, GRN, Delivery Challan, People (HR records), Company
+Profile.
+
+**Sample data.** The home screen loads one worked example — customer, part,
+priced link, four operations, seven dimensions including two CC and one SC.
+Every record it writes carries `demo:true` and removal deletes on that flag
+alone, so real data can never be caught by it. Useful for demonstrating the
+chain to a prospective customer.
 
 **The NPD chain**, each level hanging off the one above: customer → part →
 customer-part link (their number, their price) → process/routing → dimensions
@@ -135,6 +142,12 @@ is refused; an SC or CC characteristic must have a gauge and a check frequency,
 or the control plan cannot be worked to; and an operation carrying dimensions
 cannot be deleted, because those characteristics would be orphaned and silently
 dropped from the control plan.
+
+**PFD** is drawn from the routing, never typed, so it cannot disagree with the
+operations. Inspection steps are detected by name and drawn as diamonds. The
+screen states whether the part is ready for PFMEA — i.e. whether every operation
+has dimensions — because generating a PFMEA over operations with no
+characteristics produces a document that controls nothing.
 
 Everything the AI generation stages need is now in place: the routing says what
 happens and where, the dimensions say what must be held and how it is measured.

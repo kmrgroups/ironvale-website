@@ -212,6 +212,10 @@
           '</tbody></table>' + (sec.note ? '<p class="note">' + esc(sec.note) + '</p>' : '');
       }
       if (sec.type === 'text') return '<h2>' + esc(sec.title || '') + '</h2><p>' + esc(sec.body || '') + '</p>';
+      /* a section that is already laid out — a flow diagram, a chart. The caller
+         owns the markup; the letterhead and footer are still ours. */
+      if (sec.type === 'html') return (sec.title ? '<h2>' + esc(sec.title) + '</h2>' : '') +
+        (sec.html || '');
       return '';
     }).join('');
 

@@ -149,6 +149,19 @@
       </div>
       <div class="qa" id="qa-grid"></div>
       <div class="hint" id="qa-hint" style="margin-top:10px;"></div>
+
+      <div class="card" style="margin-top:20px;">
+        <h4>Sample data</h4>
+        <div class="hint" style="margin-bottom:10px;">Fills the system with one worked example — a
+          customer, a part, a priced customer link, a four-operation routing and its dimensions —
+          so the whole chain can be seen end to end. Everything it creates is marked, and
+          <b>Remove sample data</b> deletes exactly those records and nothing else.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="demo-add">Load sample data</button>
+          <button class="btn del" id="demo-del">Remove sample data</button>
+        </div>
+        <div class="note" id="demo-msg" style="display:none;"></div>
+      </div>
     </div>
 
     <div class="panel" data-panel="parts">
@@ -291,6 +304,23 @@
       <div class="card">
         <h4>Despatched</h4>
         <div id="dc-list"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="pfd">
+      <div class="card">
+        <h4>Process Flow Diagram</h4>
+        <div class="hint" style="margin-bottom:10px;">Drawn from the routing — it is not typed
+          separately, so it can never disagree with the operations you entered. Inspection
+          operations are shown as diamonds; everything else as a box.</div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>Part</label><select id="fd-part"></select></div>
+          <div style="align-self:end;"><button class="btn" id="fd-print">Print</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <h4 id="fd-title">Flow</h4>
+        <div id="fd-body"></div>
       </div>
     </div>
 
@@ -514,7 +544,7 @@
       ['pfmea_master','🧠','PFMEA Master'],['dim_entry','📐','Dimensions Master',1],
       ['pp_spec_master','📋','PP Spec Master']]],
     ['npd','🗂','NPD & APQP','New Part Development',[
-      ['parts','📦','Parts',1],['apqp','🗂','APQP Programme'],['pfd','🔵','Process Flow Diagram'],
+      ['parts','📦','Parts',1],['apqp','🗂','APQP Programme'],['pfd','🔵','Process Flow Diagram',1],
       ['fmea','⚠','PFMEA'],['control_plan','📋','Control Plan'],['msa','🔬','MSA'],
       ['ppap','📦','PPAP'],['spc','📈','SPC']]],
     ['planning','📈','Planning','Plan',[
@@ -612,6 +642,7 @@
     if (s === 'entry_customer') loadCustomers();
     if (s === 'process_master') loadProcesses();
     if (s === 'dim_entry')      loadDimensions();
+    if (s === 'pfd')            loadPfd();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -987,6 +1018,248 @@
         } catch(e){ toast(e.message); }
       });
     });
+  }
+
+  /* ---------------- Sample data ----------------
+     A worked example so the chain can be seen before real work goes in. Every
+     record carries demo:true, and removal deletes on that flag alone — real
+     data can never be caught by it. */
+  var DEMO = {
+    customer:{ name:'Demo Motors Pvt Ltd', code:'DEMO-001', gstin:'29AAAAA0000A1Z5',
+      terms:'45 days from invoice', billing:'Plot 22, Industrial Estate, Bengaluru 560058',
+      despatch:'Plot 22, Industrial Estate, Bengaluru 560058',
+      contact:'Sample Contact', phone:'9000000000', email:'sample@example.com' },
+    part:{ name:'Bearing Housing', drawingNo:'DEMO-DRG-4471', drawingRev:'02',
+      rawMaterial:'EN8 bright bar Ø52', netWeight:0.42, grossWeight:0.55, uom:'Nos' },
+    link:{ custPartNo:'DM-4471', custDrawingNo:'DEMO-DRG-4471', hsn:'84831090', price:182.50 },
+    ops:[
+      { opNo:10, name:'CNC turning', machine:'Doosan Lynx 220', setupMin:45, cycleSec:82,
+        where:'in', description:'Rough and finish turn OD, face, bore, chamfer, part off',
+        dims:[
+          { balloon:'1', description:'Bore diameter after finish turn', nominal:32, upper:'+0.025',
+            lower:'-0.000', unit:'mm', gauge:'Bore gauge 25-50mm', cls:'CC', frequency:'5 pcs / hour' },
+          { balloon:'2', description:'Outside diameter', nominal:52, upper:'+0.05', lower:'-0.05',
+            unit:'mm', gauge:'Micrometer 50-75mm', cls:'', frequency:'5 pcs / hour' },
+          { balloon:'3', description:'Overall length', nominal:38, upper:'+0.1', lower:'-0.1',
+            unit:'mm', gauge:'Vernier caliper', cls:'', frequency:'First and last piece' }]},
+      { opNo:20, name:'CNC milling', machine:'Haas VF-2', setupMin:35, cycleSec:64,
+        where:'in', description:'Mill mounting face, drill and tap 4 × M8 on PCD',
+        dims:[
+          { balloon:'4', description:'Mounting face flatness', nominal:0.05, upper:'+0.00',
+            lower:'-0.05', unit:'mm', gauge:'Dial gauge on surface plate', cls:'SC',
+            frequency:'5 pcs / hour' },
+          { balloon:'5', description:'Tapped hole PCD', nominal:76, upper:'+0.2', lower:'-0.2',
+            unit:'mm', gauge:'CMM', cls:'', frequency:'First piece' }]},
+      { opNo:30, name:'Deburring and washing', machine:'Manual bench', setupMin:5, cycleSec:40,
+        where:'in', description:'Deburr all edges, wash and dry',
+        dims:[
+          { balloon:'6', description:'Surface finish in bore', nominal:1.6, upper:'+0.4',
+            lower:'-0.0', unit:'Ra', gauge:'Surface roughness tester', cls:'', frequency:'1 per shift' }]},
+      { opNo:40, name:'Final inspection', machine:'Inspection room', setupMin:0, cycleSec:55,
+        where:'in', description:'Check all characteristics against the control plan before despatch',
+        dims:[
+          { balloon:'7', description:'Bore diameter confirmation', nominal:32, upper:'+0.025',
+            lower:'-0.000', unit:'mm', gauge:'Air gauge', cls:'CC', frequency:'100%' }]}
+    ]
+  };
+
+  async function loadDemo(){
+    var msg = document.getElementById('demo-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var btn = document.getElementById('demo-add');
+    btn.disabled = true; btn.textContent = 'Loading…';
+    try {
+      var already = (await C.idms.docs('customer'))
+        .filter(function(c){ return (c.data||{}).demo; }).length;
+      if (already) { say('Sample data is already loaded. Remove it first if you want it fresh.');
+        btn.disabled=false; btn.textContent='Load sample data'; return; }
+
+      var cj = await C.idms.saveDoc({ kind:'customer', docNo:DEMO.customer.code, status:'Active',
+        data: Object.assign({demo:true}, DEMO.customer) }, 'sample data loaded');
+
+      var internal = await C.docNumber('part');
+      var pj = await C.idms.savePart({ customer:'', partNo:internal, partName:DEMO.part.name,
+        lifecycle:'APQP', data: Object.assign({demo:true}, DEMO.part) }, 'sample data loaded');
+
+      await C.idms.saveDoc({ kind:'cust_part', partId:pj.partId, status:'Active',
+        docNo:DEMO.link.custPartNo,
+        data: Object.assign({demo:true, partId:pj.partId, internalNo:internal,
+          customerId:cj.docId, customerName:DEMO.customer.name,
+          effectiveFrom:new Date().toISOString().slice(0,10)}, DEMO.link) }, 'sample data loaded');
+
+      var dimCount = 0;
+      for (var i = 0; i < DEMO.ops.length; i++) {
+        var o = DEMO.ops[i];
+        var oj = await C.idms.saveDoc({ kind:'process', partId:pj.partId, status:'Active',
+          docNo:String(o.opNo),
+          data:{ demo:true, partId:pj.partId, opNo:o.opNo, name:o.name, machine:o.machine,
+                 setupMin:o.setupMin, cycleSec:o.cycleSec, where:o.where,
+                 description:o.description } }, 'sample data loaded');
+        for (var k = 0; k < o.dims.length; k++) {
+          var dm = o.dims[k];
+          await C.idms.saveDoc({ kind:'dimension', partId:pj.partId, status:'Active',
+            docNo:dm.balloon,
+            data: Object.assign({demo:true, partId:pj.partId, processId:oj.docId, opNo:o.opNo}, dm)
+          }, 'sample data loaded');
+          dimCount++;
+        }
+      }
+      say('Loaded: <b>' + esc(DEMO.customer.name) + '</b>, part <b>' + esc(internal) + '</b> (' +
+          esc(DEMO.part.name) + '), ' + DEMO.ops.length + ' operations and ' + dimCount +
+          ' dimensions. Open <b>Process Flow Diagram</b> to see the chain drawn.', true);
+      loadHome();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Load sample data';
+  }
+
+  async function removeDemo(){
+    var msg = document.getElementById('demo-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    if (!confirm('Remove every record marked as sample data?\n\nReal records are not touched.')) return;
+    var btn = document.getElementById('demo-del');
+    btn.disabled = true; btn.textContent = 'Removing…';
+    var gone = 0, kept = 0;
+    try {
+      /* dimensions before operations before the part, so nothing is orphaned
+         part-way through if a delete is refused */
+      var kinds = ['dimension','process','cust_part','customer'];
+      for (var i = 0; i < kinds.length; i++) {
+        var rows = (await C.idms.docs(kinds[i])).filter(function(x){ return (x.data||{}).demo; });
+        for (var k = 0; k < rows.length; k++) {
+          try { await C.idms.patchDoc({ docId:rows[k].doc_id, remove:true,
+                  reason:'sample data removed' }); gone++; }
+          catch(e){ kept++; }
+        }
+      }
+      var demoParts = (await C.idms.parts()).filter(function(p){ return (p.data||{}).demo; });
+      say('Removed ' + gone + ' sample record(s)' +
+          (kept ? ', ' + kept + ' could not be removed' : '') + '.' +
+          (demoParts.length ? ' The sample <b>part</b> is still there — parts are deliberately not ' +
+            'deletable from this screen, because a part carries an APQP history. Remove it in the ' +
+            'database if you need to.' : ''), true);
+      loadHome();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Remove sample data';
+  }
+
+  /* ---------------- Process Flow Diagram ----------------
+     The routing, drawn. Nothing is entered here: if the flow is wrong, the
+     routing is wrong, and there is only one place to correct it. */
+  function isInspection(v){
+    return /inspect|check|gaug|measur|cmm|audit/i.test((v.name||'') + ' ' + (v.description||''));
+  }
+
+  async function loadPfd(){
+    await fetchParts();
+    var sel = document.getElementById('fd-part');
+    sel.innerHTML = partOptions(sel.value);
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
+    drawPfd();
+  }
+
+  function pfdSvg(partId){
+    var ops = opsFor(partId);
+    var W = 720, boxW = 300, boxH = 62, gap = 34, x = (W - boxW) / 2;
+    var H = ops.length * (boxH + gap) + 30;
+    var out = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" ' +
+      'xmlns="http://www.w3.org/2000/svg" style="max-width:760px;display:block;margin:0 auto;">';
+    ops.forEach(function(o, i){
+      var v = o.data || {}, y = 14 + i * (boxH + gap);
+      var insp = isInspection(v);
+      var dims = dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
+      var crit = dims.filter(function(d){ return (d.data||{}).cls; }).length;
+      var fill = insp ? '#FFF6E0' : '#EAF6FD';
+      var line = insp ? '#C2932E' : '#3FA9E0';
+      if (insp) {
+        var cx = x + boxW/2, cy = y + boxH/2;
+        out += '<polygon points="' + cx + ',' + y + ' ' + (x+boxW) + ',' + cy + ' ' +
+          cx + ',' + (y+boxH) + ' ' + x + ',' + cy + '" fill="' + fill +
+          '" stroke="' + line + '" stroke-width="1.6"/>';
+      } else {
+        out += '<rect x="' + x + '" y="' + y + '" width="' + boxW + '" height="' + boxH +
+          '" rx="8" fill="' + fill + '" stroke="' + line + '" stroke-width="1.6"/>';
+      }
+      out += '<text x="' + (x + 14) + '" y="' + (y + 24) + '" font-size="13" font-weight="700" ' +
+        'fill="#0B2A5B" font-family="Arial">' + esc(v.opNo) + ' · ' + esc((v.name||'').slice(0,26)) + '</text>';
+      out += '<text x="' + (x + 14) + '" y="' + (y + 42) + '" font-size="10.5" fill="#41567E" ' +
+        'font-family="Arial">' + esc((v.machine||'—').slice(0,30)) +
+        (C.num(v.cycleSec) ? '  ·  ' + C.qty(v.cycleSec) + 's' : '') + '</text>';
+      if (v.where === 'sub')
+        out += '<text x="' + (x + boxW - 12) + '" y="' + (y + 24) + '" font-size="9.5" ' +
+          'text-anchor="end" fill="#8E6A19" font-family="Arial">SUB-CONTRACT</text>';
+      if (dims.length)
+        out += '<text x="' + (x + boxW - 12) + '" y="' + (y + 42) + '" font-size="9.5" ' +
+          'text-anchor="end" fill="#7C8CAB" font-family="Arial">' + dims.length + ' dim' +
+          (crit ? ' · ' + crit + ' SC/CC' : '') + '</text>';
+      if (i < ops.length - 1) {
+        var ay = y + boxH, by = y + boxH + gap;
+        out += '<line x1="' + (x+boxW/2) + '" y1="' + ay + '" x2="' + (x+boxW/2) + '" y2="' +
+          (by - 8) + '" stroke="#7C8CAB" stroke-width="1.4"/>';
+        out += '<polygon points="' + (x+boxW/2-5) + ',' + (by-8) + ' ' + (x+boxW/2+5) + ',' +
+          (by-8) + ' ' + (x+boxW/2) + ',' + by + '" fill="#7C8CAB"/>';
+      }
+    });
+    return out + '</svg>';
+  }
+
+  function drawPfd(){
+    var partId = document.getElementById('fd-part').value;
+    var host = document.getElementById('fd-body');
+    var title = document.getElementById('fd-title');
+    if (!partId){
+      title.textContent = 'Flow';
+      host.innerHTML = '<div class="empty"><b>Choose a part</b>Its flow is drawn from the routing.</div>';
+      return;
+    }
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    title.textContent = 'Flow for ' + (p.part_no||'') + ' — ' + (p.part_name||'');
+    var ops = opsFor(partId);
+    if (!ops.length){
+      host.innerHTML = '<div class="empty"><b>No routing on this part</b>' +
+        'Add its operations on Process Master and the flow draws itself.</div>';
+      return;
+    }
+    var noDims = ops.filter(function(o){
+      return !dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; }).length; });
+    host.innerHTML = pfdSvg(partId) +
+      (noDims.length
+        ? '<div class="note" style="margin-top:14px;"><b>' + noDims.length + ' operation(s) have no ' +
+          'dimensions recorded</b> — ' + noDims.map(function(o){ return 'Op ' + esc((o.data||{}).opNo); })
+            .join(', ') + '. A PFMEA generated now would have nothing to reason about at those ' +
+          'steps, and the control plan would leave them uncontrolled.</div>'
+        : '<div class="note good" style="margin-top:14px;">Every operation has dimensions recorded. ' +
+          'This part is ready for PFMEA and control plan generation.</div>');
+  }
+
+  function printPfd(){
+    var partId = document.getElementById('fd-part').value;
+    if (!partId) { toast('Choose a part first.'); return; }
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var ops = opsFor(partId);
+    if (!ops.length) { toast('This part has no routing to print.'); return; }
+    C.openReport({
+      title:'Process Flow Diagram', kind:'PFD',
+      subtitle: (p.part_no||'') + ' · ' + (p.part_name||'') +
+        ((p.data||{}).drawingNo ? ' · drawing ' + (p.data||{}).drawingNo : ''),
+      sections:[
+        { type:'html', html: pfdSvg(partId) },
+        { type:'table', title:'Operations',
+          columns:[{label:'Op',align:'c'},{label:'Operation'},{label:'Machine'},
+                   {label:'Setup',align:'r'},{label:'Cycle',align:'r'},{label:'Where'},
+                   {label:'Dims',align:'r'}],
+          rows: ops.map(function(o){
+            var v = o.data||{};
+            var dims = dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
+            return [v.opNo, esc(v.name||''), esc(v.machine||'—'),
+                    C.num(v.setupMin)?C.qty(v.setupMin)+' min':'—',
+                    C.num(v.cycleSec)?C.qty(v.cycleSec)+' s':'—',
+                    v.where==='sub'?'Sub-contract':'In house', dims.length];
+          }),
+          note:'Drawn from the routing held against this part. Diamonds are inspection steps.' }
+      ]});
   }
 
   /* ---------------- Part numbering and customer links ----------------
@@ -1488,6 +1761,11 @@
     });
     f.click();
   });
+
+  document.getElementById('demo-add').addEventListener('click', loadDemo);
+  document.getElementById('demo-del').addEventListener('click', removeDemo);
+  document.getElementById('fd-part').addEventListener('change', drawPfd);
+  document.getElementById('fd-print').addEventListener('click', printPfd);
 
   /* ---- routing wiring ---- */
   document.getElementById('pr-part').addEventListener('change', drawProcesses);

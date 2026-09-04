@@ -153,6 +153,23 @@
     }).then(j => j.value)
   };
 
+  /* ---------------- file storage ----------------
+     Files go to the same assets table the website uses, so a PPAP attachment is
+     served by a short public link that can be opened from any machine. */
+  async function uploadFile(file) {
+    if (file.size > 6 * 1024 * 1024)
+      throw new Error('That file is ' + Math.round(file.size / 1048576) + 'MB. The limit is 6MB.');
+    const dataUrl = await new Promise((ok, no) => {
+      const r = new FileReader();
+      r.onload = () => ok(r.result);
+      r.onerror = () => no(new Error('The file could not be read.'));
+      r.readAsDataURL(file);
+    });
+    const j = await api('/api/assets', { method:'POST', body: JSON.stringify({ dataUrl: dataUrl }) });
+    return { url: j.url || j.src || ('/api/assets?id=' + j.id), id: j.id,
+             name: file.name, size: file.size, mime: file.type };
+  }
+
   /* ---------------- the company profile ----------------
      Read once from the site content. Nothing in this file, or any screen that
      uses it, may hard-code a company name, address, GSTIN or document prefix. */
@@ -433,7 +450,8 @@
     newId: newId, toast: toast,
     api: api, signIn: signIn, verifyCode: verifyCode, setToken: setToken, getToken: getToken,
     idms: idms, loadProfile: loadProfile, getProfile: getProfile, docNumber: docNumber,
-    openReport: openReport, callAI: callAI, parseAiJson: parseAiJson, stripMarkup: stripMarkup,
+    openReport: openReport, callAI: callAI, uploadFile: uploadFile,
+    parseAiJson: parseAiJson, stripMarkup: stripMarkup,
     setFavicon: setFavicon,
     capturePhoto: capturePhoto
   };

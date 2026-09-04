@@ -1395,6 +1395,27 @@
     return ev;
   }
 
+  /* What sits in the Document column for each element. Anything this system
+     produces opens or prints directly; anything a person supplies can be
+     attached here, so the whole package is retrievable from one screen instead
+     of a shared folder somebody has to be told about. */
+  function ppapAction(el, auto, st){
+    if (el.auto === 'psw')
+      return '<button class="btn pp-open" data-go="psw">Print warrant</button>';
+    if (el.auto === 'drawing')
+      return '<button class="btn pp-open" data-go="parts">Open part</button>';
+    if (el.auto === 'pfd')
+      return '<button class="btn pp-open" data-go="pfd">Open flow</button>';
+    if (el.auto === 'pfmea')
+      return '<button class="btn pp-open" data-go="fmea">Open PFMEA</button>';
+    if (el.auto === 'control_plan')
+      return '<button class="btn pp-open" data-go="control_plan">Open plan</button>';
+    if (st.file && st.file.url)
+      return '<a class="btn" href="'+esc(st.file.url)+'" target="_blank" rel="noopener">Open</a> ' +
+        '<button class="btn del pp-unattach" data-n="'+el.n+'" title="'+esc(st.file.name||'')+'">×</button>';
+    return '<button class="btn pp-attach" data-n="'+el.n+'">Attach</button>';
+  }
+
   async function drawPpap(){
     var partId = document.getElementById('pp-part').value;
     var host = document.getElementById('pp-body');
@@ -1450,7 +1471,8 @@
           '<option value="file"'+(st.status==='file'?' selected':'')+'>On file</option>' +
           '<option value="na"'+(st.status==='na'?' selected':'')+'>Not applicable</option></select>')+'</td>' +
         '<td>'+(auto || el.auto==='psw' ? '' :
-          '<input class="pp-ref" data-n="'+el.n+'" value="'+esc(st.ref||'')+'" placeholder="document reference">')+'</td></tr>';
+          '<input class="pp-ref" data-n="'+el.n+'" value="'+esc(st.ref||'')+'" placeholder="document reference">')+'</td>' +
+        '<td>'+ppapAction(el, auto, st)+'</td></tr>';
     }).join('');
 
     host.innerHTML =
@@ -1462,7 +1484,7 @@
           'The warrant can be signed.</div>') +
       '<div style="overflow-x:auto;"><table class="t"><thead><tr><th class="c">#</th><th>Element</th>' +
       '<th class="c">Required</th><th class="c">Status</th><th>Reference</th><th>Record</th>' +
-      '<th>Reference</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>' +
+      '<th>Reference</th><th>Document</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>' +
       '<div style="margin-top:10px;"><button class="btn gold" id="pp-save">Save element status</button></div>';
 
     host.querySelectorAll('.pp-st, .pp-ref').forEach(function(el){
@@ -1475,6 +1497,60 @@
     });
     var save = document.getElementById('pp-save');
     if (save) save.addEventListener('click', function(){ savePpap(state, false); });
+
+    /* jump to the screen that owns the element, carrying the part with it, so
+       nobody has to find it again in a dropdown */
+    host.querySelectorAll('.pp-open').forEach(function(b){
+      b.addEventListener('click', function(){
+        var to = b.dataset.go;
+        if (to === 'psw') { printPpap(); return; }
+        go(to);
+        setTimeout(function(){
+          var sel = { parts:'p-filter', pfd:'fd-part', fmea:'fm-part', control_plan:'cp-part' }[to];
+          if (to !== 'parts' && document.getElementById(sel)){
+            document.getElementById(sel).value = partId;
+            document.getElementById(sel).dispatchEvent(new Event('change'));
+          }
+        }, 250);
+      });
+    });
+
+    /* an attachment is stored once and served by a link, so the package can be
+       opened from any machine rather than living in one person's folder */
+    host.querySelectorAll('.pp-attach').forEach(function(b){
+      b.addEventListener('click', function(){
+        var n = b.dataset.n;
+        var f = document.createElement('input');
+        f.type = 'file';
+        f.accept = '.pdf,.xls,.xlsx,.doc,.docx,.csv,.png,.jpg,.jpeg,image/*,application/pdf';
+        f.addEventListener('change', async function(){
+          var file = f.files[0]; if (!file) return;
+          b.disabled = true; b.textContent = 'Uploading…';
+          try {
+            var up = await C.uploadFile(file);
+            state[n] = state[n] || {};
+            state[n].file = up;
+            /* Attaching evidence is what "on file" means. It overrides "not
+               applicable" too — nobody attaches a document to an element that
+               does not apply, and leaving the two disagreeing is how a package
+               goes out claiming something it does not contain. */
+            state[n].status = 'file';
+            if (!state[n].ref) state[n].ref = up.name;
+            await savePpap(state, false);
+          } catch(e){ toast(e.message); b.disabled = false; b.textContent = 'Attach'; }
+        });
+        f.click();
+      });
+    });
+    host.querySelectorAll('.pp-unattach').forEach(function(b){
+      b.addEventListener('click', async function(){
+        if (!confirm('Remove this attachment from the package?\n\nThe file itself is not deleted.')) return;
+        var n = b.dataset.n;
+        state[n] = state[n] || {};
+        delete state[n].file;
+        await savePpap(state, false);
+      });
+    });
 
     document.getElementById('pp-sign').style.display = '';
     var v = (ppapDoc && ppapDoc.data) || {};
@@ -1588,7 +1664,8 @@
             if (el.auto === 'psw'){ status = v.signedBy ? 'Signed' : 'Not signed'; ref = v.signedBy||''; }
             else if (auto){ status = auto.ok ? 'Submitted' : 'Draft only'; ref = auto.ref; }
             else if (st.status === 'na'){ status = 'Not applicable'; ref = st.ref||''; }
-            else if (st.status === 'file'){ status = 'Submitted'; ref = st.ref||''; }
+            else if (st.status === 'file'){ status = 'Submitted';
+              ref = (st.ref||'') + (st.file && st.file.name ? ' — file: ' + st.file.name : ''); }
             else status = 'Outstanding';
             return [el.n, esc(el.name), need.indexOf(el.n)>=0 ? 'Yes' : '—', status, esc(ref)];
           }) },

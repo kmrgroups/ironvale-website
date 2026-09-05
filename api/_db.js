@@ -153,15 +153,6 @@ export async function ensureTables() {
     expires_at TIMESTAMPTZ NOT NULL,
     tries INT DEFAULT 0
   )`;
-  await sql`CREATE TABLE IF NOT EXISTS auth_sessions (
-    token_hash TEXT PRIMARY KEY,
-    username TEXT NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    last_seen_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE INDEX IF NOT EXISTS auth_sessions_expiry ON auth_sessions (expires_at)`;
-
   await sql`CREATE TABLE IF NOT EXISTS secrets (
     name TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -202,15 +193,11 @@ export async function ensureTables() {
 export async function tokenUser(token) {
   if (!token) return null;
   await ensureTables();
-  const th = hash(token);
-  const rows = await sql`
-    SELECT s.username, u.role
-    FROM auth_sessions s
-    JOIN users u ON u.username = s.username
-    WHERE s.token_hash = ${th} AND s.expires_at > now()`;
-  if (!rows.length) return null;
-  await sql`UPDATE auth_sessions SET last_seen_at = now() WHERE token_hash = ${th}`;
-  return rows[0];
+  const rows = await sql`SELECT username, role FROM users WHERE pass_hash = ${token}`;
+  if (rows.length) return rows[0];
+  // legacy single-login fallback
+  const old = await sql`SELECT user_name FROM auth WHERE id = 1 AND pass_hash = ${token}`;
+  return old.length ? { username: old[0].user_name, role: 'developer' } : null;
 }
 export async function checkToken(token) {
   return !!(await tokenUser(token));

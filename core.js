@@ -65,11 +65,15 @@
   }
 
   /* ---------------- session ---------------- */
-  // IDMS sessions are intentionally memory-only in the browser. Credentials and
-  // authentication tokens are never persisted to localStorage/sessionStorage.
-  // Closing/reopening the browser therefore always returns to the login screen.
+  const TOKEN_KEY = 'app_token';
   let token = '';
-  function setToken(t) { token = t || ''; }
+  try { token = sessionStorage.getItem(TOKEN_KEY) || ''; } catch (e) { token = ''; }
+
+  function setToken(t) {
+    token = t || '';
+    try { t ? sessionStorage.setItem(TOKEN_KEY, t) : sessionStorage.removeItem(TOKEN_KEY); }
+    catch (e) { /* private browsing — the token simply lives for this page only */ }
+  }
   const getToken = () => token;
 
   /* ---------------- the one way this app talks to the server ----------------
@@ -191,7 +195,6 @@
     return profile;
   }
   const getProfile = () => profile || { name: '', address: '', gstin: '', logo: '', docPrefix: 'DOC' };
-  function clearProfile(){ profile = null; }
 
   /* A document number built from the profile and a database counter, e.g.
      ELIX-GRN-0042. No company initials appear anywhere in the code. */
@@ -519,7 +522,6 @@
     openReport: openReport, callAI: callAI, uploadFile: uploadFile,
     parseAiJson: parseAiJson, stripMarkup: stripMarkup,
     setFavicon: setFavicon,
-    clearProfile: clearProfile,
     capturePhoto: capturePhoto
   };
 })(window);

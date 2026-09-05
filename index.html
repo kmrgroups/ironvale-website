@@ -811,9 +811,6 @@
     .process-row{grid-template-columns:1fr;gap:12px;} .process-media{width:100%;height:190px;}
     .gallery-grid{grid-template-columns:1fr 1fr;}    #chat-panel{bottom:12px;left:12px;right:12px;width:auto;height:calc(100vh - 90px);}
   }
-
-/* Public website boundary: operational attendance, staff pipeline and Site Admin are IDMS-only. */
-#admin-toggle,#admin-panel,#staff-page,#ppc-page,#hr-page{display:none!important}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
@@ -919,9 +916,7 @@
       <label>Email</label><input type="email" id="rfq-email" required>
       <label>Contact Number</label><input type="tel" id="rfq-phone" placeholder="+91 90000 00000">
       <label>Project Details</label><textarea id="rfq-message" placeholder="Material, quantity, target tolerance, timeline..."></textarea>
-      <label>Upload Drawing / Spec (optional)</label>
-<input type="file" id="rfq-file" accept=".pdf,.jpg,.jpeg,.png,.dwg,.dxf,.tif,.tiff,.bmp,.step,.stp">
-<div id="rfq-convert-status" class="field-hint">PDF, DWG, DXF and other engineering formats are converted to an AI-readable image when supported.</div>
+      <label>Upload Drawing / Spec (optional)</label><input type="file" id="rfq-file" accept=".pdf,.jpg,.jpeg,.png,.dwg,.step,.stp,.zip">
       <div class="rfq-note">Drawings up to 3MB. PDF and image drawings can be read automatically by our system.</div>
       <button type="submit" class="btn btn-gold" id="rfq-submit">Submit RFQ</button>
       <div class="rfq-thanks" id="rfq-thanks"><strong id="rfq-ref-out">REF</strong>
@@ -12116,44 +12111,6 @@ company-specific policies, salary figures or reporting lines.`;
   document.getElementById('track-btn').addEventListener('click',renderTrack);
   document.getElementById('track-input').addEventListener('keydown',e=>{if(e.key==='Enter')renderTrack();});
 
-
-  async function rfqFileToJpeg(file){
-    const status=document.getElementById('rfq-convert-status');
-    const ext=(file.name.split('.').pop()||'').toLowerCase();
-    if(['jpg','jpeg','png','bmp','tif','tiff'].includes(ext)){
-      return {name:file.name,dataUrl:await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);})};
-    }
-    status.textContent='Converting '+file.name+'…';
-    if(ext==='pdf'){
-      if(!window.pdfjsLib){
-        await new Promise((resolve,reject)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';sc.type='module';sc.onload=resolve;sc.onerror=reject;document.head.appendChild(sc);});
-      }
-      // Use the browser PDF renderer when available; preserve all pages in a contact sheet.
-      const pdfjs=window.pdfjsLib;
-      if(!pdfjs) throw new Error('PDF renderer could not be loaded. Please use JPG/PNG or configure the server converter.');
-      const buf=await file.arrayBuffer(), pdf=await pdfjs.getDocument({data:buf}).promise;
-      const scale=1.5, pages=Math.min(pdf.numPages,12), thumbs=[];
-      for(let n=1;n<=pages;n++){const page=await pdf.getPage(n);const v=page.getViewport({scale});const c=document.createElement('canvas');c.width=Math.ceil(v.width);c.height=Math.ceil(v.height);await page.render({canvasContext:c.getContext('2d'),viewport:v}).promise;thumbs.push(c);}
-      const width=Math.max.apply(null,thumbs.map(c=>c.width)), height=thumbs.reduce((a,c)=>a+c.height+12,0);
-      const out=document.createElement('canvas');out.width=width;out.height=height;const ctx=out.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);let y=0;
-      thumbs.forEach(c=>{ctx.drawImage(c,0,y);y+=c.height+12;});
-      status.textContent='PDF converted to AI-readable JPEG.';
-      return {name:file.name.replace(/\.pdf$/i,'.jpg'),dataUrl:out.toDataURL('image/jpeg',0.88)};
-    }
-    if(['dwg','dxf','step','stp'].includes(ext)){
-      // Server-side CAD conversion is deployment-specific. Use DRAWING_CONVERTER_URL
-      // on Vercel when configured; otherwise fail clearly rather than pretending a CAD
-      // file is an image.
-      const fd=new FormData(); fd.append('file',file);
-      const res=await fetch('/api/drawing',{method:'POST',body:fd});
-      const j=await res.json().catch(()=>({}));
-      if(!res.ok||!j.dataUrl) throw new Error(j.error||'CAD conversion is not configured. Set DRAWING_CONVERTER_URL on the deployment.');
-      status.textContent='CAD drawing converted to AI-readable JPEG.';
-      return {name:file.name.replace(/\.[^.]+$/i,'.jpg'),dataUrl:j.dataUrl};
-    }
-    throw new Error('This drawing format is not supported for automatic conversion.');
-  }
-
   document.getElementById('rfq-form').addEventListener('submit',function(e){
     e.preventDefault();
     const name=document.getElementById('rfq-name').value.trim();
@@ -12171,10 +12128,9 @@ company-specific policies, salary figures or reporting lines.`;
         document.getElementById('rfq-ref-out').textContent='Reference: '+rec.ref;
         document.getElementById('rfq-thanks').style.display='block'; }
     };
-    if(file){
-      if(file.size>20*1024*1024){ toast('That file is over 20MB. Please upload a smaller drawing.'); btn.textContent='Submit RFQ'; btn.disabled=false; return; }
-      rfqFileToJpeg(file).then(function(out){ base.fileName=out.name; base.originalFileName=file.name; base.fileDataUrl=out.dataUrl; return finish(); })
-        .catch(function(err){ toast(err.message); btn.textContent='Submit RFQ'; btn.disabled=false; });
+    if(file){ base.fileName=file.name;
+      if(file.size<=3*1024*1024){const rd=new FileReader();rd.onload=()=>{base.fileDataUrl=rd.result;finish();};rd.readAsDataURL(file);}
+      else { toast('That file is over 3MB — please email it to us separately.'); finish(); }
     } else finish();
   });
 

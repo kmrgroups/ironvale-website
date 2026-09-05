@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@neondatabase/serverless": "^0.10.4",
-    "busboy": "^1.6.0"
+    "@neondatabase/serverless": "^0.10.4"
   }
 }

@@ -1,16 +1,8 @@
 // Sign in, two-step codes, password changes and user management.
 import { sql, hash, ensureTables, cors, readBody, tokenUser, checkRole } from './_db.js';
-import crypto from 'crypto';
 import { sendNotification } from './notify.js';
 
 const sixDigit = () => String(Math.floor(100000 + Math.random() * 900000));
-const newToken = () => crypto.randomBytes(32).toString('hex');
-async function createSession(username) {
-  const token = newToken();
-  const expires = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
-  await sql`INSERT INTO auth_sessions (token_hash, username, expires_at) VALUES (${hash(token)}, ${username}, ${expires})`;
-  return token;
-}
 
 async function issueCode(user) {
   const code = sixDigit();
@@ -54,7 +46,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, needCode: true, user: u.username,
           sentTo, note: 'A 6-digit code has been sent to your ' + sentTo.join(' and ') + '.' });
       }
-      return res.status(200).json({ ok: true, token: await createSession(u.username), user: u.username, role: u.role });
+      return res.status(200).json({ ok: true, token: u.pass_hash, user: u.username, role: u.role });
     }
 
     /* ---------- verify the code ---------- */
@@ -74,7 +66,7 @@ export default async function handler(req, res) {
       }
       await sql`DELETE FROM login_codes WHERE username = ${uname}`;
       const u = (await sql`SELECT * FROM users WHERE username = ${uname}`)[0];
-      return res.status(200).json({ ok: true, token: await createSession(u.username), user: u.username, role: u.role });
+      return res.status(200).json({ ok: true, token: u.pass_hash, user: u.username, role: u.role });
     }
 
     if (action === 'resendCode') {
@@ -99,7 +91,7 @@ export default async function handler(req, res) {
       await sql`UPDATE users SET username = ${newUser}, pass_hash = ${newHash} WHERE username = ${uname}`;
       if (u.role === 'developer')
         await sql`UPDATE auth SET user_name = ${newUser}, pass_hash = ${newHash} WHERE id = 1`;
-      return res.status(200).json({ ok: true, token: await createSession(newUser), user: newUser, role: u.role });
+      return res.status(200).json({ ok: true, token: newHash, user: newUser, role: u.role });
     }
 
     /* ---------- recovery ---------- */
@@ -117,7 +109,7 @@ export default async function handler(req, res) {
       if (dev) await sql`UPDATE users SET username = ${newUser}, pass_hash = ${newHash}, twofa = false WHERE username = ${dev.username}`;
       else await sql`INSERT INTO users (username, pass_hash, role) VALUES (${newUser}, ${newHash}, 'developer')`;
       await sql`UPDATE auth SET user_name = ${newUser}, pass_hash = ${newHash} WHERE id = 1`;
-      return res.status(200).json({ ok: true, token: await createSession(newUser), user: newUser, role: 'developer' });
+      return res.status(200).json({ ok: true, token: newHash, user: newUser, role: 'developer' });
     }
 
     /* ---------- manage logins (developer only) ---------- */
@@ -166,12 +158,6 @@ export default async function handler(req, res) {
     if (action === 'whoami') {
       const u = await tokenUser(token);
       return res.status(200).json({ ok: !!u, user: u });
-    }
-
-    if (action === 'logout') {
-      const token = req.headers['x-auth-token'];
-      if (token) await sql`DELETE FROM auth_sessions WHERE token_hash = ${hash(token)}`;
-      return res.status(200).json({ ok: true });
     }
 
     return res.status(400).json({ error: 'Unknown action' });

@@ -307,6 +307,28 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="agent_review">
+      <div class="card">
+        <h4>Review agent work</h4>
+        <div class="hint" style="margin-bottom:10px;">Everything an agent has proposed and nobody has
+          yet accepted. <b>Approving is not a formality.</b> An operation or a characteristic the AI
+          proposed is a guess until an engineer has checked it against the drawing — putting your
+          name to it says you have. Rejecting removes it, with the reason kept.</div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>Reviewer</label>
+            <input id="rv-by" placeholder="your name — kept against everything you accept"></div>
+          <div style="align-self:end;"><button class="btn" id="rv-refresh">Refresh</button></div>
+          <div style="align-self:end;"><button class="btn" id="rv-print">Print what is pending</button></div>
+        </div>
+        <div class="note" id="rv-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><div id="rv-summary"></div></div>
+      <div class="card">
+        <h4>Pending</h4>
+        <div id="rv-body"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="agent_supplier">
       <div class="card">
         <h4>Supplier Watch Agent</h4>
@@ -1115,6 +1137,7 @@
       ['agent_audit','🔎','Audit Readiness Agent',1],
       ['agent_npd','🗂','NPD Agent',1],
       ['agent_supplier','🏭','Supplier Watch Agent',1],
+      ['agent_review','✅','Review Agent Work',1],
       ['agent_runs','📜','Agent Run Log',1]]],
     ['dash','📊','Dashboard','Overview',[
       ['home','🏠','Home',1],['dashboard','📊','Production Dashboard'],['accounts_pl','💹','P&L']]]
@@ -1189,6 +1212,7 @@
     if (s === 'agent_audit')    loadAgent();
     if (s === 'agent_npd')      loadNpdAgent();
     if (s === 'agent_supplier') loadSupplierAgent();
+    if (s === 'agent_review')   loadReview();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
   }
@@ -1454,7 +1478,9 @@
         var v = o.data || {};
         var dims = dimensions.filter(function(x){ return (x.data||{}).processId === o.doc_id; }).length;
         return '<tr><td class="c"><b>'+esc(v.opNo)+'</b></td>'+
-          '<td>'+esc(v.name||'—')+(v.aiProposed?' <span class="badge sample">AI proposed</span>':'')+
+          '<td>'+esc(v.name||'—')+(v.aiProposed?' <span class="badge sample">AI proposed</span>'
+             :v.wasAiProposed?' <span class="badge series" title="AI proposed, checked by '+
+               esc(v.reviewedBy||'')+'">checked</span>':'')+
             '<div class="hint">'+esc(v.description||'')+'</div></td>'+
           '<td>'+esc(v.machine||'—')+'</td>'+
           '<td class="r">'+(C.num(v.setupMin)?C.qty(v.setupMin)+' min':'—')+'</td>'+
@@ -1545,7 +1571,9 @@
                       : q.cls==='SC' ? '<span class="badge sample">SC</span>' : '';
               return '<tr><td class="c">'+esc(q.balloon||'—')+'</td>'+
                 '<td>'+esc(q.description||'—')+
-                  (q.aiProposed?' <span class="badge sample">AI proposed</span>':'')+'</td>'+
+                  (q.aiProposed?' <span class="badge sample">AI proposed</span>'
+                   :q.wasAiProposed?' <span class="badge series" title="AI proposed, checked by '+
+                     esc(q.reviewedBy||'')+'">checked</span>':'')+'</td>'+
                 '<td class="r">'+C.qty(q.nominal)+' '+esc(q.unit||'')+'</td>'+
                 '<td class="c">'+(q.upper||q.lower
                     ? esc(q.upper||'0')+' / '+esc(q.lower||'0') : '—')+'</td>'+
@@ -1798,6 +1826,205 @@
 'or inspection only, give a PARAM block with TOOL: not applicable.';
 
     return prompt;
+  }
+
+  /* ---------------- Reviewing what an agent produced ----------------
+     An agent that writes and is never checked is just a faster way of being
+     wrong. Everything the NPD agent creates carries a flag - aiProposed on
+     routing and dimensions, byAgent on the documents built from them - and stays
+     flagged until a named person accepts it here. Accepting clears the flag,
+     because at that point it is that person's engineering, not the machine's.
+
+     PFMEA and control plans are deliberately not signed from this screen. They
+     have their own sign-off, with the whole document in front of you, and one
+     document should not have two ways to be approved. */
+  var rvItems = [], rvParts = [];
+
+  async function loadReview(){
+    var host = document.getElementById('rv-body');
+    host.innerHTML = '<div class="hint">Reading</div>';
+    rvItems = [];
+    try {
+      rvParts = await C.idms.parts();
+      var procs = await C.idms.docs('process');
+      var dims  = await C.idms.docs('dimension');
+      var fms   = await C.idms.docs('pfmea');
+      var cps   = await C.idms.docs('control_plan');
+      var nameOf = function(pid){
+        var p = rvParts.filter(function(x){ return x.part_id === pid; })[0];
+        return p ? (p.part_no + ' ' + (p.part_name||'')) : pid; };
+
+      procs.filter(function(x){ return (x.data||{}).aiProposed; }).forEach(function(x){
+        var v = x.data||{};
+        rvItems.push({ id:x.doc_id, kind:'process', part:v.partId, partName:nameOf(v.partId),
+          title:'Operation ' + v.opNo + ' — ' + (v.name||''),
+          detail:(v.machine||'no machine') + (C.num(v.cycleSec)?' · '+v.cycleSec+'s cycle':'') +
+                 (v.description?' · '+v.description:''),
+          check:'Is this the route the part actually takes, on machines you have?' });
+      });
+      dims.filter(function(x){ return (x.data||{}).aiProposed; }).forEach(function(x){
+        var v = x.data||{};
+        rvItems.push({ id:x.doc_id, kind:'dimension', part:v.partId, partName:nameOf(v.partId),
+          title:'Op ' + v.opNo + ' — ' + (v.description||''),
+          detail:C.qty(v.nominal) + ' ' + (v.unit||'') + ' ' + (v.upper||'') + '/' + (v.lower||'') +
+                 (v.cls?' [' + v.cls + ']':'') + ' · ' + (v.gauge||'no gauge') +
+                 ' · ' + (v.frequency||'no frequency'),
+          check:'Does this match the drawing — the nominal, the tolerance and the class?' });
+      });
+      /* the documents are listed so the queue is complete, but they are signed
+         on their own screens where the whole thing can be read */
+      fms.filter(function(x){ return (x.data||{}).byAgent && !(x.data||{}).reviewedBy; })
+        .forEach(function(x){
+          rvItems.push({ id:x.doc_id, kind:'pfmea', part:x.part_id, partName:nameOf(x.part_id),
+            title:'PFMEA ' + x.doc_no, elsewhere:'fmea',
+            detail:((x.data||{}).rows||[]).length + ' line(s), unsigned',
+            check:'Sign it on the PFMEA screen, with the whole document in front of you.' });
+        });
+      cps.filter(function(x){ return (x.data||{}).byAgent && !(x.data||{}).approvedBy; })
+        .forEach(function(x){
+          rvItems.push({ id:x.doc_id, kind:'control_plan', part:x.part_id, partName:nameOf(x.part_id),
+            title:'Control plan ' + x.doc_no, elsewhere:'control_plan',
+            detail:((x.data||{}).rows||[]).length + ' control(s), unapproved',
+            check:'Approve it on the Control Plan screen.' });
+        });
+    } catch(e){
+      host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; return;
+    }
+    drawReview();
+  }
+
+  function drawReview(){
+    var host = document.getElementById('rv-body');
+    var sum = document.getElementById('rv-summary');
+    var mine = rvItems.filter(function(x){ return !x.elsewhere; });
+    var elsewhere = rvItems.filter(function(x){ return x.elsewhere; });
+
+    sum.innerHTML = '<div class="stat">' +
+      [['To accept or reject', mine.length],
+       ['Signed elsewhere', elsewhere.length],
+       ['Parts affected', Object.keys(rvItems.reduce(function(m,x){ m[x.part]=1; return m; },{})).length]]
+      .map(function(x){ return '<div class="b"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'; }).join('') +
+      '</div>';
+
+    if (!rvItems.length){
+      host.innerHTML = '<div class="empty"><b>Nothing waiting</b>' +
+        'Everything an agent has produced has been accepted, rejected, or signed on its own screen.</div>';
+      return;
+    }
+
+    /* grouped by part, because a reviewer works through one part at a time */
+    var groups = {};
+    rvItems.forEach(function(x){ (groups[x.part] = groups[x.part] || []).push(x); });
+
+    host.innerHTML = Object.keys(groups).map(function(pid){
+      var list = groups[pid], own = list.filter(function(x){ return !x.elsewhere; });
+      return '<div class="sub">' + esc(list[0].partName) + '</div>' +
+        '<table class="t"><thead><tr><th>What the agent proposed</th><th>Detail</th>' +
+        '<th>What you are confirming</th><th></th></tr></thead><tbody>' +
+        list.map(function(x){
+          return '<tr><td>'+esc(x.title)+'<div class="hint">'+esc(x.kind.replace('_',' '))+'</div></td>' +
+            '<td class="hint">'+esc(x.detail)+'</td>' +
+            '<td class="hint">'+esc(x.check)+'</td>' +
+            '<td>'+(x.elsewhere
+              ? '<button class="btn rv-go" data-go="'+esc(x.elsewhere)+'">Open</button>'
+              : '<button class="btn green rv-ok" data-id="'+esc(x.id)+'">Accept</button> ' +
+                '<button class="btn del rv-no" data-id="'+esc(x.id)+'">Reject</button>')+'</td></tr>';
+        }).join('') + '</tbody></table>' +
+        (own.length > 1
+          ? '<div style="margin-top:8px;"><button class="btn rv-all" data-part="'+esc(pid)+'">' +
+            'Accept all ' + own.length + ' for this part</button>' +
+            '<span class="hint" style="margin-left:8px;">Only do this if you have read every line.</span></div>'
+          : '');
+    }).join('<div style="height:14px;"></div>');
+
+    host.querySelectorAll('.rv-go').forEach(function(b){
+      b.addEventListener('click', function(){ go(b.dataset.go); });
+    });
+    host.querySelectorAll('.rv-ok').forEach(function(b){
+      b.addEventListener('click', function(){ reviewAccept([b.dataset.id]); });
+    });
+    host.querySelectorAll('.rv-all').forEach(function(b){
+      b.addEventListener('click', function(){
+        var ids = rvItems.filter(function(x){ return x.part === b.dataset.part && !x.elsewhere; })
+          .map(function(x){ return x.id; });
+        if (!confirm('Accept all ' + ids.length + ' proposals for this part?\n\n' +
+          'You are confirming each one against the drawing.')) return;
+        reviewAccept(ids);
+      });
+    });
+    host.querySelectorAll('.rv-no').forEach(function(b){
+      b.addEventListener('click', function(){ reviewReject(b.dataset.id); });
+    });
+  }
+
+  async function reviewAccept(ids){
+    var msg = document.getElementById('rv-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var by = document.getElementById('rv-by').value.trim();
+    if (!by) return say('Put your name in first. An acceptance with nobody behind it is worth ' +
+                        'nothing, and this is the record that says the AI\'s guess was checked.');
+    var done = 0, failed = 0;
+    for (var i = 0; i < ids.length; i++){
+      var it = rvItems.filter(function(x){ return x.id === ids[i]; })[0];
+      if (!it) continue;
+      try {
+        var rec = (await C.idms.docs(it.kind, it.part))
+          .filter(function(x){ return x.doc_id === it.id; })[0];
+        if (!rec) { failed++; continue; }
+        var d = Object.assign({}, rec.data||{});
+        /* the flag goes, because from now on this is the reviewer's engineering */
+        delete d.aiProposed;
+        d.reviewedBy = by;
+        d.reviewedOn = new Date().toISOString().slice(0,10);
+        d.wasAiProposed = true;      // kept, so the origin is never lost
+        await C.idms.saveDoc({ docId:rec.doc_id, kind:it.kind, partId:it.part,
+          docNo:rec.doc_no, status:rec.status, data:d },
+          'agent proposal accepted by ' + by);
+        done++;
+      } catch(e){ failed++; }
+    }
+    say(done + ' accepted' + (failed ? ', ' + failed + ' could not be saved' : '') +
+        '. They are no longer marked as AI proposed — they are recorded as checked by ' +
+        esc(by) + ', and the origin is kept on the record.', !failed);
+    await loadReview();
+  }
+
+  async function reviewReject(id){
+    var msg = document.getElementById('rv-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var by = document.getElementById('rv-by').value.trim();
+    if (!by) return say('Put your name in first.');
+    var it = rvItems.filter(function(x){ return x.id === id; })[0];
+    if (!it) return;
+    var why = prompt('Rejecting "' + it.title + '".\n\nWhy is it wrong? This is kept, and it is how ' +
+      'the next proposal gets better.');
+    if (why === null) return;
+    if (!why.trim()) return say('A reason is needed. "Reject" with no reason teaches nobody anything.');
+    try {
+      await C.idms.patchDoc({ docId:id, remove:true, reason:'agent proposal rejected by ' + by +
+        ': ' + why.trim() });
+      say('Rejected and removed. The reason is on the audit trail.', true);
+      await loadReview();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  function printReview(){
+    if (!rvItems.length) { toast('Nothing pending.'); return; }
+    C.openReport({
+      title:'Agent work awaiting review', kind:'Review queue', landscape:true,
+      subtitle:rvItems.length + ' item(s)',
+      sections:[
+        { type:'table', title:'Pending',
+          columns:[{label:'Part'},{label:'Proposed'},{label:'Type'},{label:'Detail'},
+                   {label:'What is being confirmed'}],
+          rows: rvItems.map(function(x){
+            return [esc(x.partName), esc(x.title), esc(x.kind.replace('_',' ')),
+                    esc(x.detail), esc(x.check)]; }),
+          note:'Produced by an agent and not yet accepted by a person. Nothing here is engineering ' +
+               'that has been checked.' }
+      ]});
   }
 
   /* ---------------- Supplier Watch Agent ----------------
@@ -6048,6 +6275,9 @@
     });
     f.click();
   });
+
+  document.getElementById('rv-refresh').addEventListener('click', loadReview);
+  document.getElementById('rv-print').addEventListener('click', printReview);
 
   document.getElementById('sw-run').addEventListener('click', runSupplierAgent);
   document.getElementById('sw-explain').addEventListener('click', explainSupplierAgent);

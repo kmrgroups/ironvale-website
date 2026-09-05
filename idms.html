@@ -307,6 +307,45 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="dashboard">
+      <div class="card">
+        <h4>Works Dashboard</h4>
+        <div class="hint" style="margin-bottom:10px;">What the works looks like right now, read
+          across every module. Each number is a link to the screen it came from — nothing here is a
+          figure you cannot go and check.</div>
+        <div class="row four">
+          <div><label>Period</label><select id="db-days">
+            <option value="7" selected>Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="db-run">Refresh</button></div>
+          <div style="align-self:end;"><button class="btn ai-btn" id="db-brief">Morning briefing</button></div>
+          <div style="align-self:end;"><button class="btn" id="db-print">Print</button></div>
+        </div>
+        <div class="note" id="db-msg" style="display:none;"></div>
+      </div>
+      <div class="card" id="db-brief-box" style="display:none;">
+        <h4>Briefing</h4>
+        <div id="db-brief-body"></div>
+      </div>
+      <div class="card">
+        <h4>Needs somebody today</h4>
+        <div id="db-urgent"></div>
+      </div>
+      <div class="card">
+        <h4>Production</h4>
+        <div id="db-prod"></div>
+      </div>
+      <div class="card">
+        <h4>Order book</h4>
+        <div id="db-orders"></div>
+      </div>
+      <div class="card">
+        <h4>New parts</h4>
+        <div id="db-npd"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="sales_plan">
       <div class="card">
         <h4>Customer orders</h4>
@@ -1278,7 +1317,7 @@
       ['agent_review','✅','Review Agent Work',1],
       ['agent_runs','📜','Agent Run Log',1]]],
     ['dash','📊','Dashboard','Overview',[
-      ['home','🏠','Home',1],['dashboard','📊','Production Dashboard'],['accounts_pl','💹','P&L']]]
+      ['home','🏠','Home',1],['dashboard','📊','Production Dashboard',1],['accounts_pl','💹','P&L']]]
   ];
 
   var LIVE = {}, LABEL = {}, ICON = {};
@@ -1353,6 +1392,7 @@
     if (s === 'agent_review')   loadReview();
     if (s === 'entry_prod')     loadProduction();
     if (s === 'sales_plan')     loadOrders();
+    if (s === 'dashboard')      loadDashboard();
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
@@ -1967,6 +2007,270 @@
 'or inspection only, give a PARAM block with TOOL: not applicable.';
 
     return prompt;
+  }
+
+  /* ---------------- Works dashboard ----------------
+     Everything here is counted from records the rest of the system already
+     keeps. Nothing is entered on this screen and nothing is estimated: if a
+     number looks wrong, the screen it came from is one click away and will say
+     the same thing. The AI is offered afterwards, for one paragraph on what the
+     numbers mean together — and the numbers stand without it. */
+  var dbData = null, dbBrief = '';
+
+  async function loadDashboard(){
+    document.getElementById('db-urgent').innerHTML = '<div class="hint">Reading</div>';
+    ['db-prod','db-orders','db-npd'].forEach(function(id){
+      document.getElementById(id).innerHTML = ''; });
+    await runDashboard();
+  }
+
+  async function runDashboard(){
+    var msg = document.getElementById('db-msg');
+    var btn = document.getElementById('db-run');
+    btn.disabled = true; btn.textContent = 'Reading';
+    var days = C.num(document.getElementById('db-days').value) || 7;
+    var since = Date.now() - days*86400000;
+    var inSpan = function(d){ return new Date(d||0).getTime() >= since; };
+
+    try {
+      allParts  = await C.idms.parts();
+      processes = await C.idms.docs('process');
+      orders    = await C.idms.docs('order');
+      prodDocs  = await C.idms.docs('production');
+      gauges    = await C.idms.docs('gauge');
+      var pdis  = await C.idms.docs('pdi');
+      var grns  = await C.idms.docs('grn');
+      var inws  = await C.idms.docs('inward');
+      var sis   = await C.idms.docs('self_insp');
+      var setups= await C.idms.docs('setup');
+      var cps   = await C.idms.docs('control_plan');
+      var fms   = await C.idms.docs('pfmea');
+      allocateProduction();
+
+      var recent = prodDocs.filter(function(r){ return inSpan((r.data||{}).date || r.updated_at); });
+      var made = recent.reduce(function(t,r){ return t + C.num((r.data||{}).made); }, 0);
+      var rej  = recent.reduce(function(t,r){ return t + C.num((r.data||{}).rejected); }, 0);
+      var down = recent.reduce(function(t,r){ return t + C.num((r.data||{}).downtime); }, 0);
+      var noSetup = recent.filter(function(r){ return (r.data||{}).bookedWithoutSetup; }).length;
+
+      var open = orders.filter(function(o){ return orderProgress(o).balance > 0; });
+      var overdue = open.filter(function(o){
+        var due = (o.data||{}).due;
+        return due && new Date(due).getTime() < Date.now(); });
+      var dueWeek = open.filter(function(o){
+        var due = (o.data||{}).due; if (!due) return false;
+        var dl = Math.ceil((new Date(due).getTime() - Date.now())/86400000);
+        return dl >= 0 && dl <= 7; });
+
+      var holds = pdis.filter(function(x){ return x.status !== 'Cleared'; });
+      var uninspected = grns.filter(function(g){
+        return !inws.some(function(i){ return (i.data||{}).grnId === g.doc_id; }); });
+      var openSheets = sis.filter(function(x){ return x.status !== 'Closed'; });
+      var badGauges = gauges.filter(function(g){
+        if (g.status === 'Withdrawn') return false;
+        var st = calState(g);
+        return st.key === 'overdue' || st.label === 'Never calibrated'; });
+      var rejectedSetups = setups.filter(function(s){
+        return s.status === 'Rejected' && inSpan((s.data||{}).at || s.updated_at); });
+
+      var stages = {};
+      allParts.forEach(function(p){ stages[p.lifecycle||'New'] = (stages[p.lifecycle||'New']||0)+1; });
+      var noCp = allParts.filter(function(p){
+        return p.lifecycle !== 'New' &&
+          !cps.some(function(c){ return c.part_id === p.part_id; }); });
+      var noFm = allParts.filter(function(p){
+        return p.lifecycle !== 'New' &&
+          !fms.some(function(c){ return c.part_id === p.part_id; }); });
+
+      dbData = { days:days, made:made, rejected:rej, rejectPct: made ? Math.round(1000*rej/made)/10 : 0,
+        downtime:down, entries:recent.length, noSetup:noSetup,
+        openOrders:open.length, overdue:overdue.length, dueWeek:dueWeek.length,
+        balance: open.reduce(function(t,o){ return t + orderProgress(o).balance; }, 0),
+        holds:holds.length, uninspected:uninspected.length, openSheets:openSheets.length,
+        badGauges:badGauges.length, rejectedSetups:rejectedSetups.length,
+        stages:stages, noCp:noCp.length, noFm:noFm.length,
+        overdueList: overdue.slice(0,6).map(function(o){
+          var v = o.data||{};
+          return { po:v.po||o.doc_no, cust:v.customerName||'', part:v.partNo||'',
+            bal:orderProgress(o).balance,
+            late: Math.abs(Math.ceil((new Date(v.due).getTime()-Date.now())/86400000)) };
+        }),
+        holdList: holds.slice(0,6).map(function(x){
+          var v = x.data||{}; return { lot:v.lot||'', part:v.partNo||'', qty:C.num(v.offered) }; }) };
+    } catch(e){
+      btn.disabled = false; btn.textContent = 'Refresh';
+      msg.style.display=''; msg.className='note bad';
+      msg.textContent = 'Could not read everything: ' + e.message;
+      return;
+    }
+    drawDashboard();
+    msg.style.display = 'none';
+    btn.disabled = false; btn.textContent = 'Refresh';
+  }
+
+  function dbTile(label, value, screen, bad){
+    return '<div class="b db-go" data-go="' + esc(screen) + '" style="cursor:pointer;">' +
+      '<b' + (bad ? ' style="color:var(--bad)"' : '') + '>' + value + '</b>' +
+      '<span>' + esc(label) + '</span></div>';
+  }
+
+  function drawDashboard(){
+    if (!dbData) return;
+    var d = dbData;
+
+    /* the things that will bite today, in the order they will bite */
+    var urgent = [];
+    if (d.overdue) urgent.push({ n:d.overdue, what:'order(s) past their delivery date',
+      go:'production_plan', bad:true });
+    if (d.noSetup) urgent.push({ n:d.noSetup, what:'run(s) booked with no approved setup',
+      go:'entry_prod', bad:true });
+    if (d.badGauges) urgent.push({ n:d.badGauges, what:'gauge(s) overdue or never calibrated',
+      go:'report_calibration', bad:true });
+    if (d.holds) urgent.push({ n:d.holds, what:'lot(s) on hold, nothing can ship from them',
+      go:'report_pdi', bad:true });
+    if (d.dueWeek) urgent.push({ n:d.dueWeek, what:'order(s) due within a week', go:'production_plan' });
+    if (d.uninspected) urgent.push({ n:d.uninspected, what:'goods receipt(s) not yet inspected',
+      go:'report_inward_inspection' });
+    if (d.openSheets) urgent.push({ n:d.openSheets, what:'self inspection sheet(s) left open',
+      go:'report_self_inspection' });
+    if (d.rejectedSetups) urgent.push({ n:d.rejectedSetups, what:'setup(s) rejected in this period',
+      go:'report_setup_approval' });
+
+    document.getElementById('db-urgent').innerHTML = urgent.length
+      ? '<table class="t"><tbody>' + urgent.map(function(u){
+          return '<tr><td class="c" style="width:70px;"><b style="font-size:20px;' +
+            (u.bad?'color:var(--bad)':'') + '">' + u.n + '</b></td>' +
+            '<td>' + esc(u.what) + '</td>' +
+            '<td style="width:90px;"><button class="btn db-go" data-go="'+esc(u.go)+'">Open</button></td></tr>';
+        }).join('') + '</tbody></table>'
+      : '<div class="note good">Nothing is waiting on anybody. No order is late, no lot is on ' +
+        'hold, every gauge is in date and every receipt has been inspected.</div>';
+
+    document.getElementById('db-prod').innerHTML =
+      '<div class="stat">' +
+      dbTile('Pieces made', C.qty(d.made), 'entry_prod') +
+      dbTile('Rejected', C.qty(d.rejected) + (d.rejectPct ? ' · ' + d.rejectPct + '%' : ''),
+        'entry_prod', d.rejectPct >= 5) +
+      dbTile('Downtime', C.qty(d.downtime) + ' min', 'entry_prod') +
+      dbTile('Bookings', d.entries, 'entry_prod') +
+      dbTile('Booked with no setup', d.noSetup, 'entry_prod', d.noSetup > 0) +
+      '</div>' +
+      (d.rejectPct >= 5
+        ? '<div class="note bad" style="margin-top:10px;"><b>' + d.rejectPct + '% rejected over ' +
+          d.days + ' days.</b> That belongs in the PFMEA, not the scrap bin.</div>'
+        : d.entries ? '' :
+          '<div class="note" style="margin-top:10px;">Nothing has been booked in this period. ' +
+          'Either the works is quiet or production is not being recorded.</div>');
+
+    document.getElementById('db-orders').innerHTML =
+      '<div class="stat">' +
+      dbTile('Open orders', d.openOrders, 'sales_plan') +
+      dbTile('Still to make', C.qty(d.balance), 'production_plan') +
+      dbTile('Past their date', d.overdue, 'production_plan', d.overdue > 0) +
+      dbTile('Due within a week', d.dueWeek, 'production_plan', d.dueWeek > 0) +
+      '</div>' +
+      (d.overdueList.length
+        ? '<table class="t" style="margin-top:12px;"><thead><tr><th>Order</th><th>Customer</th>' +
+          '<th>Part</th><th class="r">Outstanding</th><th class="c">Days late</th></tr></thead><tbody>' +
+          d.overdueList.map(function(o){
+            return '<tr><td><b>'+esc(o.po)+'</b></td><td>'+esc(o.cust)+'</td>' +
+              '<td>'+esc(o.part)+'</td><td class="r">'+C.qty(o.bal)+'</td>' +
+              '<td class="c"><span class="badge ab">'+o.late+'</span></td></tr>';
+          }).join('') + '</tbody></table>' : '');
+
+    document.getElementById('db-npd').innerHTML =
+      '<div class="stat">' +
+      ['New','APQP','Sample','PPAP','Series'].map(function(k){
+        return dbTile(k, d.stages[k] || 0, 'parts'); }).join('') +
+      dbTile('No PFMEA', d.noFm, 'fmea', d.noFm > 0) +
+      dbTile('No control plan', d.noCp, 'control_plan', d.noCp > 0) +
+      '</div>';
+
+    document.querySelectorAll('.db-go').forEach(function(el){
+      el.addEventListener('click', function(e){ e.stopPropagation(); go(el.dataset.go); });
+    });
+    if (dbBrief){
+      document.getElementById('db-brief-box').style.display = '';
+      document.getElementById('db-brief-body').innerHTML = '<div class="note">' + dbBrief + '</div>';
+    }
+  }
+
+  async function briefDashboard(){
+    var msg = document.getElementById('db-msg');
+    if (!dbData) return;
+    var btn = document.getElementById('db-brief');
+    btn.disabled = true; btn.textContent = 'Thinking';
+    var d = dbData;
+    var facts = [
+      d.openOrders + ' open orders, ' + C.qty(d.balance) + ' pieces outstanding',
+      d.overdue + ' orders past their delivery date',
+      d.dueWeek + ' orders due within a week',
+      C.qty(d.made) + ' pieces made in the last ' + d.days + ' days, ' + d.rejectPct + '% rejected',
+      C.qty(d.downtime) + ' minutes of downtime',
+      d.noSetup + ' runs booked with no approved setup',
+      d.holds + ' lots on hold',
+      d.uninspected + ' goods receipts not inspected',
+      d.badGauges + ' gauges overdue or never calibrated',
+      d.openSheets + ' self inspection sheets left open',
+      d.noFm + ' parts past New with no PFMEA, ' + d.noCp + ' with no control plan'
+    ].join('\n- ');
+    try {
+      var txt = await C.callAI(
+        'This is the state of a Tier-2 automotive machining works this morning, counted from its ' +
+        'own records:\n\n- ' + facts + '\n\nWrite the plant manager a briefing of no more than 120 ' +
+        'words of plain prose. Say what matters today and what it means for the customer. Connect ' +
+        'things that are connected. Do not list the figures back, do not invent anything, and do ' +
+        'not reassure — if the position is bad, say so.',
+        { maxTokens: 400 });
+      dbBrief = esc(C.stripMarkup(txt));
+      drawDashboard();
+      msg.style.display = 'none';
+    } catch(e){
+      msg.style.display=''; msg.className='note bad'; msg.textContent = e.message;
+    }
+    btn.disabled = false; btn.textContent = 'Morning briefing';
+  }
+
+  function printDashboard(){
+    if (!dbData) { toast('Nothing to print yet.'); return; }
+    var d = dbData;
+    C.openReport({
+      title:'Works Dashboard', kind:'Overview',
+      subtitle:'Last ' + d.days + ' days · ' + new Date().toLocaleString('en-GB'),
+      sections:[
+        dbBrief ? { type:'text', title:'Briefing', body: dbBrief.replace(/<[^>]+>/g,'') } : null,
+        { type:'pairs', title:'Needs somebody today', rows:[
+          ['Orders past their date', String(d.overdue)],
+          ['Orders due within a week', String(d.dueWeek)],
+          ['Runs booked with no approved setup', String(d.noSetup)],
+          ['Gauges overdue or never calibrated', String(d.badGauges)],
+          ['Lots on hold', String(d.holds)],
+          ['Goods receipts not inspected', String(d.uninspected)],
+          ['Self inspection sheets left open', String(d.openSheets)],
+          ['Setups rejected in this period', String(d.rejectedSetups)]]},
+        { type:'pairs', title:'Production', rows:[
+          ['Pieces made', C.qty(d.made)],
+          ['Rejected', C.qty(d.rejected) + (d.rejectPct ? ' — ' + d.rejectPct + '%' : '')],
+          ['Downtime', C.qty(d.downtime) + ' minutes'],
+          ['Bookings', String(d.entries)]]},
+        { type:'pairs', title:'Order book', rows:[
+          ['Open orders', String(d.openOrders)],
+          ['Pieces outstanding', C.qty(d.balance)]]},
+        d.overdueList.length ? { type:'table', title:'Orders past their date',
+          columns:[{label:'Order'},{label:'Customer'},{label:'Part'},{label:'Outstanding',align:'r'},
+                   {label:'Days late',align:'c'}],
+          rows: d.overdueList.map(function(o){
+            return [esc(o.po), esc(o.cust), esc(o.part), C.qty(o.bal),
+                    { v:'<b>'+o.late+'</b>', cls:'ab' }]; }) } : null,
+        { type:'pairs', title:'New parts', rows:
+          ['New','APQP','Sample','PPAP','Series'].map(function(k){
+            return [k, String(d.stages[k] || 0)]; })
+          .concat([['Past New with no PFMEA', String(d.noFm)],
+                   ['Past New with no control plan', String(d.noCp)]]) },
+        { type:'text', title:'Note',
+          body:'Counted from the records held in this system. Nothing on this screen is entered or ' +
+               'estimated; every figure can be checked on the screen it came from.' }
+      ].filter(Boolean) });
   }
 
   /* ---------------- Orders and the production plan ----------------
@@ -7075,6 +7379,11 @@
     });
     f.click();
   });
+
+  document.getElementById('db-run').addEventListener('click', runDashboard);
+  document.getElementById('db-days').addEventListener('change', runDashboard);
+  document.getElementById('db-brief').addEventListener('click', briefDashboard);
+  document.getElementById('db-print').addEventListener('click', printDashboard);
 
   document.getElementById('so-save').addEventListener('click', saveOrder);
   document.getElementById('so-clear').addEventListener('click', function(){

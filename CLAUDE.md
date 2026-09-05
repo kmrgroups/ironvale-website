@@ -120,8 +120,8 @@ idempotent — once sent, the button is replaced by a confirmation.
 **Live in the IDMS:** Home (with loadable sample data), Customer Addition,
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
 Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
-Self Inspection, Inward Inspection, Calibration, MSA, GRN, Delivery Challan,
-People (HR records), Company Profile.
+Self Inspection, Inward Inspection, Calibration, MSA, PDI, GRN, Delivery
+Challan, People (HR records), Company Profile.
 
 **Setup approval** is the first shop-floor screen and the pattern for the rest:
 what gets checked comes from the **control plan** for that operation (falling
@@ -302,6 +302,10 @@ a shape mismatch that made TDS compute as zero.
 
 If you formalise this, keep two habits that mattered:
 
+0. **Stubs must behave like the real API.** The delivery-challan stub ignored
+   `docId` and inserted instead of updating, which hid the PDI drawdown entirely
+   — the test passed on a duplicate row. If the real endpoint updates in place,
+   the stub must too.
 1. **When a test fails, find out why before changing the assertion.** Several
    "failures" were the harness lying — stubbing `HTMLAnchorElement.prototype.click`
    disabled every menu link; jsdom never firing `Image.onload` meant favicon code

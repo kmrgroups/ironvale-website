@@ -307,6 +307,45 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="report_pdi">
+      <div class="card">
+        <h4>Pre-Despatch Inspection</h4>
+        <div class="hint" style="margin-bottom:10px;">The last check before parts leave. A lot that
+          passes here is what releases a delivery challan — a challan cannot be raised against a part
+          with no cleared lot unless somebody signs for despatching it anyway.</div>
+        <div class="row four">
+          <div><label>Part</label><select id="pd-part"></select></div>
+          <div><label>Lot / batch number</label><input id="pd-lot"></div>
+          <div><label>Quantity offered</label><input class="num" id="pd-offered"></div>
+          <div><label>Sample size</label><input class="num" id="pd-sample"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Customer</label><select id="pd-cust"></select></div>
+          <div><label>Inspected by</label><input id="pd-by"></div>
+          <div style="align-self:end;"><button class="btn" id="pd-load">Load characteristics</button></div>
+          <div style="align-self:end;"><button class="btn" id="pd-print">Print</button></div>
+        </div>
+        <div class="note" id="pd-msg" style="display:none;"></div>
+      </div>
+      <div class="card" id="pd-sheet" style="display:none;">
+        <h4 id="pd-title">Readings</h4>
+        <div id="pd-body"></div>
+        <div class="row four" style="margin-top:12px;">
+          <div><label>Accepted quantity</label><input class="num" id="pd-acc"></div>
+          <div><label>Rejected quantity</label><input class="num" id="pd-rej"></div>
+          <div style="grid-column:span 2;"><label>Remarks</label><input id="pd-remarks"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn green" id="pd-pass">Clear the lot</button>
+          <button class="btn del" id="pd-fail">Hold the lot</button>
+        </div>
+      </div>
+      <div class="card">
+        <h4>Lots</h4>
+        <div id="pd-list"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="report_msa">
       <div class="card">
         <h4>Measurement System Analysis — gauge R&amp;R</h4>
@@ -973,7 +1012,7 @@
       ['report_self_inspection','🔍','Self Inspection Report',1],
       ['report_inward_inspection','📥','Inward Inspection Report',1],
       ['report_inprocess_inspection','⚙','In-Process Inspection Report'],
-      ['report_pdi','✓','PDI Report'],['report_setup_approval','✅','Setup Approval Report',1],
+      ['report_pdi','✓','PDI Report',1],['report_setup_approval','✅','Setup Approval Report',1],
       ['report_tool_history','🔧','Tool History Card'],
       ['report_machine_checksheet','⚙','Machine Check Sheet'],
       ['report_calibration','📏','Calibration Report',1],['report_msa','🔬','MSA Study Report',1],
@@ -1058,6 +1097,7 @@
     if (s === 'report_inward_inspection') loadInward();
     if (s === 'report_calibration') loadCalibration();
     if (s === 'report_msa')     loadMsa();
+    if (s === 'report_pdi')     loadPdi();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -1557,6 +1597,267 @@
       loadHome();
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Remove sample data';
+  }
+
+  /* ---------------- Pre-despatch inspection ----------------
+     The last gate. A cleared lot carries a quantity, and the delivery challan
+     draws that quantity down, so the same inspection cannot release the same
+     parts twice. */
+  var pdiChars = [], pdiReadings = {}, pdiDocs = [];
+
+  function pdiRemaining(rec){
+    var v = rec.data || {};
+    return Math.max(0, C.num(v.accepted) - C.num(v.despatched));
+  }
+
+  async function loadPdi(){
+    await fetchParts();
+    await fetchCustomers();
+    document.getElementById('pd-part').innerHTML = partOptions(document.getElementById('pd-part').value);
+    document.getElementById('pd-cust').innerHTML = customerOptions('');
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
+    try { pdiDocs = await C.idms.docs('pdi'); } catch(e){ pdiDocs = []; }
+    drawPdiList();
+  }
+
+  async function loadPdiChars(){
+    var msg = document.getElementById('pd-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var partId = document.getElementById('pd-part').value;
+    if (!partId) return say('Choose the part.');
+    if (!document.getElementById('pd-lot').value.trim())
+      return say('Give the lot a number. Without it nothing can be traced back if the customer ' +
+                 'finds a problem.');
+    if (!C.num(document.getElementById('pd-offered').value))
+      return say('State how many pieces are being offered.');
+
+    /* everything the part must hold, across every operation — this is the last
+       look before the customer's, so it is not limited to one operation */
+    var dims = dimensions.filter(function(d){ return (d.data||{}).partId === partId; });
+    if (!dims.length){
+      pdiChars = [];
+      document.getElementById('pd-sheet').style.display = 'none';
+      return say('This part has no characteristics recorded, so there is nothing to inspect against.');
+    }
+    var cp = null;
+    try { cp = (await C.idms.docs('control_plan', partId))[0] || null; } catch(e){}
+    var cpRows = cp ? ((cp.data||{}).rows||[]) : [];
+
+    pdiChars = dims.map(function(d){
+      var q = d.data || {};
+      var row = cpRows.filter(function(r){
+        return r.characteristic && q.description &&
+          r.characteristic.toLowerCase().indexOf(q.description.toLowerCase().slice(0,18)) >= 0; })[0];
+      return { balloon:q.balloon||'', description:q.description||'', opNo:q.opNo,
+        nominal:q.nominal, upper:q.upper, lower:q.lower, unit:q.unit||'', cls:q.cls||'',
+        gauge:(row && row.technique) || q.gauge || '' };
+    });
+    pdiReadings = {};
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    document.getElementById('pd-title').textContent =
+      'Lot ' + document.getElementById('pd-lot').value.trim() + ' — ' + (p.part_no||'') + ' ' + (p.part_name||'');
+    document.getElementById('pd-acc').value = C.num(document.getElementById('pd-offered').value);
+    document.getElementById('pd-rej').value = '';
+    document.getElementById('pd-sheet').style.display = '';
+    drawPdiSheet();
+    say(pdiChars.length + ' characteristic(s) across every operation' +
+        (cp ? ', gauges from the control plan.' : '. No control plan, so the recorded gauges are shown.'),
+        !!cp);
+  }
+
+  function drawPdiSheet(){
+    var host = document.getElementById('pd-body');
+    var n = Math.max(1, Math.min(10, C.num(document.getElementById('pd-sample').value) || 3));
+    var cols = '';
+    for (var i = 1; i <= n; i++) cols += '<th class="c">Pc ' + i + '</th>';
+    host.innerHTML = '<div style="overflow-x:auto;"><table class="t"><thead><tr>' +
+      '<th class="c">Op</th><th class="c">No</th><th>Characteristic</th><th class="c">Class</th>' +
+      '<th class="r">Nominal</th><th class="c">Limits</th><th>Gauge</th>' + cols +
+      '<th class="c">Result</th></tr></thead><tbody>' +
+      pdiChars.map(function(ch, ci){
+        var l = limitsOf(ch), cells = '';
+        for (var i = 0; i < n; i++){
+          var key = ci + ':' + i, val = pdiReadings[key] == null ? '' : pdiReadings[key];
+          var vd = verdict(ch, val);
+          cells += '<td class="c"><input class="num pd-r" data-c="'+ci+'" data-i="'+i+'" value="'+
+            esc(val)+'" style="width:76px;text-align:center;'+
+            (vd==='ok'?'background:#E8F5EC;':vd?'background:#FDECEA;color:#B03A2E;font-weight:700;':'')+
+            '"></td>';
+        }
+        return '<tr><td class="c">'+esc(ch.opNo||'')+'</td><td class="c">'+esc(ch.balloon||'—')+'</td>' +
+          '<td>'+esc(ch.description)+'</td>' +
+          '<td class="c">'+(ch.cls?'<span class="badge '+(ch.cls==='CC'?'apqp':'sample')+'">'+
+            esc(ch.cls)+'</span>':'')+'</td>' +
+          '<td class="r">'+C.qty(ch.nominal)+' '+esc(ch.unit)+'</td>' +
+          '<td class="c hint">'+(l.lo!=null?C.qty(l.lo):'—')+' … '+(l.hi!=null?C.qty(l.hi):'—')+'</td>' +
+          '<td class="hint">'+esc(ch.gauge||'—')+'</td>' + cells +
+          '<td class="c pd-v" data-c="'+ci+'"></td></tr>';
+      }).join('') + '</tbody></table></div><div id="pd-verdict" style="margin-top:12px;"></div>';
+
+    host.querySelectorAll('.pd-r').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        pdiReadings[inp.dataset.c + ':' + inp.dataset.i] = inp.value;
+        var vd = verdict(pdiChars[+inp.dataset.c], inp.value);
+        inp.style.background = vd==='ok' ? '#E8F5EC' : vd ? '#FDECEA' : '';
+        inp.style.color = vd && vd!=='ok' ? '#B03A2E' : '';
+        scorePdi();
+      });
+    });
+    scorePdi();
+  }
+
+  function scorePdi(){
+    var n = Math.max(1, Math.min(10, C.num(document.getElementById('pd-sample').value) || 3));
+    var out = [], missing = 0;
+    pdiChars.forEach(function(ch, ci){
+      var bad = 0, done = 0;
+      for (var i = 0; i < n; i++){
+        var v = pdiReadings[ci+':'+i];
+        if (v === '' || v == null) continue;
+        done++;
+        if (verdict(ch, v) !== 'ok') bad++;
+      }
+      if (done < n) missing += (n - done);
+      var cell = document.querySelector('.pd-v[data-c="'+ci+'"]');
+      if (cell) cell.innerHTML = !done ? '<span class="hint">—</span>'
+        : bad ? '<span class="badge ab" style="background:#FDECEA;color:#B03A2E;">Out</span>'
+              : '<span class="badge series">OK</span>';
+      if (bad) out.push(ch);
+    });
+    var host = document.getElementById('pd-verdict');
+    if (host) host.innerHTML = out.length
+      ? '<div class="note bad"><b>' + out.length + ' characteristic(s) outside the limits</b> — ' +
+        out.map(function(c){ return esc(c.description); }).join(', ') +
+        '. This lot cannot be cleared for despatch.</div>'
+      : missing ? '<div class="note">' + missing + ' reading(s) still to enter.</div>'
+                : '<div class="note good">All readings within limits.</div>';
+    return { out:out.length, missing:missing };
+  }
+
+  function drawPdiList(){
+    var host = document.getElementById('pd-list');
+    if (!pdiDocs.length){
+      host.innerHTML = '<div class="empty"><b>No lots inspected yet</b>' +
+        'A cleared lot is what releases a delivery challan.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Lot</th><th>Part</th><th>Customer</th>' +
+      '<th class="r">Offered</th><th class="r">Cleared</th><th class="r">Despatched</th>' +
+      '<th class="r">Remaining</th><th class="c">Status</th><th></th></tr></thead><tbody>' +
+      pdiDocs.slice(0,25).map(function(rec){
+        var v = rec.data||{}, rem = pdiRemaining(rec);
+        return '<tr><td><b>'+esc(v.lot||'')+'</b><div class="hint">'+C.fmtDate(v.at)+'</div></td>' +
+          '<td>'+esc(v.partNo||'')+'</td><td class="hint">'+esc(v.customerName||'—')+'</td>' +
+          '<td class="r">'+C.qty(v.offered)+'</td><td class="r">'+C.qty(v.accepted)+'</td>' +
+          '<td class="r">'+C.qty(v.despatched)+'</td>' +
+          '<td class="r"><b>'+C.qty(rem)+'</b></td>' +
+          '<td class="c">'+(rec.status==='Cleared'
+            ? '<span class="badge series">Cleared</span>'
+            : '<span class="badge ab" style="background:#FDECEA;color:#B03A2E;">On hold</span>')+'</td>' +
+          '<td><button class="btn pd-p" data-id="'+esc(rec.doc_id)+'">Print</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.pd-p').forEach(function(b){
+      b.addEventListener('click', function(){
+        printPdi(pdiDocs.filter(function(x){ return x.doc_id === b.dataset.id; })[0]);
+      });
+    });
+  }
+
+  async function savePdi(cleared){
+    var msg = document.getElementById('pd-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var by = document.getElementById('pd-by').value.trim();
+    if (!by) return say('Name who inspected the lot.');
+    if (!pdiChars.length) return say('Load the characteristics first.');
+    var score = scorePdi();
+    if (cleared && score.out)
+      return say('<b>Cannot clear this lot.</b> ' + score.out + ' characteristic(s) are outside the ' +
+                 'limits. Hold it, or sort the parts and inspect again.');
+    if (cleared && score.missing)
+      return say('<b>Cannot clear this lot.</b> ' + score.missing + ' reading(s) are missing.');
+
+    var offered = C.num(document.getElementById('pd-offered').value);
+    var acc = C.num(document.getElementById('pd-acc').value);
+    var rej = C.num(document.getElementById('pd-rej').value);
+    if (Math.abs((acc + rej) - offered) > 0.001)
+      return say('Accepted (' + C.qty(acc) + ') plus rejected (' + C.qty(rej) + ') is ' +
+                 C.qty(acc+rej) + ', but ' + C.qty(offered) + ' was offered. These must agree.');
+
+    var partId = document.getElementById('pd-part').value;
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var cust = customers.filter(function(c){ return c.doc_id === document.getElementById('pd-cust').value; })[0];
+    var n = Math.max(1, Math.min(10, C.num(document.getElementById('pd-sample').value) || 3));
+    var rows = pdiChars.map(function(ch, ci){
+      var readings = [];
+      for (var i = 0; i < n; i++) readings.push(pdiReadings[ci+':'+i] == null ? '' : pdiReadings[ci+':'+i]);
+      return Object.assign({}, ch, { readings:readings,
+        verdicts:readings.map(function(r){ return verdict(ch, r); }) });
+    });
+
+    try {
+      await C.idms.saveDoc({ kind:'pdi', partId:partId,
+        status: cleared ? 'Cleared' : 'On hold',
+        docNo: await C.docNumber('pdi'),
+        data:{ partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
+               lot:document.getElementById('pd-lot').value.trim(),
+               customerId:(cust||{}).doc_id||'', customerName:((cust||{}).data||{}).name||'',
+               offered:offered, accepted: cleared ? acc : 0, rejected:rej, despatched:0,
+               sampleSize:n, rows:rows, inspectedBy:by,
+               remarks:document.getElementById('pd-remarks').value.trim(),
+               at:new Date().toISOString() } },
+        cleared ? 'lot cleared for despatch' : 'lot placed on hold');
+      say(cleared
+        ? 'Lot cleared. ' + C.qty(acc) + ' piece(s) released for despatch.'
+        : 'Lot placed <b>on hold</b>. Nothing from it may be despatched.', cleared);
+      document.getElementById('pd-sheet').style.display = 'none';
+      pdiChars = []; pdiReadings = {};
+      await loadPdi();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  function printPdi(rec){
+    if (!rec) return;
+    var v = rec.data||{}, rows = v.rows||[];
+    var cols = [{label:'Op',align:'c'},{label:'No',align:'c'},{label:'Characteristic'},
+      {label:'Class',align:'c'},{label:'Nominal',align:'r'},{label:'Limits',align:'c'},{label:'Gauge'}];
+    for (var i = 0; i < C.num(v.sampleSize); i++) cols.push({label:'Pc '+(i+1),align:'c'});
+    cols.push({label:'Result',align:'c'});
+    C.openReport({
+      title:'Pre-Despatch Inspection' + (rec.status==='Cleared' ? '' : ' — LOT ON HOLD'),
+      kind:'PDI', landscape:true,
+      subtitle:(v.partNo||'') + ' · lot ' + (v.lot||'') + ' · ' + (v.customerName||''),
+      sections:[
+        { type:'pairs', title:'Lot', rows:[
+          ['Part', esc((v.partNo||'') + ' — ' + (v.partName||''))],
+          ['Lot / batch', esc(v.lot||'—')],
+          ['Customer', esc(v.customerName||'—')],
+          ['Quantity offered', C.qty(v.offered)],
+          ['Cleared for despatch', C.qty(v.accepted)],
+          ['Rejected', C.qty(v.rejected)],
+          ['Sample size', String(v.sampleSize||'')],
+          ['Result', rec.status === 'Cleared' ? 'CLEARED FOR DESPATCH' : 'ON HOLD — do not despatch'],
+          ['Inspected by', esc(v.inspectedBy||'—')],
+          ['Date', new Date(v.at||rec.updated_at).toLocaleString('en-GB')]]},
+        { type:'table', title:'Readings', dense:true, columns:cols,
+          rows: rows.map(function(r){
+            var l = limitsOf(r);
+            var out = [r.opNo||'', esc(r.balloon||''), esc(r.description||''), esc(r.cls||''),
+              C.qty(r.nominal)+' '+esc(r.unit||''),
+              (l.lo!=null?C.qty(l.lo):'—')+' … '+(l.hi!=null?C.qty(l.hi):'—'), esc(r.gauge||'—')];
+            (r.readings||[]).forEach(function(x,i){
+              var bad = (r.verdicts||[])[i] && r.verdicts[i] !== 'ok';
+              out.push(bad ? { v:'<b>'+esc(x)+'</b>', cls:'ab' } : esc(x));
+            });
+            out.push((r.verdicts||[]).some(function(x){ return x && x!=='ok'; }) ? 'OUT' : 'OK');
+            return out;
+          }),
+          note: v.remarks ? 'Remarks: ' + v.remarks : '' },
+        { type:'text', title:'Signatures',
+          body:'Inspected by                              Quality                              Stores' }
+      ]});
   }
 
   /* ---------------- MSA — gauge R&R ----------------
@@ -4401,7 +4702,7 @@
      Material leaving the works. A challan carries several lines, so the lines
      are collected in the page and written as one document — a part despatched
      on one challan must not be split across two numbers. */
-  var dcLines = [];
+  var dcLines = [], dcOverride = null;
 
   function drawDcLines(){
     var host = document.getElementById('dc-lines');
@@ -4501,6 +4802,12 @@
             : '' },
         { type:'pairs', title:'Record', rows:[
           ['Remarks', esc(v.remarks||'—')],
+          ['Cleared lots', (v.clearedLots||[]).length
+            ? (v.clearedLots||[]).map(function(x){
+                return esc(x.lot||'') + ' (' + C.qty(x.qty) + ')'; }).join(', ')
+            : (v.despatchedWithoutPdi ? '<b>NONE — despatched without inspection</b>' : '—')],
+          ['Authorised without PDI by', v.despatchedWithoutPdi
+            ? '<b>' + esc(v.despatchedWithoutPdi) + '</b>' : '—'],
           ['Raised by', esc(r.updated_by||'—')],
           ['Raised on', new Date(r.updated_at).toLocaleString('en-GB')]]},
         { type:'text', title:'Signatures',
@@ -4784,6 +5091,29 @@
       go('home');
     });
     f.click();
+  });
+
+  document.getElementById('pd-load').addEventListener('click', loadPdiChars);
+  document.getElementById('pd-sample').addEventListener('input', function(){
+    if (pdiChars.length) drawPdiSheet();
+  });
+  document.getElementById('pd-pass').addEventListener('click', function(){ savePdi(true); });
+  document.getElementById('pd-fail').addEventListener('click', function(){ savePdi(false); });
+  document.getElementById('pd-print').addEventListener('click', function(){
+    if (pdiDocs.length) printPdi(pdiDocs[0]);
+    else toast('Inspect a lot first, then print it from the list.');
+  });
+  /* accepted follows offered minus rejected, the same as the goods receipt */
+  ['pd-offered','pd-rej'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){
+      var acc = document.getElementById('pd-acc');
+      if (acc.dataset.touched) return;
+      var o = C.num(document.getElementById('pd-offered').value);
+      acc.value = o ? Math.max(0, o - C.num(document.getElementById('pd-rej').value)) : '';
+    });
+  });
+  document.getElementById('pd-acc').addEventListener('input', function(){
+    this.dataset.touched = this.value === '' ? '' : '1';
   });
 
   document.getElementById('ms-part').addEventListener('change', drawMsaOps);
@@ -5111,6 +5441,18 @@
     this.disabled = false;
   });
 
+  /* the override offered in the message above */
+  document.getElementById('dc-msg').addEventListener('click', function(e){
+    if (!e.target || e.target.id !== 'dc-force') return;
+    e.preventDefault();
+    var who = prompt('Despatching without a cleared lot is a deliberate decision.\n\n' +
+      'Who is authorising it, and why?');
+    if (who === null) return;
+    if (!who.trim()) { toast('A name and reason are needed.'); return; }
+    dcOverride = who.trim();
+    toast('Recorded. Press Save Challan again.');
+  });
+
   document.getElementById('dc-addline').addEventListener('click', function(){
     var msg = document.getElementById('dc-msg');
     var sel = document.getElementById('dc-part');
@@ -5156,6 +5498,47 @@
        cannot be reused — so refuse before one is taken */
     if (!dcLines.length) return say('Add at least one line before saving.');
 
+    /* Nothing leaves without a cleared lot behind it. The check runs before a
+       challan number is taken, and the quantity is drawn down afterwards, so the
+       same inspection cannot release the same parts twice. */
+    var draw = [];
+    try {
+      var lots = await C.idms.docs('pdi');
+      var shortfalls = [];
+      var byPart = {};
+      dcLines.forEach(function(l){
+        if (!l.partId) return;
+        byPart[l.partId] = (byPart[l.partId] || 0) + C.num(l.qty);
+      });
+      Object.keys(byPart).forEach(function(pid){
+        var need = byPart[pid];
+        var avail = lots.filter(function(x){
+          return x.status === 'Cleared' && (x.data||{}).partId === pid && pdiRemaining(x) > 0; })
+          .sort(function(a,b){ return String((a.data||{}).at).localeCompare(String((b.data||{}).at)); });
+        var have = avail.reduce(function(t,x){ return t + pdiRemaining(x); }, 0);
+        if (have + 0.001 < need){
+          var nm = (allParts.filter(function(p){ return p.part_id===pid; })[0]||{}).part_no || pid;
+          shortfalls.push(nm + ': ' + C.qty(need) + ' wanted, ' + C.qty(have) + ' cleared');
+        } else {
+          var left = need;
+          avail.forEach(function(x){
+            if (left <= 0) return;
+            var take = Math.min(left, pdiRemaining(x));
+            draw.push({ rec:x, take:take });
+            left -= take;
+          });
+        }
+      });
+      if (shortfalls.length && !dcOverride){
+        this.disabled = false;
+        return say('<b>No cleared lot covers this despatch.</b><br>• ' +
+          shortfalls.map(esc).join('<br>• ') +
+          '<br><br>Inspect the lot on the PDI screen, or <a href="#" id="dc-force" ' +
+          'style="color:var(--bad);">despatch without a cleared lot</a> — which needs a name ' +
+          'against it and is recorded on the challan.');
+      }
+    } catch(e){ /* if the lots cannot be read, do not block the works */ }
+
     this.disabled = true;
     try {
       var docNo = await C.docNumber('dc');
@@ -5174,9 +5557,22 @@
           address: document.getElementById('dc-addr').value.trim(),
           eway: document.getElementById('dc-eway').value.trim(),
           returnable: document.getElementById('dc-ret').value,
-          lines: dcLines.slice()
+          lines: dcLines.slice(),
+          clearedLots: draw.map(function(x){ return { lot:(x.rec.data||{}).lot, qty:x.take,
+                                                      pdi:x.rec.doc_no }; }),
+          despatchedWithoutPdi: dcOverride ? dcOverride : null
         }
       }, 'material despatched');
+
+      /* draw the quantity down so a cleared lot cannot release the same parts twice */
+      for (var di = 0; di < draw.length; di++){
+        var rec = draw[di].rec, rv = rec.data || {};
+        await C.idms.saveDoc({ docId:rec.doc_id, kind:'pdi', partId:rec.part_id,
+          docNo:rec.doc_no, status:rec.status,
+          data: Object.assign({}, rv, { despatched: C.num(rv.despatched) + draw[di].take }) },
+          'despatched against challan ' + docNo);
+      }
+      dcOverride = null;
       say('Saved as <b>' + esc(docNo) + '</b> with ' + dcLines.length + ' line(s).', true);
       dcLines = [];
       ['dc-cust','dc-veh','dc-po','dc-addr','dc-eway'].forEach(function(id){

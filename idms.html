@@ -307,6 +307,59 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="ncr">
+      <div class="card">
+        <h4>Non-conformance and corrective action</h4>
+        <div class="hint" style="margin-bottom:10px;">Everything else in this system finds problems.
+          This is where one gets closed out. Raise it against the record it came from, so the
+          rejection and the action are the same thread — an auditor asks to see both.</div>
+        <div class="row four">
+          <div><label>Raise against</label><select id="nc-source">
+            <option value="">— choose the record —</option></select></div>
+          <div><label>Or raise a fresh one about</label><select id="nc-kind">
+            <option>Internal rejection</option><option>Customer complaint</option>
+            <option>Supplier non-conformance</option><option>Audit finding</option>
+            <option>Process deviation</option></select></div>
+          <div><label>Part</label><select id="nc-part"></select></div>
+          <div><label>Raised by</label><input id="nc-by"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
+          <label>What is wrong (D2 — the problem, in plain words)</label>
+          <input id="nc-problem" placeholder="Bore oversize on 22 pieces, found at final inspection">
+        </div></div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Quantity affected</label><input class="num" id="nc-qty"></div>
+          <div><label>Target close date</label><input type="date" id="nc-due"></div>
+          <div style="align-self:end;"><button class="btn gold" id="nc-raise">Raise it</button></div>
+          <div style="align-self:end;"><button class="btn" id="nc-refresh">Refresh</button></div>
+        </div>
+        <div class="note" id="nc-msg" style="display:none;"></div>
+      </div>
+      <div class="card" id="nc-work" style="display:none;">
+        <h4 id="nc-title">8D</h4>
+        <div id="nc-body"></div>
+      </div>
+      <div class="card">
+        <div class="row four" style="margin-bottom:8px;">
+          <div><label>Show</label><select id="nc-filter">
+            <option value="open">Still open</option><option value="">Everything</option>
+            <option value="closed">Closed</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="nc-print">Print register</button></div>
+        </div>
+        <h4>Register</h4>
+        <div id="nc-list"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="ncr_open">
+      <div class="card">
+        <h4>Open actions</h4>
+        <div class="hint" style="margin-bottom:10px;">What is still owed, and to whom. An action
+          with no owner and no date is a wish, so both are shown and the overdue ones come first.</div>
+        <div id="nco-body"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="dashboard">
       <div class="card">
         <h4>Works Dashboard</h4>
@@ -1299,6 +1352,8 @@
       ['report_machine_checksheet','⚙','Machine Check Sheet'],
       ['report_calibration','📏','Calibration Report',1],['report_msa','🔬','MSA Study Report',1],
       ['report_control_charts','📊','Control Charts']]],
+    ['capa','🛠','Corrective Action','Problems and what was done about them',[
+      ['ncr','⚠','Non-conformance & 8D',1],['ncr_open','📌','Open Actions',1]]],
     ['qms','📋','QMS','Quality Management System',[
       ['qms_level1','📜','Level-1 — Policy'],['qms_level2','📄','Level-2 — Procedures'],
       ['qms_level3','📝','Level-3 — Work Instructions'],['qms_level4','🗂','Level-4 — Records'],
@@ -1393,6 +1448,8 @@
     if (s === 'entry_prod')     loadProduction();
     if (s === 'sales_plan')     loadOrders();
     if (s === 'dashboard')      loadDashboard();
+    if (s === 'ncr')            loadNcr();
+    if (s === 'ncr_open')       loadOpenActions();
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
@@ -2305,6 +2362,448 @@
 'or inspection only, give a PARAM block with TOOL: not applicable.';
 
     return prompt;
+  }
+
+  /* ---------------- Non-conformance and 8D ----------------
+     Every other screen in this system finds problems. This is the only one where
+     a problem is closed out, and the two have to be the same thread: an NC is
+     raised against the record it came from, so the rejection and what was done
+     about it can be shown together. That is what an auditor asks for.
+
+     The discipline that matters is D7. A corrective action that does not change
+     the PFMEA or the control plan has changed nothing that will still be true
+     next year, so closing is refused until somebody has said what changed. */
+  var ncrs = [], ncSources = [], ncOpen = null;
+
+  var D_STEPS = [
+    { k:'d1', n:'D1', t:'Team',            q:'Who is working on this? A name each, not a department.' },
+    { k:'d2', n:'D2', t:'The problem',     q:'What is wrong, in plain words. What, where, how many, since when.' },
+    { k:'d3', n:'D3', t:'Containment',     q:'What happened to the suspect parts — in stock, in transit, at the customer.' },
+    { k:'d4', n:'D4', t:'Root cause',      q:'Why did it happen, and why did it escape? Keep asking why until the answer is something you can change.' },
+    { k:'d5', n:'D5', t:'Chosen action',   q:'What will be changed so the cause cannot recur.' },
+    { k:'d6', n:'D6', t:'Implemented',     q:'What was actually done, by whom, on what date.' },
+    { k:'d7', n:'D7', t:'Prevent recurrence', q:'What changed in the PFMEA, the control plan, the routing or the work instruction.' },
+    { k:'d8', n:'D8', t:'Closed',          q:'What evidence shows it worked, and who accepted it.' }
+  ];
+
+  async function loadNcr(){
+    await fetchParts();
+    document.getElementById('nc-part').innerHTML = partOptions('');
+    try { ncrs = await C.idms.docs('ncr'); } catch(e){ ncrs = []; }
+    await buildNcSources();
+    var due = document.getElementById('nc-due');
+    if (!due.value){ var d = new Date(); d.setDate(d.getDate()+14);
+                     due.value = d.toISOString().slice(0,10); }
+    drawNcrList();
+  }
+
+  /* the records that could have started this: a rejection somebody booked, a
+     lot on hold, a failed check, a supplier rejection. Anything already answered
+     by an NC drops off the list. */
+  async function buildNcSources(){
+    ncSources = [];
+    var answered = {};
+    ncrs.forEach(function(r){ if ((r.data||{}).sourceId) answered[(r.data||{}).sourceId] = true; });
+    try {
+      (await C.idms.docs('production')).forEach(function(r){
+        var v = r.data||{};
+        if (!C.num(v.rejected) || answered[r.doc_id]) return;
+        ncSources.push({ id:r.doc_id, partId:v.partId,
+          label:'Production ' + C.fmtDate(v.date) + ' — ' + (v.partNo||v.partName||'') + ' op ' +
+                (v.opNo||'') + ', ' + C.qty(v.rejected) + ' rejected' +
+                (v.rejectReason ? ' (' + v.rejectReason + ')' : ''),
+          problem:C.qty(v.rejected) + ' pieces rejected at operation ' + (v.opNo||'') +
+                  (v.rejectReason ? ' — ' + v.rejectReason : '') +
+                  (v.rejectNote ? '. ' + v.rejectNote : ''),
+          qty:C.num(v.rejected), kind:'Internal rejection' });
+      });
+      (await C.idms.docs('pdi')).forEach(function(r){
+        var v = r.data||{};
+        if (r.status === 'Cleared' || answered[r.doc_id]) return;
+        ncSources.push({ id:r.doc_id, partId:v.partId,
+          label:'Lot on hold — ' + (v.lot||'') + ', ' + (v.partNo||v.partName||''),
+          problem:'Lot ' + (v.lot||'') + ' held at pre-despatch inspection. ' + (v.remarks||''),
+          qty:C.num(v.offered), kind:'Internal rejection' });
+      });
+      (await C.idms.docs('inward')).forEach(function(r){
+        var v = r.data||{};
+        if (!C.num(v.rejected) || answered[r.doc_id]) return;
+        var fail = (v.lines||[]).filter(function(l){ return l.result !== 'ok'; })
+          .map(function(l){ return l.what; }).join(', ');
+        ncSources.push({ id:r.doc_id, partId:'',
+          label:'Supplier — ' + (v.supplier||'') + ', ' + C.qty(v.rejected) + ' rejected' +
+                (fail ? ' (' + fail + ')' : ''),
+          problem:C.qty(v.rejected) + ' of ' + C.qty(v.received) + ' rejected from ' +
+                  (v.supplier||'') + (fail ? ' — ' + fail : '') + '.',
+          qty:C.num(v.rejected), kind:'Supplier non-conformance' });
+      });
+      (await C.idms.docs('self_insp')).forEach(function(r){
+        var v = r.data||{}, chars = v.chars||[];
+        (v.rounds||[]).forEach(function(rd, ri){
+          var bad = rd.readings.some(function(x,i){
+            return x !== '' && chars[i] && verdict(chars[i], x) !== 'ok'; });
+          var sid = r.doc_id + ':' + ri;
+          if (!bad || answered[sid]) return;
+          ncSources.push({ id:sid, partId:v.partId,
+            label:'Failed check — ' + (v.partNo||v.partName||'') + ' ' + C.fmtDate(v.date) +
+                  ' at ' + rd.at,
+            problem:'In-process check at ' + rd.at + ' on ' + C.fmtDate(v.date) +
+                    ' was outside the limits.' + (rd.containment ? ' Contained: ' + rd.containment : ''),
+            qty:0, kind:'Process deviation' });
+        });
+      });
+    } catch(e){}
+    document.getElementById('nc-source').innerHTML =
+      '<option value="">— none, raise a fresh one —</option>' +
+      (ncSources.length
+        ? ncSources.map(function(s,i){ return '<option value="'+i+'">'+esc(s.label)+'</option>'; }).join('')
+        : '<option value="" disabled>nothing unanswered on file</option>');
+  }
+
+  function ncStage(r){
+    var v = r.data||{};
+    if (r.status === 'Closed') return { label:'Closed', cls:'series' };
+    if (String(v.d7||'').trim()) return { label:'Awaiting close', cls:'apqp' };
+    if (String(v.d5||'').trim()) return { label:'Action agreed', cls:'sample' };
+    if (String(v.d4||'').trim()) return { label:'Root cause found', cls:'sample' };
+    if (String(v.d3||'').trim()) return { label:'Contained', cls:'sample' };
+    return { label:'Just raised', cls:'ab' };
+  }
+
+  function ncOverdue(r){
+    var v = r.data||{};
+    if (r.status === 'Closed' || !v.due) return null;
+    var d = Math.ceil((new Date(v.due).getTime() - Date.now())/86400000);
+    return d < 0 ? -d : null;
+  }
+
+  async function raiseNcr(){
+    var msg = document.getElementById('nc-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var si = document.getElementById('nc-source').value;
+    var src = si === '' ? null : ncSources[+si];
+    var problem = g('nc-problem') || (src ? src.problem : '');
+    if (!g('nc-by')) return say('Name who is raising it. An unowned non-conformance is not acted on.');
+    if (!problem) return say('Say what is wrong. "Quality issue" is not a problem statement — what, ' +
+                             'where, how many.');
+    var partId = document.getElementById('nc-part').value || (src ? src.partId : '');
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    try {
+      var no = await C.docNumber('ncr');
+      await C.idms.saveDoc({ kind:'ncr', partId:partId, status:'Open', docNo:no,
+        data:{ partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
+               sourceId: src ? src.id : '', sourceLabel: src ? src.label : '',
+               kind: src ? src.kind : document.getElementById('nc-kind').value,
+               d1:'', d2:problem, d3:'', d4:'', d5:'', d6:'', d7:'', d8:'',
+               qty: C.num(g('nc-qty')) || (src ? src.qty : 0),
+               raisedBy:g('nc-by'), due:g('nc-due'), raisedOn:new Date().toISOString() } },
+        'non-conformance raised');
+      say('Raised as <b>'+esc(no)+'</b>. Work through the eight steps below — it cannot be closed ' +
+          'until D7 says what changed.', true);
+      document.getElementById('nc-problem').value = '';
+      document.getElementById('nc-qty').value = '';
+      await loadNcr();
+      var fresh = ncrs.filter(function(x){ return x.doc_no === no; })[0];
+      if (fresh) openNcr(fresh.doc_id);
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  function openNcr(id){
+    ncOpen = ncrs.filter(function(x){ return x.doc_id === id; })[0] || null;
+    if (!ncOpen) return;
+    var v = ncOpen.data||{};
+    document.getElementById('nc-title').textContent =
+      ncOpen.doc_no + ' — ' + (v.partNo || v.kind || '') + (v.partName ? ' ' + v.partName : '');
+    document.getElementById('nc-work').style.display = '';
+    drawNcr();
+  }
+
+  function drawNcr(){
+    if (!ncOpen) return;
+    var v = ncOpen.data||{}, closed = ncOpen.status === 'Closed';
+    var over = ncOverdue(ncOpen);
+    document.getElementById('nc-body').innerHTML =
+      (closed
+        ? '<div class="note good">Closed by <b>'+esc(v.closedBy||'')+'</b> on '+C.fmtDate(v.closedOn)+'.</div>'
+        : over
+          ? '<div class="note bad"><b>'+over+' day(s) past its target close date.</b> Either it is ' +
+            'being worked on or it is not; a date that slips silently is how these die.</div>'
+          : '') +
+      (v.sourceLabel ? '<div class="hint" style="margin-bottom:10px;">Raised against: ' +
+        esc(v.sourceLabel) + '</div>' : '') +
+      D_STEPS.map(function(s){
+        return '<div class="sub">' + s.n + ' · ' + esc(s.t) + '</div>' +
+          '<div class="hint" style="margin-bottom:4px;">' + esc(s.q) + '</div>' +
+          '<textarea class="nc-f" data-k="' + s.k + '" rows="2" ' +
+          (closed ? 'readonly ' : '') + 'style="width:100%;">' + esc(v[s.k]||'') + '</textarea>';
+      }).join('') +
+      (closed ? '' :
+        '<div class="row four" style="margin-top:12px;">' +
+        '<div><label>Target close date</label><input type="date" id="nc-due2" value="'+esc(v.due||'')+'"></div>' +
+        '<div><label>Closed by</label><input id="nc-closer" placeholder="who accepts it is fixed"></div>' +
+        '<div style="align-self:end;"><button class="btn gold" id="nc-save">Save progress</button></div>' +
+        '<div style="align-self:end;"><button class="btn green" id="nc-close">Close it</button>' +
+        '<button class="btn" id="nc-ai" style="margin-left:6px;">Draft with AI</button></div></div>');
+
+    if (closed) return;
+    document.getElementById('nc-save').addEventListener('click', function(){ saveNcr(false); });
+    document.getElementById('nc-close').addEventListener('click', function(){ saveNcr(true); });
+    document.getElementById('nc-ai').addEventListener('click', draftNcr);
+  }
+
+  function readNcFields(){
+    var out = {};
+    document.querySelectorAll('.nc-f').forEach(function(t){ out[t.dataset.k] = t.value.trim(); });
+    return out;
+  }
+
+  async function saveNcr(closing){
+    var msg = document.getElementById('nc-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    if (!ncOpen) return;
+    var f = readNcFields();
+    if (closing){
+      /* D7 is checked on its own and last, so it gets its own explanation rather
+         than being lost in a list of step names — it is the one that decides
+         whether anything was actually prevented */
+      var missing = [];
+      ['d1','d2','d3','d4','d5','d6'].forEach(function(k){
+        if (!f[k]) missing.push(D_STEPS.filter(function(s){ return s.k===k; })[0].n);
+      });
+      if (missing.length)
+        return say('<b>Cannot close.</b> Nothing recorded at ' + missing.join(', ') + '. ' +
+                   'A non-conformance closed with empty steps is a form, not a corrective action.');
+      if (!f.d7)
+        return say('<b>Cannot close.</b> D7 is empty. If nothing changed in the PFMEA, the control ' +
+                   'plan, the routing or the work instruction, nothing has been prevented and the ' +
+                   'same fault will come back.');
+      if (!document.getElementById('nc-closer').value.trim())
+        return say('Name who is accepting it as fixed.');
+    }
+    try {
+      await C.idms.saveDoc({ docId:ncOpen.doc_id, kind:'ncr', partId:ncOpen.part_id,
+        docNo:ncOpen.doc_no, status: closing ? 'Closed' : 'Open',
+        data: Object.assign({}, ncOpen.data, f, {
+          due: document.getElementById('nc-due2').value,
+          closedBy: closing ? document.getElementById('nc-closer').value.trim() : (ncOpen.data||{}).closedBy,
+          closedOn: closing ? new Date().toISOString().slice(0,10) : (ncOpen.data||{}).closedOn }) },
+        closing ? 'non-conformance closed' : 'non-conformance updated');
+      say(closing ? 'Closed.' : 'Saved.', true);
+      await loadNcr();
+      var again = ncrs.filter(function(x){ return x.doc_id === ncOpen.doc_id; })[0];
+      if (again) { ncOpen = again; drawNcr(); }
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  /* The AI drafts the analysis, not the conclusion. It is told to give root
+     causes as candidates for the team to argue with, because a root cause a
+     machine decided and nobody tested is how the same fault comes back. */
+  async function draftNcr(){
+    var msg = document.getElementById('nc-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    if (!ncOpen) return;
+    var v = ncOpen.data||{}, f = readNcFields();
+    if (!f.d2) return say('Write the problem at D2 first. There is nothing to reason from.');
+    var btn = document.getElementById('nc-ai');
+    btn.disabled = true; btn.textContent = 'Thinking';
+
+    var ctx = '';
+    try {
+      if (v.partId){
+        var ops = (await C.idms.docs('process', v.partId)).sort(function(a,b){
+          return C.num((a.data||{}).opNo) - C.num((b.data||{}).opNo); });
+        var dims = await C.idms.docs('dimension', v.partId);
+        ctx = '\nTHE PART: ' + (v.partNo||'') + ' ' + (v.partName||'') +
+          '\nTHE ROUTE:' + ops.map(function(o){
+            var d = o.data||{};
+            return '\n  Op ' + d.opNo + ' ' + (d.name||'') + ' on ' + (d.machine||'') +
+              (d.description ? ' — ' + d.description : ''); }).join('') +
+          '\nWHAT IS HELD:' + dims.slice(0,10).map(function(d){
+            var q = d.data||{};
+            return '\n  ' + (q.description||'') + ' ' + q.nominal + (q.unit||'') + ' ' +
+              (q.upper||'') + '/' + (q.lower||'') + (q.cls ? ' [' + q.cls + ']' : ''); }).join('');
+      }
+    } catch(e){}
+
+    try {
+      var txt = await C.callAI(
+'A non-conformance has been raised at a Tier-2 automotive machining company. Help the team draft ' +
+'the analysis. You are not deciding anything — a cross-functional team will argue with what you ' +
+'write and change it.\n\n' +
+'THE PROBLEM (D2): ' + f.d2 + '\n' +
+'KIND: ' + (v.kind||'') + '\nQUANTITY AFFECTED: ' + (v.qty||'not stated') +
+(v.sourceLabel ? '\nRAISED AGAINST: ' + v.sourceLabel : '') + ctx + '\n\n' +
+'Reply in exactly this shape, nothing else — no markdown:\n\n' +
+'D3: <what should be done with the suspect parts, including anything already made or despatched>\n' +
+'D4: <ask why five times, one line each, in the form "Why ... because ...". Cover both why it ' +
+'happened and why it was not caught. End with a cause somebody could actually change.>\n' +
+'D5: <the corrective action that follows from that cause>\n' +
+'D7: <what should change in the PFMEA, control plan, routing or work instruction so it cannot recur>\n\n' +
+'Rules:\n- Be specific to this process. "Operator error" and "lack of training" are not root causes; ' +
+'ask why they happened.\n- Do not invent operations, gauges or figures that are not above.\n' +
+'- If the problem as stated is too vague to analyse, say so in D4 and say what needs establishing first.',
+        { maxTokens: 1600 });
+      var get = function(k){
+        var m = String(txt).match(new RegExp('^\\s*' + k + '\\s*:\\s*([\\s\\S]*?)(?=^\\s*D\\d\\s*:|$)','mi'));
+        return m ? C.stripMarkup(m[1]).trim() : '';
+      };
+      var got = 0;
+      [['d3','D3'],['d4','D4'],['d5','D5'],['d7','D7']].forEach(function(pair){
+        var val = get(pair[1]);
+        if (!val) return;
+        var el = document.querySelector('.nc-f[data-k="'+pair[0]+'"]');
+        /* never overwrite something a person has already written */
+        if (el && !el.value.trim()){ el.value = val; got++; }
+      });
+      say(got
+        ? 'Drafted ' + got + ' step(s) — <b>read every line and change what is wrong.</b> Nothing ' +
+          'is saved until you press Save, and a root cause nobody has tested is not a root cause.'
+        : 'Nothing was filled in — the steps already have text, and the agent does not overwrite ' +
+          'what a person wrote.', true);
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Draft with AI';
+  }
+
+  function drawNcrList(){
+    var host = document.getElementById('nc-list');
+    var f = document.getElementById('nc-filter').value;
+    var rows = ncrs.filter(function(r){
+      if (f === 'open') return r.status !== 'Closed';
+      if (f === 'closed') return r.status === 'Closed';
+      return true;
+    }).sort(function(a,b){
+      var oa = ncOverdue(a) || 0, ob = ncOverdue(b) || 0;
+      if (oa !== ob) return ob - oa;
+      return String((b.data||{}).raisedOn||'').localeCompare(String((a.data||{}).raisedOn||''));
+    });
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>Nothing ' + (f === 'closed' ? 'closed' : 'open') +
+        '</b>' + (f === 'open' ? 'Every non-conformance raised has been closed out.' : '') + '</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Number</th><th>Kind</th><th>Part</th>' +
+      '<th>Problem</th><th class="r">Qty</th><th>Raised by</th><th>Target</th>' +
+      '<th class="c">Stage</th><th></th></tr></thead><tbody>' + rows.map(function(r){
+        var v = r.data||{}, st = ncStage(r), over = ncOverdue(r);
+        return '<tr><td><b>'+esc(r.doc_no||'')+'</b><div class="hint">'+
+            C.fmtDate(v.raisedOn)+'</div></td>' +
+          '<td class="hint">'+esc(v.kind||'')+'</td>' +
+          '<td>'+esc(v.partNo||'—')+'</td>' +
+          '<td>'+esc(String(v.d2||'').slice(0,70))+'</td>' +
+          '<td class="r">'+(C.num(v.qty)?C.qty(v.qty):'—')+'</td>' +
+          '<td class="hint">'+esc(v.raisedBy||'')+'</td>' +
+          '<td class="hint">'+C.fmtDate(v.due)+
+            (over?'<div class="hint" style="color:var(--bad)">'+over+' days over</div>':'')+'</td>' +
+          '<td class="c"><span class="badge '+st.cls+'">'+esc(st.label)+'</span></td>' +
+          '<td><button class="btn nc-open" data-id="'+esc(r.doc_id)+'">Open</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.nc-open').forEach(function(b){
+      b.addEventListener('click', function(){ openNcr(b.dataset.id); });
+    });
+  }
+
+  async function loadOpenActions(){
+    var host = document.getElementById('nco-body');
+    host.innerHTML = '<div class="hint">Reading</div>';
+    try { ncrs = await C.idms.docs('ncr'); } catch(e){ ncrs = []; }
+    var open = ncrs.filter(function(r){ return r.status !== 'Closed'; })
+      .sort(function(a,b){ return (ncOverdue(b)||0) - (ncOverdue(a)||0); });
+    if (!open.length){
+      host.innerHTML = '<div class="note good">Nothing is owed. Every non-conformance raised has ' +
+        'been worked through to a close.</div>';
+      return;
+    }
+    var late = open.filter(function(r){ return ncOverdue(r); }).length;
+    host.innerHTML =
+      '<div class="stat" style="margin-bottom:12px;">' +
+      [['Open', open.length], ['Past their date', late],
+       ['Never contained', open.filter(function(r){ return !String((r.data||{}).d3||'').trim(); }).length],
+       ['No root cause yet', open.filter(function(r){ return !String((r.data||{}).d4||'').trim(); }).length]]
+      .map(function(x){ return '<div class="b"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'; }).join('') +
+      '</div>' +
+      '<table class="t"><thead><tr><th>Number</th><th>Problem</th><th>Owner</th><th>Target</th>' +
+      '<th class="c">Stage</th><th>What is owed next</th><th></th></tr></thead><tbody>' +
+      open.map(function(r){
+        var v = r.data||{}, st = ncStage(r), over = ncOverdue(r);
+        var owed = !String(v.d3||'').trim() ? 'Contain the suspect parts (D3)'
+          : !String(v.d4||'').trim() ? 'Find the root cause (D4)'
+          : !String(v.d5||'').trim() ? 'Agree the action (D5)'
+          : !String(v.d6||'').trim() ? 'Do it and record it (D6)'
+          : !String(v.d7||'').trim() ? 'Change the PFMEA or control plan (D7)'
+          : 'Verify and close (D8)';
+        return '<tr><td><b>'+esc(r.doc_no||'')+'</b></td>' +
+          '<td>'+esc(String(v.d2||'').slice(0,60))+'</td>' +
+          '<td>'+esc(v.raisedBy||'—')+'</td>' +
+          '<td class="hint">'+C.fmtDate(v.due)+
+            (over?'<div class="hint" style="color:var(--bad)"><b>'+over+' days over</b></div>':'')+'</td>' +
+          '<td class="c"><span class="badge '+st.cls+'">'+esc(st.label)+'</span></td>' +
+          '<td class="hint">'+esc(owed)+'</td>' +
+          '<td><button class="btn nco-open" data-id="'+esc(r.doc_id)+'">Open</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.nco-open').forEach(function(b){
+      b.addEventListener('click', function(){ go('ncr'); setTimeout(function(){
+        loadNcr().then(function(){ openNcr(b.dataset.id); }); }, 200); });
+    });
+  }
+
+  function printNcrRegister(){
+    var f = document.getElementById('nc-filter').value;
+    var rows = ncrs.filter(function(r){
+      if (f === 'open') return r.status !== 'Closed';
+      if (f === 'closed') return r.status === 'Closed';
+      return true; });
+    if (!rows.length) { toast('Nothing to print.'); return; }
+    C.openReport({
+      title:'Non-conformance Register', kind:'Corrective action', landscape:true,
+      subtitle:rows.length + ' record(s)' + (f === 'open' ? ' still open' : ''),
+      sections:[
+        { type:'table', title:'Register', dense:true,
+          columns:[{label:'Number'},{label:'Raised'},{label:'Kind'},{label:'Part'},
+            {label:'Problem'},{label:'Qty',align:'r'},{label:'Raised by'},{label:'Target'},
+            {label:'Stage'},{label:'Closed by'}],
+          rows: rows.map(function(r){
+            var v = r.data||{}, over = ncOverdue(r);
+            return [esc(r.doc_no||''), C.fmtDate(v.raisedOn), esc(v.kind||''), esc(v.partNo||'—'),
+              esc(String(v.d2||'').slice(0,80)), C.num(v.qty)?C.qty(v.qty):'—',
+              esc(v.raisedBy||''), C.fmtDate(v.due),
+              over ? { v:'<b>'+over+' days over</b>', cls:'ab' } : ncStage(r).label,
+              esc(v.closedBy||'—')];
+          }),
+          note:'A record cannot be closed until D1 to D7 are filled in, because a corrective action ' +
+               'that changed no document has prevented nothing.' }
+      ]});
+  }
+
+  function printNcr(){
+    if (!ncOpen) return;
+    var v = ncOpen.data||{};
+    C.openReport({
+      title:'8D — ' + ncOpen.doc_no + (ncOpen.status === 'Closed' ? '' : ' (OPEN)'),
+      kind:'Corrective action',
+      subtitle:(v.partNo||'') + ' ' + (v.partName||'') + ' · ' + (v.kind||''),
+      sections:[
+        { type:'pairs', title:'Record', rows:[
+          ['Number', esc(ncOpen.doc_no||'')],
+          ['Raised by', esc(v.raisedBy||'')],
+          ['Raised on', C.fmtDate(v.raisedOn)],
+          ['Kind', esc(v.kind||'')],
+          ['Part', esc((v.partNo||'') + ' ' + (v.partName||''))],
+          ['Quantity affected', C.num(v.qty) ? C.qty(v.qty) : '—'],
+          ['Raised against', esc(v.sourceLabel||'—')],
+          ['Target close', C.fmtDate(v.due)],
+          ['Closed by', esc(v.closedBy||'NOT CLOSED')],
+          ['Closed on', v.closedOn ? C.fmtDate(v.closedOn) : '—']]},
+        { type:'table', title:'The eight disciplines',
+          columns:[{label:'Step'},{label:'What was recorded'}],
+          rows: D_STEPS.map(function(s){
+            return [s.n + ' ' + s.t, esc(v[s.k] || '—')]; }) },
+        { type:'text', title:'Signatures',
+          body:'Raised by                              Team leader                              Quality' }
+      ]});
   }
 
   /* ---------------- Works dashboard ----------------
@@ -4101,6 +4600,33 @@
               'optimistic. Correct the routing or find out why.', 'process_master', r.doc_no);
         }
       });
+      /* a rejection with no non-conformance behind it, and actions that have
+         stalled — the two halves of a corrective action system that is not working */
+      var ncs = await C.idms.docs('ncr');
+      looked.correctiveActions = ncs.length;
+      var answered = {};
+      ncs.forEach(function(r){ if ((r.data||{}).sourceId) answered[(r.data||{}).sourceId] = true; });
+      ncs.filter(function(r){ return r.status !== 'Closed'; }).forEach(function(r){
+        var v = r.data||{};
+        var over = v.due ? Math.ceil((Date.now() - new Date(v.due).getTime())/86400000) : 0;
+        if (over > 0)
+          add(over > 30 ? 'high' : 'med','Corrective action',
+            r.doc_no + ' is ' + over + ' day(s) past its target close date',
+            'An action that slips silently is how the same fault comes back. ' +
+            (String(v.d4||'').trim() ? '' : 'It has no root cause recorded yet.'),
+            'ncr', r.doc_no);
+        else if (!String(v.d3||'').trim())
+          add('high','Corrective action', r.doc_no + ' has no containment recorded',
+            'Nobody has said what happened to the suspect parts.', 'ncr', r.doc_no);
+      });
+      prods.filter(function(r){
+        return C.num((r.data||{}).rejected) >= 10 && !answered[r.doc_id]; }).forEach(function(r){
+        var v = r.data||{};
+        add('med','Corrective action', C.qty(v.rejected) + ' rejected on ' + (v.partNo||'') +
+          ' op ' + (v.opNo||'') + ' (' + C.fmtDate(v.date) + ') with no non-conformance raised',
+          'The parts were scrapped and nothing followed it to a cause.', 'ncr', r.doc_no);
+      });
+
       /* orders that will not be met, judged from what has actually been booked */
       var ords = await C.idms.docs('order');
       looked.orders = ords.length;
@@ -7676,6 +8202,20 @@
       go('home');
     });
     f.click();
+  });
+
+  document.getElementById('nc-raise').addEventListener('click', raiseNcr);
+  document.getElementById('nc-refresh').addEventListener('click', loadNcr);
+  document.getElementById('nc-filter').addEventListener('change', drawNcrList);
+  document.getElementById('nc-print').addEventListener('click', printNcrRegister);
+  document.getElementById('nc-source').addEventListener('change', function(){
+    var s = this.value === '' ? null : ncSources[+this.value];
+    if (!s) return;
+    if (!document.getElementById('nc-problem').value)
+      document.getElementById('nc-problem').value = s.problem;
+    if (!C.num(document.getElementById('nc-qty').value) && s.qty)
+      document.getElementById('nc-qty').value = s.qty;
+    if (s.partId) document.getElementById('nc-part').value = s.partId;
   });
 
   document.getElementById('db-run').addEventListener('click', runDashboard);

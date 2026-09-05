@@ -195,7 +195,7 @@ Parts (+ customer/price links), Process Master (routing), Dimensions Master,
 Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
 Self Inspection, Inward Inspection, Calibration, MSA, PDI, GRN, Delivery
 Challan, Production Entry, Sales Plan, Production Plan, Works Dashboard,
-Audit Readiness Agent,
+Non-conformance & 8D, Open Actions, Audit Readiness Agent,
 NPD Agent, Supplier Watch
 Agent, Review Agent Work, Agent Run Log, People (HR records), Company Profile.
 
@@ -235,7 +235,28 @@ can go and check is a figure nobody trusts. The *Morning briefing* button asks
 the AI for one paragraph for the plant manager; the numbers stand without it and
 the AI is never called by the dashboard itself.
 
-The **Audit Readiness Agent** reads production and orders too: runs booked
+**Non-conformance and 8D** is where a problem gets closed out — every other
+screen only finds them. An NC is **raised against the record it came from**
+(a production rejection, a lot on hold, a supplier rejection, a failed in-process
+check), so the fault and the action are one thread; a source already answered
+drops off the list.
+
+Two rules hold it together. **Closing is refused with any of D1–D6 empty**, and
+**D7 is checked separately with its own message**, because it is the one that
+decides whether anything was actually prevented: if nothing changed in the PFMEA,
+control plan, routing or work instruction, the same fault comes back. Do not
+merge D7 back into the general "missing steps" list — that was a real defect, the
+dedicated message was unreachable behind the broader check.
+
+**Draft with AI** fills D3, D4 (a five-why chain), D5 and D7 from the problem
+statement plus the part's actual route and characteristics. It is told it is not
+deciding anything, that "operator error" and "lack of training" are not root
+causes, and it **never overwrites a field a person has already written in**.
+
+The **Audit Readiness Agent** reads corrective actions too: overdue ones (high
+past 30 days), ones with no containment recorded, and **rejections of 10 or more
+with no non-conformance raised at all** — the parts were scrapped and nothing
+followed it to a cause. It also reads production and orders: runs booked
 without a setup, rejection rates at or above 5%, cycle drift over 20% (raised
 against the routing, not the run), series parts nothing has been booked against,
 orders past their date, orders due within a week with a balance, and orders for

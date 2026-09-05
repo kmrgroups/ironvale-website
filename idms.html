@@ -307,6 +307,27 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="agent_npd">
+      <div class="card">
+        <h4>NPD Agent</h4>
+        <div class="hint" style="margin-bottom:10px;">Takes a part from where it is to a full draft
+          set — routing, dimensions, flow, PFMEA, control plan — one step at a time. It stops at
+          anything it cannot do honestly and tells you why. <b>Everything it writes is a draft.</b>
+          It signs nothing and approves nothing; the AI's proposals are marked as such wherever they
+          appear, so nobody mistakes them for engineering that has been done.</div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>Part</label><select id="np-part"></select></div>
+          <div style="align-self:end;"><button class="btn" id="np-plan">Look at the part</button></div>
+          <div style="align-self:end;"><button class="btn gold" id="np-run" disabled>Run the plan</button></div>
+        </div>
+        <div class="note" id="np-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4 id="np-title">Plan</h4>
+        <div id="np-body"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="agent_audit">
       <div class="card">
         <h4>Audit Readiness Agent</h4>
@@ -1061,7 +1082,7 @@
       ['users','👥','User Management']]],
     ['agent','🤖','Agents','Autonomous checks and drafting',[
       ['agent_audit','🔎','Audit Readiness Agent',1],
-      ['agent_npd','🗂','NPD Agent'],
+      ['agent_npd','🗂','NPD Agent',1],
       ['agent_supplier','🏭','Supplier Watch Agent'],
       ['agent_runs','📜','Agent Run Log',1]]],
     ['dash','📊','Dashboard','Overview',[
@@ -1135,6 +1156,7 @@
     if (s === 'report_msa')     loadMsa();
     if (s === 'report_pdi')     loadPdi();
     if (s === 'agent_audit')    loadAgent();
+    if (s === 'agent_npd')      loadNpdAgent();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
   }
@@ -1400,7 +1422,8 @@
         var v = o.data || {};
         var dims = dimensions.filter(function(x){ return (x.data||{}).processId === o.doc_id; }).length;
         return '<tr><td class="c"><b>'+esc(v.opNo)+'</b></td>'+
-          '<td>'+esc(v.name||'—')+'<div class="hint">'+esc(v.description||'')+'</div></td>'+
+          '<td>'+esc(v.name||'—')+(v.aiProposed?' <span class="badge sample">AI proposed</span>':'')+
+            '<div class="hint">'+esc(v.description||'')+'</div></td>'+
           '<td>'+esc(v.machine||'—')+'</td>'+
           '<td class="r">'+(C.num(v.setupMin)?C.qty(v.setupMin)+' min':'—')+'</td>'+
           '<td class="r">'+(C.num(v.cycleSec)?C.qty(v.cycleSec)+' s':'—')+'</td>'+
@@ -1489,7 +1512,8 @@
               var cls = q.cls==='CC' ? '<span class="badge apqp">CC</span>'
                       : q.cls==='SC' ? '<span class="badge sample">SC</span>' : '';
               return '<tr><td class="c">'+esc(q.balloon||'—')+'</td>'+
-                '<td>'+esc(q.description||'—')+'</td>'+
+                '<td>'+esc(q.description||'—')+
+                  (q.aiProposed?' <span class="badge sample">AI proposed</span>':'')+'</td>'+
                 '<td class="r">'+C.qty(q.nominal)+' '+esc(q.unit||'')+'</td>'+
                 '<td class="c">'+(q.upper||q.lower
                     ? esc(q.upper||'0')+' / '+esc(q.lower||'0') : '—')+'</td>'+
@@ -1635,6 +1659,395 @@
       loadHome();
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Remove sample data';
+  }
+
+  /* The PFMEA prompt, lifted out so the screen and the NPD agent cannot drift
+     apart. Change it here and both change. */
+  function pfmeaPromptFor(p, ops){
+    var context = ops.map(function(o){
+      var v = o.data || {};
+      var dims = dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
+      return 'OPERATION ' + v.opNo + ': ' + (v.name||'') +
+        '\n  Machine: ' + (v.machine||'not stated') +
+        '\n  What happens: ' + (v.description||'not stated') +
+        '\n  Characteristics produced or checked here:' +
+        (dims.length ? dims.map(function(d){
+          var q = d.data || {};
+          return '\n    - ' + (q.description||'') + ' — nominal ' + q.nominal + (q.unit||'') +
+            ' tol ' + (q.upper||'0') + '/' + (q.lower||'0') +
+            (q.cls ? ' [' + q.cls + ' — ' + (q.cls==='CC'?'critical':'significant') + ']' : '') +
+            ', measured with ' + (q.gauge||'not stated') +
+            ', checked ' + (q.frequency||'frequency not stated');
+        }).join('') : '\n    (none recorded)');
+    }).join('\n\n');
+
+    var prompt =
+'You are helping a Tier-2 automotive machining company draft a Process FMEA to AIAG-VDA practice.\n\n' +
+'PART: ' + (p.part_no||'') + ' — ' + (p.part_name||'') +
+  ((p.data||{}).rawMaterial ? '\nRAW MATERIAL: ' + (p.data||{}).rawMaterial : '') + '\n\n' +
+'THE PROCESS AS IT IS ACTUALLY RECORDED:\n' + context + '\n\n' +
+'Produce PFMEA lines. Reply in EXACTLY this shape, one block per line, nothing else — ' +
+'no JSON, no markdown, no asterisks:\n\n' +
+'LINE\nOP: <operation number, must be one of the numbers above>\n' +
+'CHAR: <the characteristic this line concerns, copied from above, or "process" if it concerns the step itself>\n' +
+'REQUIREMENT: <what the step must achieve>\n' +
+'MODE: <how it can fail — a physical failure of the characteristic, not a cause>\n' +
+'EFFECT: <consequence, stated for the end customer where it reaches them>\n' +
+'SEV: <1-10>\nCAUSE: <a cause on the shop floor, specific to the machine or method above>\n' +
+'OCC: <1-10>\nPREVENTION: <control that stops the cause happening>\n' +
+'DETECTION: <control that catches it if it happens — name the gauge above where there is one>\n' +
+'DET: <1-10>\nACTION: <recommended action if RPN is high, otherwise leave blank>\nEND\n\n' +
+'Rules you must follow:\n' +
+'- Use only the operations and characteristics listed above. Never invent a step, a gauge or a ' +
+'feature that is not there.\n' +
+'- Give every characteristic marked CC or SC at least one line, and rate severity for those no ' +
+'lower than 8 for CC and 5 for SC.\n' +
+'- Where an operation records no characteristics, still give at least one line for the process ' +
+'itself (handling, setup, tooling).\n' +
+'- Severity is the effect only. Occurrence is how often the cause arises. Detection is how likely ' +
+'the control is to catch it before despatch — a high number means poor detection.\n' +
+'- Be concrete. "Operator error" is not a cause; "programme edited at the machine without a setup ' +
+'approval" is.\n' +
+'- 2 to 4 lines per operation. Do not pad.';
+
+    return prompt;
+  }
+
+  /* The control plan prompt, shared the same way. The stage is passed in rather
+     than read from the screen, so an agent can call it with no screen open. */
+  function cpPromptFor(p, ops, frows, stage){
+    var opText = ops.map(function(o){
+      var v = o.data || {};
+      var dims = dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
+      return 'OPERATION ' + v.opNo + ': ' + (v.name||'') + ' on ' + (v.machine||'machine not stated') +
+        (C.num(v.cycleSec) ? ' (cycle ' + v.cycleSec + 's)' : '') +
+        '\n  ' + (v.description||'') +
+        dims.map(function(d){ var q=d.data||{};
+          return '\n  CHARACTERISTIC: ' + (q.description||'') + ' = ' + q.nominal + (q.unit||'') +
+            ' ' + (q.upper||'0') + '/' + (q.lower||'0') +
+            (q.cls ? ' [' + q.cls + ']' : '') + ', gauge ' + (q.gauge||'not stated') +
+            ', frequency ' + (q.frequency||'not stated'); }).join('');
+    }).join('\n\n');
+
+    var fmeaText = frows.map(function(r){
+      return 'Op ' + r.opNo + ' — ' + r.failureMode + ' (cause: ' + r.cause +
+        '; S' + r.sev + ' O' + r.occ + ' D' + r.det + ' RPN ' + (r.sev*r.occ*r.det) + ')';
+    }).join('\n');
+
+    var prompt =
+'You are drafting a Control Plan to AIAG practice for a Tier-2 automotive machining company.\n\n' +
+'PART: ' + (p.part_no||'') + ' — ' + (p.part_name||'') +
+  ((p.data||{}).rawMaterial ? '\nRAW MATERIAL: ' + (p.data||{}).rawMaterial : '') +
+  '\nSTAGE: ' + stage + '\n\n' +
+'THE PROCESS AS RECORDED:\n' + opText + '\n\n' +
+'THE FAILURE MODES ALREADY RANKED IN THE PFMEA:\n' + fmeaText + '\n\n' +
+'Give one CONTROL block per characteristic, and one PARAM block per operation. ' +
+'Reply in exactly this shape and nothing else — no JSON, no markdown, no asterisks:\n\n' +
+'CONTROL\nOP: <operation number from above>\nCHAR: <the characteristic, copied from above, ' +
+'or a process characteristic such as "programme loaded">\n' +
+'SPEC: <the specification and tolerance>\nTECHNIQUE: <how it is measured — name the gauge above ' +
+'where one is recorded>\nSIZE: <sample size, a number or 100%>\nFREQ: <how often>\n' +
+'METHOD: <control method — check sheet, SPC chart, first-off approval, automatic gauging>\n' +
+'REACTION: <what the operator does when it is out — must be a specific instruction, including ' +
+'what happens to the parts already made since the last good check>\n' +
+'POKA: <yes or no — is there a mistake-proofing device>\nEND\n\n' +
+'PARAM\nOP: <operation number>\nTOOL: <insert or tool specification>\nLIFE: <tool life in pieces>\n' +
+'SPEED: <spindle speed or surface speed with units>\nFEED: <feed with units>\n' +
+'DOC: <depth of cut with units>\nCLAMP: <clamping pressure with units>\n' +
+'COOLANT: <coolant specification>\nCONC: <coolant concentration, e.g. 6-8%>\nEND\n\n' +
+'Rules you must follow:\n' +
+'- Use only the operations and characteristics listed. Never invent one.\n' +
+'- Every CC characteristic must be controlled at 100% or with an automatic device, and must have ' +
+'a poka-yoke answer of yes or a reaction plan that contains 100% containment.\n' +
+'- Every failure mode with RPN 100 or above must be answered by at least one control.\n' +
+'- Reaction plans must say what happens to suspect parts already produced, not just "inform ' +
+'supervisor".\n' +
+'- Give realistic machining parameters for the material and operation. If an operation is manual ' +
+'or inspection only, give a PARAM block with TOOL: not applicable.';
+
+    return prompt;
+  }
+
+  /* ---------------- NPD Agent ----------------
+     The chain a person would otherwise click through five screens to do. It
+     writes drafts only, in the order the documents depend on each other, and
+     refuses to skip a step by inventing what the step before should have said.
+     Anything it proposes is stamped aiProposed so it can be told apart from
+     engineering somebody actually did. */
+  var npdPlan = [], npdPart = null;
+
+  async function loadNpdAgent(){
+    await fetchParts();
+    document.getElementById('np-part').innerHTML =
+      partOptions(document.getElementById('np-part').value);
+    document.getElementById('np-body').innerHTML =
+      '<div class="empty"><b>Nothing looked at yet</b>Choose a part and press ' +
+      '<b>Look at the part</b>. Nothing is written until you press Run.</div>';
+    document.getElementById('np-run').disabled = true;
+  }
+
+  var NPD_STATE = {
+    have:{ label:'Already there', cls:'series' },
+    propose:{ label:'Agent will propose', cls:'sample' },
+    draft:{ label:'Agent will draft', cls:'apqp' },
+    derived:{ label:'Derived, nothing to write', cls:'new' },
+    blocked:{ label:'Blocked', cls:'ab' },
+    done:{ label:'Done', cls:'series' },
+    failed:{ label:'Stopped', cls:'ab' },
+    running:{ label:'Working', cls:'sample' }
+  };
+
+  async function planNpd(){
+    var msg = document.getElementById('np-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var partId = document.getElementById('np-part').value;
+    if (!partId) return say('Choose the part.');
+    npdPart = allParts.filter(function(x){ return x.part_id === partId; })[0];
+    document.getElementById('np-title').textContent =
+      'Plan for ' + npdPart.part_no + ' - ' + (npdPart.part_name||'');
+
+    var ops, dims, fm, cp;
+    try {
+      ops  = await C.idms.docs('process', partId);
+      dims = await C.idms.docs('dimension', partId);
+      fm   = (await C.idms.docs('pfmea', partId))[0];
+      cp   = (await C.idms.docs('control_plan', partId))[0];
+    } catch(e){ return say('Could not read the part: ' + esc(e.message)); }
+
+    npdPlan = [];
+    var add = function(key, title, state, note){
+      npdPlan.push({ key:key, title:title, state:state, note:note, log:'' });
+    };
+
+    /* Each step is judged against the state the part will be in when the agent
+       reaches it, not the state it is in now. Judging on the state now marks
+       everything below a missing routing as blocked, and the run then skips the
+       very steps it was about to make possible. */
+    var willHaveOps = ops.length > 0 || true;   // the routing step either exists or is proposed
+
+    add('routing', 'Routing - the operations this part goes through',
+      ops.length ? 'have' : 'propose',
+      ops.length ? ops.length + ' operation(s) already recorded - left alone.'
+        : 'None recorded. The agent will propose a route from the part name and material, marked as its own suggestion for an engineer to correct.');
+
+    var opsWithout = ops.filter(function(o){
+      return !dims.filter(function(d){ return (d.data||{}).processId === o.doc_id; }).length; });
+    add('dimensions', 'Dimensions - what each operation must hold',
+      (!ops.length || opsWithout.length) ? 'propose' : 'have',
+      !ops.length
+        ? 'Every operation the agent proposes will need characteristics; it will propose those too, marked as suggestions.'
+        : opsWithout.length
+          ? opsWithout.length + ' operation(s) have none. The agent will propose characteristics for those, marked as suggestions. It will not touch operations that already have them.'
+          : 'Every operation has characteristics - left alone.');
+
+    add('pfd', 'Process flow diagram', 'derived',
+      ops.length ? 'Drawn from the routing. Nothing to write.'
+                 : 'Will be drawn from the routing once it exists. Nothing to write.');
+
+    add('pfmea', 'PFMEA',
+      fm ? 'have' : 'draft',
+      fm ? 'Already drafted (' + fm.doc_no + (((fm.data||{}).reviewedBy) ? ', signed' : ', unsigned') + ') - the agent will not overwrite it.'
+         : 'Will be drafted from the routing and dimensions. Unsigned.');
+
+    add('cp', 'Control plan',
+      cp ? 'have' : 'draft',
+      cp ? 'Already drafted (' + cp.doc_no + ') - the agent will not overwrite it.'
+         : 'Will be drafted from the PFMEA. Unapproved.');
+
+    drawNpdPlan();
+    var todo = npdPlan.filter(function(x){ return x.state==='propose' || x.state==='draft'; }).length;
+    document.getElementById('np-run').disabled = !todo;
+    say(todo ? todo + ' step(s) to do. Nothing is written until you press <b>Run the plan</b>.'
+             : 'Nothing to do - this part already has everything the agent would produce.', !todo);
+  }
+
+  function drawNpdPlan(){
+    var host = document.getElementById('np-body');
+    if (!npdPlan.length){ host.innerHTML = ''; return; }
+    host.innerHTML = '<table class="t"><thead><tr><th class="c">Step</th><th>What</th>' +
+      '<th class="c">Status</th><th>Notes</th></tr></thead><tbody>' +
+      npdPlan.map(function(x, i){
+        var st = NPD_STATE[x.state] || NPD_STATE.have;
+        return '<tr><td class="c">'+(i+1)+'</td><td>'+esc(x.title)+'</td>' +
+          '<td class="c"><span class="badge '+st.cls+'">'+esc(st.label)+'</span></td>' +
+          '<td class="hint">'+esc(x.log || x.note)+'</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  async function runNpd(){
+    var msg = document.getElementById('np-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    if (!npdPart) return;
+    var btn = document.getElementById('np-run');
+    btn.disabled = true; btn.textContent = 'Running';
+    var partId = npdPart.part_id, written = [], stopped = null;
+
+    var step = function(key){ return npdPlan.filter(function(x){ return x.key===key; })[0]; };
+    var mark = function(key, state, log){
+      var st = step(key); if (!st) return;
+      st.state = state; st.log = log || st.log; drawNpdPlan();
+    };
+
+    try {
+      if (step('routing').state === 'propose'){
+        mark('routing','running','Asking for a route');
+        var made = await agentProposeRouting(npdPart);
+        written.push(made + ' operation(s)');
+        mark('routing','done', made + ' operation(s) proposed and saved as suggestions.');
+      }
+      var ops = await C.idms.docs('process', partId);
+      if (!ops.length) throw new Error('There is still no routing, so nothing below it can be built.');
+
+      var dims = await C.idms.docs('dimension', partId);
+      var bare = ops.filter(function(o){
+        return !dims.filter(function(d){ return (d.data||{}).processId === o.doc_id; }).length; });
+      if (bare.length){
+        mark('dimensions','running','Proposing characteristics for ' + bare.length + ' operation(s)');
+        var n = 0;
+        for (var i = 0; i < bare.length; i++) n += await agentProposeDimensions(npdPart, bare[i]);
+        written.push(n + ' characteristic(s)');
+        mark('dimensions','done', n + ' characteristic(s) proposed across ' + bare.length +
+          ' operation(s), marked as suggestions.');
+      }
+      dims = await C.idms.docs('dimension', partId);
+      if (!dims.length) throw new Error('No characteristics could be established, so a PFMEA would have nothing to reason about.');
+
+      mark('pfd','done','Drawn from the routing.');
+
+      if (step('pfmea').state === 'draft'){
+        mark('pfmea','running','Drafting');
+        processes = ops; dimensions = dims;
+        var txt = await C.callAI(pfmeaPromptFor(npdPart, ops), { maxTokens: 3000 });
+        var rows = parseFmeaReply(txt, ops);
+        if (!rows.length) throw new Error('The PFMEA reply could not be read as lines.');
+        await C.idms.saveDoc({ kind:'pfmea', partId:partId, status:'Draft',
+          docNo: await C.docNumber('pfmea'),
+          data:{ partId:partId, rows:rows, generatedOn:new Date().toISOString().slice(0,10),
+                 reviewedBy:'', reviewedOn:'', rev:'00', byAgent:true } },
+          'PFMEA drafted by the NPD agent');
+        written.push(rows.length + ' PFMEA line(s)');
+        mark('pfmea','done', rows.length + ' line(s) drafted. Unsigned - a CFT must work through them.');
+      }
+
+      if (step('cp').state === 'draft'){
+        mark('cp','running','Drafting from the PFMEA');
+        var fm = (await C.idms.docs('pfmea', partId))[0];
+        var frows = (fm && (fm.data||{}).rows) || [];
+        if (!frows.length) throw new Error('There is no PFMEA to write the control plan from.');
+        var txt2 = await C.callAI(cpPromptFor(npdPart, ops, frows, 'Production'), { maxTokens: 3500 });
+        var parsed = parseCpReply(txt2, ops);
+        if (!parsed.rows.length) throw new Error('The control plan reply could not be read as lines.');
+        await C.idms.saveDoc({ kind:'control_plan', partId:partId, status:'Draft',
+          docNo: await C.docNumber('cp'),
+          data:{ partId:partId, rows:parsed.rows, params:parsed.params, stage:'Production',
+                 fmeaRef:(fm||{}).doc_no||'', fmeaApproved:!!((fm||{}).data||{}).reviewedBy,
+                 generatedOn:new Date().toISOString().slice(0,10),
+                 approvedBy:'', approvedOn:'', rev:'00', byAgent:true } },
+          'control plan drafted by the NPD agent');
+        written.push(parsed.rows.length + ' control(s)');
+        mark('cp','done', parsed.rows.length + ' control(s) and parameters for ' +
+          parsed.params.length + ' operation(s). Unapproved.');
+      }
+    } catch(e){
+      stopped = e.message;
+      npdPlan.forEach(function(x){
+        if (x.state === 'running'){ x.state = 'failed'; x.log = e.message; }
+        else if (x.state === 'draft' || x.state === 'propose'){
+          x.state = 'blocked'; x.log = 'Not attempted - the agent stopped before this.';
+        }
+      });
+      drawNpdPlan();
+    }
+
+    try {
+      await C.idms.saveDoc({ kind:'agent_run', partId:partId,
+        status: stopped ? 'Stopped' : 'Completed',
+        docNo: await C.docNumber('agent'),
+        data:{ agent:'NPD', at:new Date().toISOString(), part:npdPart.part_no,
+               steps:npdPlan.map(function(x){ return { step:x.title, state:x.state, log:x.log }; }),
+               written:written, stopped:stopped || '' } }, 'NPD agent run');
+    } catch(e){}
+
+    say(stopped
+      ? '<b>Stopped.</b> ' + esc(stopped) + ' Nothing after that step was attempted, and what was written before it is still there as a draft.'
+      : '<b>Done.</b> Written: ' + written.join(', ') + '. Every one of them is a draft - read them, change what is wrong, and sign them yourself. The agent has signed nothing.',
+      !stopped);
+    btn.disabled = false; btn.textContent = 'Run the plan';
+    document.getElementById('np-run').disabled = true;
+  }
+
+  async function agentProposeRouting(p){
+    var d = p.data || {};
+    var txt = await C.callAI(
+'Propose a machining route for this part at a Tier-2 automotive supplier.\n\n' +
+'PART: ' + (p.part_no||'') + ' - ' + (p.part_name||'') +
+(d.rawMaterial ? '\nRAW MATERIAL: ' + d.rawMaterial : '') +
+(d.netWeight ? '\nNET WEIGHT: ' + d.netWeight + ' kg' : '') +
+(d.drawingNo ? '\nDRAWING: ' + d.drawingNo + (d.drawingRev ? ' rev ' + d.drawingRev : '') : '') +
+'\n\nReply in exactly this shape, one block per operation, nothing else:\n\n' +
+'OP\nNO: <10, 20, 30>\nNAME: <short operation name>\n' +
+'MACHINE: <machine or work centre type>\nCYCLE: <cycle time in seconds, your estimate>\n' +
+'SETUP: <setup time in minutes, your estimate>\nWHAT: <what happens at this step>\nEND\n\n' +
+'Rules:\n- Number in tens.\n- Include a final inspection step.\n' +
+'- Six operations at most. If the part name does not tell you enough to be specific, say so in WHAT rather than inventing detail.\n' +
+'- Times are estimates and will be corrected by an engineer.',
+      { maxTokens: 1500 });
+    var made = 0;
+    var blocks = String(txt||'').split(/^\s*OP\s*$/mi);
+    for (var i = 0; i < blocks.length; i++){
+      var b = blocks[i];
+      var g = function(k){ var m = b.match(new RegExp('^\\s*'+k+'\\s*:\\s*(.+)$','mi'));
+                           return m ? C.stripMarkup(m[1]).trim() : ''; };
+      var no = C.num(g('NO'));
+      if (!no || !g('NAME')) continue;
+      await C.idms.saveDoc({ kind:'process', partId:p.part_id, status:'Active', docNo:String(no),
+        data:{ partId:p.part_id, opNo:no, name:g('NAME'), machine:g('MACHINE'),
+               cycleSec:C.num(g('CYCLE')), setupMin:C.num(g('SETUP')), where:'in',
+               description:g('WHAT'), aiProposed:true } },
+        'operation proposed by the NPD agent');
+      made++;
+    }
+    if (!made) throw new Error('No route could be read from the reply.');
+    return made;
+  }
+
+  async function agentProposeDimensions(p, op){
+    var v = op.data || {};
+    var txt = await C.callAI(
+'Propose the characteristics that must be held at one machining operation.\n\n' +
+'PART: ' + (p.part_no||'') + ' - ' + (p.part_name||'') +
+((p.data||{}).rawMaterial ? '\nRAW MATERIAL: ' + (p.data||{}).rawMaterial : '') + '\n' +
+'OPERATION ' + v.opNo + ': ' + (v.name||'') + ' on ' + (v.machine||'a machine') + '\n' +
+'WHAT HAPPENS: ' + (v.description||'not stated') + '\n\n' +
+'Reply in exactly this shape, one block per characteristic, nothing else:\n\n' +
+'DIM\nNO: <balloon number>\nWHAT: <the characteristic>\nNOMINAL: <a number>\n' +
+'UPPER: <+0.05>\nLOWER: <-0.05>\nUNIT: <mm, deg, Ra>\n' +
+'GAUGE: <how it would be measured>\nFREQ: <how often it would be checked>\n' +
+'CLASS: <blank, SC or CC>\nEND\n\n' +
+'Rules:\n- Four characteristics at most, the ones that matter at this step.\n' +
+'- These are proposals for an engineer to check against the drawing. Give ordinary values for the kind of feature, and do not pretend to know the drawing.\n' +
+'- Mark a characteristic CC only where failure would reach the end user.',
+      { maxTokens: 1500 });
+    var made = 0;
+    var blocks = String(txt||'').split(/^\s*DIM\s*$/mi);
+    for (var i = 0; i < blocks.length; i++){
+      var b = blocks[i];
+      var g = function(k){ var m = b.match(new RegExp('^\\s*'+k+'\\s*:\\s*(.+)$','mi'));
+                           return m ? C.stripMarkup(m[1]).trim() : ''; };
+      if (!g('WHAT') || g('NOMINAL') === '') continue;
+      var cls = g('CLASS').toUpperCase().replace(/[^SC]/g,'');
+      cls = (cls === 'CC' || cls === 'SC') ? cls : '';
+      await C.idms.saveDoc({ kind:'dimension', partId:p.part_id, status:'Active', docNo:g('NO'),
+        data:{ partId:p.part_id, processId:op.doc_id, opNo:v.opNo, balloon:g('NO'),
+               description:g('WHAT'), nominal:C.num(g('NOMINAL')),
+               upper:g('UPPER'), lower:g('LOWER'), unit:g('UNIT')||'mm',
+               gauge:g('GAUGE'), frequency:g('FREQ'), cls:cls, aiProposed:true } },
+        'characteristic proposed by the NPD agent');
+      made++;
+    }
+    return made;
   }
 
   /* ---------------- Agents ----------------
@@ -4381,55 +4794,7 @@
     btn.disabled = true; btn.textContent = 'Drafting…';
     say('Building controls for ' + frows.length + ' failure mode(s).', true);
 
-    var opText = ops.map(function(o){
-      var v = o.data || {};
-      var dims = dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
-      return 'OPERATION ' + v.opNo + ': ' + (v.name||'') + ' on ' + (v.machine||'machine not stated') +
-        (C.num(v.cycleSec) ? ' (cycle ' + v.cycleSec + 's)' : '') +
-        '\n  ' + (v.description||'') +
-        dims.map(function(d){ var q=d.data||{};
-          return '\n  CHARACTERISTIC: ' + (q.description||'') + ' = ' + q.nominal + (q.unit||'') +
-            ' ' + (q.upper||'0') + '/' + (q.lower||'0') +
-            (q.cls ? ' [' + q.cls + ']' : '') + ', gauge ' + (q.gauge||'not stated') +
-            ', frequency ' + (q.frequency||'not stated'); }).join('');
-    }).join('\n\n');
-
-    var fmeaText = frows.map(function(r){
-      return 'Op ' + r.opNo + ' — ' + r.failureMode + ' (cause: ' + r.cause +
-        '; S' + r.sev + ' O' + r.occ + ' D' + r.det + ' RPN ' + (r.sev*r.occ*r.det) + ')';
-    }).join('\n');
-
-    var prompt =
-'You are drafting a Control Plan to AIAG practice for a Tier-2 automotive machining company.\n\n' +
-'PART: ' + (p.part_no||'') + ' — ' + (p.part_name||'') +
-  ((p.data||{}).rawMaterial ? '\nRAW MATERIAL: ' + (p.data||{}).rawMaterial : '') +
-  '\nSTAGE: ' + document.getElementById('cp-stage').value + '\n\n' +
-'THE PROCESS AS RECORDED:\n' + opText + '\n\n' +
-'THE FAILURE MODES ALREADY RANKED IN THE PFMEA:\n' + fmeaText + '\n\n' +
-'Give one CONTROL block per characteristic, and one PARAM block per operation. ' +
-'Reply in exactly this shape and nothing else — no JSON, no markdown, no asterisks:\n\n' +
-'CONTROL\nOP: <operation number from above>\nCHAR: <the characteristic, copied from above, ' +
-'or a process characteristic such as "programme loaded">\n' +
-'SPEC: <the specification and tolerance>\nTECHNIQUE: <how it is measured — name the gauge above ' +
-'where one is recorded>\nSIZE: <sample size, a number or 100%>\nFREQ: <how often>\n' +
-'METHOD: <control method — check sheet, SPC chart, first-off approval, automatic gauging>\n' +
-'REACTION: <what the operator does when it is out — must be a specific instruction, including ' +
-'what happens to the parts already made since the last good check>\n' +
-'POKA: <yes or no — is there a mistake-proofing device>\nEND\n\n' +
-'PARAM\nOP: <operation number>\nTOOL: <insert or tool specification>\nLIFE: <tool life in pieces>\n' +
-'SPEED: <spindle speed or surface speed with units>\nFEED: <feed with units>\n' +
-'DOC: <depth of cut with units>\nCLAMP: <clamping pressure with units>\n' +
-'COOLANT: <coolant specification>\nCONC: <coolant concentration, e.g. 6-8%>\nEND\n\n' +
-'Rules you must follow:\n' +
-'- Use only the operations and characteristics listed. Never invent one.\n' +
-'- Every CC characteristic must be controlled at 100% or with an automatic device, and must have ' +
-'a poka-yoke answer of yes or a reaction plan that contains 100% containment.\n' +
-'- Every failure mode with RPN 100 or above must be answered by at least one control.\n' +
-'- Reaction plans must say what happens to suspect parts already produced, not just "inform ' +
-'supervisor".\n' +
-'- Give realistic machining parameters for the material and operation. If an operation is manual ' +
-'or inspection only, give a PARAM block with TOOL: not applicable.';
-
+    var prompt = cpPromptFor(p, ops, frows, document.getElementById('cp-stage').value);
     try {
       var txt = await C.callAI(prompt, { maxTokens: 3500 });
       var parsed = parseCpReply(txt, ops);
@@ -4693,52 +5058,7 @@
     /* The model is given only what is on file. It is told not to invent
        operations or characteristics, because a PFMEA line that refers to a step
        which does not exist is worse than a missing line — it looks like control. */
-    var context = ops.map(function(o){
-      var v = o.data || {};
-      var dims = dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
-      return 'OPERATION ' + v.opNo + ': ' + (v.name||'') +
-        '\n  Machine: ' + (v.machine||'not stated') +
-        '\n  What happens: ' + (v.description||'not stated') +
-        '\n  Characteristics produced or checked here:' +
-        (dims.length ? dims.map(function(d){
-          var q = d.data || {};
-          return '\n    - ' + (q.description||'') + ' — nominal ' + q.nominal + (q.unit||'') +
-            ' tol ' + (q.upper||'0') + '/' + (q.lower||'0') +
-            (q.cls ? ' [' + q.cls + ' — ' + (q.cls==='CC'?'critical':'significant') + ']' : '') +
-            ', measured with ' + (q.gauge||'not stated') +
-            ', checked ' + (q.frequency||'frequency not stated');
-        }).join('') : '\n    (none recorded)');
-    }).join('\n\n');
-
-    var prompt =
-'You are helping a Tier-2 automotive machining company draft a Process FMEA to AIAG-VDA practice.\n\n' +
-'PART: ' + (p.part_no||'') + ' — ' + (p.part_name||'') +
-  ((p.data||{}).rawMaterial ? '\nRAW MATERIAL: ' + (p.data||{}).rawMaterial : '') + '\n\n' +
-'THE PROCESS AS IT IS ACTUALLY RECORDED:\n' + context + '\n\n' +
-'Produce PFMEA lines. Reply in EXACTLY this shape, one block per line, nothing else — ' +
-'no JSON, no markdown, no asterisks:\n\n' +
-'LINE\nOP: <operation number, must be one of the numbers above>\n' +
-'CHAR: <the characteristic this line concerns, copied from above, or "process" if it concerns the step itself>\n' +
-'REQUIREMENT: <what the step must achieve>\n' +
-'MODE: <how it can fail — a physical failure of the characteristic, not a cause>\n' +
-'EFFECT: <consequence, stated for the end customer where it reaches them>\n' +
-'SEV: <1-10>\nCAUSE: <a cause on the shop floor, specific to the machine or method above>\n' +
-'OCC: <1-10>\nPREVENTION: <control that stops the cause happening>\n' +
-'DETECTION: <control that catches it if it happens — name the gauge above where there is one>\n' +
-'DET: <1-10>\nACTION: <recommended action if RPN is high, otherwise leave blank>\nEND\n\n' +
-'Rules you must follow:\n' +
-'- Use only the operations and characteristics listed above. Never invent a step, a gauge or a ' +
-'feature that is not there.\n' +
-'- Give every characteristic marked CC or SC at least one line, and rate severity for those no ' +
-'lower than 8 for CC and 5 for SC.\n' +
-'- Where an operation records no characteristics, still give at least one line for the process ' +
-'itself (handling, setup, tooling).\n' +
-'- Severity is the effect only. Occurrence is how often the cause arises. Detection is how likely ' +
-'the control is to catch it before despatch — a high number means poor detection.\n' +
-'- Be concrete. "Operator error" is not a cause; "programme edited at the machine without a setup ' +
-'approval" is.\n' +
-'- 2 to 4 lines per operation. Do not pad.';
-
+    var prompt = pfmeaPromptFor(p, ops);
     try {
       var txt = await C.callAI(prompt, { maxTokens: 3000 });
       var rows = parseFmeaReply(txt, ops);
@@ -5452,6 +5772,9 @@
     });
     f.click();
   });
+
+  document.getElementById('np-plan').addEventListener('click', planNpd);
+  document.getElementById('np-run').addEventListener('click', runNpd);
 
   document.getElementById('ag-run').addEventListener('click', runAuditAgent);
   document.getElementById('ag-explain').addEventListener('click', explainAgent);

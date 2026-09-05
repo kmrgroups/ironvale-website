@@ -49,9 +49,24 @@ check into the prompt to "make it smarter".
 Every run writes an `agent_run` record with what it read and what it found. An
 agent whose work cannot be audited has no place in a quality system.
 
-Planned next: **NPD Agent** (chain routing → dimensions → PFD → PFMEA → control
-plan for one part, pausing at each step, writing only drafts) and **Supplier
-Watch Agent** (rejection rates, repeat non-conformances, overdue inspections).
+**NPD Agent** chains routing → dimensions → PFD → PFMEA → control plan for one
+part. It shows a plan first and writes nothing until Run is pressed; it never
+overwrites work that already exists; everything it creates is stamped
+`aiProposed` (routing, dimensions) or `byAgent` (PFMEA, control plan) and shows
+as **AI proposed** on the screens that display it. A failure stops the chain,
+marks later steps "not attempted", and leaves earlier drafts in place.
+
+The PFMEA and control plan prompts live in `pfmeaPromptFor()` and `cpPromptFor()`
+so the screens and the agent cannot drift apart — change the prompt in one place
+and both change.
+
+**Plan against the end state, not the current one.** A bug caught in testing:
+the plan judged PFMEA and control plan against the part as it was, so with no
+routing they were marked blocked and the run skipped the very steps the routing
+step was about to make possible.
+
+Planned: **Supplier Watch Agent** (rejection rates, repeat non-conformances,
+overdue inspections).
 
 ## Hard rules
 
@@ -147,8 +162,8 @@ idempotent — once sent, the button is replaced by a confirmation.
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
 Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
 Self Inspection, Inward Inspection, Calibration, MSA, PDI, GRN, Delivery
-Challan, Audit Readiness Agent, Agent Run Log, People (HR records), Company
-Profile.
+Challan, Audit Readiness Agent, NPD Agent, Agent Run Log, People (HR records),
+Company Profile.
 
 **Setup approval** is the first shop-floor screen and the pattern for the rest:
 what gets checked comes from the **control plan** for that operation (falling
@@ -333,6 +348,11 @@ If you formalise this, keep two habits that mattered:
    `docId` and inserted instead of updating, which hid the PDI drawdown entirely
    — the test passed on a duplicate row. If the real endpoint updates in place,
    the stub must too.
+0.5 **Patches must be all-or-nothing.** `patchlib.py` validates every anchor
+   before writing any of them. Three separate times a patch script aborted half
+   way and wrote nothing, leaving a block I believed was applied silently
+   missing — the panel markup for Customers, for PFD, and the whole NPD agent
+   module. Validate first, then write.
 1. **When a test fails, find out why before changing the assertion.** Several
    "failures" were the harness lying — stubbing `HTMLAnchorElement.prototype.click`
    disabled every menu link; jsdom never firing `Image.onload` meant favicon code

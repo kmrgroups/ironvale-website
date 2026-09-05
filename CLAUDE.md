@@ -12,8 +12,10 @@ database:
 
 | File | What it is | Who uses it |
 |---|---|---|
-| `index.html` | The public website + admin: content, enquiry, RFQ, costing, quotation, HR & payroll, PPC | Public + staff |
-| `idms.html` | IDMS — manufacturing system: parts, APQP, quality, stores, planning | Staff only |
+| `index.html` | The public website. It also still *serves* the staff screens (RFQ pipeline, PPC, HR, attendance, admin panel), but nothing on the site links to them — the IDMS opens them | Public; staff only through the IDMS |
+| `idms.html` | IDMS — the whole manufacturing system, and now the only way in to every staff screen | Staff only |
+| `kpi.js` | The KPI dashboards: chart engine, KPI registry, and the derivations that compute figures from records | IDMS |
+| `drawing-convert.js` | Turns a customer's PDF/DXF/PNG into the JPEG the drawing reader can read, in their browser, before upload | Website |
 | `core.js` / `core.css` | Shared plumbing and design system used by both | Both |
 | `api/*.js` | Vercel serverless functions | Both |
 
@@ -100,6 +102,56 @@ sixth, the pattern is: deterministic rules produce the findings, the AI is asked
 one narrow question afterwards, the run is logged, and anything written goes to
 the review queue.
 
+## The website is a website (v104)
+
+The public site has **no staff entry points at all**: no Operations dropdown at
+the top, no staff links in the footer, no My Attendance, no ⚙ admin button. The
+admin panel, the RFQ pipeline, planning, payroll and attendance are reached from
+the IDMS menu and nowhere else. `#pipeline`, `#ppc` and `#hr` no longer open a
+sign-in box — an old bookmark gets a sentence saying where the screen went.
+
+`#me` is the one exception and must stay: **the QR code on every printed
+employee ID card points at it**, and those cards are already in pockets.
+
+The screens themselves were not rewritten — a mechanical lift is impossible
+(48 HR functions interleaved with 263 unrelated ones across ~8,000 lines), and
+rewriting them blind would have been the wrong risk to take in one pass. Instead
+the IDMS opens them in a same-origin frame at `/?embed=<target>`:
+
+- `embed=admin` opens the admin panel only, with the public page hidden, and only
+  for the developer role.
+- `embed=pipeline|ppc|hr|me` open those staff screens the same way.
+- `body.embedded` in `index.html` hides the header, footer, chat and every public
+  section, so what shows in the frame is the screen and nothing else.
+
+**Both pages share one session.** `index.html` now reads and writes the same
+`sessionStorage` key as `core.js` (`app_token`), so signing in to the IDMS is
+what signs you in to the framed screen. There is no second login and no way into
+these screens from the public site. When a screen is eventually rebuilt natively
+in `idms.html`, the menu entry changes and nothing else does.
+
+## Drawing conversion happens in the customer's browser
+
+The free-tier AI provider reads images, not PDFs and not CAD, so a PDF enquiry
+used to mean re-keying by hand. `drawing-convert.js` converts before upload:
+
+- **PDF** → each page rendered to JPEG (pdf.js, loaded lazily from a CDN only when
+  a PDF is picked); multi-page PDFs get a page chooser, because the drawing is
+  not always page 1.
+- **PNG/WEBP/GIF/BMP** → re-encoded onto a **white** canvas. A drawing on a
+  transparent background becomes black-on-black in JPEG otherwise.
+- **DXF** → a small reader draws LINE, ARC, CIRCLE, polylines and text to a
+  canvas. Blocks, hatches and dimension annotations are *not* expanded, and the
+  sender is told so rather than being sold a CAD viewer.
+- **DWG, STEP, IGES, native CAD, TIFF** → refused, with the export to make
+  instead. These are binary formats with no reader that runs in a browser.
+  Saying "cannot be read" and stopping was the old behaviour and it wasted the
+  customer's time.
+
+The converted image is shown to the sender before they submit — a conversion
+nobody can see is a conversion nobody can check — and the **original file is
+still attached** whenever conversion was not possible, so nothing sent is lost.
+
 ## Authentication — do not undo this
 
 Until v103 the session token **was the password hash**: `auth.js` returned
@@ -119,9 +171,18 @@ It now works like this, and none of it should be reverted:
   `users.pass_hash`.**
 - Changing a password, an administrator setting one, deleting a login, or
   running recovery all **end the relevant sessions immediately**.
-- The browser keeps the token in `sessionStorage` (per-tab, dies with the tab)
-  and `idms.html` calls `C.checkSession()` before showing a single screen — a
-  token in the tab is not proof, it may have been revoked since.
+- The browser keeps the token in `sessionStorage` (per-tab, dies with the tab).
+- **Opening `idms.html` signs nobody in.** Any token left in the tab is signed
+  out on the server and discarded before the page draws, so the sign-in screen
+  always stands. This was asked for directly: a shared works PC must not walk
+  the next person into live quality records because the last one closed the lid.
+  The session still lasts while the tab is open — that is what lets the framed
+  website screens run without a second sign-in — it simply does not survive
+  re-opening the page. The login fields carry `autocomplete="new-password"` and
+  neutral names so the browser does not offer to save or refill them.
+- The sign-in screen shows the company logo, name and address from the site
+  profile (readable without a session, which is why it can be shown before one
+  exists) and carries **Powered by — KMR Groups of Companies**.
 - Minimum password length is 8 everywhere.
 
 `sectest.mjs` covers this: 35 checks including that the password hash no longer
@@ -482,18 +543,70 @@ and the priced link. Nothing in that path is typed by hand: the quotation line
 carries the customer's part number, drawing number, revision and HSN, and
 "Add to quotation" on the costing screen fills those from the title block the AI
 already read off the drawing.
-**Declared but not built:** 65 further screens, marked `soon` in the menu, each
-showing an explanation rather than a blank page. The menu structure mirrors the
-system the team already uses.
+**Declared but not built:** the screens marked `soon` in the menu, each showing
+an explanation rather than a blank page.
+
+## The menu, and the KPI dashboards (v104)
+
+The menu is now organised by **the department that owns the work**, in the order
+the business reviews it: Home, Top Management, QMS, Marketing, NPD, Purchase &
+SCM, PPC & MMD, Production, Quality Assurance, Maintenance, HRM, Accounts,
+Admin. Every group **opens with that department's dashboard**, so the first thing
+anyone sees is how their own area is doing, and the screens that produce those
+figures sit directly beneath it. Screens did not move between files; only their
+grouping changed. `PANEL_OF` maps the ids that share one panel (every dashboard
+draws into `kpidash`, every framed website screen into `embed`).
+
+`kpi.js` holds all of it: a plain-SVG chart engine (grouped bar, line, donut,
+radar, pareto — no library, no build step, no network call), a registry of **101
+KPIs across twelve dashboards**, and the derivations. The rule that matters:
+
+> **A number arrives one of two ways, and the card says which.**
+> *Derived* — computed from records already in the database. Nobody types it, so
+> nobody can massage it. **29 KPIs are of this kind**: OEE and its three parts,
+> operator and machine efficiency, the loss and rejection paretos, rejection PPM
+> at all four gates, supplier PPM and quality rating, calibration due against
+> done, MSA and PPAP counts, breakdown hours, MTTR/MTBF, preventive maintenance,
+> on-time delivery, despatched quantity, manpower on roll, absenteeism, RFQ
+> received against won, and non-conformances raised against closed.
+> *Entered* — a monthly plan and actual typed on **KPI Data Entry**, because the
+> system holds no record to compute it from. Budgets, audit calendars and survey
+> results are all of this kind.
+
+Where the actual is derived and the plan is not, **only the plan can be typed** —
+the actual column is locked and says *computed from records*, so the two cannot
+be made to disagree.
+
+**A card with no data says so.** It never draws an invented figure and never
+treats "not entered" as zero; it offers a link that lands on the right KPI on the
+entry screen. Accounts works the same way: a department that has not entered its
+budget is *listed as not entered*, not shown as having spent nothing.
+
+Entries are `idms_docs` kind `kpi`, one record per KPI per financial year
+(`{kpiId, fy, rows:{Plan:[12], Actual:[12]}}`), so a new KPI needs no migration.
+The financial year is April–March throughout.
+
+Top Management adds no figures of its own: the radar and every tile on it are
+KPIs already shown on a department dashboard.
+
+**Home, banner and shortcuts.** The Quick Access shortcut grid is gone. The
+banner is no longer edited from the screen it appears on — it is set in
+**Admin → Home Banner** (upload or address, tagline, strapline, with a preview),
+because branding is an admin decision, not a per-user one. **Export/Import JSON
+left the top bar** for Admin → Backup & Restore, and restoring now requires an
+admin or developer role: it overwrites records, and that does not belong one
+click from the theme picker. The database chip stayed and is now a button that
+re-checks rather than a label that goes stale. Sample data moved to Admin too.
 
 To make a screen live: add `1` as the 4th element of its `MENU` entry, add a
 `<div class="panel" data-panel="…">`, and a branch in `go()`.
 
-**Still on the website, moving later:** HR & payroll and PPC. When they move,
-`index.html` must keep permanent redirects for `#me`, `#hr` and `#ppc` — **every
-printed employee ID card has a QR code pointing at `#me` on the website**, and
-those cards are already in people's pockets. Run HR in both places for one
-release before removing it.
+**Still served by `index.html`, shown inside the IDMS:** the RFQ pipeline, PPC,
+HR & payroll, attendance and the admin panel. They are reached only from the
+IDMS menu. Rebuilding them natively in `idms.html` remains the right end state —
+rebuild each screen against the shared API, one at a time, and only change its
+menu entry once the new one is proven on live data. **Keep `#me` answering on the
+website whatever happens** (printed ID cards).
 
 ---
 
@@ -547,6 +660,15 @@ If you formalise this, keep two habits that mattered:
    never ran at all.
 2. **Test what matters, not what is easy.** Testing that a fold worked passed
    while the Save button was being folded away with it.
+
+`smoketest.mjs` (IDMS: 65 checks — no auto sign-in, the gate branding, the menu
+order, the home screen, the top bar, all twelve dashboards rendering without an
+error note, KPI entry saving *and updating rather than duplicating*, the framed
+screens, the banner) and `sitetest.mjs` (website: 20 checks — no staff entry
+points anywhere, embed mode with and without a session, and the converter
+refusing DWG/STEP/TIFF with the export to make instead). Both need `jsdom`
+installed as a throwaway dev dependency; **do not commit it to `package.json`**,
+which has exactly one dependency and must keep it.
 
 Useful smoke checks after any change:
 - Statutory → the tax checker: ₹12,00,000 → ₹0 · ₹13,00,000 → ₹26,000/yr ·

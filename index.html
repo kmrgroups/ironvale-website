@@ -591,6 +591,24 @@
   .status-select{width:100%;margin-top:12px;padding:10px 13px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--white);font-family:var(--mono);font-size:var(--fs-label);color:var(--navy);}
 
   /* ---- ADMIN ---- */
+  /* the converted-drawing preview under the RFQ upload */
+  .dwg-box{margin:-6px 0 14px;padding:12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--sky-wash);}
+  .dwg-status{font-size:calc(var(--font-base)*.78);color:var(--ink-mid);line-height:1.5;}
+  .dwg-status.bad{color:#B03A2E;}
+  .dwg-status.ok{color:#1F6F4A;}
+  .dwg-page{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:calc(var(--font-base)*.78);}
+  .dwg-page select{height:34px;border-radius:8px;border:1px solid var(--line-strong);padding:0 8px;background:#fff;}
+  .dwg-prev{display:block;margin-top:10px;max-width:100%;max-height:320px;border:1px solid var(--line-strong);border-radius:8px;background:#fff;}
+
+  /* Embedded mode: the site is opened inside the IDMS as a working screen, so
+     the public chrome — header, footer, chat, section links — is hidden and only
+     the staff screen is shown. */
+  body.embedded header, body.embedded footer, body.embedded #chat-fab, body.embedded #chat-panel,
+  body.embedded section, body.embedded #admin-toggle, body.embedded .custom-sec{display:none !important;}
+  body.embedded{background:var(--white);}
+  .embed-msg{max-width:520px;margin:60px auto;padding:26px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;text-align:center;}
+  .embed-msg h3{font-family:var(--display);margin-bottom:8px;}
+
   #admin-toggle{position:fixed;bottom:26px;right:26px;z-index:100;width:56px;height:56px;border-radius:50%;background:linear-gradient(180deg,var(--sky-mid),var(--navy));border:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:21px;box-shadow:0 6px 0 var(--navy-deep),0 16px 30px rgba(11,42,91,.4);transition:transform .2s;}
   #admin-toggle:hover{transform:translateY(-4px);}
   #admin-panel{position:fixed;inset:0;width:100vw;max-width:100vw;background:var(--white);color:var(--navy);z-index:160;transform:translateX(100%);transition:transform .32s ease;display:flex;flex-direction:column;}
@@ -916,8 +934,19 @@
       <label>Email</label><input type="email" id="rfq-email" required>
       <label>Contact Number</label><input type="tel" id="rfq-phone" placeholder="+91 90000 00000">
       <label>Project Details</label><textarea id="rfq-message" placeholder="Material, quantity, target tolerance, timeline..."></textarea>
-      <label>Upload Drawing / Spec (optional)</label><input type="file" id="rfq-file" accept=".pdf,.jpg,.jpeg,.png,.dwg,.step,.stp,.zip">
-      <div class="rfq-note">Drawings up to 3MB. PDF and image drawings can be read automatically by our system.</div>
+      <label>Upload Drawing / Spec (optional)</label>
+      <input type="file" id="rfq-file" accept=".pdf,.dxf,.jpg,.jpeg,.png,.webp,.bmp,.gif,.dwg,.step,.stp,.igs,.iges,.zip">
+      <div class="rfq-note">PDF, DXF, JPEG, PNG, WEBP and BMP drawings are converted to a JPEG here in your
+        browser before they are sent, because that is the format our drawing reader can read. DWG, STEP and
+        IGES cannot be converted in a browser — please export a PDF or DXF from your CAD software.</div>
+      <div class="dwg-box" id="rfq-file-box" style="display:none;">
+        <div class="dwg-status" id="rfq-file-status"></div>
+        <div class="dwg-page" id="rfq-file-pagerow" style="display:none;">
+          <label for="rfq-file-page">Drawing is on page</label>
+          <select id="rfq-file-page"></select>
+        </div>
+        <img class="dwg-prev" id="rfq-file-prev" alt="Converted drawing preview" style="display:none;">
+      </div>
       <button type="submit" class="btn btn-gold" id="rfq-submit">Submit RFQ</button>
       <div class="rfq-thanks" id="rfq-thanks"><strong id="rfq-ref-out">REF</strong>
         <span class="t-body">Save this reference — you can check progress in “Track your RFQ” below.</span></div>
@@ -1551,7 +1580,6 @@ I would recommend this company as a place to work</textarea></div></div>
   </div>
 </div>
 
-<button id="admin-toggle" title="Admin">⚙</button>
 <div id="save-toast">SAVED</div>
 
 <div id="admin-panel">
@@ -2334,6 +2362,7 @@ I would recommend this company as a place to work</textarea></div></div>
   </div>
 </div>
 
+<script src="/drawing-convert.js"></script>
 <script>
 (function(){
   const API=''; // same origin — the API lives beside this page
@@ -2575,7 +2604,17 @@ I would recommend this company as a place to work</textarea></div></div>
   },LAYOUT_DEFAULTS);
 
   let data=JSON.parse(JSON.stringify(DEFAULTS));
+  /* The IDMS and this page are the same origin in the same tab, so they share
+     one sessionStorage entry and therefore one server-side session. That is what
+     lets the IDMS open a staff screen from here without a second sign-in. It is
+     the session token, not a credential, and it dies with the tab. */
+  const TOKEN_KEY='app_token';
   let token=null, currentUser='', rfqs=[], dirty=false, cloudOK=false, expandedRfq=null;
+  try{ token=sessionStorage.getItem(TOKEN_KEY)||null; }catch(e){ token=null; }
+  function keepToken(t){
+    token=t||null;
+    try{ t?sessionStorage.setItem(TOKEN_KEY,t):sessionStorage.removeItem(TOKEN_KEY); }catch(e){}
+  }
   let poOrders=[], expandedOrder=null;
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const setText=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
@@ -2751,58 +2790,17 @@ I would recommend this company as a place to work</textarea></div></div>
   function renderNav(){
     const it=navItems();
 
-    /* Staff modules live behind one "Operations" dropdown so the public menu
-       stays short as more modules are added. */
-    const ops=[];
-    if(data.showPipeBtn) ops.push(['pipeline','RFQ Pipeline','Enquiries, quotations and costing']);
-    if(data.showPPCBtn)  ops.push(['ppc','Production Planning','Orders, capacity and scheduling']);
-    if(data.showHRBtn)   ops.push(['hr','HR &amp; People','Employees, payroll and compliance']);
+    /* The website is a website. Every staff module — the RFQ pipeline, planning,
+       HR, attendance and the admin panel — is reached from the IDMS and nowhere
+       else, so no operations menu is drawn here at top or bottom. The screens
+       themselves still answer on their own addresses (#pipeline, #ppc, #hr, #me)
+       because the IDMS opens them, and because the QR code on every printed
+       employee ID card points at #me and those cards are already in pockets. */
     if(data.showCareers!==false) it.push(['#careers','Careers']);
-    if(data.showSelfService!==false) it.push(['#me','My Attendance']);
 
-    let html=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('');
-    if(ops.length){
-      html+=`<div class="ops-wrap" id="ops-wrap">
-        <a href="#" class="pipeline ops-btn" id="ops-btn">Operations <span class="ops-caret">▾</span></a>
-        <div class="ops-menu" id="ops-menu">
-          ${ops.map(([t,label,desc])=>`<a href="#" data-ops="${t}"><b>${label}</b><span>${desc}</span></a>`).join('')}
-        </div></div>`;
-    }
+    const html=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('');
     document.getElementById('main-nav').innerHTML=html;
-
-    document.getElementById('foot-links').innerHTML=it.map(([h,t])=>`<a href="${h}">${esc(t)}</a>`).join('')
-      +ops.map(([t,label])=>`<a href="#" data-ops="${t}">${label}</a>`).join('');
-
-    /* one handler serves the dropdown and the footer */
-    document.querySelectorAll('#main-nav a[href="#me"], #foot-links a[href="#me"]').forEach(a=>
-      a.addEventListener('click',e=>{ e.preventDefault(); openMe(''); }));
-    document.querySelectorAll('[data-ops]').forEach(a=>a.addEventListener('click',e=>{
-      e.preventDefault();
-      const menu=document.getElementById('ops-menu');
-      if(menu) menu.classList.remove('open');
-      requestLogin(a.dataset.ops);
-    }));
-
-    const btn=document.getElementById('ops-btn'), menu=document.getElementById('ops-menu');
-    if(btn&&menu){
-      /* The nav strip scrolls horizontally and clips its children, so the menu
-         is positioned against the viewport instead of inside that box. */
-      const place=()=>{
-        const r=btn.getBoundingClientRect();
-        menu.style.top=(r.bottom+8)+'px';
-        menu.style.left=Math.max(8,Math.min(r.left,window.innerWidth-285))+'px';
-      };
-      btn.addEventListener('click',e=>{
-        e.preventDefault(); e.stopPropagation();
-        place(); menu.classList.toggle('open');
-      });
-      window.addEventListener('resize',()=>{ if(menu.classList.contains('open')) place(); });
-      window.addEventListener('scroll',()=>{ if(menu.classList.contains('open')) place(); },true);
-      document.addEventListener('click',ev=>{
-        if(!menu.contains(ev.target)&&ev.target!==btn) menu.classList.remove('open');
-      });
-      document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') menu.classList.remove('open'); });
-    }
+    document.getElementById('foot-links').innerHTML=html;
   }
   function renderCustomSections(){
     document.getElementById('custom-sections').innerHTML=data.customSections.map(s=>{
@@ -11471,7 +11469,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
         setTimeout(()=>document.getElementById('login-code').focus(),150);
         return;
       }
-      token=j.token; currentUser=j.user; currentRole=j.role||'';
+      keepToken(j.token); currentUser=j.user; currentRole=j.role||'';
       document.getElementById('login-modal').classList.remove('open');
       openTarget(pendingTarget||'pipeline');
     }catch(e){ err.textContent=e.message||'Sign in failed.'; err.style.display='block'; }
@@ -11481,7 +11479,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     const code=document.getElementById('login-code').value.trim();
     try{
       const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'verifyCode',user:pendingUser,code})});
-      token=j.token; currentUser=j.user; currentRole=j.role||'';
+      keepToken(j.token); currentUser=j.user; currentRole=j.role||'';
       document.getElementById('login-modal').classList.remove('open');
       showPanel('login');
       openTarget(pendingTarget||'pipeline');
@@ -11524,18 +11522,13 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     if(!nu||np.length<6){ err.textContent='Enter a username and a password of at least 6 characters.'; err.style.display='block'; return; }
     try{
       const j=await api('/api/auth',{method:'POST',body:JSON.stringify({action:'reset',recoveryCode:code,newUser:nu,newPass:np})});
-      token=j.token; currentUser=j.user;
+      keepToken(j.token); currentUser=j.user;
       document.getElementById('login-modal').classList.remove('open');
       toast('Password reset — you are signed in.');
       openTarget(pendingTarget||'pipeline');
     }catch(e){ err.textContent=e.message||'Reset failed.'; err.style.display='block'; }
   });
 
-  document.getElementById('admin-toggle').addEventListener('click',async()=>{
-    if(token){ await confirmRole();
-      if(currentRole!=='developer'){ toast('This login cannot open the admin panel.'); return; } }
-    requestLogin('admin');
-  });
   document.getElementById('staff-admin').addEventListener('click',()=>{
     document.getElementById('staff-page').classList.remove('open'); document.body.style.overflow='';
     fillForm(); document.getElementById('admin-panel').classList.add('open');});
@@ -11544,7 +11537,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     if(location.hash==='#pipeline')history.replaceState(null,'',location.pathname);});
   document.getElementById('staff-refresh').addEventListener('click',loadRfqs);
   document.getElementById('staff-logout').addEventListener('click',()=>{
-    token=null; currentUser=''; rfqs=[];
+    keepToken(''); currentUser=''; rfqs=[];
     document.getElementById('staff-page').classList.remove('open');
     document.getElementById('admin-panel').classList.remove('open');
     document.body.style.overflow='';
@@ -12111,6 +12104,61 @@ company-specific policies, salary figures or reporting lines.`;
   document.getElementById('track-btn').addEventListener('click',renderTrack);
   document.getElementById('track-input').addEventListener('keydown',e=>{if(e.key==='Enter')renderTrack();});
 
+  /* ---------- drawing conversion on the enquiry form ----------
+     Whatever the customer picks is turned into a JPEG here, in their browser,
+     before it is uploaded — because that is what the drawing reader can read.
+     The result is shown to them: a conversion nobody can see is a conversion
+     nobody can check. A file we cannot convert is still attached to the
+     enquiry, with the reason stated, rather than silently dropped. */
+  let rfqDrawing=null, rfqRawFile=null;
+  function rfqFileStatus(text,cls){
+    const box=document.getElementById('rfq-file-box'), s=document.getElementById('rfq-file-status');
+    box.style.display=''; s.className='dwg-status'+(cls?' '+cls:''); s.textContent=text;
+  }
+  async function convertRfqFile(page){
+    const file=rfqRawFile; if(!file) return;
+    const prev=document.getElementById('rfq-file-prev');
+    const pageRow=document.getElementById('rfq-file-pagerow');
+    prev.style.display='none';
+    if(!window.DrawingConvert){ rfqFileStatus('The converter did not load. Your file will be attached as it is.','bad'); return; }
+    rfqFileStatus('Converting '+file.name+' to JPEG…');
+    try{
+      const out=await window.DrawingConvert.prepare(file,{page:page});
+      const bytes=window.DrawingConvert.sizeOf(out.dataUrl);
+      if(bytes>3*1024*1024){
+        rfqDrawing=null;
+        rfqFileStatus('The converted image is '+Math.round(bytes/1048576*10)/10+'MB, over the 3MB limit. '+
+          'Send a smaller drawing or email it to us separately.','bad');
+        return;
+      }
+      rfqDrawing={fileName:out.fileName,dataUrl:out.dataUrl};
+      rfqFileStatus(out.note+' It will be read automatically when it reaches us.','ok');
+      prev.src=out.dataUrl; prev.style.display='';
+      if(out.pages>1){
+        pageRow.style.display='flex';
+        const sel=document.getElementById('rfq-file-page');
+        if(sel.options.length!==out.pages){
+          sel.innerHTML=Array.from({length:out.pages},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+        }
+        sel.value=String(out.page||1);
+      } else pageRow.style.display='none';
+    }catch(err){
+      rfqDrawing=null;
+      document.getElementById('rfq-file-pagerow').style.display='none';
+      rfqFileStatus(err.message+' Your file will still be attached to the enquiry.','bad');
+    }
+  }
+  document.getElementById('rfq-file').addEventListener('change',function(){
+    rfqDrawing=null; rfqRawFile=this.files[0]||null;
+    document.getElementById('rfq-file-pagerow').style.display='none';
+    document.getElementById('rfq-file-prev').style.display='none';
+    if(!rfqRawFile){ document.getElementById('rfq-file-box').style.display='none'; return; }
+    convertRfqFile(1);
+  });
+  document.getElementById('rfq-file-page').addEventListener('change',function(){
+    convertRfqFile(parseInt(this.value,10)||1);
+  });
+
   document.getElementById('rfq-form').addEventListener('submit',function(e){
     e.preventDefault();
     const name=document.getElementById('rfq-name').value.trim();
@@ -12120,15 +12168,22 @@ company-specific policies, salary figures or reporting lines.`;
     const base={source:'Form',name,company:document.getElementById('rfq-company').value.trim(),email,
       phone:document.getElementById('rfq-phone').value.trim(),message:document.getElementById('rfq-message').value.trim(),
       fileName:'',fileDataUrl:''};
-    const file=document.getElementById('rfq-file').files[0];
+    const file=rfqRawFile;
     const finish=async()=>{
       const rec=await submitRfq(base);
       btn.textContent='Submit RFQ'; btn.disabled=false;
       if(rec){ e.target.reset();
+        rfqDrawing=null; rfqRawFile=null;
+        document.getElementById('rfq-file-box').style.display='none';
         document.getElementById('rfq-ref-out').textContent='Reference: '+rec.ref;
         document.getElementById('rfq-thanks').style.display='block'; }
     };
-    if(file){ base.fileName=file.name;
+    /* the converted JPEG is what gets sent; the original is only used when
+       conversion was not possible, so nothing the customer sent is lost */
+    if(rfqDrawing){
+      base.fileName=rfqDrawing.fileName; base.fileDataUrl=rfqDrawing.dataUrl; finish();
+    } else if(file){
+      base.fileName=file.name;
       if(file.size<=3*1024*1024){const rd=new FileReader();rd.onload=()=>{base.fileDataUrl=rd.result;finish();};rd.readAsDataURL(file);}
       else { toast('That file is over 3MB — please email it to us separately.'); finish(); }
     } else finish();
@@ -12145,9 +12200,50 @@ company-specific policies, salary figures or reporting lines.`;
     try{ await loadJobs(); }
     finally{ document.body.classList.remove('booting'); }
 
-    if(location.hash==='#pipeline') requestLogin('pipeline');
-    if(location.hash==='#ppc') requestLogin('ppc');
-    if(location.hash==='#hr') requestLogin('hr');
+    /* ---------- opened from inside the IDMS ----------
+       The IDMS shows these screens in a frame on the same origin, so the session
+       already in the tab is the session used here. No second sign-in, and no way
+       in from the public site. */
+    const embed=new URLSearchParams(location.search).get('embed');
+    if(embed){
+      document.body.classList.add('embedded');
+      if(!token){
+        document.body.insertAdjacentHTML('beforeend',
+          `<div class="embed-msg"><h3>Sign in first</h3><p class="t-body">This screen is opened from the
+           IDMS. Sign in there and it will appear here.</p></div>`);
+        return;
+      }
+      await confirmRole();
+      if(embed==='admin'){
+        if(currentRole!=='developer'){
+          document.body.insertAdjacentHTML('beforeend',
+            `<div class="embed-msg"><h3>Not permitted</h3><p class="t-body">Website content can only be
+             changed by the developer login.</p></div>`);
+          return;
+        }
+        fillForm();
+        document.getElementById('admin-panel').classList.add('open');
+      } else if(embed==='me'){
+        const m=location.hash.match(/id=([A-Za-z0-9_-]+)/);
+        openMe(m?m[1].toUpperCase():'');
+      } else {
+        openTarget(embed);
+      }
+      return;
+    }
+
+    /* The staff modules are no longer part of the website. Somebody arriving on
+       an old bookmark is told where they went rather than shown a sign-in box
+       that should not be here. */
+    if(['#pipeline','#ppc','#hr'].includes(location.hash)){
+      history.replaceState(null,'',location.pathname);
+      document.body.insertAdjacentHTML('beforeend',
+        `<div class="embed-msg"><h3>This has moved</h3><p class="t-body">The RFQ pipeline, planning
+         and HR are now inside the IDMS. Open the IDMS and sign in there.</p>
+         <p><a class="btn btn-primary" href="/idms.html">Open the IDMS</a></p></div>`);
+    }
+    /* #me stays: the QR code on every printed employee ID card points at it,
+       and those cards are already in people's pockets. */
     if(location.hash.startsWith('#me')){
       const m=location.hash.match(/id=([A-Za-z0-9_-]+)/);
       openMe(m?m[1].toUpperCase():'');

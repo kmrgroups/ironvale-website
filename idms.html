@@ -83,6 +83,37 @@
 .qa a b{font-size:12px;font-weight:600;line-height:1.3;display:block;}
 .qa a span{font-family:var(--mono);font-size:9px;color:var(--ink-soft);}
 
+/* ---- sign-in screen ---- */
+.gate .brandline{display:flex;align-items:center;gap:13px;justify-content:center;margin-bottom:14px;}
+.gate .brandline img{height:54px;width:54px;object-fit:contain;border-radius:10px;background:#fff;
+  padding:4px;border:1px solid var(--line);}
+.gate .brandline .mark{height:54px;width:54px;border-radius:10px;background:var(--gold);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:19px;}
+.gate .brandline b{font-family:var(--disp);font-size:18px;line-height:1.2;display:block;text-align:left;}
+.gate .brandline span{font-family:var(--mono);font-size:10px;color:var(--ink-soft);letter-spacing:.04em;}
+.gate .powered{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);text-align:center;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;color:var(--ink-soft);}
+.gate .powered a{color:var(--sky-deep);text-decoration:none;font-weight:600;}
+.gate .powered a:hover{text-decoration:underline;}
+
+/* ---- KPI dashboards ---- */
+.kpi-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));}
+.kpi-card{margin:0;}
+.kpi-card.wide{grid-column:1/-1;margin-bottom:14px;}
+.kpi-src{font-size:11.5px;color:var(--ink-soft);line-height:1.5;margin:-4px 0 10px;}
+.kpi-svg{display:block;margin-top:4px;overflow:visible;}
+.kpi-leg{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--ink-mid);margin-bottom:2px;}
+.kpi-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;}
+.kpi-empty{border:1px dashed var(--line-strong);border-radius:10px;padding:20px;text-align:center;
+  color:var(--ink-soft);font-size:12.5px;}
+.kpi-empty b{display:block;color:var(--navy);font-size:13px;margin-bottom:4px;}
+.kpi-empty a{display:inline-block;margin-top:9px;color:var(--sky-deep);font-weight:600;cursor:pointer;}
+.kpi-note{font-size:12px;color:var(--ink-mid);margin-bottom:10px;}
+.kpi-entry input.num{min-width:66px;text-align:right;}
+.scroll-x{overflow-x:auto;}
+.embed-frame{width:100%;height:calc(100vh - 190px);min-height:520px;border:1px solid var(--line);
+  border-radius:var(--radius-sm);background:var(--white);}
+
 .stat{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:6px;}
 .stat .b{background:var(--white);border:1px solid var(--line);border-radius:11px;padding:13px;}
 .stat .b b{font-family:var(--disp);font-size:23px;color:var(--navy);display:block;}
@@ -94,18 +125,27 @@
 
 <div class="gate" id="gate">
   <div class="box">
-    <h1>IDMS</h1>
-    <p>Intelligent Digital Manufacturing System. Sign in with your usual account.</p>
+    <div class="brandline">
+      <div id="g-logo"><div class="mark">··</div></div>
+      <div><b id="g-co">Loading…</b><span id="g-addr"></span></div>
+    </div>
+    <h1 id="g-welcome">Welcome</h1>
+    <p>Intelligent Digital Manufacturing System. Please sign in to continue — you will be
+      asked every time this page is opened.</p>
     <div class="row">
-      <div><label>Username</label><input id="g-user" autocomplete="username"></div>
-      <div><label>Password</label><input id="g-pass" type="password" autocomplete="current-password"></div>
+      <div><label>Username</label><input id="g-user" autocomplete="off" autocorrect="off"
+        autocapitalize="none" spellcheck="false" name="idms-account"></div>
+      <div><label>Password</label><input id="g-pass" type="password" autocomplete="new-password"
+        name="idms-secret"></div>
       <div id="g-code-row" style="display:none;"><label>6-digit code</label>
-        <input id="g-code" inputmode="numeric" maxlength="6"></div>
+        <input id="g-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>
       <div><button class="btn gold" id="g-go" style="width:100%;">Sign in</button></div>
     </div>
     <div class="note bad" id="g-msg" style="display:none;"></div>
     <div class="hint" style="margin-top:14px;">This system holds live manufacturing and quality
       records. Everything you change is recorded against your name.</div>
+    <div class="powered">Powered by —
+      <a href="https://www.kmr-groups.com" target="_blank" rel="noopener">KMR Groups of Companies</a></div>
   </div>
 </div>
 
@@ -118,9 +158,12 @@
     </div>
     <div class="spacer"></div>
     <div class="themes" id="t-themes"></div>
-    <button class="btn ghost" id="t-export">Export JSON</button>
-    <button class="btn ghost" id="t-import">Import JSON</button>
-    <div class="chip" id="t-db"><span class="dot off"></span><span id="t-dbtext">Checking…</span></div>
+    <!-- Export and Import used to sit here, one click from the theme buttons. Import
+         overwrites records, so it now lives in Admin → Backup & Restore behind the
+         admin role, where a destructive action belongs. The database chip stays, and
+         is now a button that re-checks rather than a label that went stale. -->
+    <button class="chip" id="t-db" title="Check the database connection again"
+      style="cursor:pointer;font-family:inherit;color:#fff;"><span class="dot off"></span><span id="t-dbtext">Checking…</span></button>
     <div class="who"><div class="av" id="t-av">?</div>
       <div><b id="t-user">—</b><span id="t-role"></span></div></div>
     <a class="btn ghost" href="/" style="text-decoration:none;line-height:1.9;">Website</a>
@@ -132,25 +175,136 @@
   <div class="app-body">
 
     <div class="panel on" data-panel="home">
+      <!-- The banner is set in Admin → Home Banner, like every other piece of
+           branding, so it is the same for everyone and not editable from the
+           screen it appears on. -->
       <div class="banner">
         <img class="bg" id="bn-img" style="display:none;" alt="">
         <div class="veil" id="bn-veil" style="display:none;"></div>
-        <button class="btn edit" id="bn-edit">Change banner</button>
         <div class="in">
           <h1 id="bn-title">—</h1>
           <div class="sub" id="bn-sub"></div>
-          <div class="strap">Intelligent Digital Manufacturing System</div>
+          <div class="strap" id="bn-strap">Intelligent Digital Manufacturing System</div>
         </div>
       </div>
       <div class="stat" id="home-stats"></div>
-      <div class="qa-head">
-        <h3>⚡ Quick Access</h3>
-        <button class="btn" id="qa-edit">Edit shortcuts</button>
+      <div class="card" style="margin-top:18px;">
+        <h4>Where to start</h4>
+        <div class="hint">Every screen is on the menu above, grouped by the department that owns it.
+          Each department's dashboard is the first item in its group, and the figures on it come
+          from the records entered on the screens below it.</div>
       </div>
-      <div class="qa" id="qa-grid"></div>
-      <div class="hint" id="qa-hint" style="margin-top:10px;"></div>
+    </div>
 
-      <div class="card" style="margin-top:20px;">
+    <!-- ============ KPI dashboards: one panel, twelve departments ============ -->
+    <div class="panel" data-panel="kpidash">
+      <div class="card">
+        <h4 id="kd-title">Dashboard</h4>
+        <div class="hint" id="kd-note" style="margin-bottom:10px;"></div>
+        <div class="row four">
+          <div><label>Financial year</label><select id="kd-fy"></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="kd-run">Refresh</button></div>
+          <div style="align-self:end;"><button class="btn" id="kd-entry">Enter plan &amp; actual</button></div>
+          <div style="align-self:end;"><button class="btn" id="kd-print">Print</button></div>
+        </div>
+      </div>
+      <div id="kd-body"></div>
+    </div>
+
+    <!-- ============ KPI data entry ============ -->
+    <div class="panel" data-panel="kpi_entry">
+      <div class="card">
+        <h4>KPI Data Entry</h4>
+        <div class="hint" style="margin-bottom:10px;">Where a figure cannot be computed from records —
+          budgets, audit calendars, survey results — it is entered here, month by month, and the
+          department dashboard draws it. KPIs marked <b>computed from records</b> take their actual
+          from the system and only need a plan; that is deliberate, so the two cannot disagree.</div>
+        <div class="row four">
+          <div><label>Financial year</label><select id="ke-fy"></select></div>
+          <div><label>Department</label><select id="ke-dept"></select></div>
+          <div><label>KPI</label><select id="ke-kpi"></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="ke-save">Save</button></div>
+        </div>
+        <div class="note" id="ke-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><div id="ke-form"></div></div>
+      <div class="card">
+        <h4>Not entered yet, this year</h4>
+        <div id="ke-gaps"></div>
+      </div>
+    </div>
+
+    <!-- ============ screens still served by the website, shown here ============
+         The RFQ pipeline, planning, payroll, attendance and the website admin
+         panel are the same code they always were; they are reached only from
+         this menu now. Same origin, same tab, so the session signed in here is
+         the session used there — no second sign-in, and no way in from the
+         public site. -->
+    <div class="panel" data-panel="embed">
+      <div class="card">
+        <h4 id="em-title">Screen</h4>
+        <div class="hint" id="em-note" style="margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" id="em-reload">Reload</button>
+          <a class="btn ghost" id="em-open" target="_blank" rel="noopener"
+             style="text-decoration:none;line-height:1.9;">Open in a new tab</a>
+        </div>
+      </div>
+      <iframe class="embed-frame" id="em-frame" title="Screen"></iframe>
+    </div>
+
+    <!-- ============ Admin: home banner ============ -->
+    <div class="panel" data-panel="admin_banner">
+      <div class="card">
+        <h4>Home Banner</h4>
+        <div class="hint" style="margin-bottom:10px;">The picture and wording across the top of the
+          home screen. Saved once, for everyone — the home screen itself has no edit button, because
+          branding is an admin decision and not a per-user one.</div>
+        <div class="row">
+          <div><label>Banner image</label><input type="file" id="ab-file" accept="image/*">
+            <div class="hint">Stored with the other site images and served by link, so the settings
+              record stays small.</div></div>
+          <div><label>Image address (optional, if you already have one)</label><input id="ab-url"></div>
+          <div><label>Line under the company name</label><input id="ab-tag"></div>
+          <div><label>Strapline at the bottom</label><input id="ab-strap"
+            placeholder="Intelligent Digital Manufacturing System"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+          <button class="btn gold" id="ab-save">Save banner</button>
+          <button class="btn del" id="ab-clear">Remove the image</button>
+        </div>
+        <div class="note" id="ab-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Preview</h4>
+        <div class="banner" style="margin:0;">
+          <img class="bg" id="ab-prev" style="display:none;" alt="">
+          <div class="veil" id="ab-veil" style="display:none;"></div>
+          <div class="in"><h1 id="ab-prev-title">—</h1><div class="sub" id="ab-prev-sub"></div>
+            <div class="strap" id="ab-prev-strap"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Admin: backup and restore ============ -->
+    <div class="panel" data-panel="admin_backup">
+      <div class="card">
+        <h4>Backup &amp; Restore</h4>
+        <div class="hint" style="margin-bottom:10px;">A copy taken off-site, and a way to put it back.
+          The database remains the record — this is not where the data lives. Restoring overwrites
+          any record with the same id and cannot be undone, which is why it sits here rather than on
+          the top bar.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="t-export">Export JSON</button>
+          <button class="btn del" id="t-import">Import JSON</button>
+        </div>
+        <div class="note" id="bk-msg" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ============ Admin: sample data ============ -->
+    <div class="panel" data-panel="admin_sample">
+      <div class="card">
         <h4>Sample data</h4>
         <div class="hint" style="margin-bottom:10px;">Fills the system with one worked example — a
           customer, a part, a priced customer link, a four-operation routing and its dimensions —
@@ -1439,6 +1593,7 @@
 </div>
 
 <script src="/core.js"></script>
+<script src="/kpi.js"></script>
 <script>
 (function(){
   'use strict';
@@ -1456,68 +1611,103 @@
   /* The menu, in the shape the team already works to. A trailing 1 marks a
      screen backed by the database today; the rest are declared so the
      navigation is real from the start and says plainly what is not built. */
+  /* The menu is organised by the department that owns the work, in the order the
+     business reviews it. Each group opens with that department's dashboard, so
+     the first thing anyone sees is how their own area is doing, and the screens
+     that produce those figures sit directly beneath it. */
   var MENU = [
-    ['entry','✏️','Entry','Key Process',[
-      ['form','🔑','Key Process Input'],['entry_supplier','🏭','Supplier Addition'],
-      ['entry_rawmat','🪨','Raw Material Addition'],['entry_customer','👤','Customer Addition',1],
-      ['entry_machine','⚙','Machine Addition',1]]],
-    ['pm','🎛','Process Master','Configuration',[
-      ['process_master','🎛','Process Master Configuration',1],['machine_process','⚙','Machine & Process'],
-      ['pfmea_master','🧠','PFMEA Master'],['dim_entry','📐','Dimensions Master',1],
-      ['pp_spec_master','📋','PP Spec Master']]],
-    ['npd','🗂','NPD & APQP','New Part Development',[
-      ['parts','📦','Parts',1],['apqp','🗂','APQP Programme'],['pfd','🔵','Process Flow Diagram',1],
-      ['fmea','⚠','PFMEA',1],['control_plan','📋','Control Plan',1],['msa','🔬','MSA'],
-      ['ppap','📦','PPAP',1],['spc','📈','SPC']]],
-    ['planning','📈','Planning','Plan',[
-      ['sales_plan','📈','Sales Plan',1],['capacity_plan','⚙','Capacity Plan'],
-      ['production_plan','🏭','Production Plan',1],['machine_loading','🔩','Machine Loading Plan']]],
-    ['mmd','📦','MMD','Material Movement',[
-      ['grn','📥','GRN — Goods Receipt',1],['dc','📤','Delivery Challan',1],
-      ['sheet_rawmat','🪨','Raw Material Stock'],['bom','🧾','Bill of Materials']]],
-    ['prod','🏭','Production','Shop Floor',[
-      ['cnc','⌨','CNC Programme',1],['entry_prod','📝','Production Entry',1],['dwm','📊','DWM — Daily Work Management'],
-      ['task_list','✅','Task List']]],
-    ['hr','🏢','HR & Competency','Organisation',[
-      ['hrm','👥','HR & Payroll',1],['org_chart','🏗','Organisation Chart'],
-      ['skill_matrix','📊','Skill Matrix',1],['roles_resp','📋','Roles & Responsibilities'],
-      ['competency_map','🎯','Competency Mapping'],['tni','📚','Training Need Identification'],
-      ['training_plan_actual','📅','Training Plan vs Actual'],['gap_analysis','📈','Skill Gap Analysis'],
-      ['training_effectiveness','✅','Training Effectiveness'],['succession_plan','🎖','Succession Planning'],
-      ['supplier_competency','🤝','Supplier Competency']]],
-    ['reports','📊','Reports','Inspection Reports',[
-      ['report_self_inspection','🔍','Self Inspection Report',1],
-      ['report_inward_inspection','📥','Inward Inspection Report',1],
-      ['report_inprocess_inspection','⚙','In-Process Inspection Report'],
-      ['report_pdi','✓','PDI Report',1],['report_setup_approval','✅','Setup Approval Report',1],
-      ['report_tool_history','🔧','Tool History Card'],
-      ['report_machine_checksheet','⚙','Machine Check Sheet'],
-      ['maintenance','🔧','Preventive Maintenance',1],
-      ['report_calibration','📏','Calibration Report',1],['report_msa','🔬','MSA Study Report',1],
-      ['report_control_charts','📊','Control Charts']]],
-    ['capa','🛠','Corrective Action','Problems and what was done about them',[
-      ['ncr','⚠','Non-conformance & 8D',1],['ncr_open','📌','Open Actions',1],
-      ['change_4m','🔁','4M Change',1]]],
-    ['qms','📋','QMS','Quality Management System',[
-      ['qms_level1','📜','Level-1 — Policy'],['qms_level2','📄','Level-2 — Procedures'],
-      ['qms_level3','📝','Level-3 — Work Instructions'],['qms_level4','🗂','Level-4 — Records'],
-      ['compliance_audit_trail','📋','Compliance & Audit Trail']]],
-    ['masters','🗂','Masters','Organisation',[
-      ['profile','🏢','Company Profile',1],['dept_master','🏢','Department Master'],
-      ['desig_master','🎖','Designation Master'],['position_master','📌','Position Master'],
-      ['doc_format_master','📄','Document Format Numbers'],['signatories','✍','Signatories Master'],
-      ['cft_master','👥','CFT Members Master'],['doc_master_pfd','📑','Master List — PFD'],
-      ['doc_master_pfmea','📑','Master List — PFMEA'],['doc_master_cp','📑','Master List — Control Plan'],
-      ['users','👥','User Management']]],
-    ['agent','🤖','Agents','Autonomous checks and drafting',[
+    ['topmgmt','🏛','Top Management','Oversight',[
+      ['dash_topmgmt','📊','Company Scorecard',1],
+      ['dashboard','🏭','Works Dashboard',1],
+      ['kpi_entry','✏️','KPI Data Entry',1],
       ['agent_audit','🔎','Audit Readiness Agent',1],
-      ['agent_npd','🗂','NPD Agent',1],
-      ['agent_supplier','🏭','Supplier Watch Agent',1],
       ['agent_review','✅','Review Agent Work',1],
       ['agent_runs','📜','Agent Run Log',1]]],
-    ['dash','📊','Dashboard','Overview',[
-      ['home','🏠','Home',1],['dashboard','📊','Production Dashboard',1],['accounts_pl','💹','P&L']]]
+    ['qms','📋','QMS','Quality Management System',[
+      ['dash_qms','📊','QMS Dashboard',1],
+      ['qms_level1','📜','Level-1 — Policy'],['qms_level2','📄','Level-2 — Procedures'],
+      ['qms_level3','📝','Level-3 — Work Instructions'],['qms_level4','🗂','Level-4 — Records'],
+      ['compliance_audit_trail','📋','Compliance & Audit Trail'],
+      ['doc_format_master','📄','Document Format Numbers'],['signatories','✍','Signatories Master'],
+      ['cft_master','👥','CFT Members Master'],['doc_master_pfd','📑','Master List — PFD'],
+      ['doc_master_pfmea','📑','Master List — PFMEA'],['doc_master_cp','📑','Master List — Control Plan']]],
+    ['marketing','📣','Marketing','Enquiry to order',[
+      ['dash_marketing','📊','Marketing Dashboard',1],
+      ['emb_pipeline','📨','RFQ Pipeline',1],
+      ['entry_customer','👤','Customer Addition',1]]],
+    ['npd','🗂','NPD','New product development',[
+      ['dash_npd','📊','NPD Dashboard',1],
+      ['dash_engineering','📐','Engineering Dashboard',1],
+      ['parts','📦','Parts',1],['apqp','🗂','APQP Programme'],
+      ['process_master','🎛','Process Master Configuration',1],['dim_entry','📐','Dimensions Master',1],
+      ['pfd','🔵','Process Flow Diagram',1],['fmea','⚠','PFMEA',1],['control_plan','📋','Control Plan',1],
+      ['cnc','⌨','CNC Programme',1],['ppap','📦','PPAP',1],['msa','🔬','MSA'],['spc','📈','SPC'],
+      ['machine_process','⚙','Machine & Process'],['pfmea_master','🧠','PFMEA Master'],
+      ['pp_spec_master','📋','PP Spec Master'],['agent_npd','🤖','NPD Agent',1]]],
+    ['purchase','🏭','Purchase & SCM','Suppliers and inward material',[
+      ['dash_purchase','📊','Purchase & SCM Dashboard',1],
+      ['entry_supplier','🏭','Supplier Addition'],['entry_rawmat','🪨','Raw Material Addition'],
+      ['grn','📥','GRN — Goods Receipt',1],['report_inward_inspection','📥','Inward Inspection Report',1],
+      ['agent_supplier','🤖','Supplier Watch Agent',1],['supplier_competency','🤝','Supplier Competency']]],
+    ['ppc','📦','PPC & MMD','Planning and material movement',[
+      ['dash_ppc','📊','PPC & MMD Dashboard',1],
+      ['sales_plan','📈','Sales Plan',1],['production_plan','🏭','Production Plan',1],
+      ['emb_ppc','🗓','Production Planning (orders & capacity)',1],
+      ['capacity_plan','⚙','Capacity Plan'],['machine_loading','🔩','Machine Loading Plan'],
+      ['dc','📤','Delivery Challan',1],['sheet_rawmat','🪨','Raw Material Stock'],
+      ['bom','🧾','Bill of Materials'],['form','🔑','Key Process Input']]],
+    ['production','🏗','Production','Shop floor',[
+      ['dash_production','📊','Production Dashboard',1],
+      ['entry_prod','📝','Production Entry',1],
+      ['report_setup_approval','✅','Setup Approval',1],
+      ['report_self_inspection','🔍','Self Inspection',1],
+      ['entry_machine','⚙','Machine Addition',1],
+      ['dwm','📊','DWM — Daily Work Management'],['task_list','✅','Task List'],
+      ['report_machine_checksheet','⚙','Machine Check Sheet'],
+      ['report_tool_history','🔧','Tool History Card']]],
+    ['quality','🔬','Quality Assurance','Inspection, gauges and corrective action',[
+      ['dash_quality','📊','Quality Dashboard',1],
+      ['report_pdi','✓','PDI Report',1],
+      ['report_inprocess_inspection','⚙','In-Process Inspection Report'],
+      ['report_calibration','📏','Calibration Report',1],['report_msa','🔬','MSA Study Report',1],
+      ['report_control_charts','📊','Control Charts'],
+      ['ncr','⚠','Non-conformance & 8D',1],['ncr_open','📌','Open Actions',1],
+      ['change_4m','🔁','4M Change',1]]],
+    ['maintenance','🔧','Maintenance','Machines and upkeep',[
+      ['dash_maintenance','📊','Maintenance Dashboard',1],
+      ['maintenance','🔧','Preventive Maintenance',1]]],
+    ['hrm','👥','HRM','People',[
+      ['dash_hrm','📊','HR Dashboard',1],
+      ['hrm','👥','People — HR records',1],
+      ['emb_hr','💼','HR & Payroll',1],
+      ['emb_me','🪪','My Attendance',1],
+      ['skill_matrix','📊','Skill Matrix',1],
+      ['org_chart','🏗','Organisation Chart'],['roles_resp','📋','Roles & Responsibilities'],
+      ['competency_map','🎯','Competency Mapping'],['tni','📚','Training Need Identification'],
+      ['training_plan_actual','📅','Training Plan vs Actual'],['gap_analysis','📈','Skill Gap Analysis'],
+      ['training_effectiveness','✅','Training Effectiveness'],['succession_plan','🎖','Succession Planning']]],
+    ['accounts','💹','Accounts','Budget and cost',[
+      ['dash_accounts','📊','Accounts Dashboard',1],
+      ['accounts_pl','💹','P&L']]],
+    ['admin','⚙','Admin','Settings and the website',[
+      ['admin_site','🌐','Website Content',1],
+      ['admin_banner','🖼','Home Banner',1],
+      ['profile','🏢','Company Profile',1],
+      ['users','👥','User Management'],
+      ['dept_master','🏢','Department Master'],['desig_master','🎖','Designation Master'],
+      ['position_master','📌','Position Master'],
+      ['admin_backup','💾','Backup & Restore',1],
+      ['admin_sample','🧪','Sample Data',1]]]
   ];
+
+  /* Screens that share one panel: every department dashboard draws into the same
+     markup, and every screen served by the website shows in the same frame. */
+  var PANEL_OF = {
+    kpi_entry: 'kpi_entry', admin_banner: 'admin_banner',
+    admin_backup: 'admin_backup', admin_sample: 'admin_sample',
+    admin_site: 'embed', emb_pipeline: 'embed', emb_ppc: 'embed', emb_hr: 'embed', emb_me: 'embed'
+  };
+  (window.KPIX ? window.KPIX.DEPTS : []).forEach(function (d) { PANEL_OF['dash_' + d.key] = 'kpidash'; });
 
   var LIVE = {}, LABEL = {}, ICON = {};
   MENU.forEach(function(g){ g[4].forEach(function(it){
@@ -1556,7 +1746,7 @@
   }
 
   function go(s){
-    var want = LIVE[s] ? s : 'placeholder';
+    var want = LIVE[s] ? (PANEL_OF[s] || s) : 'placeholder';
     document.querySelectorAll('.panel').forEach(function(p){
       p.classList.toggle('on', p.dataset.panel === want);
     });
@@ -1601,6 +1791,160 @@
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
+    if (s.indexOf('dash_') === 0)  loadKpiDash(s.slice(5));
+    if (s === 'kpi_entry')         loadKpiEntry();
+    if (s === 'admin_banner')      loadBannerScreen();
+    if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
+  }
+
+  /* ---------------- KPI dashboards ----------------
+     One panel serves all twelve. Everything about what a KPI is, where its
+     number comes from and how it is drawn lives in kpi.js; this is only the
+     screen around it. */
+  var kpiFy = window.KPIX ? window.KPIX.fyOf() : new Date().getFullYear();
+  var kpiDept = 'topmgmt';
+
+  function fyChoices(){
+    var now = window.KPIX.fyOf(), out = [];
+    for (var y = now; y >= now - 4; y--) out.push(y);
+    return out;
+  }
+  function fillFy(id){
+    var sel = document.getElementById(id);
+    if (!sel || sel.options.length) return;
+    sel.innerHTML = fyChoices().map(function (y){
+      return '<option value="' + y + '">' + window.KPIX.fyLabel(y) + '</option>';
+    }).join('');
+    sel.value = String(kpiFy);
+  }
+
+  async function loadKpiDash(dept){
+    if (!window.KPIX) { toast('The dashboard engine did not load.'); return; }
+    kpiDept = dept;
+    var d = window.KPIX.DEPTS.filter(function (x){ return x.key === dept; })[0] || { title: dept, note: '' };
+    document.getElementById('kd-title').textContent = d.title + ' — financial year ' + window.KPIX.fyLabel(kpiFy);
+    document.getElementById('kd-note').textContent = d.note;
+    fillFy('kd-fy');
+    document.getElementById('kd-fy').value = String(kpiFy);
+    window.KPIX.refresh();
+    await window.KPIX.renderDashboard(dept, document.getElementById('kd-body'), kpiFy);
+  }
+
+  /* A chart with nothing behind it offers the entry screen, and lands on the
+     right KPI when you get there — otherwise it is a dead end. */
+  if (window.KPIX) window.KPIX.onEntryRequest = function (kpiId){
+    var k = window.KPIX.byId(kpiId);
+    go('kpi_entry');
+    setTimeout(function (){
+      if (k) {
+        document.getElementById('ke-dept').value = k.dept;
+        fillKpiChoices();
+        document.getElementById('ke-kpi').value = kpiId;
+      }
+      drawKpiForm();
+    }, 60);
+  };
+
+  function fillKpiChoices(){
+    var dept = document.getElementById('ke-dept').value;
+    var list = window.KPIX.forDept(dept).filter(function (k){ return !k.mirror; });
+    document.getElementById('ke-kpi').innerHTML = list.map(function (k){
+      return '<option value="' + k.id + '">' + esc(k.name) + '</option>';
+    }).join('') || '<option value="">Nothing to enter — every KPI here is computed</option>';
+  }
+
+  async function drawKpiForm(){
+    var host = document.getElementById('ke-form');
+    var id = document.getElementById('ke-kpi').value;
+    if (!id) { host.innerHTML = '<div class="empty"><b>Nothing to enter</b>Every KPI in this department is computed from records.</div>'; return; }
+    host.innerHTML = '<div class="hint">Loading…</div>';
+    var doc = await window.KPIX.entryDoc(id, kpiFy);
+    host.innerHTML = window.KPIX.entryForm(id, kpiFy, doc);
+  }
+
+  async function drawKpiGaps(){
+    var host = document.getElementById('ke-gaps');
+    var dept = document.getElementById('ke-dept').value;
+    var list = window.KPIX.forDept(dept).filter(function (k){ return !k.mirror && !(k.derive && !k.plan); });
+    var rows = [];
+    for (var i = 0; i < list.length; i++){
+      var doc = await window.KPIX.entryDoc(list[i].id, kpiFy);
+      if (!doc) rows.push(list[i]);
+    }
+    host.innerHTML = rows.length
+      ? '<table class="t"><thead><tr><th>KPI</th><th>Measured in</th><th>Columns</th></tr></thead><tbody>' +
+        rows.map(function (k){
+          return '<tr><td><a data-pick="' + k.id + '" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">' +
+            esc(k.name) + '</a></td><td>' + esc(k.unit) + '</td><td class="hint">' +
+            esc(window.KPIX.cols(k).length === 12 ? 'Apr–Mar' : window.KPIX.cols(k).join(', ')) + '</td></tr>';
+        }).join('') + '</tbody></table>'
+      : '<div class="empty"><b>Nothing outstanding</b>Every KPI in this department has figures for ' +
+        window.KPIX.fyLabel(kpiFy) + '.</div>';
+    host.querySelectorAll('[data-pick]').forEach(function (a){
+      a.addEventListener('click', function (){
+        document.getElementById('ke-kpi').value = a.dataset.pick;
+        drawKpiForm();
+      });
+    });
+  }
+
+  async function loadKpiEntry(){
+    if (!window.KPIX) return;
+    fillFy('ke-fy');
+    var dsel = document.getElementById('ke-dept');
+    if (!dsel.options.length){
+      dsel.innerHTML = window.KPIX.DEPTS.filter(function (d){ return d.key !== 'topmgmt' && d.key !== 'accounts'; })
+        .map(function (d){ return '<option value="' + d.key + '">' + esc(d.title) + '</option>'; }).join('');
+      dsel.value = (kpiDept === 'topmgmt' || kpiDept === 'accounts') ? 'production' : kpiDept;
+      fillKpiChoices();
+    }
+    await drawKpiForm();
+    await drawKpiGaps();
+  }
+
+  /* ---------------- screens served by the website ---------------- */
+  var EMBEDS = {
+    admin_site: ['Website Content', 'admin',
+      'The public website — text, photographs, sections, colours, contacts and the RFQ settings. ' +
+      'It is edited here and nowhere else: the website itself has no admin button. Anything published ' +
+      'here appears on the live site straight away, because both read the same record.'],
+    emb_pipeline: ['RFQ Pipeline', 'pipeline',
+      'Enquiries from the website: drawing reading, costing, quotations, and the handover that turns ' +
+      'a won quotation into a part in this system.'],
+    emb_ppc: ['Production Planning', 'ppc',
+      'Customer orders, capacity and scheduling as held on the website side.'],
+    emb_hr: ['HR & Payroll', 'hr',
+      'Employees, attendance, leave, payroll and statutory compliance.'],
+    emb_me: ['My Attendance', 'me',
+      'The employee self-service screen. The QR code on every printed ID card opens this same screen.']
+  };
+  function loadEmbed(id){
+    var e = EMBEDS[id]; if (!e) return;
+    document.getElementById('em-title').textContent = e[0];
+    document.getElementById('em-note').textContent = e[2];
+    var url = '/?embed=' + e[1];
+    document.getElementById('em-frame').src = url;
+    document.getElementById('em-open').href = url;
+  }
+
+  /* ---------------- the home banner ---------------- */
+  function bannerPreview(){
+    var img = document.getElementById('ab-prev'), veil = document.getElementById('ab-veil');
+    var url = document.getElementById('ab-url').value.trim();
+    if (url) { img.src = url; img.style.display = ''; veil.style.display = ''; }
+    else { img.style.display = 'none'; veil.style.display = 'none'; }
+    document.getElementById('ab-prev-title').textContent = (C.getProfile() || {}).name || 'Your company';
+    document.getElementById('ab-prev-sub').textContent = document.getElementById('ab-tag').value;
+    document.getElementById('ab-prev-strap').textContent =
+      document.getElementById('ab-strap').value || 'Intelligent Digital Manufacturing System';
+  }
+  function loadBannerScreen(){
+    var b = settings.banner || {};
+    document.getElementById('ab-url').value = b.image || '';
+    document.getElementById('ab-tag').value = b.tagline || '';
+    document.getElementById('ab-strap').value = b.strap || '';
+    document.getElementById('ab-msg').style.display = 'none';
+    bannerPreview();
   }
 
   /* ---------------- themes ---------------- */
@@ -1625,12 +1969,12 @@
 
   /* ---------------- home ---------------- */
   var settings = {};
-  var DEFAULT_SHORTCUTS = ['parts','form','pfd','fmea','control_plan','production_plan','grn','skill_matrix'];
-
   async function loadHome(){
     var p = C.getProfile();
     document.getElementById('bn-title').textContent = p.name || 'Your company';
     document.getElementById('bn-sub').textContent = (settings.banner && settings.banner.tagline) || '';
+    document.getElementById('bn-strap').textContent =
+      (settings.banner && settings.banner.strap) || 'Intelligent Digital Manufacturing System';
     var img = document.getElementById('bn-img'), veil = document.getElementById('bn-veil');
     if (settings.banner && settings.banner.image) {
       img.src = settings.banner.image; img.style.display = ''; veil.style.display = '';
@@ -1646,20 +1990,6 @@
     } catch(e){
       document.getElementById('home-stats').innerHTML = '<div class="note bad">'+esc(e.message)+'</div>';
     }
-    drawQuick();
-  }
-
-  function drawQuick(){
-    var ids = (settings.shortcuts && settings.shortcuts.ids) || DEFAULT_SHORTCUTS;
-    document.getElementById('qa-grid').innerHTML = ids.map(function(id){
-      return '<a data-s="'+esc(id)+'"><span class="ic">'+(ICON[id]||'▪')+'</span><b>'+
-        esc(LABEL[id]||id)+'</b><span>'+(LIVE[id]?'open':'soon')+'</span></a>';
-    }).join('');
-    document.querySelectorAll('#qa-grid a').forEach(function(a){
-      a.addEventListener('click', function(){ go(a.dataset.s); });
-    });
-    document.getElementById('qa-hint').textContent =
-      'Shortcuts are saved to the database against this company, so everyone signing in sees the same set.';
   }
 
   /* ---------------- parts ---------------- */
@@ -9110,30 +9440,78 @@
   });
   document.getElementById('p-filter').addEventListener('change', loadParts);
 
-  document.getElementById('bn-edit').addEventListener('click', async function(){
-    var url = prompt('Paste an image address for the banner, or leave blank to remove it.',
-      (settings.banner && settings.banner.image) || '');
-    if (url === null) return;
-    var tagline = prompt('A line under the company name (optional).',
-      (settings.banner && settings.banner.tagline) || '');
-    if (tagline === null) tagline = '';
-    settings.banner = { image: url.trim(), tagline: tagline.trim() };
-    try { await C.idms.saveSetting('banner', settings.banner);
-          toast('Banner saved for everyone'); loadHome(); }
-    catch(e){ toast(e.message); }
+  /* ---------------- banner, KPI and dashboard wiring ---------------- */
+  ['ab-tag','ab-strap','ab-url'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', bannerPreview);
+  });
+  document.getElementById('ab-file').addEventListener('change', async function(){
+    var f = this.files[0]; if (!f) return;
+    var msg = document.getElementById('ab-msg');
+    msg.style.display = ''; msg.className = 'note'; msg.textContent = 'Uploading…';
+    try {
+      var up = await C.uploadFile(f);
+      document.getElementById('ab-url').value = up.url;
+      bannerPreview();
+      msg.className = 'note good'; msg.textContent = 'Uploaded. Press Save banner to publish it.';
+    } catch(e){ msg.className = 'note bad'; msg.textContent = e.message; }
+  });
+  document.getElementById('ab-save').addEventListener('click', async function(){
+    var msg = document.getElementById('ab-msg');
+    settings.banner = {
+      image: document.getElementById('ab-url').value.trim(),
+      tagline: document.getElementById('ab-tag').value.trim(),
+      strap: document.getElementById('ab-strap').value.trim()
+    };
+    try {
+      await C.idms.saveSetting('banner', settings.banner);
+      msg.style.display=''; msg.className='note good'; msg.textContent='Saved — everyone sees this banner.';
+      loadHome();
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent=e.message; }
+  });
+  document.getElementById('ab-clear').addEventListener('click', function(){
+    document.getElementById('ab-url').value = '';
+    document.getElementById('ab-file').value = '';
+    bannerPreview();
   });
 
-  document.getElementById('qa-edit').addEventListener('click', async function(){
-    var all = Object.keys(LABEL);
-    var current = ((settings.shortcuts && settings.shortcuts.ids) || DEFAULT_SHORTCUTS).join(', ');
-    var next = prompt('Shortcuts to show, separated by commas.\n\nAvailable:\n' + all.join(', '), current);
-    if (next === null) return;
-    var ids = next.split(',').map(function(x){ return x.trim(); })
-      .filter(function(x){ return LABEL[x]; });
-    if (!ids.length) { toast('None of those names matched a screen.'); return; }
-    settings.shortcuts = { ids: ids };
-    try { await C.idms.saveSetting('shortcuts', settings.shortcuts); toast('Shortcuts saved'); drawQuick(); }
-    catch(e){ toast(e.message); }
+  document.getElementById('kd-run').addEventListener('click', function(){ loadKpiDash(kpiDept); });
+  document.getElementById('kd-fy').addEventListener('change', function(){
+    kpiFy = +this.value; loadKpiDash(kpiDept);
+  });
+  document.getElementById('kd-entry').addEventListener('click', function(){ go('kpi_entry'); });
+  document.getElementById('kd-print').addEventListener('click', function(){
+    window.KPIX.printDashboard(kpiDept, kpiFy, document.getElementById('kd-body'));
+  });
+
+  document.getElementById('ke-fy').addEventListener('change', function(){
+    kpiFy = +this.value; drawKpiForm(); drawKpiGaps();
+  });
+  document.getElementById('ke-dept').addEventListener('change', function(){
+    fillKpiChoices(); drawKpiForm(); drawKpiGaps();
+  });
+  document.getElementById('ke-kpi').addEventListener('change', drawKpiForm);
+  document.getElementById('ke-save').addEventListener('click', async function(){
+    var id = document.getElementById('ke-kpi').value, msg = document.getElementById('ke-msg');
+    if (!id) return;
+    this.disabled = true;
+    try {
+      await window.KPIX.saveEntry(id, kpiFy, document.getElementById('ke-form'));
+      msg.style.display=''; msg.className='note good';
+      msg.textContent='Saved. The department dashboard will show it.';
+      await drawKpiForm(); await drawKpiGaps();
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent=e.message; }
+    this.disabled = false;
+  });
+
+  document.getElementById('em-reload').addEventListener('click', function(){
+    var f = document.getElementById('em-frame');
+    f.src = f.src;                              // eslint-disable-line no-self-assign
+  });
+
+  document.getElementById('t-db').addEventListener('click', async function(){
+    dbState(false, 'Checking…');
+    try { settings = await C.idms.settings(); dbState(true, 'Database: connected'); }
+    catch(e){ dbState(false, 'Database: ' + e.message); }
   });
 
   /* Export and import are a safety net for taking a copy off-site. The
@@ -9153,6 +9531,13 @@
   });
 
   document.getElementById('t-import').addEventListener('click', function(){
+    /* Restoring overwrites records. It is not something a general login should
+       be able to do from a stray click. */
+    if (String(me.role || '').toLowerCase().indexOf('admin') < 0 &&
+        String(me.role || '').toLowerCase() !== 'developer') {
+      toast('Restoring a backup needs an administrator login.');
+      return;
+    }
     var f = document.createElement('input');
     f.type = 'file'; f.accept = '.json,application/json';
     f.addEventListener('change', async function(){
@@ -9922,17 +10307,42 @@
     this.disabled = false;
   });
 
-  /* A token in this tab is not proof of anything — it may have expired or been
-     revoked since. Ask the server before showing a single screen. */
+  /* ---------------- opening the system ----------------
+     Opening this page signs nobody in. Any token left in the tab is discarded
+     first, so the sign-in screen always stands and the browser has nothing to
+     re-use: a shared works PC must not walk somebody into live quality records
+     because the last person closed the lid.
+
+     The session still lasts while the tab is open — the staff screens that run
+     in a frame read the same token — but it does not survive re-opening the
+     page, which is exactly what was asked for. */
   (async function(){
-    if (!C.getToken()) return;                       // no token: the sign-in screen stands
-    var who = await C.checkSession();
-    if (!who) { C.setToken(''); return; }            // expired or revoked: sign in again
+    if (C.getToken()) { try { await C.signOut(); } catch(e){ C.setToken(''); } }
+    C.setToken('');
+
+    /* the company name and logo on the sign-in screen come from the same profile
+       the website uses; it is readable without signing in, which is why it can be
+       shown before anybody has */
     try {
-      var j = await C.api('/api/idms?what=settings');
-      settings = j.settings || {};
-      start();
-    } catch(e){ C.setToken(''); }
+      var p = await C.loadProfile();
+      if (p.name) {
+        document.getElementById('g-co').textContent = p.name;
+        document.getElementById('g-welcome').textContent = 'Welcome to ' + p.name;
+        document.title = p.name + ' — IDMS';
+      } else {
+        document.getElementById('g-co').textContent = 'IDMS';
+        document.getElementById('g-welcome').textContent = 'Welcome';
+      }
+      document.getElementById('g-addr').textContent = p.address || '';
+      if (p.logo) document.getElementById('g-logo').innerHTML = '<img src="' + p.logo + '" alt="">';
+      else document.getElementById('g-logo').innerHTML =
+        '<div class="mark">' + esc((p.docPrefix || 'ID').slice(0,2)) + '</div>';
+      C.setFavicon(p.logo || '');
+    } catch(e){
+      document.getElementById('g-co').textContent = 'IDMS';
+      document.getElementById('g-welcome').textContent = 'Welcome';
+    }
+    document.getElementById('g-user').focus();
   })();
 })();
 </script>

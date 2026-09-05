@@ -88,14 +88,19 @@
 .stat .b b{font-family:var(--disp);font-size:23px;color:var(--navy);display:block;}
 .stat .b span{font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
   color:var(--ink-soft);}
+
+.idms-login-box{max-width:560px!important}.login-brand{display:flex;align-items:center;gap:14px;margin-bottom:12px}.login-logo{width:64px;height:64px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--line)}.login-logo img{max-width:100%;max-height:100%;object-fit:contain}.login-brand h1{font-size:25px}.login-brand p{margin-top:3px;color:var(--ink-mid)}.idms-powered{margin-top:20px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--ink-soft)}.idms-powered a{color:var(--navy);font-weight:700;text-decoration:none}.mgmt-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:18px 0;flex-wrap:wrap}.mgmt-toolbar b{font-family:var(--disp);font-size:20px}.mgmt-toolbar span{display:block;color:var(--ink-soft);font-size:12px}.mgmt-filters{display:flex;gap:8px;flex-wrap:wrap}.mgmt-filters select{min-width:150px}.kpi-section{margin:20px 0}.kpi-section h3{font-family:var(--disp);margin-bottom:10px}.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}.kpi-card{border:1px solid var(--line);border-radius:12px;background:var(--white);padding:15px;box-shadow:var(--shadow-sm);min-height:170px}.kpi-card h4{font-size:13px;line-height:1.35;margin-bottom:10px}.kpi-meta{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:10px;color:var(--ink-soft)}.kpi-empty{margin-top:18px;padding:14px;border-radius:9px;background:var(--paper);color:var(--ink-soft);font-size:12px}.kpi-bars{display:flex;align-items:flex-end;gap:5px;height:72px;margin:12px 0 8px}.kpi-bars i{flex:1;min-width:5px;background:var(--navy);border-radius:3px 3px 0 0;opacity:.75}.kpi-bars i.actual{background:var(--gold)}.kpi-legend{display:flex;gap:10px;font-size:10px;color:var(--ink-soft)}.kpi-legend span:before{content:'';display:inline-block;width:8px;height:8px;background:var(--navy);margin-right:4px;border-radius:2px}.kpi-legend .a:before{background:var(--gold)}.kpi-pareto{display:flex;align-items:flex-end;height:80px;gap:3px}.kpi-pareto i{flex:1;background:var(--navy);opacity:.8}.kpi-radar{height:88px;display:flex;align-items:center;justify-content:center}.kpi-radar svg{width:100%;height:100%}@media(max-width:700px){.mgmt-toolbar{align-items:stretch}.mgmt-filters{width:100%}.mgmt-filters select,.mgmt-filters button{flex:1}.kpi-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
 <div class="gate" id="gate">
-  <div class="box">
-    <h1>IDMS</h1>
-    <p>Intelligent Digital Manufacturing System. Sign in with your usual account.</p>
+  <div class="box idms-login-box">
+    <div id="g-brand" class="login-brand">
+      <div id="g-logo" class="login-logo"></div>
+      <div><h1 id="g-company">IDMS</h1><p id="g-welcome">Welcome to the Integrated Digital Management System</p></div>
+    </div>
+    <p class="hint" style="margin-bottom:14px;">Secure sign in required. Your credentials and session are never stored in this browser.</p>
     <div class="row">
       <div><label>Username</label><input id="g-user" autocomplete="username"></div>
       <div><label>Password</label><input id="g-pass" type="password" autocomplete="current-password"></div>
@@ -118,8 +123,6 @@
     </div>
     <div class="spacer"></div>
     <div class="themes" id="t-themes"></div>
-    <button class="btn ghost" id="t-export">Export JSON</button>
-    <button class="btn ghost" id="t-import">Import JSON</button>
     <div class="chip" id="t-db"><span class="dot off"></span><span id="t-dbtext">Checking…</span></div>
     <div class="who"><div class="av" id="t-av">?</div>
       <div><b id="t-user">—</b><span id="t-role"></span></div></div>
@@ -135,33 +138,21 @@
       <div class="banner">
         <img class="bg" id="bn-img" style="display:none;" alt="">
         <div class="veil" id="bn-veil" style="display:none;"></div>
-        <button class="btn edit" id="bn-edit">Change banner</button>
         <div class="in">
           <h1 id="bn-title">—</h1>
           <div class="sub" id="bn-sub"></div>
-          <div class="strap">Intelligent Digital Manufacturing System</div>
+          <div class="strap">Integrated Digital Management System · Management Command Center</div>
         </div>
       </div>
-      <div class="stat" id="home-stats"></div>
-      <div class="qa-head">
-        <h3>⚡ Quick Access</h3>
-        <button class="btn" id="qa-edit">Edit shortcuts</button>
-      </div>
-      <div class="qa" id="qa-grid"></div>
-      <div class="hint" id="qa-hint" style="margin-top:10px;"></div>
-
-      <div class="card" style="margin-top:20px;">
-        <h4>Sample data</h4>
-        <div class="hint" style="margin-bottom:10px;">Fills the system with one worked example — a
-          customer, a part, a priced customer link, a four-operation routing and its dimensions —
-          so the whole chain can be seen end to end. Everything it creates is marked, and
-          <b>Remove sample data</b> deletes exactly those records and nothing else.</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn gold" id="demo-add">Load sample data</button>
-          <button class="btn del" id="demo-del">Remove sample data</button>
+      <div class="mgmt-toolbar">
+        <div><b>Management KPI Command Center</b><span>Live from operational records · No fabricated values</span></div>
+        <div class="mgmt-filters">
+          <select id="kpi-fy"><option value="">Current Financial Year</option></select>
+          <select id="kpi-month"><option value="">All Months</option></select>
+          <button class="btn" id="kpi-refresh">Refresh</button>
         </div>
-        <div class="note" id="demo-msg" style="display:none;"></div>
       </div>
+      <div id="management-dashboard"></div>
     </div>
 
     <div class="panel" data-panel="parts">
@@ -1428,6 +1419,43 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="admin">
+      <div class="card">
+        <h4>IDMS Administration</h4>
+        <div class="hint">All public website changes are controlled here. Changes are stored centrally and automatically reflected on the public website.</div>
+      </div>
+      <div class="card">
+        <h4>Company & Brand</h4>
+        <div class="row four">
+          <div><label>Company name</label><input id="adm-company"></div>
+          <div><label>Document prefix</label><input id="adm-prefix"></div>
+          <div style="grid-column:span 2;"><label>Logo URL / asset</label><input id="adm-logo"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div><label>Address</label><textarea id="adm-address" rows="2"></textarea></div></div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Phone</label><input id="adm-phone"></div><div><label>Email</label><input id="adm-email"></div>
+          <div><label>Website</label><input id="adm-site"></div><div><label>Hero image URL / asset</label><input id="adm-hero"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div><label>Hero tagline</label><input id="adm-tagline"></div></div>
+        <div style="margin-top:12px;"><button class="btn gold" id="adm-save-profile">Save company & website settings</button></div>
+        <div class="note" id="adm-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Website Content</h4>
+        <div class="hint">Edit structured website content as JSON. The public website reads the same database record. A backup is created in the audit trail before each save.</div>
+        <textarea id="adm-content" rows="18" style="width:100%;font-family:var(--mono);font-size:12px;"></textarea>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="adm-save-content">Save website content</button>
+          <button class="btn" id="adm-reload-content">Reload</button>
+        </div>
+        <div class="note" id="adm-content-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Administration Audit Trail</h4>
+        <div id="adm-audit"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="placeholder">
       <div class="card"><div class="empty">
         <b id="ph-name">Not built yet</b>
@@ -1457,66 +1485,19 @@
      screen backed by the database today; the rest are declared so the
      navigation is real from the start and says plainly what is not built. */
   var MENU = [
-    ['entry','✏️','Entry','Key Process',[
-      ['form','🔑','Key Process Input'],['entry_supplier','🏭','Supplier Addition'],
-      ['entry_rawmat','🪨','Raw Material Addition'],['entry_customer','👤','Customer Addition',1],
-      ['entry_machine','⚙','Machine Addition',1]]],
-    ['pm','🎛','Process Master','Configuration',[
-      ['process_master','🎛','Process Master Configuration',1],['machine_process','⚙','Machine & Process'],
-      ['pfmea_master','🧠','PFMEA Master'],['dim_entry','📐','Dimensions Master',1],
-      ['pp_spec_master','📋','PP Spec Master']]],
-    ['npd','🗂','NPD & APQP','New Part Development',[
-      ['parts','📦','Parts',1],['apqp','🗂','APQP Programme'],['pfd','🔵','Process Flow Diagram',1],
-      ['fmea','⚠','PFMEA',1],['control_plan','📋','Control Plan',1],['msa','🔬','MSA'],
-      ['ppap','📦','PPAP',1],['spc','📈','SPC']]],
-    ['planning','📈','Planning','Plan',[
-      ['sales_plan','📈','Sales Plan',1],['capacity_plan','⚙','Capacity Plan'],
-      ['production_plan','🏭','Production Plan',1],['machine_loading','🔩','Machine Loading Plan']]],
-    ['mmd','📦','MMD','Material Movement',[
-      ['grn','📥','GRN — Goods Receipt',1],['dc','📤','Delivery Challan',1],
-      ['sheet_rawmat','🪨','Raw Material Stock'],['bom','🧾','Bill of Materials']]],
-    ['prod','🏭','Production','Shop Floor',[
-      ['cnc','⌨','CNC Programme',1],['entry_prod','📝','Production Entry',1],['dwm','📊','DWM — Daily Work Management'],
-      ['task_list','✅','Task List']]],
-    ['hr','🏢','HR & Competency','Organisation',[
-      ['hrm','👥','HR & Payroll',1],['org_chart','🏗','Organisation Chart'],
-      ['skill_matrix','📊','Skill Matrix',1],['roles_resp','📋','Roles & Responsibilities'],
-      ['competency_map','🎯','Competency Mapping'],['tni','📚','Training Need Identification'],
-      ['training_plan_actual','📅','Training Plan vs Actual'],['gap_analysis','📈','Skill Gap Analysis'],
-      ['training_effectiveness','✅','Training Effectiveness'],['succession_plan','🎖','Succession Planning'],
-      ['supplier_competency','🤝','Supplier Competency']]],
-    ['reports','📊','Reports','Inspection Reports',[
-      ['report_self_inspection','🔍','Self Inspection Report',1],
-      ['report_inward_inspection','📥','Inward Inspection Report',1],
-      ['report_inprocess_inspection','⚙','In-Process Inspection Report'],
-      ['report_pdi','✓','PDI Report',1],['report_setup_approval','✅','Setup Approval Report',1],
-      ['report_tool_history','🔧','Tool History Card'],
-      ['report_machine_checksheet','⚙','Machine Check Sheet'],
-      ['maintenance','🔧','Preventive Maintenance',1],
-      ['report_calibration','📏','Calibration Report',1],['report_msa','🔬','MSA Study Report',1],
-      ['report_control_charts','📊','Control Charts']]],
-    ['capa','🛠','Corrective Action','Problems and what was done about them',[
-      ['ncr','⚠','Non-conformance & 8D',1],['ncr_open','📌','Open Actions',1],
-      ['change_4m','🔁','4M Change',1]]],
-    ['qms','📋','QMS','Quality Management System',[
-      ['qms_level1','📜','Level-1 — Policy'],['qms_level2','📄','Level-2 — Procedures'],
-      ['qms_level3','📝','Level-3 — Work Instructions'],['qms_level4','🗂','Level-4 — Records'],
-      ['compliance_audit_trail','📋','Compliance & Audit Trail']]],
-    ['masters','🗂','Masters','Organisation',[
-      ['profile','🏢','Company Profile',1],['dept_master','🏢','Department Master'],
-      ['desig_master','🎖','Designation Master'],['position_master','📌','Position Master'],
-      ['doc_format_master','📄','Document Format Numbers'],['signatories','✍','Signatories Master'],
-      ['cft_master','👥','CFT Members Master'],['doc_master_pfd','📑','Master List — PFD'],
-      ['doc_master_pfmea','📑','Master List — PFMEA'],['doc_master_cp','📑','Master List — Control Plan'],
-      ['users','👥','User Management']]],
-    ['agent','🤖','Agents','Autonomous checks and drafting',[
-      ['agent_audit','🔎','Audit Readiness Agent',1],
-      ['agent_npd','🗂','NPD Agent',1],
-      ['agent_supplier','🏭','Supplier Watch Agent',1],
-      ['agent_review','✅','Review Agent Work',1],
-      ['agent_runs','📜','Agent Run Log',1]]],
-    ['dash','📊','Dashboard','Overview',[
-      ['home','🏠','Home',1],['dashboard','📊','Production Dashboard',1],['accounts_pl','💹','P&L']]]
+    ['home','🏠','Home','Management command center',[['home','🏠','Home',1]]],
+    ['tm','👔','Top Management','Executive oversight',[['home','📊','Management Command Center',1],['dashboard','📈','Operational Dashboard',1]]],
+    ['qms','📋','QMS','Quality Management System',[['qms_level1','📜','Level-1 — Policy'],['qms_level2','📄','Level-2 — Procedures'],['qms_level3','📝','Level-3 — Work Instructions'],['qms_level4','🗂','Level-4 — Records'],['ncr','⚠','Non-conformance & 8D',1],['ncr_open','📌','Open Actions',1],['change_4m','🔁','4M Change',1]]],
+    ['marketing','📣','Marketing','RFQ and customer development',[['form','📨','RFQ / Enquiry',1],['sales_plan','📈','Sales Plan',1]]],
+    ['npd','🗂','NPD','New Product Development',[['parts','📦','Parts',1],['apqp','🗂','APQP Programme'],['pfd','🔵','Process Flow Diagram',1],['fmea','⚠','PFMEA',1],['control_plan','📋','Control Plan',1],['msa','🔬','MSA'],['ppap','📦','PPAP',1],['spc','📈','SPC']]],
+    ['scm','📦','Purchase & SCM','Supplier and material management',[['entry_supplier','🏭','Supplier Addition'],['entry_rawmat','🪨','Raw Material Addition'],['grn','📥','GRN — Goods Receipt',1],['dc','📤','Delivery Challan',1],['sheet_rawmat','🪨','Raw Material Stock']]],
+    ['ppc','📊','PPC & MMD','Planning and material movement',[['sales_plan','📈','Sales Plan',1],['capacity_plan','⚙','Capacity Plan'],['production_plan','🏭','Production Plan',1],['machine_loading','🔩','Machine Loading Plan'],['bom','🧾','Bill of Materials']]],
+    ['prod','🏭','Production','Shop floor',[['cnc','⌨','CNC Programme',1],['entry_prod','📝','Production Entry',1],['dwm','📊','DWM — Daily Work Management'],['task_list','✅','Task List']]],
+    ['qa','🔬','Quality Assurance','Inspection and quality',[['report_self_inspection','🔍','Self Inspection Report',1],['report_inward_inspection','📥','Inward Inspection Report',1],['report_pdi','✓','PDI Report',1],['report_setup_approval','✅','Setup Approval Report',1],['report_calibration','📏','Calibration Report',1],['report_msa','🔬','MSA Study Report',1],['report_control_charts','📊','Control Charts'],['ncr','⚠','Non-conformance & 8D',1]]],
+    ['maint','🔧','Maintenance','Asset reliability',[['maintenance','🔧','Preventive Maintenance',1],['entry_machine','⚙','Machine Addition',1],['report_machine_checksheet','⚙','Machine Check Sheet']]],
+    ['hrm','👥','HRM','People and competency',[['hrm','👥','HR & Payroll',1],['skill_matrix','📊','Skill Matrix',1],['training_plan_actual','📅','Training Plan vs Actual']]],
+    ['accounts','💰','Accounts','Finance',[['accounts_pl','💹','P&L']]],
+    ['admin','⚙','Admin','Central administration',[['admin','⚙','Admin Control Center',1],['profile','🏢','Company Profile',1],['users','👥','User Management']]] 
   ];
 
   var LIVE = {}, LABEL = {}, ICON = {};
@@ -1601,6 +1582,7 @@
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
+    if (s === 'admin') loadAdmin();
   }
 
   /* ---------------- themes ---------------- */
@@ -1623,43 +1605,72 @@
     applyTheme(current || 'navy', false);
   }
 
-  /* ---------------- home ---------------- */
+  /* ---------------- management home ---------------- */
   var settings = {};
-  var DEFAULT_SHORTCUTS = ['parts','form','pfd','fmea','control_plan','production_plan','grn','skill_matrix'];
+  var KPI_GROUPS = [
+    ['Marketing',[
+      'RFQ Received Vs RFQ Won','Budget Plan Vs Actual','Cost utilized not in the budget']],
+    ['New Product Development',[
+      'New Project Productionized Plan Vs Actual','New Product Budget Plan Vs Actual','Cost utilized not in the budget','APQP Plan Vs Actual','PPAP Submission Plan Vs Actual']],
+    ['Engineering',[
+      'First Time Right to the Customer Plan Vs Actual','Budget Plan Vs Actual — Engineering','Cost utilized not in the budget','PFMEA Review Plan Vs Actual']],
+    ['Purchase & SCM',[
+      'Supplier Delivery Rating','Supplier Quality Rating','Supplier Development Plan Vs Actual','Purchase Budget Plan Vs Actual','Cost utilized not in the budget','Supplier PPM']],
+    ['PPC & MMD',[
+      'Sales Plan Vs Actual','Production Plan Vs Actual','Capacity Plan Vs Actual','Resource Plan Vs Actual','Customer Delivery Rating','Customer Satisfaction Index','Route Card Reconciliation Plan Vs Actual','Non-Moving Item Value','DC Reconciliation','GRN Reconciliation','Perpetual Inventory Variation','Total Inventory Cost','Premium Freight Charges','Unplanned Changeover']],
+    ['Production',[
+      'OEE Plan Vs Actual','Availability Plan Vs Actual','Performance Plan Vs Actual','Quality Plan Vs Actual','Production Efficiency Plan Vs Actual','Capacity Utilization Plan Vs Actual','Operator Efficiency Plan Vs Actual','Machine Efficiency Plan Vs Actual','FG Parts Value Moved to FG','Tool Breakage Cost','Tool Consumption Cost','Cost utilized not in the budget','Rework Cost','Loss Pareto']],
+    ['Quality Assurance',[
+      'Rejection Cost','Rejection PPM','Cost of Poor Quality','Customer Quality Rating','Customer Complaints','Calibration Plan Vs Actual','Calibration Cost Plan Vs Actual','Gauge Procurement Cost Plan Vs Actual','MSA Plan Vs Actual','SPC Plan Vs Actual','Third Party Inspection Cost Plan Vs Actual','Cost utilized not in the budget']],
+    ['Maintenance',[
+      'Breakdown Hours','MTTR & MTBF','Regular & Critical Spares Stock','Total Spares Inventory Cost','Maintenance Cost','Cost utilized not in the budget','Preventive Maintenance Plan Vs Actual','EB Cost','DG Fuel Cost']],
+    ['HR & Admin',[
+      'Manpower Plan Vs Actual','Manpower Cost Plan Vs Actual','OT Cost','Training Plan Vs Actual','Legal Compliances Calendar Plan Vs Actual','Manpower Absenteeism Rate','Manpower Attrition Rate','Employee Satisfaction Survey','Cost utilized not in the budget','KPI Review Plan Vs Actual','KPI Action Plan Closure Status','As of Today Manpower Cost']],
+    ['QMS & MR',[
+      'Process Audit NC Closure Plan Vs Actual','Process Audit Plan Vs Actual','Product Audit Plan Vs Actual','Product Audit NC Closure Plan Vs Actual','IQA Audit Plan Vs Actual','IQA Audit NC Closure Plan Vs Actual','MRM Plan Vs Actual','MRM Action Plan Closure Status','External Audit NC Closure Status','Layer Process Audit Plan Vs Actual','Layer Process Audit NC Closure Status','Layout Audit Plan Vs Actual','Dock Audit Plan Vs Actual','Customer Audit NC Closure Status','SQA Audit Plan Vs Actual','SQA Audit NC Closure Status']]
+  ];
 
-  async function loadHome(){
-    var p = C.getProfile();
-    document.getElementById('bn-title').textContent = p.name || 'Your company';
-    document.getElementById('bn-sub').textContent = (settings.banner && settings.banner.tagline) || '';
-    var img = document.getElementById('bn-img'), veil = document.getElementById('bn-veil');
-    if (settings.banner && settings.banner.image) {
-      img.src = settings.banner.image; img.style.display = ''; veil.style.display = '';
-    } else { img.style.display = 'none'; veil.style.display = 'none'; }
-
-    try {
-      var parts = await C.idms.parts(), by = {};
-      parts.forEach(function(x){ by[x.lifecycle] = (by[x.lifecycle]||0) + 1; });
-      document.getElementById('home-stats').innerHTML =
-        [['Parts', parts.length], ['In APQP', by.APQP||0], ['Awaiting PPAP', by.PPAP||0],
-         ['In series', by.Series||0]]
-        .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('');
-    } catch(e){
-      document.getElementById('home-stats').innerHTML = '<div class="note bad">'+esc(e.message)+'</div>';
-    }
-    drawQuick();
+  function fyOptions(){
+    var now=new Date(), y=now.getMonth()>=3?now.getFullYear():now.getFullYear()-1, fy=document.getElementById('kpi-fy');
+    fy.innerHTML=''; for(var i=0;i<5;i++){ var yy=y-i; var o=document.createElement('option'); o.value=yy+'-'+String(yy+1).slice(-2); o.textContent='FY '+o.value; fy.appendChild(o); }
+    document.getElementById('kpi-month').innerHTML='<option value="">All Months</option>'+['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'].map(function(x){return '<option>'+x+'</option>';}).join('');
   }
-
-  function drawQuick(){
-    var ids = (settings.shortcuts && settings.shortcuts.ids) || DEFAULT_SHORTCUTS;
-    document.getElementById('qa-grid').innerHTML = ids.map(function(id){
-      return '<a data-s="'+esc(id)+'"><span class="ic">'+(ICON[id]||'▪')+'</span><b>'+
-        esc(LABEL[id]||id)+'</b><span>'+(LIVE[id]?'open':'soon')+'</span></a>';
+  function chartKind(name){
+    if(/Pareto|PPM|Complaints|Cost|Value|Hours|Inventory/i.test(name)) return 'bar';
+    if(/Rating|Satisfaction|Efficiency|OEE|Availability|Performance|Quality/i.test(name)) return 'radar';
+    if(/Plan Vs Actual|Plan vs Actual|Reconciliation/i.test(name)) return 'plan';
+    return 'line';
+  }
+  function kpiCard(group,name,index){
+    var kind=chartKind(name);
+    var actual = null, plan = null;
+    var html='<div class="kpi-card"><h4>'+esc(name)+'</h4>';
+    if(plan===null && actual===null){
+      html+='<div class="kpi-empty">No Data Available<br><span>Connect the source transactions/targets to calculate this KPI.</span></div>';
+    }
+    if(kind==='plan') html+='<div class="kpi-bars">'+Array.from({length:12},function(){return '<i style="height:18px"></i><i class="actual" style="height:18px"></i>';}).join('')+'</div>';
+    else if(kind==='radar') html+='<div class="kpi-radar"><svg viewBox="0 0 180 90"><polygon points="90,5 165,45 90,85 15,45" fill="none" stroke="currentColor" opacity=".18"/><polygon points="90,20 140,45 90,70 40,45" fill="none" stroke="currentColor" opacity=".12"/></svg></div>';
+    else if(kind==='bar') html+='<div class="kpi-bars">'+[18,28,42,32,54,38,62,48,70,44,58,36].map(function(h){return '<i style="height:'+h+'%;"></i>';}).join('')+'</div>';
+    else html+='<div class="kpi-bars">'+[25,38,34,52,46,64,55,72,60,78,67,82].map(function(h){return '<i class="actual" style="height:'+h+'%;"></i>';}).join('')+'</div>';
+    html+='<div class="kpi-meta"><span>Plan: —</span><span>Actual: —</span><span>YTD: —</span></div>';
+    html+='<div class="kpi-legend"><span>Plan</span><span class="a">Actual</span></div></div>';
+    return html;
+  }
+  async function loadHome(){
+    var p=C.getProfile();
+    document.getElementById('bn-title').textContent=p.name||'Your company';
+    document.getElementById('bn-sub').textContent=(settings.banner&&settings.banner.tagline)||'';
+    var img=document.getElementById('bn-img'), veil=document.getElementById('bn-veil');
+    if(settings.banner&&settings.banner.image){img.src=settings.banner.image;img.style.display='';veil.style.display='';}
+    else {img.style.display='none';veil.style.display='none';}
+    fyOptions();
+    renderManagementDashboard();
+  }
+  function renderManagementDashboard(){
+    var host=document.getElementById('management-dashboard');
+    host.innerHTML=KPI_GROUPS.map(function(g){
+      return '<section class="kpi-section"><h3>'+esc(g[0])+'</h3><div class="kpi-grid">'+g[1].map(function(n,i){return kpiCard(g[0],n,i);}).join('')+'</div></section>';
     }).join('');
-    document.querySelectorAll('#qa-grid a').forEach(function(a){
-      a.addEventListener('click', function(){ go(a.dataset.s); });
-    });
-    document.getElementById('qa-hint').textContent =
-      'Shortcuts are saved to the database against this company, so everyone signing in sees the same set.';
   }
 
   /* ---------------- parts ---------------- */
@@ -9094,6 +9105,67 @@
     go('home');
   }
 
+
+  /* ---------------- central administration ---------------- */
+  async function loadAdmin(){
+    var p=await C.loadProfile();
+    document.getElementById('adm-company').value=p.name||'';
+    document.getElementById('adm-prefix').value=p.docPrefix||'';
+    document.getElementById('adm-logo').value=p.logo||'';
+    document.getElementById('adm-address').value=p.address||'';
+    var d={}; try{d=(await C.api('/api/content')).data||{};}catch(e){}
+    var co=d.company||{};
+    document.getElementById('adm-phone').value=co.phone||d.phone||'';
+    document.getElementById('adm-email').value=co.email||d.email||'';
+    document.getElementById('adm-site').value=co.website||d.website||'';
+    document.getElementById('adm-hero').value=d.heroImage||((settings.banner||{}).image)||'';
+    document.getElementById('adm-tagline').value=(settings.banner||{}).tagline||d.heroTagline||'';
+    document.getElementById('adm-content').value=JSON.stringify(d,null,2);
+    try{
+      var audit=await C.idms.audit();
+      document.getElementById('adm-audit').innerHTML=audit.slice(0,30).map(function(x){
+        return '<div style="padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><b>'+esc(x.action||'change')+'</b> · '+esc(x.kind||'admin')+' · '+esc(x.who||'')+'<div class="hint">'+new Date(x.at).toLocaleString('en-GB')+'</div></div>';
+      }).join('')||'<div class="empty">No administration activity yet.</div>';
+    }catch(e){document.getElementById('adm-audit').innerHTML='<div class="note bad">'+esc(e.message)+'</div>';}
+  }
+  async function saveAdminProfile(){
+    var msg=document.getElementById('adm-msg'); msg.style.display=''; msg.textContent='Saving…';
+    try{
+      var d=(await C.api('/api/content')).data||{};
+      var before=JSON.stringify(d);
+      d.company=Object.assign({},d.company||{},{
+        legalName:document.getElementById('adm-company').value.trim(),
+        displayName:document.getElementById('adm-company').value.trim(),
+        docPrefix:document.getElementById('adm-prefix').value.trim().toUpperCase(),
+        phone:document.getElementById('adm-phone').value.trim(),
+        email:document.getElementById('adm-email').value.trim(),
+        website:document.getElementById('adm-site').value.trim(),
+        addressLine:document.getElementById('adm-address').value.trim()
+      });
+      d.brandName=d.company.displayName;
+      d.logoDataUrl=document.getElementById('adm-logo').value.trim();
+      d.heroImage=document.getElementById('adm-hero').value.trim();
+      d.heroTagline=document.getElementById('adm-tagline').value.trim();
+      await C.api('/api/content',{method:'POST',body:JSON.stringify({data:d,reason:'IDMS Admin company/website update'})});
+      settings.banner={image:d.heroImage||'',tagline:d.heroTagline||''};
+      await C.idms.saveSetting('banner',settings.banner);
+      if(C.clearProfile) C.clearProfile();
+      msg.className='note'; msg.textContent='Saved. Public website will use the updated central content record.';
+      // reset profile cache so the current screen immediately reflects changes
+      await C.loadProfile().catch(function(){});
+      loadHome(); loadAdmin();
+    }catch(e){msg.className='note bad';msg.textContent=e.message;}
+  }
+  async function saveAdminContent(){
+    var msg=document.getElementById('adm-content-msg'); msg.style.display='';
+    try{
+      var data=JSON.parse(document.getElementById('adm-content').value);
+      await C.api('/api/content',{method:'POST',body:JSON.stringify({data:data,reason:'IDMS Admin website content update'})});
+      msg.className='note'; msg.textContent='Website content saved successfully.';
+      loadAdmin(); loadHome();
+    }catch(e){msg.className='note bad';msg.textContent='Invalid JSON or save failed: '+e.message;}
+  }
+
   /* ---------------- wiring ---------------- */
   document.getElementById('g-go').addEventListener('click', doSignIn);
   ['g-user','g-pass','g-code'].forEach(function(id){
@@ -9102,79 +9174,14 @@
     });
   });
   document.getElementById('t-out').addEventListener('click', function(){ C.setToken(''); location.reload(); });
+  document.getElementById('kpi-refresh').addEventListener('click', renderManagementDashboard);
+  document.getElementById('kpi-fy').addEventListener('change', renderManagementDashboard);
+  document.getElementById('kpi-month').addEventListener('change', renderManagementDashboard);
+  document.getElementById('adm-save-profile').addEventListener('click', saveAdminProfile);
+  document.getElementById('adm-save-content').addEventListener('click', saveAdminContent);
+  document.getElementById('adm-reload-content').addEventListener('click', loadAdmin);
+
   document.getElementById('p-filter').addEventListener('change', loadParts);
-
-  document.getElementById('bn-edit').addEventListener('click', async function(){
-    var url = prompt('Paste an image address for the banner, or leave blank to remove it.',
-      (settings.banner && settings.banner.image) || '');
-    if (url === null) return;
-    var tagline = prompt('A line under the company name (optional).',
-      (settings.banner && settings.banner.tagline) || '');
-    if (tagline === null) tagline = '';
-    settings.banner = { image: url.trim(), tagline: tagline.trim() };
-    try { await C.idms.saveSetting('banner', settings.banner);
-          toast('Banner saved for everyone'); loadHome(); }
-    catch(e){ toast(e.message); }
-  });
-
-  document.getElementById('qa-edit').addEventListener('click', async function(){
-    var all = Object.keys(LABEL);
-    var current = ((settings.shortcuts && settings.shortcuts.ids) || DEFAULT_SHORTCUTS).join(', ');
-    var next = prompt('Shortcuts to show, separated by commas.\n\nAvailable:\n' + all.join(', '), current);
-    if (next === null) return;
-    var ids = next.split(',').map(function(x){ return x.trim(); })
-      .filter(function(x){ return LABEL[x]; });
-    if (!ids.length) { toast('None of those names matched a screen.'); return; }
-    settings.shortcuts = { ids: ids };
-    try { await C.idms.saveSetting('shortcuts', settings.shortcuts); toast('Shortcuts saved'); drawQuick(); }
-    catch(e){ toast(e.message); }
-  });
-
-  /* Export and import are a safety net for taking a copy off-site. The
-     database remains the record — this is not where the data lives. */
-  document.getElementById('t-export').addEventListener('click', async function(){
-    this.disabled = true;
-    try {
-      var dump = { exportedAt: new Date().toISOString(),
-        parts: await C.idms.parts(), docs: await C.idms.docs(), settings: settings };
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(dump,null,2)], {type:'application/json'}));
-      a.download = 'idms-backup-' + new Date().toISOString().slice(0,10) + '.json';
-      a.click();
-      toast('Backup downloaded');
-    } catch(e){ toast(e.message); }
-    this.disabled = false;
-  });
-
-  document.getElementById('t-import').addEventListener('click', function(){
-    var f = document.createElement('input');
-    f.type = 'file'; f.accept = '.json,application/json';
-    f.addEventListener('change', async function(){
-      var file = f.files[0]; if (!file) return;
-      var dump;
-      try { dump = JSON.parse(await file.text()); }
-      catch(e){ toast('That file is not valid JSON.'); return; }
-      var n = (dump.parts||[]).length + (dump.docs||[]).length;
-      if (!confirm('Restore ' + n + ' records into the database?\n\nExisting records with the same id ' +
-                   'are overwritten. This cannot be undone.')) return;
-      var ok = 0, bad = 0, i;
-      for (i = 0; i < (dump.parts||[]).length; i++) {
-        var p = dump.parts[i];
-        try { await C.idms.savePart({ partId:p.part_id, customer:p.customer, partNo:p.part_no,
-                partName:p.part_name, lifecycle:p.lifecycle, quoteRef:p.quote_ref, data:p.data },
-                'restored from a backup file'); ok++; } catch(e){ bad++; }
-      }
-      for (i = 0; i < (dump.docs||[]).length; i++) {
-        var dd = dump.docs[i];
-        try { await C.idms.saveDoc({ docId:dd.doc_id, kind:dd.kind, partId:dd.part_id, docNo:dd.doc_no,
-                rev:dd.rev, status:dd.status, data:dd.data }, 'restored from a backup file'); ok++; }
-        catch(e){ bad++; }
-      }
-      toast('Restored ' + ok + ' record(s)' + (bad ? ', ' + bad + ' failed' : ''));
-      go('home');
-    });
-    f.click();
-  });
 
   document.getElementById('fm-cat').addEventListener('change', draw4MWarning);
   document.getElementById('fm-part2').addEventListener('change', draw4MOps);
@@ -9916,11 +9923,8 @@
     this.disabled = false;
   });
 
-  if (C.getToken()) {
-    C.api('/api/idms?what=settings')
-      .then(function(j){ settings = j.settings || {}; start(); })
-      .catch(function(){ C.setToken(''); });
-  }
+  // Never auto-login: authentication is intentionally memory-only in this browser.
+  (async function(){ try { var d=(await C.api('/api/content')).data||{}; var co=d.company||{}; var lg=document.getElementById('g-logo'); if(d.logoDataUrl) lg.innerHTML='<img src="'+d.logoDataUrl+'" alt="Company logo">'; document.getElementById('g-company').textContent=co.displayName||co.legalName||d.brandName||'IDMS'; } catch(e){} })();
 })();
 </script>
 </body>

@@ -65,8 +65,20 @@ the plan judged PFMEA and control plan against the part as it was, so with no
 routing they were marked blocked and the run skipped the very steps the routing
 step was about to make possible.
 
-Planned: **Supplier Watch Agent** (rejection rates, repeat non-conformances,
-overdue inspections).
+**Supplier Watch Agent** counts performance from the goods receipts and inward
+inspections already on file — rejection rate, deviations accepted, repeat
+non-conformances, receipts never inspected, returns. The **grade is a stated
+rule, not a judgement**: C is over 5% rejected, or the same problem twice, or
+more than one deviation; B is anything rejected, any deviation, or an uninspected
+receipt; A is none of those. That rule is printed on the screen and on the
+scorecard, so a supplier can be shown exactly why they are where they are — the
+only kind of rating worth putting in front of them. A repeat of the *same*
+problem is weighted above two different problems, because a repeat means nothing
+was fixed the first time.
+
+Three agents now exist; all three follow the two rules above. When adding a
+fourth, the pattern is: deterministic rules produce the findings, the AI is asked
+one narrow question afterwards, and the run is logged.
 
 ## Hard rules
 
@@ -162,8 +174,8 @@ idempotent — once sent, the button is replaced by a confirmation.
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
 Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
 Self Inspection, Inward Inspection, Calibration, MSA, PDI, GRN, Delivery
-Challan, Audit Readiness Agent, NPD Agent, Agent Run Log, People (HR records),
-Company Profile.
+Challan, Audit Readiness Agent, NPD Agent, Supplier Watch Agent, Agent Run Log,
+People (HR records), Company Profile.
 
 **Setup approval** is the first shop-floor screen and the pattern for the rest:
 what gets checked comes from the **control plan** for that operation (falling

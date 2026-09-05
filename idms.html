@@ -307,6 +307,37 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="agent_supplier">
+      <div class="card">
+        <h4>Supplier Watch Agent</h4>
+        <div class="hint" style="margin-bottom:10px;">Works out how each supplier is actually
+          performing from the goods receipts and inward inspections already on file — rejection rate,
+          deviations accepted, repeat problems, receipts left uninspected. The figures are
+          arithmetic; the AI is asked only which conversations to have first. <b>It changes nothing
+          and it does not rate anyone by opinion.</b></div>
+        <div class="row four">
+          <div><label>Period</label><select id="sw-days">
+            <option value="90" selected>Last 90 days</option>
+            <option value="180">Last 180 days</option>
+            <option value="365">Last year</option>
+            <option value="0">Everything on file</option></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="sw-run">Run the check</button></div>
+          <div style="align-self:end;"><button class="btn" id="sw-explain">Ask the AI to prioritise</button></div>
+          <div style="align-self:end;"><button class="btn" id="sw-print">Print scorecard</button></div>
+        </div>
+        <div class="note" id="sw-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><div id="sw-summary"></div></div>
+      <div class="card">
+        <h4>Suppliers</h4>
+        <div id="sw-body"></div>
+      </div>
+      <div class="card">
+        <h4>What needs attention</h4>
+        <div id="sw-findings"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="agent_npd">
       <div class="card">
         <h4>NPD Agent</h4>
@@ -1083,7 +1114,7 @@
     ['agent','🤖','Agents','Autonomous checks and drafting',[
       ['agent_audit','🔎','Audit Readiness Agent',1],
       ['agent_npd','🗂','NPD Agent',1],
-      ['agent_supplier','🏭','Supplier Watch Agent'],
+      ['agent_supplier','🏭','Supplier Watch Agent',1],
       ['agent_runs','📜','Agent Run Log',1]]],
     ['dash','📊','Dashboard','Overview',[
       ['home','🏠','Home',1],['dashboard','📊','Production Dashboard'],['accounts_pl','💹','P&L']]]
@@ -1157,6 +1188,7 @@
     if (s === 'report_pdi')     loadPdi();
     if (s === 'agent_audit')    loadAgent();
     if (s === 'agent_npd')      loadNpdAgent();
+    if (s === 'agent_supplier') loadSupplierAgent();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
   }
@@ -1766,6 +1798,250 @@
 'or inspection only, give a PARAM block with TOOL: not applicable.';
 
     return prompt;
+  }
+
+  /* ---------------- Supplier Watch Agent ----------------
+     Every figure below is counted from goods receipts and inward inspections
+     that already exist. The rating is a stated rule, not a judgement: a supplier
+     can be shown exactly why they are where they are, which is the only kind of
+     rating worth putting in front of them. The AI is asked one thing, and only
+     after the numbers are settled: which conversation to have first. */
+  var swRows = [], swFindings = [], swNarrative = '';
+
+  function supplierGrade(r){
+    /* A: nothing rejected, nothing accepted under deviation, nothing overdue.
+       C: more than 5% rejected, or any repeat of the same problem, or material
+          accepted under deviation more than once.
+       B: everything in between. */
+    if (r.rejectRate > 5 || r.repeats.length || r.deviations > 1)
+      return { key:'C', label:'C — needs attention', cls:'ab' };
+    if (r.rejectRate > 0 || r.deviations || r.uninspected)
+      return { key:'B', label:'B — watch', cls:'sample' };
+    return { key:'A', label:'A — no issues', cls:'series' };
+  }
+
+  async function loadSupplierAgent(){
+    document.getElementById('sw-summary').innerHTML =
+      '<div class="empty"><b>Nothing checked yet</b>Press <b>Run the check</b>.</div>';
+    document.getElementById('sw-body').innerHTML = '';
+    document.getElementById('sw-findings').innerHTML = '';
+  }
+
+  async function runSupplierAgent(){
+    var msg = document.getElementById('sw-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'');
+                                 msg.innerHTML=t; };
+    var btn = document.getElementById('sw-run');
+    btn.disabled = true; btn.textContent = 'Reading';
+    var days = C.num(document.getElementById('sw-days').value);
+    var since = days ? Date.now() - days*86400000 : 0;
+
+    var grns, inws;
+    try {
+      grns = await C.idms.docs('grn');
+      inws = await C.idms.docs('inward');
+    } catch(e){
+      btn.disabled = false; btn.textContent = 'Run the check';
+      return say('Could not read the records: ' + esc(e.message));
+    }
+
+    var inSpan = function(d){ return !since || new Date(d || 0).getTime() >= since; };
+    var byGrn = {}; inws.forEach(function(x){ byGrn[(x.data||{}).grnId] = x; });
+
+    var sup = {};
+    grns.filter(function(g){ return inSpan((g.data||{}).date || g.updated_at); }).forEach(function(g){
+      var v = g.data || {}, name = (v.supplier||'').trim() || '(not named)';
+      var s = sup[name] || (sup[name] = { name:name, receipts:0, received:0, rejected:0,
+        deviations:0, returns:0, uninspected:0, problems:{}, repeats:[], lines:0, failedLines:0 });
+      s.receipts++; s.received += C.num(v.qty);
+      var ii = byGrn[g.doc_id];
+      if (!ii){ s.uninspected++; s.rejected += C.num(v.rejected); return; }
+      var iv = ii.data || {};
+      s.rejected += C.num(iv.rejected);
+      if (iv.disposition === 'deviation') s.deviations++;
+      if (iv.disposition === 'return' || iv.disposition === 'rework' || iv.disposition === 'scrap')
+        s.returns++;
+      (iv.lines||[]).forEach(function(l){
+        s.lines++;
+        if (l.result === 'ok') return;
+        s.failedLines++;
+        /* the same thing failing twice is worth more than two different things
+           failing once — it means nothing was fixed after the first time */
+        var k = String(l.what||'').toLowerCase().trim();
+        if (!k) return;
+        s.problems[k] = (s.problems[k] || 0) + 1;
+      });
+    });
+
+    swRows = Object.keys(sup).map(function(k){
+      var s = sup[k];
+      s.rejectRate = s.received ? Math.round(1000 * s.rejected / s.received) / 10 : 0;
+      s.repeats = Object.keys(s.problems).filter(function(x){ return s.problems[x] > 1; })
+        .map(function(x){ return { what:x, times:s.problems[x] }; });
+      s.grade = supplierGrade(s);
+      return s;
+    }).sort(function(a,b){
+      var order = { C:0, B:1, A:2 };
+      if (order[a.grade.key] !== order[b.grade.key]) return order[a.grade.key] - order[b.grade.key];
+      return b.rejectRate - a.rejectRate;
+    });
+
+    swFindings = [];
+    swRows.forEach(function(s){
+      s.repeats.forEach(function(r){
+        swFindings.push({ sev:'high', supplier:s.name,
+          what: '"' + r.what + '" has failed ' + r.times + ' times',
+          why: 'A repeat means nothing changed after the first rejection. Ask for a containment and ' +
+               'a corrective action, not another replacement batch.' });
+      });
+      if (s.rejectRate > 5)
+        swFindings.push({ sev:'high', supplier:s.name,
+          what: C.qty(s.rejected) + ' of ' + C.qty(s.received) + ' rejected — ' + s.rejectRate + '%',
+          why: 'Above 5% the cost of sorting and delay usually exceeds any price advantage.' });
+      if (s.deviations > 1)
+        swFindings.push({ sev:'high', supplier:s.name,
+          what: s.deviations + ' consignments accepted under deviation',
+          why: 'Repeated deviations quietly become the new specification. Either the drawing is ' +
+               'wrong or the supplier cannot hold it — decide which.' });
+      else if (s.deviations === 1)
+        swFindings.push({ sev:'low', supplier:s.name, what:'one consignment accepted under deviation',
+          why:'Worth checking it was closed out.' });
+      if (s.uninspected)
+        swFindings.push({ sev:'med', supplier:s.name,
+          what: s.uninspected + ' receipt(s) never inspected',
+          why: 'Their quality cannot be judged on records that were never made, and that material ' +
+               'should not have gone to production.' });
+      if (s.returns)
+        swFindings.push({ sev:'med', supplier:s.name,
+          what: s.returns + ' consignment(s) returned, reworked or scrapped',
+          why: 'Recoverable cost that should be going back to the supplier.' });
+    });
+    swFindings.sort(function(a,b){ return SEV[b.sev].rank - SEV[a.sev].rank; });
+    swNarrative = '';
+    drawSupplierAgent(days);
+
+    try {
+      await C.idms.saveDoc({ kind:'agent_run', partId:'', status:'Completed',
+        docNo: await C.docNumber('agent'),
+        data:{ agent:'Supplier watch', at:new Date().toISOString(),
+               looked:{ receipts:grns.length, inspections:inws.length, suppliers:swRows.length },
+               counts:{ high:swFindings.filter(function(x){return x.sev==='high';}).length,
+                        med:swFindings.filter(function(x){return x.sev==='med';}).length,
+                        low:swFindings.filter(function(x){return x.sev==='low';}).length },
+               period:days ? days + ' days' : 'everything',
+               suppliers:swRows.map(function(s){
+                 return { name:s.name, receipts:s.receipts, rejectRate:s.rejectRate,
+                          grade:s.grade.key }; }) } }, 'supplier watch agent run');
+    } catch(e){}
+
+    say('Read ' + grns.length + ' receipt(s) and ' + inws.length + ' inspection(s) across ' +
+        swRows.length + ' supplier(s)' + (days ? ' over the last ' + days + ' days.' : '.'), true);
+    btn.disabled = false; btn.textContent = 'Run the check';
+  }
+
+  function drawSupplierAgent(days){
+    var sum = document.getElementById('sw-summary');
+    var body = document.getElementById('sw-body');
+    var fh = document.getElementById('sw-findings');
+    var c = swRows.filter(function(s){ return s.grade.key === 'C'; }).length;
+    var b = swRows.filter(function(s){ return s.grade.key === 'B'; }).length;
+    var a = swRows.filter(function(s){ return s.grade.key === 'A'; }).length;
+
+    sum.innerHTML = '<div class="stat">' +
+      [['Needs attention',c],['Watch',b],['No issues',a],['Suppliers',swRows.length]]
+        .map(function(x){ return '<div class="b"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'; }).join('') +
+      '</div>' +
+      (swNarrative ? '<div class="note" style="margin-top:12px;">' + swNarrative + '</div>' : '') +
+      '<div class="hint" style="margin-top:10px;">Grade is a rule, not an opinion: <b>C</b> is over ' +
+      '5% rejected, or the same problem twice, or more than one deviation. <b>B</b> is anything ' +
+      'rejected, any deviation, or a receipt left uninspected. <b>A</b> is none of those.</div>';
+
+    if (!swRows.length){
+      body.innerHTML = '<div class="empty"><b>No goods receipts in this period</b>' +
+        'Nothing can be said about a supplier with no records.</div>';
+      fh.innerHTML = ''; return;
+    }
+    body.innerHTML = '<table class="t"><thead><tr><th>Supplier</th><th class="c">Grade</th>' +
+      '<th class="r">Receipts</th><th class="r">Received</th><th class="r">Rejected</th>' +
+      '<th class="r">Rate</th><th class="c">Deviations</th><th class="c">Returned</th>' +
+      '<th class="c">Uninspected</th><th class="c">Repeats</th></tr></thead><tbody>' +
+      swRows.map(function(s){
+        return '<tr><td><b>'+esc(s.name)+'</b></td>' +
+          '<td class="c"><span class="badge '+s.grade.cls+'">'+esc(s.grade.label)+'</span></td>' +
+          '<td class="r">'+s.receipts+'</td><td class="r">'+C.qty(s.received)+'</td>' +
+          '<td class="r">'+(s.rejected?'<b style="color:var(--bad)">'+C.qty(s.rejected)+'</b>':'—')+'</td>' +
+          '<td class="r">'+(s.rejectRate?s.rejectRate+'%':'—')+'</td>' +
+          '<td class="c">'+(s.deviations||'—')+'</td><td class="c">'+(s.returns||'—')+'</td>' +
+          '<td class="c">'+(s.uninspected||'—')+'</td>' +
+          '<td class="c">'+(s.repeats.length?'<b style="color:var(--bad)">'+s.repeats.length+'</b>':'—')+'</td></tr>';
+      }).join('') + '</tbody></table>';
+
+    fh.innerHTML = swFindings.length
+      ? '<table class="t"><thead><tr><th class="c">Priority</th><th>Supplier</th><th>Finding</th>' +
+        '<th>Why it matters</th></tr></thead><tbody>' + swFindings.map(function(x){
+          return '<tr><td class="c"><span class="badge '+SEV[x.sev].cls+'">'+SEV[x.sev].label+'</span></td>' +
+            '<td>'+esc(x.supplier)+'</td><td>'+esc(x.what)+'</td>' +
+            '<td class="hint">'+esc(x.why)+'</td></tr>';
+        }).join('') + '</tbody></table>'
+      : '<div class="note good">Nothing to raise with anybody in this period.</div>';
+  }
+
+  async function explainSupplierAgent(){
+    var msg = document.getElementById('sw-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    if (!swFindings.length) return say('Run the check first, or there is nothing to prioritise.');
+    var btn = document.getElementById('sw-explain');
+    btn.disabled = true; btn.textContent = 'Thinking';
+    var list = swFindings.map(function(x, i){
+      return (i+1) + '. [' + SEV[x.sev].label + '] ' + x.supplier + ': ' + x.what; }).join('\n');
+    try {
+      var txt = await C.callAI(
+        'These are the open supplier issues at a Tier-2 automotive machining company, counted from ' +
+        'goods receipts and incoming inspections. They were produced by fixed rules, not by you:\n\n' +
+        list + '\n\nIn no more than 120 words of plain prose, say which supplier to speak to first ' +
+        'and what to ask for. Group issues that are one conversation. Name the numbers you mean. ' +
+        'Do not invent issues, do not repeat the list back, and do not soften it.',
+        { maxTokens: 400 });
+      swNarrative = '<b>Who to speak to first.</b> ' + esc(C.stripMarkup(txt));
+      drawSupplierAgent();
+      msg.style.display = 'none';
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Ask the AI to prioritise';
+  }
+
+  function printSupplierAgent(){
+    if (!swRows.length) { toast('Run the check first.'); return; }
+    var days = C.num(document.getElementById('sw-days').value);
+    C.openReport({
+      title:'Supplier Scorecard', kind:'Agent report', landscape:true,
+      subtitle:(days ? 'Last ' + days + ' days' : 'All records') + ' · ' + swRows.length + ' supplier(s)',
+      sections:[
+        { type:'table', title:'Performance',
+          columns:[{label:'Supplier'},{label:'Grade'},{label:'Receipts',align:'r'},
+            {label:'Received',align:'r'},{label:'Rejected',align:'r'},{label:'Rate',align:'r'},
+            {label:'Deviations',align:'c'},{label:'Returned',align:'c'},
+            {label:'Uninspected',align:'c'},{label:'Repeats',align:'c'}],
+          rows: swRows.map(function(s){
+            return [esc(s.name),
+              s.grade.key === 'C' ? { v:'<b>'+esc(s.grade.label)+'</b>', cls:'ab' } : esc(s.grade.label),
+              s.receipts, C.qty(s.received), C.qty(s.rejected), s.rejectRate + '%',
+              s.deviations || '—', s.returns || '—', s.uninspected || '—', s.repeats.length || '—'];
+          }),
+          note:'Grade is a fixed rule: C is over 5% rejected, or the same problem twice, or more ' +
+               'than one deviation. B is anything rejected, any deviation, or a receipt left ' +
+               'uninspected. A is none of those.' },
+        swFindings.length ? { type:'table', title:'What needs attention',
+          columns:[{label:'Priority'},{label:'Supplier'},{label:'Finding'},{label:'Why it matters'}],
+          rows: swFindings.map(function(x){
+            return [ x.sev==='high' ? { v:'<b>Must fix</b>', cls:'ab' } : SEV[x.sev].label,
+              esc(x.supplier), esc(x.what), esc(x.why) ]; }) } : null,
+        swNarrative ? { type:'text', title:'Who to speak to first',
+          body: swNarrative.replace(/<[^>]+>/g,'') } : null,
+        { type:'text', title:'Note',
+          body:'Counted from the goods receipts and incoming inspections held in this system on ' +
+               new Date().toLocaleString('en-GB') + '. Nothing was changed.' }
+      ].filter(Boolean) });
   }
 
   /* ---------------- NPD Agent ----------------
@@ -5772,6 +6048,10 @@
     });
     f.click();
   });
+
+  document.getElementById('sw-run').addEventListener('click', runSupplierAgent);
+  document.getElementById('sw-explain').addEventListener('click', explainSupplierAgent);
+  document.getElementById('sw-print').addEventListener('click', printSupplierAgent);
 
   document.getElementById('np-plan').addEventListener('click', planNpd);
   document.getElementById('np-run').addEventListener('click', runNpd);

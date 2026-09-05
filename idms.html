@@ -307,6 +307,49 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="report_msa">
+      <div class="card">
+        <h4>Measurement System Analysis — gauge R&amp;R</h4>
+        <div class="hint" style="margin-bottom:10px;">The average-and-range study from the AIAG MSA
+          manual. Take the same parts, measure them repeatedly with the same gauge by more than one
+          operator, and the study says how much of what you are seeing is the part and how much is
+          the measurement. A gauge that cannot tell your parts apart makes every inspection record
+          taken with it worth less than it looks.</div>
+        <div class="row four">
+          <div><label>Part</label><select id="ms-part"></select></div>
+          <div><label>Operation</label><select id="ms-op"></select></div>
+          <div><label>Characteristic</label><select id="ms-char"></select></div>
+          <div><label>Gauge</label><select id="ms-gauge"></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Operators</label><select id="ms-ops">
+            <option>2</option><option selected>3</option></select></div>
+          <div><label>Parts measured</label><select id="ms-parts">
+            <option>5</option><option>6</option><option>7</option><option>8</option>
+            <option>9</option><option selected>10</option></select></div>
+          <div><label>Trials each</label><select id="ms-trials">
+            <option>2</option><option selected>3</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="ms-build">Build the sheet</button></div>
+        </div>
+        <div class="note" id="ms-msg" style="display:none;"></div>
+      </div>
+      <div class="card" id="ms-sheet" style="display:none;">
+        <h4 id="ms-title">Readings</h4>
+        <div id="ms-grid"></div>
+        <div class="row four" style="margin-top:10px;">
+          <div><label>Operator names</label><input id="ms-names" placeholder="A, B, C"></div>
+          <div><label>Studied by</label><input id="ms-by"></div>
+          <div style="align-self:end;"><button class="btn gold" id="ms-calc">Calculate</button></div>
+          <div style="align-self:end;"><button class="btn" id="ms-save">Save study</button></div>
+        </div>
+        <div id="ms-result" style="margin-top:14px;"></div>
+      </div>
+      <div class="card">
+        <h4>Studies</h4>
+        <div id="ms-list"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="report_calibration">
       <div class="card">
         <h4>Gauge register and calibration</h4>
@@ -933,7 +976,7 @@
       ['report_pdi','✓','PDI Report'],['report_setup_approval','✅','Setup Approval Report',1],
       ['report_tool_history','🔧','Tool History Card'],
       ['report_machine_checksheet','⚙','Machine Check Sheet'],
-      ['report_calibration','📏','Calibration Report',1],['report_msa','🔬','MSA Study Report'],
+      ['report_calibration','📏','Calibration Report',1],['report_msa','🔬','MSA Study Report',1],
       ['report_control_charts','📊','Control Charts']]],
     ['qms','📋','QMS','Quality Management System',[
       ['qms_level1','📜','Level-1 — Policy'],['qms_level2','📄','Level-2 — Procedures'],
@@ -1014,6 +1057,7 @@
     if (s === 'report_self_inspection') loadSelfInsp();
     if (s === 'report_inward_inspection') loadInward();
     if (s === 'report_calibration') loadCalibration();
+    if (s === 'report_msa')     loadMsa();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -1513,6 +1557,352 @@
       loadHome();
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Remove sample data';
+  }
+
+  /* ---------------- MSA — gauge R&R ----------------
+     The average-and-range method from the AIAG MSA manual. The constants and the
+     arithmetic are checked against the worked example published in that manual,
+     so the numbers here can be defended in an audit rather than merely produced. */
+  var MSA_K1 = {2:0.8862, 3:0.5908};                       // trials
+  var MSA_K2 = {2:0.7071, 3:0.5231};                       // operators
+  var MSA_K3 = {2:3.65, 3:2.70, 4:2.30, 5:2.08, 6:1.93,    // parts
+                7:1.82, 8:1.74, 9:1.67, 10:1.62};
+  var msaReadings = [], msaChars = [], msaDocs = [], msaResult = null;
+
+  function gaugeRR(readings, tolerance){
+    var ops = readings.length, parts = readings[0].length, trials = readings[0][0].length;
+    var opMeans = [], opRanges = [];
+    for (var o = 0; o < ops; o++){
+      var sum = 0, count = 0, rsum = 0;
+      for (var p = 0; p < parts; p++){
+        var t = readings[o][p];
+        rsum += Math.max.apply(null, t) - Math.min.apply(null, t);
+        for (var i = 0; i < t.length; i++){ sum += t[i]; count++; }
+      }
+      opMeans.push(sum / count); opRanges.push(rsum / parts);
+    }
+    var Rbar = opRanges.reduce(function(a,b){ return a+b; }, 0) / ops;
+    var Xdiff = Math.max.apply(null, opMeans) - Math.min.apply(null, opMeans);
+    var partAvg = [];
+    for (var p2 = 0; p2 < parts; p2++){
+      var s2 = 0, c2 = 0;
+      for (var o2 = 0; o2 < ops; o2++)
+        for (var i2 = 0; i2 < trials; i2++){ s2 += readings[o2][p2][i2]; c2++; }
+      partAvg.push(s2 / c2);
+    }
+    var Rp = Math.max.apply(null, partAvg) - Math.min.apply(null, partAvg);
+    var EV = Rbar * (MSA_K1[trials] || MSA_K1[3]);
+    var inner = Math.pow(Xdiff * (MSA_K2[ops] || MSA_K2[3]), 2) - (EV*EV) / (parts * trials);
+    var AV = Math.sqrt(Math.max(0, inner));
+    var GRR = Math.sqrt(EV*EV + AV*AV);
+    var PV = Rp * (MSA_K3[parts] || MSA_K3[10]);
+    var TV = Math.sqrt(GRR*GRR + PV*PV);
+    var pct = function(v){ return TV ? 100*v/TV : 0; };
+    /* the number of distinct categories: how many groups of parts the gauge can
+       actually tell apart. Below 5 it cannot be used for process control. */
+    var ndc = GRR > 0 ? Math.floor(1.41 * PV / GRR) : 0;
+    var out = { ops:ops, parts:parts, trials:trials, Rbar:Rbar, Xdiff:Xdiff, Rp:Rp,
+      EV:EV, AV:AV, GRR:GRR, PV:PV, TV:TV, ndc:ndc,
+      pEV:pct(EV), pAV:pct(AV), pGRR:pct(GRR), pPV:pct(PV) };
+    /* against the tolerance is the figure a customer usually asks for, and it is
+       the harsher of the two on a tight tolerance */
+    if (C.num(tolerance) > 0) out.pTol = 100 * (6 * GRR) / C.num(tolerance);
+    return out;
+  }
+
+  function msaVerdict(pct){
+    if (pct == null) return null;
+    if (pct < 10) return { label:'Acceptable', cls:'series' };
+    if (pct <= 30) return { label:'Conditionally acceptable', cls:'sample' };
+    return { label:'Not acceptable', cls:'ab' };
+  }
+
+  async function loadMsa(){
+    await fetchParts();
+    document.getElementById('ms-part').innerHTML = partOptions(document.getElementById('ms-part').value);
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
+    try { gauges = await C.idms.docs('gauge'); } catch(e){ gauges = []; }
+    try { msaDocs = await C.idms.docs('msa'); } catch(e){ msaDocs = []; }
+    document.getElementById('ms-gauge').innerHTML =
+      '<option value="">— choose a gauge —</option>' +
+      gauges.filter(function(g){ return g.status !== 'Withdrawn'; }).map(function(g){
+        var st = calState(g);
+        return '<option value="'+esc(g.doc_id)+'">'+esc(g.doc_no)+' · '+
+          esc((g.data||{}).description||'')+' ('+esc(st.label)+')</option>'; }).join('');
+    drawMsaOps();
+    drawMsaList();
+  }
+
+  function drawMsaOps(){
+    var partId = document.getElementById('ms-part').value;
+    var ops = opsFor(partId);
+    document.getElementById('ms-op').innerHTML = ops.length
+      ? '<option value="">— choose —</option>' + ops.map(function(o){
+          var v=o.data||{};
+          return '<option value="'+esc(o.doc_id)+'">'+esc(v.opNo)+' · '+esc(v.name||'')+'</option>';
+        }).join('')
+      : '<option value="">no operations</option>';
+    drawMsaChars();
+  }
+  function drawMsaChars(){
+    var opId = document.getElementById('ms-op').value;
+    msaChars = dimensions.filter(function(d){ return (d.data||{}).processId === opId; });
+    document.getElementById('ms-char').innerHTML = msaChars.length
+      ? '<option value="">— choose —</option>' + msaChars.map(function(d,i){
+          var q=d.data||{};
+          return '<option value="'+i+'">'+esc(q.description||'')+' ('+C.qty(q.nominal)+' '+
+            esc(q.unit||'')+')</option>'; }).join('')
+      : '<option value="">no characteristics</option>';
+  }
+
+  function buildMsaSheet(){
+    var msg = document.getElementById('ms-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var ci = document.getElementById('ms-char').value;
+    if (ci === '') return say('Choose the characteristic being studied.');
+    if (!document.getElementById('ms-gauge').value)
+      return say('Choose the gauge. A study that does not name the gauge proves nothing about it.');
+
+    var ops = C.num(document.getElementById('ms-ops').value);
+    var parts = C.num(document.getElementById('ms-parts').value);
+    var trials = C.num(document.getElementById('ms-trials').value);
+    /* ten parts, three operators, three trials is the standard study; fewer is
+       allowed but the result carries less weight, and the report says so */
+    msaReadings = [];
+    for (var o = 0; o < ops; o++){
+      var opRows = [];
+      for (var p = 0; p < parts; p++){
+        var t = [];
+        for (var i = 0; i < trials; i++) t.push('');
+        opRows.push(t);
+      }
+      msaReadings.push(opRows);
+    }
+    msaResult = null;
+    var ch = (msaChars[+ci]||{}).data || {};
+    document.getElementById('ms-title').textContent =
+      'Readings — ' + (ch.description||'') + ' (' + C.qty(ch.nominal) + ' ' + (ch.unit||'') + ')';
+    document.getElementById('ms-sheet').style.display = '';
+    drawMsaGrid();
+    say('Measure each part ' + trials + ' times, by each of ' + ops + ' operators, in a different ' +
+        'order each round and without the operators seeing their earlier readings.', true);
+  }
+
+  function drawMsaGrid(){
+    var host = document.getElementById('ms-grid');
+    if (!msaReadings.length){ host.innerHTML = ''; return; }
+    var names = (document.getElementById('ms-names').value||'').split(',')
+      .map(function(x){ return x.trim(); });
+    var parts = msaReadings[0].length, trials = msaReadings[0][0].length;
+    var head = '<th>Operator</th><th class="c">Trial</th>';
+    for (var p = 1; p <= parts; p++) head += '<th class="c">Part '+p+'</th>';
+    host.innerHTML = '<div style="overflow-x:auto;"><table class="t"><thead><tr>' + head +
+      '</tr></thead><tbody>' + msaReadings.map(function(opRows, o){
+        var rows = '';
+        for (var t = 0; t < trials; t++){
+          rows += '<tr>' + (t === 0
+            ? '<td rowspan="'+trials+'"><b>'+esc(names[o] || String.fromCharCode(65+o))+'</b></td>'
+            : '') + '<td class="c">'+(t+1)+'</td>' +
+            opRows.map(function(cell, p){
+              return '<td class="c"><input class="num ms-r" data-o="'+o+'" data-p="'+p+'" data-t="'+t+
+                '" value="'+esc(cell[t])+'" style="width:72px;text-align:center;"></td>';
+            }).join('') + '</tr>';
+        }
+        return rows;
+      }).join('') + '</tbody></table></div>';
+    host.querySelectorAll('.ms-r').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        msaReadings[+inp.dataset.o][+inp.dataset.p][+inp.dataset.t] = inp.value;
+      });
+    });
+  }
+
+  function calcMsa(){
+    var msg = document.getElementById('ms-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var blank = 0, nums = [];
+    msaReadings.forEach(function(opRows){
+      var o = [];
+      opRows.forEach(function(cell){
+        var t = cell.map(function(v){
+          if (v === '' || v == null) { blank++; return 0; }
+          return C.num(v);
+        });
+        o.push(t);
+      });
+      nums.push(o);
+    });
+    if (blank) return say('<b>' + blank + ' reading(s) are missing.</b> A part-filled study gives a ' +
+                          'number that looks like an answer and is not one.');
+
+    var ci = document.getElementById('ms-char').value;
+    var ch = (msaChars[+ci]||{}).data || {};
+    var l = limitsOf(ch);
+    var tol = (l.hi != null && l.lo != null) ? (l.hi - l.lo) : 0;
+    msaResult = gaugeRR(nums, tol);
+    msaResult.tolerance = tol;
+    drawMsaResult();
+    say('Calculated.', true);
+  }
+
+  function drawMsaResult(){
+    var host = document.getElementById('ms-result');
+    if (!msaResult){ host.innerHTML = ''; return; }
+    var r = msaResult;
+    var vTv = msaVerdict(r.pGRR), vTol = r.pTol != null ? msaVerdict(r.pTol) : null;
+    var worst = vTol && r.pTol > r.pGRR ? vTol : vTv;
+    var f = function(x){ return (Math.round(x*10000)/10000).toString(); };
+    host.innerHTML =
+      '<div class="note '+(worst.cls==='series'?'good':worst.cls==='ab'?'bad':'')+'">' +
+      '<b>' + esc(worst.label) + '.</b> Gauge R&amp;R is <b>' + r.pGRR.toFixed(2) + '%</b> of total ' +
+      'variation' + (r.pTol != null ? ' and <b>' + r.pTol.toFixed(2) + '%</b> of the tolerance' : '') +
+      '. Number of distinct categories: <b>' + r.ndc + '</b>' +
+      (r.ndc < 5 ? ' — below 5, so this gauge cannot resolve your parts well enough for process ' +
+        'control, whatever the percentages say.' : '.') +
+      (worst.cls === 'ab'
+        ? ' Readings from this gauge should not be used to accept or reject parts until it is improved.'
+        : worst.cls === 'sample'
+          ? ' Usable, but the customer may ask what is being done about it.' : '') +
+      '</div>' +
+      '<table class="t"><thead><tr><th>Source</th><th class="r">Std dev</th>' +
+      '<th class="r">% of total variation</th>' + (r.pTol!=null?'<th class="r">% of tolerance</th>':'') +
+      '</tr></thead><tbody>' +
+      '<tr><td>Repeatability — equipment (EV)</td><td class="r">'+f(r.EV)+'</td>' +
+        '<td class="r">'+r.pEV.toFixed(2)+'%</td>'+(r.pTol!=null?'<td class="r">'+(100*6*r.EV/r.tolerance).toFixed(2)+'%</td>':'')+'</tr>' +
+      '<tr><td>Reproducibility — operator (AV)</td><td class="r">'+f(r.AV)+'</td>' +
+        '<td class="r">'+r.pAV.toFixed(2)+'%</td>'+(r.pTol!=null?'<td class="r">'+(100*6*r.AV/r.tolerance).toFixed(2)+'%</td>':'')+'</tr>' +
+      '<tr class="tot"><td><b>Gauge R&amp;R</b></td><td class="r"><b>'+f(r.GRR)+'</b></td>' +
+        '<td class="r"><b>'+r.pGRR.toFixed(2)+'%</b></td>'+(r.pTol!=null?'<td class="r"><b>'+r.pTol.toFixed(2)+'%</b></td>':'')+'</tr>' +
+      '<tr><td>Part variation (PV)</td><td class="r">'+f(r.PV)+'</td>' +
+        '<td class="r">'+r.pPV.toFixed(2)+'%</td>'+(r.pTol!=null?'<td class="r">—</td>':'')+'</tr>' +
+      '<tr><td>Total variation (TV)</td><td class="r">'+f(r.TV)+'</td>' +
+        '<td class="r">100.00%</td>'+(r.pTol!=null?'<td class="r">—</td>':'')+'</tr>' +
+      '</tbody></table>' +
+      '<div class="hint" style="margin-top:8px;">Average-and-range method, AIAG MSA. ' +
+      r.ops+' operators · '+r.parts+' parts · '+r.trials+' trials. ' +
+      'Under 10% acceptable, 10–30% conditional, over 30% not acceptable.</div>';
+  }
+
+  async function saveMsa(){
+    var msg = document.getElementById('ms-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    if (!msaResult) return say('Calculate the study before saving it.');
+    if (!document.getElementById('ms-by').value.trim())
+      return say('Name who carried out the study.');
+    var partId = document.getElementById('ms-part').value;
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var op = processes.filter(function(x){ return x.doc_id === document.getElementById('ms-op').value; })[0] || {};
+    var ch = (msaChars[+document.getElementById('ms-char').value]||{}).data || {};
+    var gid = document.getElementById('ms-gauge').value;
+    var gauge = gauges.filter(function(g){ return g.doc_id === gid; })[0] || {};
+    var worst = msaResult.pTol != null ? Math.max(msaResult.pGRR, msaResult.pTol) : msaResult.pGRR;
+    try {
+      await C.idms.saveDoc({ kind:'msa', partId: partId,
+        status: msaVerdict(worst).label,
+        docNo: await C.docNumber('msa'),
+        data:{ partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
+               opNo:(op.data||{}).opNo, characteristic:ch.description||'',
+               nominal:ch.nominal, unit:ch.unit||'', tolerance:msaResult.tolerance,
+               gaugeId:gid, gaugeNo:gauge.doc_no||'', gaugeDesc:(gauge.data||{}).description||'',
+               operators:(document.getElementById('ms-names').value||'').trim(),
+               readings:msaReadings, result:msaResult,
+               studiedBy:document.getElementById('ms-by').value.trim(),
+               at:new Date().toISOString() } }, 'MSA study recorded');
+      say('Saved.', true);
+      await loadMsa();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  function drawMsaList(){
+    var host = document.getElementById('ms-list');
+    if (!msaDocs.length){
+      host.innerHTML = '<div class="empty"><b>No studies yet</b>' +
+        'A study proves the gauge before the readings taken with it are relied on.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Study</th><th>Part</th><th class="c">Op</th>' +
+      '<th>Characteristic</th><th>Gauge</th><th class="r">%GRR</th><th class="r">%Tol</th>' +
+      '<th class="c">ndc</th><th class="c">Verdict</th><th></th></tr></thead><tbody>' +
+      msaDocs.map(function(rec){
+        var v = rec.data||{}, r = v.result||{};
+        var vd = msaVerdict(v.tolerance ? Math.max(r.pGRR, r.pTol) : r.pGRR) || {label:'',cls:''};
+        return '<tr><td><b>'+esc(rec.doc_no||'')+'</b><div class="hint">'+C.fmtDate(v.at)+'</div></td>' +
+          '<td>'+esc(v.partNo||'')+'</td><td class="c">'+esc(v.opNo||'')+'</td>' +
+          '<td>'+esc(v.characteristic||'')+'</td>' +
+          '<td class="hint">'+esc(v.gaugeNo||'')+' '+esc(v.gaugeDesc||'')+'</td>' +
+          '<td class="r">'+(r.pGRR!=null?r.pGRR.toFixed(2)+'%':'—')+'</td>' +
+          '<td class="r">'+(r.pTol!=null?r.pTol.toFixed(2)+'%':'—')+'</td>' +
+          '<td class="c">'+(r.ndc!=null?r.ndc:'—')+'</td>' +
+          '<td class="c"><span class="badge '+vd.cls+'">'+esc(vd.label)+'</span></td>' +
+          '<td><button class="btn ms-p" data-id="'+esc(rec.doc_id)+'">Print</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.ms-p').forEach(function(b){
+      b.addEventListener('click', function(){
+        printMsa(msaDocs.filter(function(x){ return x.doc_id === b.dataset.id; })[0]);
+      });
+    });
+  }
+
+  function printMsa(rec){
+    if (!rec) return;
+    var v = rec.data||{}, r = v.result||{};
+    var names = (v.operators||'').split(',').map(function(x){ return x.trim(); });
+    var rows = [];
+    (v.readings||[]).forEach(function(opRows, o){
+      for (var t = 0; t < (opRows[0]||[]).length; t++){
+        var row = [ t===0 ? (names[o] || String.fromCharCode(65+o)) : '', String(t+1) ];
+        opRows.forEach(function(cell){ row.push(cell[t]); });
+        rows.push(row);
+      }
+    });
+    var cols = [{label:'Operator'},{label:'Trial',align:'c'}];
+    for (var p = 1; p <= ((v.readings||[[]])[0]||[]).length; p++) cols.push({label:'Part '+p, align:'c'});
+    var worst = v.tolerance ? Math.max(r.pGRR, r.pTol) : r.pGRR;
+    var vd = msaVerdict(worst) || {label:''};
+    C.openReport({
+      title:'Measurement System Analysis', kind:'Gauge R&R', landscape:true,
+      subtitle:(v.partNo||'') + ' · Op ' + (v.opNo||'') + ' · ' + (v.characteristic||'') +
+        ' · ' + (v.gaugeNo||''),
+      sections:[
+        { type:'pairs', title:'Study', rows:[
+          ['Part', esc((v.partNo||'') + ' — ' + (v.partName||''))],
+          ['Characteristic', esc(v.characteristic||'') + ' = ' + C.qty(v.nominal) + ' ' + esc(v.unit||'')],
+          ['Tolerance', v.tolerance ? C.qty(v.tolerance) + ' ' + esc(v.unit||'') : 'not stated'],
+          ['Gauge', esc((v.gaugeNo||'') + ' ' + (v.gaugeDesc||''))],
+          ['Method', 'Average and range, AIAG MSA'],
+          ['Study size', (r.ops||'') + ' operators · ' + (r.parts||'') + ' parts · ' + (r.trials||'') + ' trials'],
+          ['Studied by', esc(v.studiedBy||'—')],
+          ['Date', C.fmtDate(v.at)]]},
+        { type:'table', title:'Readings', dense:true, columns:cols, rows:rows },
+        { type:'table', title:'Result',
+          columns:[{label:'Source'},{label:'Std dev',align:'r'},{label:'% of variation',align:'r'},
+                   {label:'% of tolerance',align:'r'}],
+          rows:[
+            ['Repeatability (EV)', (r.EV||0).toFixed(4), (r.pEV||0).toFixed(2)+'%',
+              v.tolerance ? (100*6*r.EV/v.tolerance).toFixed(2)+'%' : '—'],
+            ['Reproducibility (AV)', (r.AV||0).toFixed(4), (r.pAV||0).toFixed(2)+'%',
+              v.tolerance ? (100*6*r.AV/v.tolerance).toFixed(2)+'%' : '—'],
+            [{v:'<b>Gauge R&R</b>'}, {v:'<b>'+(r.GRR||0).toFixed(4)+'</b>'},
+              {v:'<b>'+(r.pGRR||0).toFixed(2)+'%</b>'},
+              v.tolerance ? {v:'<b>'+(r.pTol||0).toFixed(2)+'%</b>'} : '—'],
+            ['Part variation (PV)', (r.PV||0).toFixed(4), (r.pPV||0).toFixed(2)+'%', '—'],
+            ['Total variation (TV)', (r.TV||0).toFixed(4), '100.00%', '—'],
+            ['Distinct categories (ndc)', String(r.ndc||0), '—', '—']],
+          note:'Under 10% acceptable · 10–30% conditionally acceptable · over 30% not acceptable. ' +
+               'ndc of 5 or more is required for process control.' },
+        { type:'text', title:'Conclusion',
+          body: vd.label + '. ' +
+            (r.ndc < 5 ? 'The number of distinct categories is below 5, so this measurement system ' +
+              'cannot resolve the parts well enough for process control. ' : '') +
+            (worst > 30 ? 'Readings from this gauge must not be used to accept or reject parts until ' +
+              'the measurement system is improved.' : '') },
+        { type:'text', title:'Signatures',
+          body:'Studied by                              Quality                              Date' }
+      ]});
   }
 
   /* ---------------- Calibration ----------------
@@ -2570,7 +2960,7 @@
     { n:5,  name:'Process flow diagram', auto:'pfd' },
     { n:6,  name:'Process FMEA', auto:'pfmea' },
     { n:7,  name:'Control plan', auto:'control_plan' },
-    { n:8,  name:'Measurement system analysis (MSA)' },
+    { n:8,  name:'Measurement system analysis (MSA)', auto:'msa' },
     { n:9,  name:'Dimensional results' },
     { n:10, name:'Material and performance test results' },
     { n:11, name:'Initial process studies (Cpk)' },
@@ -2631,6 +3021,14 @@
       var cp = (await C.idms.docs('control_plan', partId))[0];
       if (cp) ev.control_plan = { ref: cp.doc_no + ((cp.data||{}).approvedBy ? '' : ' (unapproved draft)'),
                                   ok: !!(cp.data||{}).approvedBy };
+      /* element 8 is satisfied by a study the system holds, but only if the
+         study passed — an unacceptable gauge R&R is not evidence of anything */
+      var ms = (await C.idms.docs('msa', partId));
+      if (ms.length){
+        var bad = ms.filter(function(m){ return m.status === 'Not acceptable'; });
+        ev.msa = { ref: ms.length + ' study(ies)' + (bad.length ? ', ' + bad.length + ' not acceptable' : ''),
+                   ok: !bad.length };
+      }
     } catch(e){}
     return ev;
   }
@@ -2650,6 +3048,8 @@
       return '<button class="btn pp-open" data-go="fmea">Open PFMEA</button>';
     if (el.auto === 'control_plan')
       return '<button class="btn pp-open" data-go="control_plan">Open plan</button>';
+    if (el.auto === 'msa')
+      return '<button class="btn pp-open" data-go="report_msa">Open studies</button>';
     if (st.file && st.file.url)
       return '<a class="btn" href="'+esc(st.file.url)+'" target="_blank" rel="noopener">Open</a> ' +
         '<button class="btn del pp-unattach" data-n="'+el.n+'" title="'+esc(st.file.name||'')+'">×</button>';
@@ -4385,6 +4785,13 @@
     });
     f.click();
   });
+
+  document.getElementById('ms-part').addEventListener('change', drawMsaOps);
+  document.getElementById('ms-op').addEventListener('change', drawMsaChars);
+  document.getElementById('ms-build').addEventListener('click', buildMsaSheet);
+  document.getElementById('ms-names').addEventListener('input', drawMsaGrid);
+  document.getElementById('ms-calc').addEventListener('click', calcMsa);
+  document.getElementById('ms-save').addEventListener('click', saveMsa);
 
   document.getElementById('cal-save').addEventListener('click', saveGauge);
   document.getElementById('cal-clear').addEventListener('click', clearGaugeForm);

@@ -120,8 +120,8 @@ idempotent — once sent, the button is replaced by a confirmation.
 **Live in the IDMS:** Home (with loadable sample data), Customer Addition,
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
 Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
-Self Inspection, Inward Inspection, Calibration, GRN, Delivery Challan, People
-(HR records), Company Profile.
+Self Inspection, Inward Inspection, Calibration, MSA, GRN, Delivery Challan,
+People (HR records), Company Profile.
 
 **Setup approval** is the first shop-floor screen and the pattern for the rest:
 what gets checked comes from the **control plan** for that operation (falling
@@ -162,6 +162,17 @@ be evidenced. Withdrawing a gauge needs a reason and correctly *reopens* the
 control-plan gap, because the plan still calls for it. An overdue gauge is
 reported as a recall question, not a red row: readings taken with it since its
 last valid calibration are in doubt.
+
+**MSA** is the AIAG average-and-range gauge R&R. The constants (K1/K2/K3) and
+the arithmetic are verified against the worked example published in the AIAG MSA
+manual and reproduce it to four decimals — %GRR 5.37, %PV 99.86, ndc 26. Do not
+"simplify" that maths; it is the part that can be challenged in an audit. Two
+percentages are reported, of total variation and of tolerance, and **the harsher
+governs the verdict**, because the tolerance figure is what a customer asks
+about. ndc below 5 is called out separately: a gauge can pass on percentage and
+still be unable to resolve the parts. A part-filled study is refused rather than
+averaged. Studies feed **PPAP element 8** automatically, but only count as
+satisfied when none of them is "Not acceptable".
 
 **The NPD chain is now complete end to end**: a won quotation on the website
 produces customer, part and price; routing and dimensions are entered against

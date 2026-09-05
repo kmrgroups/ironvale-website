@@ -196,7 +196,7 @@ Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
 Self Inspection, Inward Inspection, Calibration, MSA, PDI, GRN, Delivery
 Challan, Production Entry, Sales Plan, Production Plan, Works Dashboard,
 Non-conformance & 8D, Open Actions, Machine Addition, Preventive Maintenance,
-Skill Matrix, Audit Readiness Agent,
+Skill Matrix, 4M Change, Audit Readiness Agent,
 NPD Agent, Supplier Watch
 Agent, Review Agent Work, Agent Run Log, People (HR records), Company Profile.
 
@@ -283,7 +283,19 @@ assessment past its reassessment interval counts as **no longer current**, shown
 as `3!`. Reassessment updates the record and keeps the history. The matrix also
 flags machines only one person can run, and machines nobody can.
 
-The **Audit Readiness Agent** reads competence too: somebody who booked
+**4M change.** A change of man, machine, material or method is the commonest
+reason a capable process stops being capable, and the commonest thing nobody
+writes down. Two rules earn the screen its place. The form **names which changes
+require the customer to agree first** — material, machine and method do, man does
+not — and refuses to save one of those with the customer position blank; saying
+they agreed demands a name and a date, because "the customer knows" is not a
+record. And whether anything ran afterwards with an approved setup is **read from
+the production bookings**, not from a tick on the form.
+
+The **Audit Readiness Agent** reads changes too: runs booked after a change with
+no approved setup (high — *a change is exactly when the first pieces need
+checking*), and non-man changes with no customer position recorded. It reads
+competence too: somebody who booked
 production with no assessment on file (medium), and somebody who ran a machine
 alone while assessed only at level 1 or 2 (high) — put as *either the record is
 wrong or they should not have been running it*. It reads machines too: overdue or never-maintained

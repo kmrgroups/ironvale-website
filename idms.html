@@ -307,6 +307,50 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="change_4m">
+      <div class="card">
+        <h4>4M Change</h4>
+        <div class="hint" style="margin-bottom:10px;">A change of man, machine, material or method is
+          the commonest reason a process that was capable yesterday is not today. Recording it is
+          how the next problem gets explained. Some changes cannot be made without telling the
+          customer first — the form says which.</div>
+        <div class="row four">
+          <div><label>What changed</label><select id="fm-cat">
+            <option value="man">Man — who is doing it</option>
+            <option value="machine">Machine — where it runs</option>
+            <option value="material">Material — what it is made from</option>
+            <option value="method">Method — how it is made</option></select></div>
+          <div><label>Part</label><select id="fm-part2"></select></div>
+          <div><label>Operation</label><select id="fm-op2"></select></div>
+          <div><label>When</label><input type="date" id="fm-when"></div>
+        </div>
+        <div class="row" style="margin-top:9px;">
+          <div><label>From</label><input id="fm-from" placeholder="what it was"></div>
+          <div><label>To</label><input id="fm-to" placeholder="what it is now"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
+          <label>Why</label><input id="fm-why" placeholder="the reason for the change"></div></div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Raised by</label><input id="fm-by2"></div>
+          <div><label>Customer told</label><select id="fm-told">
+            <option value="">Not yet</option><option value="yes">Yes, and they agreed</option>
+            <option value="na">Not required for this change</option></select></div>
+          <div style="grid-column:span 2;"><label>Who at the customer, and when</label>
+            <input id="fm-told-who"></div>
+        </div>
+        <div id="fm-warn"></div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="fm-save2">Record the change</button>
+          <button class="btn" id="fm-print2">Print register</button>
+        </div>
+        <div class="note" id="fm-msg2" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Changes</h4>
+        <div id="fm-list2"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="skill_matrix">
       <div class="card">
         <h4>Skill Matrix</h4>
@@ -1452,7 +1496,8 @@
       ['report_calibration','📏','Calibration Report',1],['report_msa','🔬','MSA Study Report',1],
       ['report_control_charts','📊','Control Charts']]],
     ['capa','🛠','Corrective Action','Problems and what was done about them',[
-      ['ncr','⚠','Non-conformance & 8D',1],['ncr_open','📌','Open Actions',1]]],
+      ['ncr','⚠','Non-conformance & 8D',1],['ncr_open','📌','Open Actions',1],
+      ['change_4m','🔁','4M Change',1]]],
     ['qms','📋','QMS','Quality Management System',[
       ['qms_level1','📜','Level-1 — Policy'],['qms_level2','📄','Level-2 — Procedures'],
       ['qms_level3','📝','Level-3 — Work Instructions'],['qms_level4','🗂','Level-4 — Records'],
@@ -1550,6 +1595,7 @@
     if (s === 'ncr')            loadNcr();
     if (s === 'entry_machine')  loadMachines();
     if (s === 'skill_matrix')   loadSkills();
+    if (s === 'change_4m')      load4M();
     if (s === 'maintenance')    loadMaintenance();
     if (s === 'ncr_open')       loadOpenActions();
     if (s === 'production_plan') loadPlan();
@@ -2464,6 +2510,195 @@
 'or inspection only, give a PARAM block with TOOL: not applicable.';
 
     return prompt;
+  }
+
+  /* ---------------- 4M change ----------------
+     A change of man, machine, material or method is the commonest reason a
+     process that was capable yesterday is not today, and the commonest thing
+     nobody wrote down. Two rules earn this screen its place.
+
+     First, some changes cannot be made without telling the customer — a change
+     of material source, of the works it runs in, or of the process itself are
+     the ones a PPAP would have to be resubmitted for. The screen names them
+     rather than leaving it to memory.
+
+     Second, a change is not finished when it is recorded. The next thing that
+     runs after it needs a fresh setup approval, and the agent checks that
+     against the production bookings rather than trusting a tick. */
+  var changes4m = [];
+
+  var M4 = {
+    man:     { label:'Man', tell:false,
+               note:'A different person on the job. Check they are assessed for it on the skill matrix.' },
+    machine: { label:'Machine', tell:true,
+               note:'Moving a part to another machine or another works changes the process. Most ' +
+                    'customers require notification, and many require a fresh PPAP.' },
+    material:{ label:'Material', tell:true,
+               note:'A different material or a different supplier of it. This almost always requires ' +
+                    'the customer to be told, and often a resubmission.' },
+    method:  { label:'Method', tell:true,
+               note:'A change to the process, the tooling or the programme. If it changes what the ' +
+                    'control plan says, the customer usually has to know.' }
+  };
+
+  async function load4M(){
+    await fetchParts();
+    /* keep the part selected across a save — several changes on one part is the
+       normal case, and silently losing it makes the next save fail confusingly */
+    var psel = document.getElementById('fm-part2');
+    var keep = psel.value;
+    psel.innerHTML = partOptions(keep);
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { changes4m = await C.idms.docs('change4m'); } catch(e){ changes4m = []; }
+    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    var w = document.getElementById('fm-when');
+    if (!w.value) w.value = new Date().toISOString().slice(0,10);
+    draw4MOps();
+    draw4MWarning();
+    draw4MList();
+  }
+
+  function draw4MOps(){
+    var partId = document.getElementById('fm-part2').value;
+    var ops = opsFor(partId);
+    document.getElementById('fm-op2').innerHTML =
+      '<option value="">— all operations —</option>' + ops.map(function(o){
+        var v = o.data||{};
+        return '<option value="'+esc(o.doc_id)+'">'+esc(v.opNo)+' · '+esc(v.name||'')+'</option>';
+      }).join('');
+  }
+
+  function draw4MWarning(){
+    var cat = document.getElementById('fm-cat').value;
+    var m = M4[cat] || M4.man;
+    document.getElementById('fm-warn').innerHTML =
+      '<div class="note ' + (m.tell ? 'bad' : '') + '" style="margin-top:10px;">' +
+      (m.tell ? '<b>This kind of change usually has to be agreed with the customer first.</b> '
+              : '<b>This change does not normally need the customer told.</b> ') +
+      esc(m.note) + '</div>';
+  }
+
+  async function save4M(){
+    var msg = document.getElementById('fm-msg2');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var cat = document.getElementById('fm-cat').value;
+    var partId = document.getElementById('fm-part2').value;
+    if (!partId) return say('Which part does this affect?');
+    if (!g('fm-from') || !g('fm-to'))
+      return say('Say what it was and what it is now. A change recorded without both is not a ' +
+                 'record of anything.');
+    if (!g('fm-why')) return say('Why was it changed? That is the part somebody needs six months ' +
+                                 'from now.');
+    if (!g('fm-by2')) return say('Who is raising it?');
+
+    var told = document.getElementById('fm-told').value;
+    if (M4[cat].tell && !told)
+      return say('<b>A ' + M4[cat].label.toLowerCase() + ' change needs the customer position ' +
+                 'recorded.</b> Either they have agreed it, or it is genuinely not required for ' +
+                 'this change and somebody is saying so. Leaving it blank is the answer that ' +
+                 'causes trouble later.');
+    if (told === 'yes' && !g('fm-told-who'))
+      return say('Name who at the customer agreed it and when. "The customer knows" is not a record.');
+
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var op = processes.filter(function(x){ return x.doc_id === document.getElementById('fm-op2').value; })[0];
+    try {
+      var no = await C.docNumber('4m');
+      await C.idms.saveDoc({ kind:'change4m', partId:partId, status:'Open', docNo:no,
+        data:{ partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
+               processId:(op||{}).doc_id||'', opNo:op ? (op.data||{}).opNo : '',
+               category:cat, categoryLabel:M4[cat].label,
+               from:g('fm-from'), to:g('fm-to'), why:g('fm-why'),
+               when:g('fm-when'), raisedBy:g('fm-by2'),
+               customerTold:told, customerWho:g('fm-told-who'),
+               at:new Date().toISOString() } }, '4M change recorded');
+      say('Recorded as <b>'+esc(no)+'</b>. The next thing that runs on this part needs a fresh ' +
+          'setup approval — the audit agent checks that against the bookings.', true);
+      ['fm-from','fm-to','fm-why','fm-told-who'].forEach(function(id){
+        document.getElementById(id).value=''; });
+      document.getElementById('fm-told').value = '';
+      await load4M();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  /* whether anything has run since the change, and whether a setup was approved
+     for it — read from the bookings, not from a tick on this form */
+  function changeFollowUp(r){
+    var v = r.data||{};
+    var after = prodDocs.filter(function(x){
+      var q = x.data||{};
+      return q.partId === v.partId && String(q.date||'') >= String(v.when||''); });
+    if (!after.length) return { ran:0, unapproved:0 };
+    var bad = after.filter(function(x){ return !(x.data||{}).setupRef; }).length;
+    return { ran:after.length, unapproved:bad };
+  }
+
+  function draw4MList(){
+    var host = document.getElementById('fm-list2');
+    if (!changes4m.length){
+      host.innerHTML = '<div class="empty"><b>No changes recorded</b>' +
+        'The first one is usually written down after the problem it caused.</div>';
+      return;
+    }
+    host.innerHTML = '<div style="overflow-x:auto;"><table class="t"><thead><tr><th>Number</th>' +
+      '<th class="c">What</th><th>Part</th><th>From</th><th>To</th><th>Why</th><th>When</th>' +
+      '<th>Raised by</th><th class="c">Customer</th><th class="c">Since then</th>' +
+      '</tr></thead><tbody>' + changes4m.slice().sort(function(a,b){
+        return String((b.data||{}).when||'').localeCompare(String((a.data||{}).when||'')); })
+      .map(function(r){
+        var v = r.data||{}, f = changeFollowUp(r);
+        var cust = v.customerTold === 'yes'
+          ? '<span class="badge series" title="'+esc(v.customerWho||'')+'">agreed</span>'
+          : v.customerTold === 'na'
+            ? '<span class="badge new">not required</span>'
+            : '<span class="badge ab">not told</span>';
+        var since = !f.ran ? '<span class="hint">nothing run</span>'
+          : f.unapproved
+            ? '<span class="badge ab">' + f.unapproved + ' run(s) with no setup</span>'
+            : '<span class="badge series">' + f.ran + ' run(s), setup approved</span>';
+        return '<tr><td><b>'+esc(r.doc_no||'')+'</b></td>' +
+          '<td class="c">'+esc(v.categoryLabel||'')+'</td>' +
+          '<td>'+esc(v.partNo||'')+(v.opNo?'<div class="hint">op '+esc(v.opNo)+'</div>':'')+'</td>' +
+          '<td class="hint">'+esc(v.from||'')+'</td><td>'+esc(v.to||'')+'</td>' +
+          '<td class="hint">'+esc(String(v.why||'').slice(0,50))+'</td>' +
+          '<td class="hint">'+C.fmtDate(v.when)+'</td>' +
+          '<td class="hint">'+esc(v.raisedBy||'')+'</td>' +
+          '<td class="c">'+cust+'</td><td class="c">'+since+'</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  function print4M(){
+    if (!changes4m.length) { toast('Nothing to print.'); return; }
+    var untold = changes4m.filter(function(r){ return !(r.data||{}).customerTold; }).length;
+    C.openReport({
+      title:'4M Change Register', kind:'Change control', landscape:true,
+      subtitle:changes4m.length + ' change(s)',
+      sections:[
+        { type:'table', title:'Changes', dense:true,
+          columns:[{label:'Number'},{label:'What changed'},{label:'Part'},{label:'Op',align:'c'},
+            {label:'From'},{label:'To'},{label:'Why'},{label:'When'},{label:'Raised by'},
+            {label:'Customer'},{label:'Since then'}],
+          rows: changes4m.map(function(r){
+            var v = r.data||{}, f = changeFollowUp(r);
+            return [esc(r.doc_no||''), esc(v.categoryLabel||''), esc(v.partNo||''), v.opNo||'',
+              esc(v.from||''), esc(v.to||''), esc(v.why||''), C.fmtDate(v.when),
+              esc(v.raisedBy||''),
+              v.customerTold === 'yes' ? esc(v.customerWho||'agreed')
+                : v.customerTold === 'na' ? 'not required'
+                : { v:'<b>NOT TOLD</b>', cls:'ab' },
+              !f.ran ? 'nothing run'
+                : f.unapproved ? { v:'<b>'+f.unapproved+' run(s) with no setup approval</b>', cls:'ab' }
+                : f.ran + ' run(s), setup approved'];
+          }),
+          note: untold
+            ? untold + ' change(s) have no customer position recorded. A material, machine or method ' +
+              'change usually requires the customer to agree it first.'
+            : 'Every change has the customer position recorded.' },
+        { type:'text', title:'Signatures',
+          body:'Raised by                              Production                              Quality' }
+      ]});
   }
 
   /* ---------------- Skill matrix ----------------
@@ -5256,6 +5491,28 @@
               'optimistic. Correct the routing or find out why.', 'process_master', r.doc_no);
         }
       });
+      /* a change made and then run without a fresh setup approval, and changes
+         the customer should have been told about */
+      var chg = await C.idms.docs('change4m');
+      looked.changes = chg.length;
+      chg.forEach(function(r){
+        var v = r.data||{};
+        var after = prods.filter(function(x){
+          var q = x.data||{};
+          return q.partId === v.partId && String(q.date||'') >= String(v.when||''); });
+        var bad = after.filter(function(x){ return !(x.data||{}).setupRef; }).length;
+        if (bad)
+          add('high','Change control', r.doc_no + ' changed the ' + (v.categoryLabel||'').toLowerCase() +
+            ' on ' + (v.partNo||'') + ' and ' + bad + ' run(s) since have no approved setup',
+            'A change is exactly when the first pieces need checking. Nobody confirmed the process ' +
+            'still makes good parts.', 'entry_prod', r.doc_no);
+        if (!v.customerTold && v.category !== 'man')
+          add('med','Change control', r.doc_no + ' changed the ' + (v.categoryLabel||'').toLowerCase() +
+            ' on ' + (v.partNo||'') + ' with no customer position recorded',
+            'A material, machine or method change usually has to be agreed with the customer, and ' +
+            'often needs a resubmission.', 'change_4m', r.doc_no);
+      });
+
       /* competence: somebody ran work they were not assessed for. This is read
          from the bookings, so it cannot be dodged by not filling in a matrix. */
       var sks = await C.idms.docs('skill');
@@ -8918,6 +9175,11 @@
     });
     f.click();
   });
+
+  document.getElementById('fm-cat').addEventListener('change', draw4MWarning);
+  document.getElementById('fm-part2').addEventListener('change', draw4MOps);
+  document.getElementById('fm-save2').addEventListener('click', save4M);
+  document.getElementById('fm-print2').addEventListener('click', print4M);
 
   document.getElementById('sk-save').addEventListener('click', saveSkill);
   document.getElementById('sk-clear').addEventListener('click', function(){

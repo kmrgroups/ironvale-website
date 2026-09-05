@@ -87,9 +87,18 @@ only kind of rating worth putting in front of them. A repeat of the *same*
 problem is weighted above two different problems, because a repeat means nothing
 was fixed the first time.
 
-Three agents now exist; all three follow the two rules above. When adding a
-fourth, the pattern is: deterministic rules produce the findings, the AI is asked
-one narrow question afterwards, and the run is logged.
+**RFQ Triage Agent** lives on the *website*, on the RFQ pipeline page — the only
+agent outside the IDMS. It reads every open enquiry and reports what is stopping
+each one: no drawing read, unanswered points on the drawing, not costed, costed
+with no quotation, a quotation gone quiet for over a fortnight, a won job never
+sent to the IDMS, an enquiry untouched for a week. Closed enquiries are ignored.
+It writes its run to `agent_run` through `/api/idms` so **all agent runs sit in
+one log** regardless of which half of the platform they ran in.
+
+Five agents now exist; all five follow the three rules above. When adding a
+sixth, the pattern is: deterministic rules produce the findings, the AI is asked
+one narrow question afterwards, the run is logged, and anything written goes to
+the review queue.
 
 ## Hard rules
 

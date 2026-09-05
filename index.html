@@ -1046,6 +1046,20 @@
   </div>
   <div class="staff-body">
     <div id="ai-status"></div>
+    <div class="qb" style="margin-bottom:18px;">
+      <h4>🤖 RFQ Triage Agent</h4>
+      <div class="field-hint" style="margin-bottom:10px;">Reads every open enquiry and says which to
+        act on and what is stopping each one. The checks are fixed rules over the enquiries
+        themselves; the AI is asked only which to take first. <b>It changes nothing and answers no
+        customer.</b></div>
+      <div class="rfq-actions">
+        <button class="mini-btn gold" id="tri-run">Triage the pipeline</button>
+        <button class="mini-btn ai" id="tri-explain">Ask the AI to prioritise</button>
+        <button class="mini-btn" id="tri-print">Print</button>
+      </div>
+      <div id="tri-msg" class="field-hint" style="margin-top:8px;"></div>
+      <div id="tri-body" style="margin-top:12px;"></div>
+    </div>
     <div class="kpi-row" id="kpi-row"></div>
     <div id="rfq-list"></div>
   </div>
@@ -9830,6 +9844,156 @@ Reply with ONLY this JSON, no commentary or code fences:
   }
 
 
+
+  /* ---------------- RFQ Triage Agent ----------------
+     The same discipline as the agents in the IDMS: fixed rules find the state of
+     each enquiry, the AI is asked one narrow question afterwards, and nothing is
+     written or sent. An enquiry sitting unanswered costs an order; this says
+     which one and why, rather than leaving somebody to scroll the list. */
+  const TRI_SEV = { high:{ rank:3, label:'Do today', cls:'no' },
+                    med:{ rank:2, label:'This week', cls:'unk' },
+                    low:{ rank:1, label:'When you can', cls:'go' } };
+  let triFindings=[], triNarrative='';
+
+  function daysSince(d){
+    const t = new Date(d||0).getTime();
+    return t ? Math.floor((Date.now()-t)/86400000) : null;
+  }
+
+  function triageRfqs(){
+    const out = [];
+    (rfqs||[]).forEach(r => {
+      if (r.status === 'Closed') return;
+      const age = daysSince(r.createdAt || r.at || r.date);
+      const x = (r.extract||{}), part = x.part||{};
+      const has = k => String(part[k]||'').trim().length > 0;
+      const add = (sev, what, why) => out.push({ ref:r.ref, who:r.company||r.name||'',
+        status:r.status||'', age:age, sev:sev, what:what, why:why });
+
+      if (!r.fileName && !r.cvText && !x.readAt)
+        add('med','No drawing has been read',
+          'Nothing can be costed from a description alone. Ask for the drawing before anything else.');
+      else if (x.readAt && !(has('number') || has('drawingNumber')))
+        add('med','The drawing was read but carries no part or drawing number',
+          'The quotation and everything after it hang off that number. Ask for it now, not after the order.');
+
+      if ((x.missing||[]).length)
+        add('med', (x.missing||[]).length + ' point(s) the drawing does not answer',
+          'Quoting around an unanswered question is how a job is won at the wrong price.');
+
+      if (!r.costing || !r.costing.material || !r.costing.material.grade)
+        add('high','Not costed yet',
+          'Until it is costed there is no basis for a price, and the clock is running.');
+      else if (!r.quoteDoc)
+        add('high','Costed but no quotation drafted',
+          'The work is done; the customer has nothing in writing.');
+      else if (!r.quoteDoc.number)
+        add('med','Quotation drafted but not numbered',
+          'An unnumbered quotation cannot be referred to later.');
+
+      if (r.status === 'Approved & Sent' && age !== null && age > 14)
+        add('med','Sent ' + age + ' days ago with no answer',
+          'Chase it. A quotation that goes quiet is usually lost to somebody who followed up.');
+
+      if (r.status === 'Won' && !(r.idmsParts||[]).length)
+        add('high','Won but never sent to the IDMS',
+          'No part, no APQP, no control plan — the works does not know this job exists.');
+
+      if (age !== null && age > 7 && (r.status === 'Received'))
+        add('high','Received ' + age + ' days ago and still untouched',
+          'A week of silence is how a customer decides you are not interested.');
+    });
+    out.sort((a,b) => TRI_SEV[b.sev].rank - TRI_SEV[a.sev].rank || (b.age||0) - (a.age||0));
+    return out;
+  }
+
+  async function runTriage(){
+    const msg = document.getElementById('tri-msg');
+    const btn = document.getElementById('tri-run');
+    btn.disabled = true; btn.textContent = 'Reading…';
+    triFindings = triageRfqs(); triNarrative = '';
+    drawTriage();
+    const open = (rfqs||[]).filter(r => r.status !== 'Closed').length;
+    msg.innerHTML = 'Read ' + open + ' open enquiry(ies). ' +
+      (triFindings.length ? triFindings.length + ' thing(s) to deal with.'
+                          : 'Nothing is waiting on us.');
+    /* logged alongside the IDMS agents, so there is one place to see what any
+       agent did and when */
+    try {
+      await api('/api/idms',{method:'POST',body:JSON.stringify({what:'docs',
+        doc:{ kind:'agent_run', status:'Completed', docNo:'TRIAGE-'+Date.now().toString(36).toUpperCase(),
+          data:{ agent:'RFQ triage', at:new Date().toISOString(),
+                 looked:{ enquiries:open },
+                 counts:{ high:triFindings.filter(x=>x.sev==='high').length,
+                          med:triFindings.filter(x=>x.sev==='med').length,
+                          low:triFindings.filter(x=>x.sev==='low').length },
+                 findings:triFindings } },
+        reason:'RFQ triage agent run'})});
+    } catch(e){ /* the findings matter more than the log */ }
+    btn.disabled = false; btn.textContent = 'Triage the pipeline';
+  }
+
+  function drawTriage(){
+    const host = document.getElementById('tri-body');
+    if (!triFindings.length){
+      host.innerHTML = '<div class="feas-banner go"><div class="feas-title">Nothing is waiting on us</div>' +
+        '<div class="t-micro">Every open enquiry has been read, costed and quoted, and nothing has ' +
+        'gone quiet.</div></div>';
+      return;
+    }
+    host.innerHTML = (triNarrative ? '<div class="warn-box" style="margin-bottom:10px;">' +
+        triNarrative + '</div>' : '') +
+      '<table class="cs-t"><thead><tr><th>When</th><th>Enquiry</th><th>Customer</th>' +
+      '<th>What is stopping it</th><th>Why it matters</th></tr></thead><tbody>' +
+      triFindings.map(f => `<tr>
+        <td><span class="order-badge ${TRI_SEV[f.sev].cls}">${TRI_SEV[f.sev].label}</span>
+          ${f.age!==null?`<div class="t-micro">${f.age} days old</div>`:''}</td>
+        <td><b>${esc(f.ref)}</b><div class="t-micro">${esc(f.status)}</div></td>
+        <td>${esc(f.who)}</td><td>${esc(f.what)}</td>
+        <td class="t-micro">${esc(f.why)}</td></tr>`).join('') + '</tbody></table>';
+  }
+
+  async function explainTriage(){
+    const msg = document.getElementById('tri-msg');
+    if (!triFindings.length){ msg.textContent = 'Run the triage first.'; return; }
+    const btn = document.getElementById('tri-explain');
+    btn.disabled = true; btn.textContent = 'Thinking…';
+    const list = triFindings.map((f,i) =>
+      `${i+1}. [${TRI_SEV[f.sev].label}] ${f.ref} ${f.who}: ${f.what}`).join('\n');
+    try {
+      const txt = await callAI(
+        'These are the open items in a manufacturing company\'s enquiry pipeline, found by fixed ' +
+        'rules, not by you:\n\n' + list + '\n\nIn no more than 100 words of plain prose, say which ' +
+        'to deal with first and why. Group anything that is one phone call. Name the numbers you ' +
+        'mean. Do not invent items and do not repeat the list back.',
+        { maxTokens:350, surfaceError:true });
+      triNarrative = '<b>What to do first.</b> ' + esc(stripMarkup(txt));
+      drawTriage();
+      msg.textContent = '';
+    } catch(e){ msg.textContent = e.message; }
+    btn.disabled = false; btn.textContent = 'Ask the AI to prioritise';
+  }
+
+  function printTriage(){
+    if (!triFindings.length){ toast('Run the triage first.'); return; }
+    openReport({ title:'RFQ pipeline triage', kind:'Agent report', landscape:true,
+      subtitle:triFindings.length + ' item(s) open',
+      sections:[
+        { type:'table', title:'What is stopping each enquiry',
+          columns:[{label:'Priority'},{label:'Age',align:'r'},{label:'Enquiry'},{label:'Customer'},
+                   {label:'Status'},{label:'What is stopping it'},{label:'Why it matters'}],
+          rows: triFindings.map(f => [
+            f.sev==='high' ? {v:'<b>Do today</b>', cls:'ab'} : TRI_SEV[f.sev].label,
+            f.age!==null ? f.age + ' d' : '—', esc(f.ref), esc(f.who), esc(f.status),
+            esc(f.what), esc(f.why)]),
+          note:'Found by fixed rules over the enquiries held in this system on ' +
+               new Date().toLocaleString('en-GB') + '. Nothing was changed and no customer was ' +
+               'contacted.' },
+        triNarrative ? { type:'text', title:'What to do first',
+          body: triNarrative.replace(/<[^>]+>/g,'') } : null
+      ].filter(Boolean) });
+  }
+
   function renderRfqAdmin(){
     const kpi=document.getElementById('kpi-row'), host=document.getElementById('rfq-list');
     const counts=STAGES.map(s=>rfqs.filter(r=>(r.status||'Received')===s).length);
@@ -11421,6 +11585,10 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.querySelectorAll('#hr-groups button').forEach(b=>
       b.classList.toggle('active',b.dataset.g===hrGroup));
   }
+  document.getElementById('tri-run').addEventListener('click', runTriage);
+  document.getElementById('tri-explain').addEventListener('click', explainTriage);
+  document.getElementById('tri-print').addEventListener('click', printTriage);
+
   document.querySelectorAll('.hr-tab').forEach(tab=>tab.addEventListener('click',()=>{
     if(tab.dataset.hrgroup&&tab.dataset.hrgroup!==hrGroup){ hrGroup=tab.dataset.hrgroup; showHrGroup(); }
     document.querySelectorAll('.hr-tab').forEach(t=>t.classList.remove('active'));

@@ -194,8 +194,22 @@ idempotent — once sent, the button is replaced by a confirmation.
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
 Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
 Self Inspection, Inward Inspection, Calibration, MSA, PDI, GRN, Delivery
-Challan, Audit Readiness Agent, NPD Agent, Supplier Watch Agent, Review Agent
-Work, Agent Run Log, People (HR records), Company Profile.
+Challan, Production Entry, Audit Readiness Agent, NPD Agent, Supplier Watch
+Agent, Review Agent Work, Agent Run Log, People (HR records), Company Profile.
+
+**Production entry** is the record everything else assumed existed. Two things
+make it more than a tally sheet. It **will not book against an operation with no
+approved setup** — the same gate pattern as PDI on the delivery challan, with the
+same named override stored as `bookedWithoutSetup`. And it computes the actual
+cycle from the time booked less downtime, and compares it with the routing: a
+drift of 20% or more is reported as *the routing being wrong*, because every
+quotation and capacity plan is built on that number. Rejections need a reason
+code and downtime needs a reason, because a figure nobody can explain is a figure
+nobody can improve.
+
+The **Audit Readiness Agent** reads production too: runs booked without a setup,
+rejection rates at or above 5%, cycle drift over 20% (raised against the
+routing, not the run), and series parts nothing has ever been booked against.
 
 **Setup approval** is the first shop-floor screen and the pattern for the rest:
 what gets checked comes from the **control plan** for that operation (falling

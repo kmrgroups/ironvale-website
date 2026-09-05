@@ -307,6 +307,79 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="entry_prod">
+      <div class="card">
+        <h4>Production Entry</h4>
+        <div class="hint" style="margin-bottom:10px;">What was actually made, on which machine, by
+          whom, and what went wrong. A job cannot be booked against an operation with no approved
+          setup — that is what the setup approval is for.</div>
+        <div class="row four">
+          <div><label>Part</label><select id="pe-part"></select></div>
+          <div><label>Operation</label><select id="pe-op"></select></div>
+          <div><label>Date</label><input type="date" id="pe-date"></div>
+          <div><label>Shift</label><select id="pe-shift">
+            <option>A</option><option>B</option><option>C</option><option>General</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Machine</label><input id="pe-machine"></div>
+          <div><label>Operator</label><input id="pe-operator"></div>
+          <div><label>Started</label><input type="time" id="pe-from"></div>
+          <div><label>Finished</label><input type="time" id="pe-to"></div>
+        </div>
+        <div class="sub">What was made</div>
+        <div class="row four">
+          <div><label>Total produced</label><input class="num" id="pe-made"></div>
+          <div><label>Rejected</label><input class="num" id="pe-rej"></div>
+          <div><label>Reworked</label><input class="num" id="pe-rew"></div>
+          <div><label>Good pieces</label><input class="num" id="pe-ok" readonly>
+            <div class="hint">Produced less rejected.</div></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div style="grid-column:span 2;"><label>Reason for rejection</label>
+            <select id="pe-rej-why">
+              <option value="">— choose —</option>
+              <option>Oversize</option><option>Undersize</option><option>Surface finish</option>
+              <option>Tool mark or chatter</option><option>Burr not removed</option>
+              <option>Handling damage</option><option>Material defect</option>
+              <option>Wrong setting or offset</option><option>Programme error</option>
+              <option>Other</option></select></div>
+          <div style="grid-column:span 2;"><label>Rejection note</label><input id="pe-rej-note"></div>
+        </div>
+        <div class="sub">Time lost</div>
+        <div class="row four">
+          <div><label>Downtime (minutes)</label><input class="num" id="pe-down"></div>
+          <div style="grid-column:span 2;"><label>Reason for downtime</label>
+            <select id="pe-down-why">
+              <option value="">— choose —</option>
+              <option>Machine breakdown</option><option>Tool change</option>
+              <option>Setup or changeover</option><option>No material</option>
+              <option>No operator</option><option>Power failure</option>
+              <option>Quality hold</option><option>Planned maintenance</option>
+              <option>Other</option></select></div>
+          <div><label>Lot / batch</label><input id="pe-lot"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="pe-save">Book the production</button>
+          <button class="btn" id="pe-clear">Clear</button>
+        </div>
+        <div class="note" id="pe-msg" style="display:none;"></div>
+      </div>
+      <div class="card" id="pe-perf" style="display:none;">
+        <h4>How the shift ran</h4>
+        <div id="pe-perf-body"></div>
+      </div>
+      <div class="card">
+        <div class="row four" style="margin-bottom:8px;">
+          <div style="grid-column:span 2;"><label>Show</label><select id="pe-filter">
+            <option value="">Everything on file</option>
+            <option value="7">Last 7 days</option><option value="30">Last 30 days</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="pe-print">Print log</button></div>
+        </div>
+        <h4>Production log</h4>
+        <div id="pe-list"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="agent_review">
       <div class="card">
         <h4>Review agent work</h4>
@@ -1104,7 +1177,7 @@
       ['grn','📥','GRN — Goods Receipt',1],['dc','📤','Delivery Challan',1],
       ['sheet_rawmat','🪨','Raw Material Stock'],['bom','🧾','Bill of Materials']]],
     ['prod','🏭','Production','Shop Floor',[
-      ['cnc','⌨','CNC Programme',1],['entry_prod','📝','Production Entry'],['dwm','📊','DWM — Daily Work Management'],
+      ['cnc','⌨','CNC Programme',1],['entry_prod','📝','Production Entry',1],['dwm','📊','DWM — Daily Work Management'],
       ['task_list','✅','Task List']]],
     ['hr','🏢','HR & Competency','Organisation',[
       ['hrm','👥','HR & Payroll',1],['org_chart','🏗','Organisation Chart'],
@@ -1213,6 +1286,7 @@
     if (s === 'agent_npd')      loadNpdAgent();
     if (s === 'agent_supplier') loadSupplierAgent();
     if (s === 'agent_review')   loadReview();
+    if (s === 'entry_prod')     loadProduction();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
   }
@@ -1828,6 +1902,265 @@
     return prompt;
   }
 
+  /* ---------------- Production entry ----------------
+     The record that everything else has been assuming existed: what was actually
+     made. Two things make it worth having rather than a tally sheet. It will not
+     book against an operation with no approved setup, because that is what the
+     setup approval is for. And it compares the time taken against the cycle time
+     on the routing, which is how you find out the routing is wrong. */
+  var prodDocs = [], prodSetups = [];
+
+  async function loadProduction(){
+    await fetchParts();
+    document.getElementById('pe-part').innerHTML =
+      partOptions(document.getElementById('pe-part').value);
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    try { prodSetups = await C.idms.docs('setup'); } catch(e){ prodSetups = []; }
+    var dt = document.getElementById('pe-date');
+    if (!dt.value) dt.value = new Date().toISOString().slice(0,10);
+    drawProdOps();
+    drawProdList();
+  }
+
+  function drawProdOps(){
+    var partId = document.getElementById('pe-part').value;
+    var ops = opsFor(partId);
+    document.getElementById('pe-op').innerHTML = ops.length
+      ? '<option value="">— choose —</option>' + ops.map(function(o){
+          var v = o.data||{};
+          return '<option value="'+esc(o.doc_id)+'" data-machine="'+esc(v.machine||'')+'" '+
+            'data-cycle="'+C.num(v.cycleSec)+'">'+esc(v.opNo)+' · '+esc(v.name||'')+'</option>';
+        }).join('')
+      : '<option value="">no operations on this part</option>';
+  }
+
+  /* the most recent setup decision for this part and operation */
+  function latestSetup(partId, opId){
+    return prodSetups.filter(function(s){
+      var v = s.data||{};
+      return v.partId === partId && v.processId === opId; })
+      .sort(function(a,b){
+        return String((b.data||{}).at||b.updated_at).localeCompare(String((a.data||{}).at||a.updated_at));
+      })[0] || null;
+  }
+
+  function prodGood(){
+    var made = C.num(document.getElementById('pe-made').value);
+    var rej  = C.num(document.getElementById('pe-rej').value);
+    document.getElementById('pe-ok').value = made ? C.qty(Math.max(0, made - rej)) : '';
+  }
+
+  async function saveProduction(){
+    var msg = document.getElementById('pe-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var partId = document.getElementById('pe-part').value;
+    var opId = document.getElementById('pe-op').value;
+    if (!partId) return say('Choose the part.');
+    if (!opId)   return say('Choose the operation.');
+    if (!g('pe-operator')) return say('Name the operator. A production record with nobody against ' +
+                                      'it cannot be traced when a problem turns up later.');
+    var made = C.num(g('pe-made'));
+    if (made <= 0) return say('How many pieces were made?');
+    var rej = C.num(g('pe-rej'));
+    if (rej > made) return say('More rejected (' + C.qty(rej) + ') than made (' + C.qty(made) +
+                               '). These cannot both be right.');
+    if (rej > 0 && !document.getElementById('pe-rej-why').value)
+      return say('Say why the ' + C.qty(rej) + ' were rejected. A rejection with no reason cannot ' +
+                 'be acted on, and it is the reason that stops it happening again.');
+    var down = C.num(g('pe-down'));
+    if (down > 0 && !document.getElementById('pe-down-why').value)
+      return say('Say what the ' + C.qty(down) + ' minutes of downtime were. Unexplained lost time ' +
+                 'is the figure nobody can improve.');
+
+    /* the gate: an operation running without an approved setup means nobody
+       confirmed the first pieces were right */
+    var su = latestSetup(partId, opId);
+    if (!su || su.status !== 'Approved'){
+      if (!prodOverride){
+        return say('<b>No approved setup for this operation.</b> ' +
+          (su ? 'The last setup was <b>rejected</b>. ' : 'Nothing has been approved. ') +
+          'Nobody has confirmed the first pieces were right, so this run has no basis. ' +
+          'Approve the setup, or <a href="#" id="pe-force" style="color:var(--bad);">book it ' +
+          'anyway</a> — which needs a name and is recorded against the run.');
+      }
+    }
+
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var op = processes.filter(function(x){ return x.doc_id === opId; })[0] || {};
+    var plannedCycle = C.num((op.data||{}).cycleSec);
+
+    /* minutes actually worked, less downtime */
+    var mins = 0;
+    if (g('pe-from') && g('pe-to')){
+      var a = g('pe-from').split(':'), b = g('pe-to').split(':');
+      mins = (C.num(b[0])*60 + C.num(b[1])) - (C.num(a[0])*60 + C.num(a[1]));
+      if (mins < 0) mins += 24*60;          // a shift that runs past midnight
+    }
+    var runMins = Math.max(0, mins - down);
+    var actualCycle = (made && runMins) ? Math.round((runMins * 60 / made) * 10) / 10 : 0;
+
+    try {
+      await C.idms.saveDoc({ kind:'production', partId:partId,
+        status: rej > 0 ? 'With rejection' : 'Booked',
+        docNo: await C.docNumber('prod'),
+        data:{ partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
+               processId:opId, opNo:(op.data||{}).opNo, opName:(op.data||{}).name||'',
+               date:g('pe-date'), shift:document.getElementById('pe-shift').value,
+               machine:g('pe-machine'), operator:g('pe-operator'),
+               from:g('pe-from'), to:g('pe-to'), minutes:mins, runMinutes:runMins,
+               made:made, rejected:rej, reworked:C.num(g('pe-rew')), good:Math.max(0, made-rej),
+               rejectReason:document.getElementById('pe-rej-why').value,
+               rejectNote:g('pe-rej-note'),
+               downtime:down, downtimeReason:document.getElementById('pe-down-why').value,
+               lot:g('pe-lot'), plannedCycle:plannedCycle, actualCycle:actualCycle,
+               setupRef:(su && su.status === 'Approved') ? su.doc_no : '',
+               bookedWithoutSetup: prodOverride || null,
+               at:new Date().toISOString() } },
+        'production booked');
+      showProdPerformance({ made:made, rej:rej, down:down, mins:mins, runMins:runMins,
+        plannedCycle:plannedCycle, actualCycle:actualCycle });
+      say('Booked. ' + C.qty(made - rej) + ' good piece(s)' +
+          (rej ? ', ' + C.qty(rej) + ' rejected' : '') + '.', true);
+      prodOverride = null;
+      ['pe-made','pe-rej','pe-rew','pe-ok','pe-rej-note','pe-down','pe-lot']
+        .forEach(function(id){ document.getElementById(id).value=''; });
+      document.getElementById('pe-rej-why').value = '';
+      document.getElementById('pe-down-why').value = '';
+      await loadProduction();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  /* Comparing the shift against the routing is the whole point of booking time:
+     a cycle a long way off the planned one means the routing is wrong, and the
+     routing is what every quotation and every capacity plan is built on. */
+  function showProdPerformance(r){
+    var host = document.getElementById('pe-perf-body');
+    var box = document.getElementById('pe-perf');
+    var rejPct = r.made ? Math.round(1000 * r.rej / r.made) / 10 : 0;
+    var drift = (r.plannedCycle && r.actualCycle)
+      ? Math.round(1000 * (r.actualCycle - r.plannedCycle) / r.plannedCycle) / 10 : null;
+    var avail = r.mins ? Math.round(1000 * r.runMins / r.mins) / 10 : null;
+    box.style.display = '';
+    host.innerHTML =
+      '<div class="stat">' +
+      [['Good pieces', C.qty(r.made - r.rej)],
+       ['Rejected', C.qty(r.rej) + (rejPct ? ' · ' + rejPct + '%' : '')],
+       ['Downtime', r.down ? C.qty(r.down) + ' min' : 'none'],
+       ['Actual cycle', r.actualCycle ? C.qty(r.actualCycle) + ' s' : '—'],
+       ['Planned cycle', r.plannedCycle ? C.qty(r.plannedCycle) + ' s' : 'not set'],
+       ['Machine available', avail != null ? avail + '%' : '—']]
+      .map(function(x){ return '<div class="b"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'; }).join('') +
+      '</div>' +
+      (drift != null && Math.abs(drift) >= 20
+        ? '<div class="note bad" style="margin-top:12px;"><b>The cycle time on the routing is ' +
+          Math.abs(drift) + '% ' + (drift > 0 ? 'faster than what actually happened' :
+          'slower than what actually happened') + '.</b> ' +
+          (drift > 0
+            ? 'Every quotation and capacity plan built on ' + r.plannedCycle + ' seconds is optimistic. '
+            : 'The part is running better than planned, so quotations may be leaving money behind. ') +
+          'Correct the routing, or find out why this shift was different.</div>'
+        : drift != null
+          ? '<div class="note good" style="margin-top:12px;">Actual cycle is within ' +
+            Math.abs(drift) + '% of the routing. The routing can be trusted.</div>'
+          : '<div class="note" style="margin-top:12px;">No cycle time on the routing to compare ' +
+            'against, so nothing here can tell you whether the plan was right.</div>') +
+      (rejPct >= 5
+        ? '<div class="note bad" style="margin-top:10px;"><b>' + rejPct + '% rejected on this run.</b> ' +
+          'That is the number to take to the PFMEA, not the scrap bin.</div>' : '');
+  }
+
+  function drawProdList(){
+    var host = document.getElementById('pe-list');
+    var f = C.num(document.getElementById('pe-filter').value);
+    var since = f ? Date.now() - f*86400000 : 0;
+    var rows = prodDocs.filter(function(r){
+      return !since || new Date((r.data||{}).date || r.updated_at).getTime() >= since; });
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>Nothing booked' + (f ? ' in this period' : ' yet') +
+        '</b>Production is what everything else in this system assumes has happened.</div>';
+      return;
+    }
+    var tot = rows.reduce(function(t,r){
+      var v = r.data||{};
+      t.made += C.num(v.made); t.rej += C.num(v.rejected); t.down += C.num(v.downtime); return t;
+    }, { made:0, rej:0, down:0 });
+
+    host.innerHTML =
+      '<div class="stat" style="margin-bottom:12px;">' +
+      [['Produced', C.qty(tot.made)], ['Rejected', C.qty(tot.rej) +
+        (tot.made ? ' · ' + (Math.round(1000*tot.rej/tot.made)/10) + '%' : '')],
+       ['Downtime', C.qty(tot.down) + ' min'], ['Entries', rows.length]]
+      .map(function(x){ return '<div class="b"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'; }).join('') +
+      '</div>' +
+      '<div style="overflow-x:auto;"><table class="t"><thead><tr><th>Date</th><th>Part</th>' +
+      '<th class="c">Op</th><th>Machine</th><th>Operator</th><th class="r">Made</th>' +
+      '<th class="r">Rejected</th><th>Reason</th><th class="r">Downtime</th>' +
+      '<th class="r">Cycle</th><th class="c">Setup</th></tr></thead><tbody>' +
+      rows.slice(0,50).map(function(r){
+        var v = r.data||{};
+        var drift = (v.plannedCycle && v.actualCycle)
+          ? Math.round(100 * (v.actualCycle - v.plannedCycle) / v.plannedCycle) : null;
+        return '<tr><td class="hint">'+C.fmtDate(v.date)+'<div class="hint">'+esc(v.shift||'')+'</div></td>' +
+          '<td>'+esc(v.partNo||'')+'</td><td class="c">'+esc(v.opNo||'')+'</td>' +
+          '<td class="hint">'+esc(v.machine||'—')+'</td><td>'+esc(v.operator||'—')+'</td>' +
+          '<td class="r">'+C.qty(v.made)+'</td>' +
+          '<td class="r">'+(C.num(v.rejected)?'<b style="color:var(--bad)">'+C.qty(v.rejected)+'</b>':'—')+'</td>' +
+          '<td class="hint">'+esc(v.rejectReason||'')+'</td>' +
+          '<td class="r">'+(C.num(v.downtime)?C.qty(v.downtime)+' m':'—')+
+            (v.downtimeReason?'<div class="hint">'+esc(v.downtimeReason)+'</div>':'')+'</td>' +
+          '<td class="r">'+(v.actualCycle?C.qty(v.actualCycle)+'s':'—')+
+            (drift!=null&&Math.abs(drift)>=20?'<div class="hint" style="color:var(--bad)">'+
+              (drift>0?'+':'')+drift+'%</div>':'')+'</td>' +
+          '<td class="c">'+(v.bookedWithoutSetup
+            ? '<span class="badge ab" title="'+esc(v.bookedWithoutSetup)+'">no setup</span>'
+            : v.setupRef ? '<span class="badge series">ok</span>' : '—')+'</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  function printProduction(){
+    var f = C.num(document.getElementById('pe-filter').value);
+    var since = f ? Date.now() - f*86400000 : 0;
+    var rows = prodDocs.filter(function(r){
+      return !since || new Date((r.data||{}).date || r.updated_at).getTime() >= since; });
+    if (!rows.length) { toast('Nothing to print.'); return; }
+    var tot = rows.reduce(function(t,r){
+      var v = r.data||{};
+      t.made += C.num(v.made); t.rej += C.num(v.rejected);
+      t.down += C.num(v.downtime); t.rew += C.num(v.reworked); return t;
+    }, { made:0, rej:0, down:0, rew:0 });
+    C.openReport({
+      title:'Production Log', kind:'Production', landscape:true,
+      subtitle:(f ? 'Last ' + f + ' days' : 'All records') + ' · ' + rows.length + ' entry(ies)',
+      sections:[
+        { type:'table', title:'Entries', dense:true,
+          columns:[{label:'Date'},{label:'Shift',align:'c'},{label:'Part'},{label:'Op',align:'c'},
+            {label:'Machine'},{label:'Operator'},{label:'Made',align:'r'},{label:'Rejected',align:'r'},
+            {label:'Reason'},{label:'Downtime',align:'r'},{label:'Reason'},
+            {label:'Cycle',align:'r'},{label:'Setup'}],
+          rows: rows.map(function(r){
+            var v = r.data||{};
+            return [C.fmtDate(v.date), esc(v.shift||''), esc(v.partNo||''), v.opNo||'',
+              esc(v.machine||'—'), esc(v.operator||'—'), C.qty(v.made),
+              C.num(v.rejected) ? { v:'<b>'+C.qty(v.rejected)+'</b>', cls:'ab' } : '—',
+              esc(v.rejectReason||''), C.num(v.downtime)?C.qty(v.downtime)+' m':'—',
+              esc(v.downtimeReason||''), v.actualCycle?C.qty(v.actualCycle)+'s':'—',
+              v.bookedWithoutSetup ? { v:'<b>NO SETUP</b>', cls:'ab' } : (v.setupRef||'—')];
+          }) },
+        { type:'pairs', title:'Totals', rows:[
+          ['Produced', C.qty(tot.made)],
+          ['Rejected', C.qty(tot.rej) + (tot.made ? ' — ' + (Math.round(1000*tot.rej/tot.made)/10) + '%' : '')],
+          ['Reworked', C.qty(tot.rew)],
+          ['Downtime', C.qty(tot.down) + ' minutes'],
+          ['Booked without an approved setup',
+            rows.filter(function(r){ return (r.data||{}).bookedWithoutSetup; }).length]]},
+        { type:'text', title:'Signatures',
+          body:'Production                              Quality                              Plant head' }
+      ]});
+  }
+
   /* ---------------- Reviewing what an agent produced ----------------
      An agent that writes and is never checked is just a faster way of being
      wrong. Everything the NPD agent creates carries a flag - aiProposed on
@@ -1838,7 +2171,7 @@
      PFMEA and control plans are deliberately not signed from this screen. They
      have their own sign-off, with the whole document in front of you, and one
      document should not have two ways to be approved. */
-  var rvItems = [], rvParts = [];
+  var rvItems = [], rvParts = [], prodOverride = null;
 
   async function loadReview(){
     var host = document.getElementById('rv-body');
@@ -2606,7 +2939,9 @@
       var grns  = await C.idms.docs('grn');
       var inws  = await C.idms.docs('inward');
       var pdis  = await C.idms.docs('pdi');
-      looked = { parts:parts.length, operations:procs.length, dimensions:dims.length,
+      var prods = await C.idms.docs('production');
+      looked = { production:prods.length,
+        parts:parts.length, operations:procs.length, dimensions:dims.length,
         pfmea:fmeas.length, controlPlans:cps.length, gauges:gs.length, studies:msas.length,
         ppap:ppaps.length, selfInspection:sis.length, receipts:grns.length, lots:pdis.length };
 
@@ -2743,6 +3078,39 @@
           ' has not been inspected',
           'Uninspected material should not be issued to production.',
           'report_inward_inspection', g.doc_no);
+      });
+
+      /* production is where the plan meets what happened; the gaps between the
+         two are worth more than either on its own */
+      prods.forEach(function(r){
+        var v = r.data || {};
+        if (v.bookedWithoutSetup)
+          add('high','Production', (v.partNo||'') + ' op ' + (v.opNo||'') + ' on ' +
+            C.fmtDate(v.date) + ' was booked with no approved setup',
+            'Authorised by ' + (v.bookedWithoutSetup||'') + '. Nobody confirmed the first pieces ' +
+            'were right, so the whole run is unproven.', 'entry_prod', r.doc_no);
+        var pct = C.num(v.made) ? 100 * C.num(v.rejected) / C.num(v.made) : 0;
+        if (pct >= 5)
+          add('med','Production', (v.partNo||'') + ' op ' + (v.opNo||'') + ' — ' +
+            (Math.round(pct*10)/10) + '% rejected on ' + C.fmtDate(v.date) +
+            (v.rejectReason ? ' (' + v.rejectReason + ')' : ''),
+            'Above 5% the cause belongs in the PFMEA and the control plan, not just the scrap bin.',
+            'entry_prod', r.doc_no);
+        if (C.num(v.plannedCycle) && C.num(v.actualCycle)){
+          var drift = 100 * (C.num(v.actualCycle) - C.num(v.plannedCycle)) / C.num(v.plannedCycle);
+          if (drift >= 20)
+            add('med','Routing', (v.partNo||'') + ' op ' + (v.opNo||'') + ' ran ' +
+              Math.round(drift) + '% slower than the routing says',
+              'Every quotation and capacity plan built on ' + v.plannedCycle + ' seconds is ' +
+              'optimistic. Correct the routing or find out why.', 'process_master', r.doc_no);
+        }
+      });
+      /* a part in series production that nothing has ever been booked against */
+      live.filter(function(x){ return x.lifecycle === 'Series'; }).forEach(function(x){
+        if (!prods.filter(function(r){ return (r.data||{}).partId === x.part_id; }).length)
+          add('low','Production', x.part_no + ' is in series production but nothing has been booked ' +
+            'against it', 'Either it is not running, or production is not being recorded.',
+            'entry_prod', x.part_no);
       });
 
       pdis.filter(function(x){ return x.status !== 'Cleared'; }).forEach(function(x){
@@ -6274,6 +6642,36 @@
       go('home');
     });
     f.click();
+  });
+
+  document.getElementById('pe-part').addEventListener('change', drawProdOps);
+  document.getElementById('pe-op').addEventListener('change', function(){
+    var o = this.selectedOptions[0];
+    if (o && o.dataset.machine && !document.getElementById('pe-machine').value)
+      document.getElementById('pe-machine').value = o.dataset.machine;
+  });
+  ['pe-made','pe-rej'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', prodGood);
+  });
+  document.getElementById('pe-save').addEventListener('click', saveProduction);
+  document.getElementById('pe-clear').addEventListener('click', function(){
+    ['pe-made','pe-rej','pe-rew','pe-ok','pe-rej-note','pe-down','pe-lot','pe-from','pe-to']
+      .forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('pe-msg').style.display='none';
+    document.getElementById('pe-perf').style.display='none';
+    prodOverride = null;
+  });
+  document.getElementById('pe-filter').addEventListener('change', drawProdList);
+  document.getElementById('pe-print').addEventListener('click', printProduction);
+  document.getElementById('pe-msg').addEventListener('click', function(e){
+    if (!e.target || e.target.id !== 'pe-force') return;
+    e.preventDefault();
+    var who = prompt('Booking production against an operation with no approved setup.\n\n' +
+      'Who is authorising it, and why?');
+    if (who === null) return;
+    if (!who.trim()) { toast('A name and reason are needed.'); return; }
+    prodOverride = who.trim();
+    toast('Recorded. Press Book the production again.');
   });
 
   document.getElementById('rv-refresh').addEventListener('click', loadReview);

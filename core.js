@@ -104,6 +104,31 @@
   /* The login API expects `user` and `pass`, and may answer with needCode when
      two-factor is switched on for that account — in which case the caller must
      follow up with verifyCode. */
+  /* Ask the server whether this session is still good. A revoked or expired
+     token looks exactly like a valid one from here, so never assume it is. */
+  async function checkSession() {
+    if (!token) return null;
+    try {
+      const j = await api('/api/auth', { method: 'POST',
+        body: JSON.stringify({ action: 'session' }) });
+      if (j && j.ok) return { user: j.user, role: j.role };
+    } catch (e) {
+      /* a rejected token is gone; a network failure is not a reason to sign
+         somebody out, so only clear it when the server actually says no */
+      if (/session has ended|Not signed in/i.test(e.message || '')) setToken('');
+      return null;
+    }
+    setToken('');
+    return null;
+  }
+
+  async function signOut() {
+    try {
+      await api('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'logout' }) });
+    } catch (e) { /* the local token goes either way */ }
+    setToken('');
+  }
+
   async function signIn(user, pass) {
     const j = await api('/api/auth', {
       method: 'POST',
@@ -518,6 +543,7 @@
     fmtDate: fmtDate, dayKey: dayKey,
     newId: newId, toast: toast,
     api: api, signIn: signIn, verifyCode: verifyCode, setToken: setToken, getToken: getToken,
+    checkSession: checkSession, signOut: signOut,
     idms: idms, loadProfile: loadProfile, getProfile: getProfile, docNumber: docNumber,
     openReport: openReport, callAI: callAI, uploadFile: uploadFile,
     parseAiJson: parseAiJson, stripMarkup: stripMarkup,

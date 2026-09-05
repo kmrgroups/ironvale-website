@@ -100,6 +100,38 @@ sixth, the pattern is: deterministic rules produce the findings, the AI is asked
 one narrow question afterwards, the run is logged, and anything written goes to
 the review queue.
 
+## Authentication — do not undo this
+
+Until v103 the session token **was the password hash**: `auth.js` returned
+`token: u.pass_hash` and `tokenUser()` resolved a caller with
+`SELECT ... WHERE pass_hash = <token>`, over an unsalted single-round SHA-256.
+A leaked token was therefore a permanent, unrevocable credential, and the
+`users` table was a plaintext-equivalent password list.
+
+It now works like this, and none of it should be reverted:
+
+- Passwords are **scrypt with a per-user salt**, stored as `scrypt$<salt>$<hash>`
+  and compared in constant time. Legacy hashes are accepted **once** at sign-in
+  and silently upgraded, so nobody is locked out at cutover.
+- Sessions are **opaque 32-byte random tokens** in a `sessions` table with a
+  7-day expiry, a `last_seen` touch, and server-side revocation. `tokenUser()`
+  reads that table and nothing else. **Never reinstate a lookup against
+  `users.pass_hash`.**
+- Changing a password, an administrator setting one, deleting a login, or
+  running recovery all **end the relevant sessions immediately**.
+- The browser keeps the token in `sessionStorage` (per-tab, dies with the tab)
+  and `idms.html` calls `C.checkSession()` before showing a single screen — a
+  token in the tab is not proof, it may have been revoked since.
+- Minimum password length is 8 everywhere.
+
+`sectest.mjs` covers this: 35 checks including that the password hash no longer
+works as a token and that the old lookup path is gone from the source.
+
+**Still to do:** HTTP-only cookies (§7 of the master prompt). The header-token
+scheme is immune to CSRF, which cookies are not, so moving to cookies means
+adding CSRF protection at the same time. The catastrophic parts are fixed; this
+is the next increment, not an emergency.
+
 ## Hard rules
 
 ### 1. No company details in code, ever

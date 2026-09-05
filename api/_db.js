@@ -6,9 +6,78 @@ export const sql = neon(process.env.DATABASE_URL);
 
 export const hash = s => crypto.createHash('sha256').update(String(s)).digest('hex');
 
+/* ---------------- passwords ----------------
+   The old scheme was an unsalted single-round SHA-256, and the value it produced
+   was ALSO used as the session token. Two consequences: a stolen token was a
+   permanent credential that could not be revoked, and the users table was a
+   plaintext-equivalent password list for any password in a rainbow table.
+
+   Passwords are now scrypt with a per-user salt. Old hashes are still accepted
+   on sign-in and silently upgraded, so nobody is locked out at cutover — but a
+   legacy hash is never issued as a token again. */
+export function newSalt() { return crypto.randomBytes(16).toString('hex'); }
+
+export function scryptHash(password, salt) {
+  return 'scrypt$' + salt + '$' +
+    crypto.scryptSync(String(password), salt, 64, { N: 16384, r: 8, p: 1 }).toString('hex');
+}
+
+export function passwordMatches(password, stored) {
+  if (!stored) return false;
+  if (stored.startsWith('scrypt$')) {
+    const [, salt] = stored.split('$');
+    const want = Buffer.from(stored, 'utf8');
+    const got = Buffer.from(scryptHash(password, salt), 'utf8');
+    return want.length === got.length && crypto.timingSafeEqual(want, got);
+  }
+  // legacy unsalted sha256 — accepted once, then upgraded by the caller
+  const a = Buffer.from(hash(password), 'utf8'), b = Buffer.from(stored, 'utf8');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+export const isLegacyHash = stored => !!stored && !String(stored).startsWith('scrypt$');
+
+/* ---------------- sessions ----------------
+   An opaque random token with a server-side expiry that can be revoked. It is
+   not derived from the password and tells an attacker nothing. */
+const SESSION_DAYS = 7;
+export function newToken() { return crypto.randomBytes(32).toString('hex'); }
+
+export async function startSession(username, role, agent) {
+  await ensureTables();
+  const token = newToken();
+  const expires = new Date(Date.now() + SESSION_DAYS * 86400000).toISOString();
+  await sql`INSERT INTO sessions (token, username, role, expires_at, user_agent)
+            VALUES (${token}, ${username}, ${role || 'staff'}, ${expires},
+                    ${String(agent || '').slice(0, 200)})`;
+  // housekeeping, cheap and keeps the table from growing without bound
+  await sql`DELETE FROM sessions WHERE expires_at < now()`;
+  return { token, expiresAt: expires };
+}
+
+export async function endSession(token) {
+  if (!token) return;
+  await ensureTables();
+  await sql`DELETE FROM sessions WHERE token = ${token}`;
+}
+
+export async function endAllSessions(username) {
+  await ensureTables();
+  await sql`DELETE FROM sessions WHERE username = ${username}`;
+}
+
 let ready = false;
 export async function ensureTables() {
   if (ready) return;
+  await sql`CREATE TABLE IF NOT EXISTS sessions (
+    token TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'staff',
+    created_at TIMESTAMPTZ DEFAULT now(),
+    last_seen TIMESTAMPTZ DEFAULT now(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    user_agent TEXT
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS sessions_user ON sessions (username)`;
   await sql`CREATE TABLE IF NOT EXISTS site_content (
     id INT PRIMARY KEY DEFAULT 1,
     data JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -193,11 +262,16 @@ export async function ensureTables() {
 export async function tokenUser(token) {
   if (!token) return null;
   await ensureTables();
-  const rows = await sql`SELECT username, role FROM users WHERE pass_hash = ${token}`;
-  if (rows.length) return rows[0];
-  // legacy single-login fallback
-  const old = await sql`SELECT user_name FROM auth WHERE id = 1 AND pass_hash = ${token}`;
-  return old.length ? { username: old[0].user_name, role: 'developer' } : null;
+  /* A session token only. The old behaviour — resolving a caller by matching the
+     token against users.pass_hash — is deliberately gone: it made the password
+     verifier and the session token the same value. Do not reinstate it. */
+  const rows = await sql`
+    SELECT username, role FROM sessions
+    WHERE token = ${token} AND expires_at > now()`;
+  if (!rows.length) return null;
+  // touch it, so an active session does not expire mid-shift
+  await sql`UPDATE sessions SET last_seen = now() WHERE token = ${token}`;
+  return rows[0];
 }
 export async function checkToken(token) {
   return !!(await tokenUser(token));

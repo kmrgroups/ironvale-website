@@ -1,5 +1,7 @@
 // Sign in, two-step codes, password changes and user management.
-import { sql, hash, ensureTables, cors, readBody, tokenUser, checkRole } from './_db.js';
+import { sql, hash, ensureTables, cors, readBody, tokenUser, checkRole,
+         newSalt, scryptHash, passwordMatches, isLegacyHash,
+         startSession, endSession, endAllSessions } from './_db.js';
 import { sendNotification } from './notify.js';
 
 const sixDigit = () => String(Math.floor(100000 + Math.random() * 900000));
@@ -38,15 +40,37 @@ export default async function handler(req, res) {
       const uname = String(body.user || '').trim();
       const rows = await sql`SELECT * FROM users WHERE username = ${uname}`;
       const u = rows[0];
-      if (!u || hash(body.pass) !== u.pass_hash)
+      if (!u || !passwordMatches(body.pass, u.pass_hash))
         return res.status(401).json({ ok: false, error: 'Incorrect username or password.' });
+
+      /* an old unsalted hash is accepted once and immediately replaced, so
+         nobody is locked out at cutover and nobody stays on the old scheme */
+      if (isLegacyHash(u.pass_hash)) {
+        const salt = newSalt();
+        await sql`UPDATE users SET pass_hash = ${scryptHash(body.pass, salt)} WHERE username = ${u.username}`;
+      }
 
       if (u.twofa && (u.email || u.whatsapp)) {
         const { sentTo } = await issueCode(u);
         return res.status(200).json({ ok: true, needCode: true, user: u.username,
           sentTo, note: 'A 6-digit code has been sent to your ' + sentTo.join(' and ') + '.' });
       }
-      return res.status(200).json({ ok: true, token: u.pass_hash, user: u.username, role: u.role });
+      const s = await startSession(u.username, u.role, req.headers['user-agent']);
+      return res.status(200).json({ ok: true, token: s.token, expiresAt: s.expiresAt,
+        user: u.username, role: u.role });
+    }
+
+    /* ---------- sign out ---------- */
+    if (action === 'logout') {
+      await endSession(token);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* ---------- is this session still good? ---------- */
+    if (action === 'session') {
+      const u = await tokenUser(token);
+      if (!u) return res.status(401).json({ ok: false, error: 'Your session has ended. Sign in again.' });
+      return res.status(200).json({ ok: true, user: u.username, role: u.role });
     }
 
     /* ---------- verify the code ---------- */
@@ -66,7 +90,9 @@ export default async function handler(req, res) {
       }
       await sql`DELETE FROM login_codes WHERE username = ${uname}`;
       const u = (await sql`SELECT * FROM users WHERE username = ${uname}`)[0];
-      return res.status(200).json({ ok: true, token: u.pass_hash, user: u.username, role: u.role });
+      const s = await startSession(u.username, u.role, req.headers['user-agent']);
+      return res.status(200).json({ ok: true, token: s.token, expiresAt: s.expiresAt,
+        user: u.username, role: u.role });
     }
 
     if (action === 'resendCode') {
@@ -81,17 +107,22 @@ export default async function handler(req, res) {
     if (action === 'change') {
       const uname = String(body.user || '').trim();
       const u = (await sql`SELECT * FROM users WHERE username = ${uname}`)[0];
-      if (!u || hash(body.oldPass) !== u.pass_hash)
+      if (!u || !passwordMatches(body.oldPass, u.pass_hash))
         return res.status(401).json({ ok: false, error: 'Current password is incorrect.' });
-      if (!body.newPass || String(body.newPass).length < 6)
-        return res.status(400).json({ ok: false, error: 'New password must be at least 6 characters.' });
+      if (!body.newPass || String(body.newPass).length < 8)
+        return res.status(400).json({ ok: false, error: 'New password must be at least 8 characters.' });
 
       const newUser = String(body.newUser || u.username).trim();
-      const newHash = hash(body.newPass);
+      const newHash = scryptHash(body.newPass, newSalt());
       await sql`UPDATE users SET username = ${newUser}, pass_hash = ${newHash} WHERE username = ${uname}`;
       if (u.role === 'developer')
         await sql`UPDATE auth SET user_name = ${newUser}, pass_hash = ${newHash} WHERE id = 1`;
-      return res.status(200).json({ ok: true, token: newHash, user: newUser, role: u.role });
+      /* changing a password ends every other session for that person — that is
+         the whole point of changing it after a suspected compromise */
+      await endAllSessions(uname);
+      const s = await startSession(newUser, u.role, req.headers['user-agent']);
+      return res.status(200).json({ ok: true, token: s.token, expiresAt: s.expiresAt,
+        user: newUser, role: u.role });
     }
 
     /* ---------- recovery ---------- */
@@ -101,15 +132,19 @@ export default async function handler(req, res) {
         return res.status(400).json({ ok: false, error: 'Password recovery is not set up. Ask whoever deployed the site to add an ADMIN_RECOVERY_CODE setting.' });
       if (String(body.recoveryCode || '') !== recoveryCode)
         return res.status(401).json({ ok: false, error: 'That recovery code is incorrect.' });
-      if (!body.newUser || !body.newPass || String(body.newPass).length < 6)
-        return res.status(400).json({ ok: false, error: 'Enter a username and a password of at least 6 characters.' });
+      if (!body.newUser || !body.newPass || String(body.newPass).length < 8)
+        return res.status(400).json({ ok: false, error: 'Enter a username and a password of at least 8 characters.' });
 
-      const newUser = String(body.newUser).trim(), newHash = hash(body.newPass);
+      const newUser = String(body.newUser).trim(), newHash = scryptHash(body.newPass, newSalt());
       const dev = (await sql`SELECT username FROM users WHERE role = 'developer' LIMIT 1`)[0];
       if (dev) await sql`UPDATE users SET username = ${newUser}, pass_hash = ${newHash}, twofa = false WHERE username = ${dev.username}`;
       else await sql`INSERT INTO users (username, pass_hash, role) VALUES (${newUser}, ${newHash}, 'developer')`;
       await sql`UPDATE auth SET user_name = ${newUser}, pass_hash = ${newHash} WHERE id = 1`;
-      return res.status(200).json({ ok: true, token: newHash, user: newUser, role: 'developer' });
+      /* a recovery is exactly when every existing session should stop working */
+      await sql`DELETE FROM sessions`;
+      const s = await startSession(newUser, 'developer', req.headers['user-agent']);
+      return res.status(200).json({ ok: true, token: s.token, expiresAt: s.expiresAt,
+        user: newUser, role: 'developer' });
     }
 
     /* ---------- manage logins (developer only) ---------- */
@@ -132,15 +167,17 @@ export default async function handler(req, res) {
 
       const existing = (await sql`SELECT username FROM users WHERE username = ${uname}`)[0];
       if (existing) {
-        if (body.password && String(body.password).length >= 6) {
-          await sql`UPDATE users SET pass_hash = ${hash(body.password)} WHERE username = ${uname}`;
+        if (body.password && String(body.password).length >= 8) {
+          await sql`UPDATE users SET pass_hash = ${scryptHash(body.password, newSalt())} WHERE username = ${uname}`;
+          /* a password set by an administrator ends that person's sessions too */
+          await endAllSessions(uname);
         }
         await sql`UPDATE users SET role = ${role}, email = ${email}, whatsapp = ${wa}, twofa = ${twofa} WHERE username = ${uname}`;
       } else {
-        if (!body.password || String(body.password).length < 6)
-          return res.status(400).json({ ok: false, error: 'New logins need a password of at least 6 characters.' });
+        if (!body.password || String(body.password).length < 8)
+          return res.status(400).json({ ok: false, error: 'New logins need a password of at least 8 characters.' });
         await sql`INSERT INTO users (username, pass_hash, role, email, whatsapp, twofa)
-                  VALUES (${uname}, ${hash(body.password)}, ${role}, ${email}, ${wa}, ${twofa})`;
+                  VALUES (${uname}, ${scryptHash(body.password, newSalt())}, ${role}, ${email}, ${wa}, ${twofa})`;
       }
       return res.status(200).json({ ok: true, saved: uname });
     }
@@ -152,6 +189,8 @@ export default async function handler(req, res) {
       if (uname === me.username)
         return res.status(400).json({ ok: false, error: 'You cannot delete the login you are using.' });
       await sql`DELETE FROM users WHERE username = ${uname}`;
+      /* a deleted login must stop working immediately, not when its session expires */
+      await endAllSessions(uname);
       return res.status(200).json({ ok: true, removed: uname });
     }
 

@@ -9101,7 +9101,13 @@
       if (e.key === 'Enter') doSignIn();
     });
   });
-  document.getElementById('t-out').addEventListener('click', function(){ C.setToken(''); location.reload(); });
+  /* Signing out has to end the session on the server, not just forget the token
+     here — otherwise the token keeps working for anybody who has a copy of it. */
+  document.getElementById('t-out').addEventListener('click', async function(){
+    this.disabled = true; this.textContent = 'Signing out…';
+    await C.signOut();
+    location.reload();
+  });
   document.getElementById('p-filter').addEventListener('change', loadParts);
 
   document.getElementById('bn-edit').addEventListener('click', async function(){
@@ -9916,11 +9922,18 @@
     this.disabled = false;
   });
 
-  if (C.getToken()) {
-    C.api('/api/idms?what=settings')
-      .then(function(j){ settings = j.settings || {}; start(); })
-      .catch(function(){ C.setToken(''); });
-  }
+  /* A token in this tab is not proof of anything — it may have expired or been
+     revoked since. Ask the server before showing a single screen. */
+  (async function(){
+    if (!C.getToken()) return;                       // no token: the sign-in screen stands
+    var who = await C.checkSession();
+    if (!who) { C.setToken(''); return; }            // expired or revoked: sign in again
+    try {
+      var j = await C.api('/api/idms?what=settings');
+      settings = j.settings || {};
+      start();
+    } catch(e){ C.setToken(''); }
+  })();
 })();
 </script>
 </body>

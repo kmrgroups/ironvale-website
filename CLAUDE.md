@@ -194,7 +194,8 @@ idempotent — once sent, the button is replaced by a confirmation.
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
 Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
 Self Inspection, Inward Inspection, Calibration, MSA, PDI, GRN, Delivery
-Challan, Production Entry, Audit Readiness Agent, NPD Agent, Supplier Watch
+Challan, Production Entry, Sales Plan, Production Plan, Audit Readiness Agent,
+NPD Agent, Supplier Watch
 Agent, Review Agent Work, Agent Run Log, People (HR records), Company Profile.
 
 **Production entry** is the record everything else assumed existed. Two things
@@ -207,9 +208,28 @@ quotation and capacity plan is built on that number. Rejections need a reason
 code and downtime needs a reason, because a figure nobody can explain is a figure
 nobody can improve.
 
-The **Audit Readiness Agent** reads production too: runs booked without a setup,
-rejection rates at or above 5%, cycle drift over 20% (raised against the
-routing, not the run), and series parts nothing has ever been booked against.
+**Sales Plan** holds customer orders; **Production Plan** computes the balance
+on each, the daily rate needed to hit the date, and machine hours per work
+centre against available capacity. Both numbers come from records — made from
+production bookings, never from an estimate.
+
+**Production is allocated across orders, earliest due first.** A real bug found
+in testing: counting production against each order independently let 300 pieces
+satisfy a 200-piece order and a 1000-piece order at the same time, so demand
+showed as met twice and both balances were wrong. `allocateProduction()` fills
+the earliest due date first, which is what a works actually does — and the
+**agent allocates identically**, because two places computing a balance
+differently is worse than not showing it at all.
+
+Orders for parts with no routing are shown as *no routing* rather than dropped,
+with a note that the plan is short by however long they take. Silently excluding
+them would understate the load.
+
+The **Audit Readiness Agent** reads production and orders too: runs booked
+without a setup, rejection rates at or above 5%, cycle drift over 20% (raised
+against the routing, not the run), series parts nothing has been booked against,
+orders past their date, orders due within a week with a balance, and orders for
+parts with no routing.
 
 **Setup approval** is the first shop-floor screen and the pattern for the rest:
 what gets checked comes from the **control plan** for that operation (falling

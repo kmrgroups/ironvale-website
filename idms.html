@@ -307,6 +307,71 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="sales_plan">
+      <div class="card">
+        <h4>Customer orders</h4>
+        <div class="hint" style="margin-bottom:10px;">What has been ordered and when it is due.
+          Everything the production plan says about whether you will make it comes from here, so a
+          date entered loosely produces a plan that is loose in the same way.</div>
+        <div class="row four">
+          <div><label>Customer</label><select id="so-cust"></select></div>
+          <div><label>Part</label><select id="so-part"></select></div>
+          <div><label>Their order number</label><input id="so-po"></div>
+          <div><label>Quantity ordered</label><input class="num" id="so-qty"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Delivery date</label><input type="date" id="so-due"></div>
+          <div><label>Ordered on</label><input type="date" id="so-on"></div>
+          <div><label>Schedule</label><select id="so-kind">
+            <option>Firm order</option><option>Schedule release</option>
+            <option>Forecast</option></select></div>
+          <div style="align-self:end;">
+            <button class="btn gold" id="so-save">Add order</button>
+            <button class="btn" id="so-clear" style="margin-left:6px;">Clear</button></div>
+        </div>
+        <div class="note" id="so-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <div class="row four" style="margin-bottom:8px;">
+          <div><label>Show</label><select id="so-filter">
+            <option value="open">Open orders</option><option value="">Everything</option>
+            <option value="done">Completed</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="so-print">Print order book</button></div>
+        </div>
+        <h4>Order book</h4>
+        <div id="so-list"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="production_plan">
+      <div class="card">
+        <h4>Production Plan</h4>
+        <div class="hint" style="margin-bottom:10px;">What is still to make against each order, the
+          rate needed to hit the date, and whether the machines have the hours. Made and despatched
+          come from the production bookings and the cleared lots, not from anybody's estimate.</div>
+        <div class="row four">
+          <div><label>Working days per week</label><select id="pp-week">
+            <option>5</option><option selected>6</option><option>7</option></select></div>
+          <div><label>Shifts per day</label><select id="pp-shifts">
+            <option>1</option><option selected>2</option><option>3</option></select></div>
+          <div><label>Hours per shift</label><input class="num" id="pp-hours" value="8"></div>
+          <div style="align-self:end;">
+            <button class="btn gold" id="pp-run">Work out the plan</button>
+            <button class="btn" id="pp-print2" style="margin-left:6px;">Print</button></div>
+        </div>
+        <div class="note" id="pp-plan-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><div id="pp-summary"></div></div>
+      <div class="card">
+        <h4>Orders</h4>
+        <div id="pp-orders"></div>
+      </div>
+      <div class="card">
+        <h4>Machine loading</h4>
+        <div id="pp-machines"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="entry_prod">
       <div class="card">
         <h4>Production Entry</h4>
@@ -1171,8 +1236,8 @@
       ['fmea','⚠','PFMEA',1],['control_plan','📋','Control Plan',1],['msa','🔬','MSA'],
       ['ppap','📦','PPAP',1],['spc','📈','SPC']]],
     ['planning','📈','Planning','Plan',[
-      ['sales_plan','📈','Sales Plan'],['capacity_plan','⚙','Capacity Plan'],
-      ['production_plan','🏭','Production Plan'],['machine_loading','🔩','Machine Loading Plan']]],
+      ['sales_plan','📈','Sales Plan',1],['capacity_plan','⚙','Capacity Plan'],
+      ['production_plan','🏭','Production Plan',1],['machine_loading','🔩','Machine Loading Plan']]],
     ['mmd','📦','MMD','Material Movement',[
       ['grn','📥','GRN — Goods Receipt',1],['dc','📤','Delivery Challan',1],
       ['sheet_rawmat','🪨','Raw Material Stock'],['bom','🧾','Bill of Materials']]],
@@ -1287,6 +1352,8 @@
     if (s === 'agent_supplier') loadSupplierAgent();
     if (s === 'agent_review')   loadReview();
     if (s === 'entry_prod')     loadProduction();
+    if (s === 'sales_plan')     loadOrders();
+    if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
   }
@@ -1900,6 +1967,333 @@
 'or inspection only, give a PARAM block with TOOL: not applicable.';
 
     return prompt;
+  }
+
+  /* ---------------- Orders and the production plan ----------------
+     The plan is only worth having because the two numbers it compares come from
+     somewhere real: made comes from production bookings, despatched from cleared
+     lots drawn down by challans. Nothing here asks anybody how it is going. */
+  var orders = [], planRows = [], planLoad = [];
+
+  async function loadOrders(){
+    await fetchParts();
+    await fetchCustomers();
+    document.getElementById('so-cust').innerHTML = customerOptions('');
+    document.getElementById('so-part').innerHTML = partOptions('');
+    try { orders = await C.idms.docs('order'); } catch(e){ orders = []; }
+    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    allocateProduction();
+    var on = document.getElementById('so-on');
+    if (!on.value) on.value = new Date().toISOString().slice(0,10);
+    drawOrders();
+  }
+
+  /* Production has to be allocated across the orders for a part, not counted
+     against each of them. Counting independently made 300 pieces satisfy a
+     200-piece order and a 1000-piece order at the same time, so the plan showed
+     demand as met twice and the balance was wrong on both. Earliest due date is
+     filled first, which is what a works actually does. */
+  var orderAlloc = {};
+  function allocateProduction(){
+    orderAlloc = {};
+    var byPart = {};
+    orders.forEach(function(o){
+      var v = o.data||{};
+      (byPart[v.partId] = byPart[v.partId] || []).push(o);
+    });
+    Object.keys(byPart).forEach(function(pid){
+      var pool = prodDocs.filter(function(r){ return (r.data||{}).partId === pid; })
+        .reduce(function(t,r){ return t + C.num((r.data||{}).good); }, 0);
+      byPart[pid].sort(function(a,b){
+        return String((a.data||{}).due||'').localeCompare(String((b.data||{}).due||'')); })
+        .forEach(function(o){
+          var want = C.num((o.data||{}).qty);
+          var take = Math.min(pool, want);
+          pool -= take;
+          orderAlloc[o.doc_id] = { made:take, balance:Math.max(0, want - take) };
+        });
+    });
+  }
+  function orderProgress(o){
+    return orderAlloc[o.doc_id] || { made:0, balance:C.num((o.data||{}).qty) };
+  }
+
+  function daysTo(due){
+    if (!due) return null;
+    return Math.ceil((new Date(due).getTime() - Date.now()) / 86400000);
+  }
+
+  function drawOrders(){
+    var host = document.getElementById('so-list');
+    var f = document.getElementById('so-filter').value;
+    var rows = orders.filter(function(o){
+      var pr = orderProgress(o);
+      if (f === 'open') return pr.balance > 0;
+      if (f === 'done') return pr.balance <= 0;
+      return true;
+    });
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>No orders' + (f ? ' matching that' : ' yet') +
+        '</b>The production plan has nothing to plan against until an order exists.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Order</th><th>Customer</th><th>Part</th>' +
+      '<th class="r">Ordered</th><th class="r">Made</th><th class="r">Balance</th>' +
+      '<th>Due</th><th class="c">Days</th><th class="c">Type</th><th></th></tr></thead><tbody>' +
+      rows.map(function(o){
+        var v = o.data||{}, pr = orderProgress(o), dl = daysTo(v.due);
+        var late = pr.balance > 0 && dl !== null && dl < 0;
+        return '<tr><td><b>'+esc(v.po||o.doc_no||'')+'</b></td>' +
+          '<td>'+esc(v.customerName||'—')+'</td>' +
+          '<td>'+esc(v.partNo||'')+'<div class="hint">'+esc(v.partName||'')+'</div></td>' +
+          '<td class="r">'+C.qty(v.qty)+'</td><td class="r">'+C.qty(pr.made)+'</td>' +
+          '<td class="r"><b>'+C.qty(pr.balance)+'</b></td>' +
+          '<td class="hint">'+C.fmtDate(v.due)+'</td>' +
+          '<td class="c">'+(dl===null?'—':late
+            ? '<span class="badge ab">'+Math.abs(dl)+' late</span>'
+            : pr.balance<=0 ? '<span class="badge series">done</span>' : dl)+'</td>' +
+          '<td class="c hint">'+esc(v.kind||'')+'</td>' +
+          '<td><button class="btn del so-del" data-id="'+esc(o.doc_id)+'">Remove</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.so-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Removing this order. Why?');
+        if (why === null) return;
+        if (!why.trim()) { toast('State a reason.'); return; }
+        try {
+          await C.idms.patchDoc({ docId:b.dataset.id, remove:true, reason:'order removed: '+why.trim() });
+          await loadOrders(); toast('Removed');
+        } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
+  async function saveOrder(){
+    var msg = document.getElementById('so-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var custId = document.getElementById('so-cust').value;
+    var partId = document.getElementById('so-part').value;
+    if (!custId) return say('Choose the customer.');
+    if (!partId) return say('Choose the part.');
+    if (!C.num(g('so-qty'))) return say('How many are they ordering?');
+    if (!g('so-due')) return say('A delivery date is needed, or there is nothing to plan against.');
+    if (g('so-on') && g('so-due') < g('so-on'))
+      return say('The delivery date is before the order date. One of the two is wrong.');
+
+    var cust = customers.filter(function(c){ return c.doc_id === custId; })[0] || {};
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    /* the same PO twice for the same part is usually a double entry, and it
+       doubles the apparent demand */
+    if (g('so-po')){
+      var dup = orders.filter(function(o){
+        var v = o.data||{};
+        return v.partId === partId && String(v.po||'').toLowerCase() === g('so-po').toLowerCase(); })[0];
+      if (dup) return say('Order <b>'+esc(g('so-po'))+'</b> already exists for this part. ' +
+                          'Adding it again would double the demand in the plan.');
+    }
+    try {
+      await C.idms.saveDoc({ kind:'order', partId:partId, status:'Open',
+        docNo: await C.docNumber('so'),
+        data:{ partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
+               customerId:custId, customerName:(cust.data||{}).name||'',
+               po:g('so-po'), qty:C.num(g('so-qty')), due:g('so-due'),
+               orderedOn:g('so-on'), kind:document.getElementById('so-kind').value } },
+        'customer order added');
+      say('Added.', true);
+      ['so-po','so-qty','so-due'].forEach(function(id){ document.getElementById(id).value=''; });
+      await loadOrders();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  function printOrderBook(){
+    if (!orders.length) { toast('No orders to print.'); return; }
+    C.openReport({
+      title:'Order Book', kind:'Sales', landscape:true,
+      subtitle:orders.length + ' order(s)',
+      sections:[{ type:'table', title:'Orders',
+        columns:[{label:'Order'},{label:'Customer'},{label:'Part'},{label:'Ordered',align:'r'},
+          {label:'Made',align:'r'},{label:'Balance',align:'r'},{label:'Due'},{label:'Days',align:'c'},
+          {label:'Type'}],
+        rows: orders.map(function(o){
+          var v = o.data||{}, pr = orderProgress(o), dl = daysTo(v.due);
+          return [esc(v.po||o.doc_no||''), esc(v.customerName||''), esc(v.partNo||''),
+            C.qty(v.qty), C.qty(pr.made), C.qty(pr.balance), C.fmtDate(v.due),
+            (pr.balance>0 && dl!==null && dl<0) ? { v:'<b>'+Math.abs(dl)+' late</b>', cls:'ab' }
+              : (pr.balance<=0 ? 'done' : (dl===null?'—':String(dl))),
+            esc(v.kind||'')];
+        }),
+        note:'Made is counted from production bookings for the part since the order date.' }]});
+  }
+
+  /* ---- the plan itself ---- */
+  async function loadPlan(){
+    await fetchParts();
+    try { orders = await C.idms.docs('order'); } catch(e){ orders = []; }
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    allocateProduction();
+    document.getElementById('pp-summary').innerHTML =
+      '<div class="empty"><b>Nothing worked out yet</b>Press <b>Work out the plan</b>.</div>';
+    document.getElementById('pp-orders').innerHTML = '';
+    document.getElementById('pp-machines').innerHTML = '';
+  }
+
+  function runPlan(){
+    var msg = document.getElementById('pp-plan-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'');
+                                 msg.innerHTML=t; };
+    var perWeek = C.num(document.getElementById('pp-week').value);
+    var shifts  = C.num(document.getElementById('pp-shifts').value);
+    var hrs     = C.num(document.getElementById('pp-hours').value);
+    var hoursPerDay = shifts * hrs;
+    if (!hoursPerDay) return say('Set the shifts and hours, or there is no capacity to plan with.');
+
+    planRows = []; planLoad = [];
+    var load = {};
+
+    orders.forEach(function(o){
+      var v = o.data||{}, pr = orderProgress(o), dl = daysTo(v.due);
+      if (pr.balance <= 0) return;
+      /* working days left, not calendar days — a plan on calendar days is a
+         plan that quietly assumes Sundays */
+      var calDays = dl === null ? null : dl;
+      var workDays = calDays === null ? null
+        : Math.max(0, Math.floor(calDays * (perWeek / 7)));
+      var perDay = workDays ? Math.ceil(pr.balance / workDays) : null;
+
+      var ops = opsFor(v.partId);
+      var secs = ops.reduce(function(t,x){ return t + C.num((x.data||{}).cycleSec); }, 0);
+      var hoursNeeded = Math.round((pr.balance * secs / 3600) * 10) / 10;
+
+      ops.forEach(function(x){
+        var d = x.data||{}, m = (d.machine||'not stated').trim();
+        var h = C.num(d.cycleSec) * pr.balance / 3600;
+        load[m] = (load[m] || 0) + h;
+      });
+
+      planRows.push({ po:v.po||o.doc_no, customer:v.customerName||'', partNo:v.partNo||'',
+        partId:v.partId, qty:C.num(v.qty), made:pr.made, balance:pr.balance,
+        due:v.due, days:calDays, workDays:workDays, perDay:perDay,
+        hours:hoursNeeded, noRouting:!ops.length,
+        late: calDays !== null && calDays < 0 });
+    });
+
+    planRows.sort(function(a,b){
+      if (a.late !== b.late) return a.late ? -1 : 1;
+      return (a.days === null ? 1e9 : a.days) - (b.days === null ? 1e9 : b.days);
+    });
+
+    var horizon = planRows.reduce(function(m,r){
+      return Math.max(m, r.workDays || 0); }, 0) || 1;
+    planLoad = Object.keys(load).map(function(m){
+      var need = Math.round(load[m] * 10) / 10;
+      var avail = Math.round(horizon * hoursPerDay * 10) / 10;
+      return { machine:m, hours:need, available:avail,
+        pct: avail ? Math.round(1000 * need / avail) / 10 : null };
+    }).sort(function(a,b){ return (b.pct||0) - (a.pct||0); });
+
+    drawPlan(hoursPerDay, horizon);
+    var over = planLoad.filter(function(m){ return m.pct !== null && m.pct > 100; }).length;
+    var late = planRows.filter(function(r){ return r.late; }).length;
+    say(planRows.length + ' open order(s). ' +
+        (late ? '<b>' + late + ' already past its date.</b> ' : '') +
+        (over ? '<b>' + over + ' machine(s) overloaded.</b>' : 'No machine is overloaded.'),
+        !late && !over);
+  }
+
+  function drawPlan(hoursPerDay, horizon){
+    var sum = document.getElementById('pp-summary');
+    var oh = document.getElementById('pp-orders');
+    var mh = document.getElementById('pp-machines');
+    var late = planRows.filter(function(r){ return r.late; }).length;
+    var totBal = planRows.reduce(function(t,r){ return t + r.balance; }, 0);
+    var totHrs = Math.round(planRows.reduce(function(t,r){ return t + r.hours; }, 0) * 10) / 10;
+
+    sum.innerHTML = '<div class="stat">' +
+      [['Open orders', planRows.length], ['Still to make', C.qty(totBal)],
+       ['Machine hours needed', C.qty(totHrs)], ['Past their date', late],
+       ['Capacity per day', C.qty(hoursPerDay) + ' h']]
+      .map(function(x){ return '<div class="b"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'; }).join('') +
+      '</div>';
+
+    if (!planRows.length){
+      oh.innerHTML = '<div class="empty"><b>Nothing outstanding</b>Every order has been made.</div>';
+      mh.innerHTML = ''; return;
+    }
+    oh.innerHTML = '<table class="t"><thead><tr><th>Order</th><th>Customer</th><th>Part</th>' +
+      '<th class="r">Balance</th><th>Due</th><th class="c">Working days</th>' +
+      '<th class="r">Per day</th><th class="r">Machine hours</th><th class="c">Verdict</th>' +
+      '</tr></thead><tbody>' + planRows.map(function(r){
+        var verdict = r.late
+          ? '<span class="badge ab">past its date</span>'
+          : r.noRouting
+            ? '<span class="badge sample">no routing</span>'
+            : r.workDays === 0
+              ? '<span class="badge ab">no days left</span>'
+              : '<span class="badge series">plannable</span>';
+        return '<tr><td><b>'+esc(r.po)+'</b></td><td>'+esc(r.customer)+'</td>' +
+          '<td>'+esc(r.partNo)+'</td><td class="r"><b>'+C.qty(r.balance)+'</b></td>' +
+          '<td class="hint">'+C.fmtDate(r.due)+'</td>' +
+          '<td class="c">'+(r.workDays===null?'—':r.workDays)+'</td>' +
+          '<td class="r">'+(r.perDay?C.qty(r.perDay):'—')+'</td>' +
+          '<td class="r">'+(r.noRouting?'—':C.qty(r.hours))+'</td>' +
+          '<td class="c">'+verdict+'</td></tr>';
+      }).join('') + '</tbody></table>' +
+      (planRows.some(function(r){ return r.noRouting; })
+        ? '<div class="note" style="margin-top:10px;">Orders marked <b>no routing</b> cannot be ' +
+          'loaded onto a machine, so they are missing from the hours below. The plan is short by ' +
+          'however long they take.</div>' : '');
+
+    mh.innerHTML = !planLoad.length
+      ? '<div class="empty"><b>No routings to load</b></div>'
+      : '<table class="t"><thead><tr><th>Machine</th><th class="r">Hours needed</th>' +
+        '<th class="r">Hours available</th><th class="r">Load</th><th class="c"></th>' +
+        '</tr></thead><tbody>' + planLoad.map(function(m){
+          var over = m.pct !== null && m.pct > 100;
+          return '<tr><td>'+esc(m.machine)+'</td><td class="r">'+C.qty(m.hours)+'</td>' +
+            '<td class="r">'+C.qty(m.available)+'</td>' +
+            '<td class="r">'+(m.pct===null?'—':'<b'+(over?' style="color:var(--bad)"':'')+'>'+
+              m.pct+'%</b>')+'</td>' +
+            '<td class="c">'+(over?'<span class="badge ab">overloaded</span>'
+              :m.pct>85?'<span class="badge sample">tight</span>'
+              :'<span class="badge series">room</span>')+'</td></tr>';
+        }).join('') + '</tbody></table>' +
+        '<div class="hint" style="margin-top:8px;">Hours available assume ' + C.qty(hoursPerDay) +
+        ' hours a day over ' + horizon + ' working day(s) — the longest window any open order has. ' +
+        'A machine over 100% cannot make everything by the dates given, whatever the sequence.</div>';
+  }
+
+  function printPlan(){
+    if (!planRows.length) { toast('Work out the plan first.'); return; }
+    C.openReport({
+      title:'Production Plan', kind:'Planning', landscape:true,
+      subtitle:planRows.length + ' open order(s)',
+      sections:[
+        { type:'table', title:'Orders outstanding',
+          columns:[{label:'Order'},{label:'Customer'},{label:'Part'},{label:'Balance',align:'r'},
+            {label:'Due'},{label:'Working days',align:'c'},{label:'Per day',align:'r'},
+            {label:'Machine hours',align:'r'},{label:'Verdict'}],
+          rows: planRows.map(function(r){
+            return [esc(r.po), esc(r.customer), esc(r.partNo), C.qty(r.balance), C.fmtDate(r.due),
+              r.workDays===null?'—':String(r.workDays), r.perDay?C.qty(r.perDay):'—',
+              r.noRouting?'—':C.qty(r.hours),
+              r.late ? { v:'<b>PAST ITS DATE</b>', cls:'ab' }
+                     : r.noRouting ? 'no routing' : 'plannable'];
+          }) },
+        { type:'table', title:'Machine loading',
+          columns:[{label:'Machine'},{label:'Hours needed',align:'r'},
+            {label:'Hours available',align:'r'},{label:'Load',align:'r'}],
+          rows: planLoad.map(function(m){
+            return [esc(m.machine), C.qty(m.hours), C.qty(m.available),
+              (m.pct !== null && m.pct > 100) ? { v:'<b>'+m.pct+'%</b>', cls:'ab' }
+                                              : (m.pct===null?'—':m.pct+'%')];
+          }),
+          note:'Balance and made come from the production bookings, not from an estimate. Loading ' +
+               'assumes every operation runs on its own machine and takes no account of sequence ' +
+               'or shared setups.' }
+      ]});
   }
 
   /* ---------------- Production entry ----------------
@@ -3105,6 +3499,44 @@
               'optimistic. Correct the routing or find out why.', 'process_master', r.doc_no);
         }
       });
+      /* orders that will not be met, judged from what has actually been booked */
+      var ords = await C.idms.docs('order');
+      looked.orders = ords.length;
+      /* allocated the same way as the plan screen, earliest due first — two
+         places computing a balance differently is worse than not showing it */
+      var pool = {};
+      prods.forEach(function(r){
+        var q = r.data||{};
+        pool[q.partId] = (pool[q.partId]||0) + C.num(q.good);
+      });
+      ords.slice().sort(function(a,b){
+        return String((a.data||{}).due||'').localeCompare(String((b.data||{}).due||''));
+      }).forEach(function(o){
+        var v = o.data||{};
+        var want = C.num(v.qty);
+        var take = Math.min(pool[v.partId]||0, want);
+        pool[v.partId] = (pool[v.partId]||0) - take;
+        var bal = want - take;
+        if (bal <= 0) return;
+        var dl = v.due ? Math.ceil((new Date(v.due).getTime() - Date.now())/86400000) : null;
+        if (dl !== null && dl < 0)
+          add('high','Delivery', (v.customerName||'') + ' order ' + (v.po||'') + ' for ' +
+            (v.partNo||'') + ' is ' + Math.abs(dl) + ' day(s) past its date with ' + C.qty(bal) +
+            ' still to make',
+            'The customer is already short. Tell them before they ring you.',
+            'production_plan', v.po||o.doc_no);
+        else if (dl !== null && dl <= 7)
+          add('med','Delivery', (v.customerName||'') + ' order ' + (v.po||'') + ' is due in ' +
+            dl + ' day(s) with ' + C.qty(bal) + ' still to make',
+            'A week or less. If it will not make it, that is a conversation to have now.',
+            'production_plan', v.po||o.doc_no);
+        if (!opsFor(v.partId).length)
+          add('high','Delivery', 'Order ' + (v.po||'') + ' is for ' + (v.partNo||'') +
+            ', which has no routing',
+            'It cannot be planned or loaded onto a machine, so it is invisible to the plan.',
+            'process_master', v.po||o.doc_no);
+      });
+
       /* a part in series production that nothing has ever been booked against */
       live.filter(function(x){ return x.lifecycle === 'Series'; }).forEach(function(x){
         if (!prods.filter(function(r){ return (r.data||{}).partId === x.part_id; }).length)
@@ -6643,6 +7075,16 @@
     });
     f.click();
   });
+
+  document.getElementById('so-save').addEventListener('click', saveOrder);
+  document.getElementById('so-clear').addEventListener('click', function(){
+    ['so-po','so-qty','so-due'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('so-msg').style.display='none';
+  });
+  document.getElementById('so-filter').addEventListener('change', drawOrders);
+  document.getElementById('so-print').addEventListener('click', printOrderBook);
+  document.getElementById('pp-run').addEventListener('click', runPlan);
+  document.getElementById('pp-print2').addEventListener('click', printPlan);
 
   document.getElementById('pe-part').addEventListener('change', drawProdOps);
   document.getElementById('pe-op').addEventListener('change', function(){

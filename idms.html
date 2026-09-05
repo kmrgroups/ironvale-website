@@ -307,6 +307,44 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="skill_matrix">
+      <div class="card">
+        <h4>Skill Matrix</h4>
+        <div class="hint" style="margin-bottom:10px;">Who is competent on what, and when it was last
+          assessed. The people and machines below are the ones already appearing on your production
+          bookings and setup approvals — this is a record of what is true, not a wish list.</div>
+        <div id="sk-gap"></div>
+        <div class="row four" style="margin-top:10px;">
+          <div><label>Person</label><input id="sk-who" list="sk-people" placeholder="as it appears on the bookings"></div>
+          <datalist id="sk-people"></datalist>
+          <div><label>Machine or operation</label><input id="sk-what" list="sk-things"></div>
+          <datalist id="sk-things"></datalist>
+          <div><label>Level</label><select id="sk-level">
+            <option value="1">1 — under instruction</option>
+            <option value="2">2 — can run, supervised</option>
+            <option value="3" selected>3 — can run alone</option>
+            <option value="4">4 — can train others</option></select></div>
+          <div><label>Assessed on</label><input type="date" id="sk-on"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Assessed by</label><input id="sk-by"></div>
+          <div><label>Reassess every (months)</label><input class="num" id="sk-freq" value="24"></div>
+          <div><label>Evidence</label><input id="sk-note" placeholder="what they were watched doing"></div>
+          <div style="align-self:end;">
+            <button class="btn gold" id="sk-save">Record it</button>
+            <button class="btn" id="sk-clear" style="margin-left:6px;">Clear</button></div>
+        </div>
+        <div class="note" id="sk-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <div class="row four" style="margin-bottom:8px;">
+          <div style="align-self:end;"><button class="btn" id="sk-print">Print matrix</button></div>
+        </div>
+        <h4>The matrix</h4>
+        <div id="sk-body"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="entry_machine">
       <div class="card">
         <h4>Machines</h4>
@@ -1398,7 +1436,7 @@
       ['task_list','✅','Task List']]],
     ['hr','🏢','HR & Competency','Organisation',[
       ['hrm','👥','HR & Payroll',1],['org_chart','🏗','Organisation Chart'],
-      ['skill_matrix','📊','Skill Matrix'],['roles_resp','📋','Roles & Responsibilities'],
+      ['skill_matrix','📊','Skill Matrix',1],['roles_resp','📋','Roles & Responsibilities'],
       ['competency_map','🎯','Competency Mapping'],['tni','📚','Training Need Identification'],
       ['training_plan_actual','📅','Training Plan vs Actual'],['gap_analysis','📈','Skill Gap Analysis'],
       ['training_effectiveness','✅','Training Effectiveness'],['succession_plan','🎖','Succession Planning'],
@@ -1511,6 +1549,7 @@
     if (s === 'dashboard')      loadDashboard();
     if (s === 'ncr')            loadNcr();
     if (s === 'entry_machine')  loadMachines();
+    if (s === 'skill_matrix')   loadSkills();
     if (s === 'maintenance')    loadMaintenance();
     if (s === 'ncr_open')       loadOpenActions();
     if (s === 'production_plan') loadPlan();
@@ -2425,6 +2464,252 @@
 'or inspection only, give a PARAM block with TOOL: not applicable.';
 
     return prompt;
+  }
+
+  /* ---------------- Skill matrix ----------------
+     Production already records who ran each job and setup approval records who
+     signed it off. Nothing until now checked that those people were assessed as
+     competent on that machine, which is both an audit finding waiting to happen
+     and a real risk. So this screen starts from the names already on the
+     bookings — the same approach as the machine list — and shows the gaps rather
+     than presenting an empty grid to fill in.
+
+     A level is not a job title. It says what somebody has been watched doing. */
+  var skills = [], SK_LEVEL = {
+    1:{ label:'Under instruction', cls:'ab' },
+    2:{ label:'Supervised', cls:'sample' },
+    3:{ label:'Can run alone', cls:'series' },
+    4:{ label:'Can train others', cls:'apqp' }
+  };
+
+  async function loadSkills(){
+    try { skills = await C.idms.docs('skill'); } catch(e){ skills = []; }
+    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    try { machines = await C.idms.docs('machine'); } catch(e){ machines = []; }
+    var setups = [];
+    try { setups = await C.idms.docs('setup'); } catch(e){}
+    window.__setups = setups;
+    var on = document.getElementById('sk-on');
+    if (!on.value) on.value = new Date().toISOString().slice(0,10);
+    drawSkillLists();
+    drawSkillGaps();
+    drawSkillMatrix();
+  }
+
+  /* who and what are actually in use, so nothing has to be typed from memory */
+  function skillPeople(){
+    var s = {};
+    prodDocs.forEach(function(r){
+      var n = String((r.data||{}).operator||'').trim(); if (n) s[n] = 1; });
+    (window.__setups||[]).forEach(function(r){
+      var n = String((r.data||{}).operator||'').trim(); if (n) s[n] = 1;
+      var a = String((r.data||{}).approvedBy||'').trim(); if (a) s[a] = 1; });
+    skills.forEach(function(r){
+      var n = String((r.data||{}).person||'').trim(); if (n) s[n] = 1; });
+    return Object.keys(s).sort();
+  }
+  function skillThings(){
+    var s = {};
+    machines.forEach(function(m){
+      var n = String((m.data||{}).name||'').trim(); if (n) s[n] = 1; });
+    prodDocs.forEach(function(r){
+      var n = String((r.data||{}).machine||'').trim(); if (n) s[n] = 1; });
+    skills.forEach(function(r){
+      var n = String((r.data||{}).thing||'').trim(); if (n) s[n] = 1; });
+    return Object.keys(s).sort();
+  }
+
+  function drawSkillLists(){
+    document.getElementById('sk-people').innerHTML =
+      skillPeople().map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
+    document.getElementById('sk-things').innerHTML =
+      skillThings().map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
+  }
+
+  function skillOf(person, thing){
+    return skills.filter(function(r){
+      var v = r.data||{};
+      return String(v.person||'').toLowerCase() === String(person).toLowerCase() &&
+             String(v.thing||'').toLowerCase() === String(thing).toLowerCase(); })[0] || null;
+  }
+  function skillDue(r){
+    var v = r.data||{};
+    if (!v.assessedOn) return null;
+    var d = new Date(v.assessedOn);
+    d.setMonth(d.getMonth() + (C.num(v.reassessMonths) || 24));
+    return d;
+  }
+  function skillStale(r){
+    var due = skillDue(r);
+    return due ? (due < new Date()) : false;
+  }
+
+  /* the gap that matters: somebody booked production on a machine they have not
+     been assessed on, or were only assessed to run supervised */
+  function skillGaps(){
+    var out = [];
+    var seen = {};
+    prodDocs.forEach(function(r){
+      var v = r.data||{};
+      var who = String(v.operator||'').trim(), what = String(v.machine||'').trim();
+      if (!who || !what) return;
+      var key = who + '|' + what;
+      if (seen[key]) return;
+      seen[key] = 1;
+      var sk = skillOf(who, what);
+      if (!sk)
+        out.push({ who:who, what:what, why:'has booked production on it with no assessment on file' });
+      else if (C.num((sk.data||{}).level) < 3)
+        out.push({ who:who, what:what,
+          why:'is assessed only at level ' + (sk.data||{}).level + ' — ' +
+              (SK_LEVEL[C.num((sk.data||{}).level)]||{}).label + ' — but has booked production alone' });
+      else if (skillStale(sk))
+        out.push({ who:who, what:what, why:'was last assessed on ' +
+          C.fmtDate((sk.data||{}).assessedOn) + ' and is overdue for reassessment' });
+    });
+    return out;
+  }
+
+  function drawSkillGaps(){
+    var host = document.getElementById('sk-gap');
+    var gaps = skillGaps();
+    if (!prodDocs.length){
+      host.innerHTML = '<div class="hint">No production has been booked yet, so there is nothing ' +
+        'to check the matrix against.</div>';
+      return;
+    }
+    host.innerHTML = gaps.length
+      ? '<div class="note bad"><b>' + gaps.length + ' gap(s) between who ran the work and who was ' +
+        'assessed to.</b><br>' + gaps.slice(0,8).map(function(g){
+          return '• <b>' + esc(g.who) + '</b> ' + esc(g.why) + ' on <b>' + esc(g.what) + '</b>';
+        }).join('<br>') + (gaps.length > 8 ? '<br>and ' + (gaps.length-8) + ' more' : '') +
+        '<br><br>Either assess them and record it, or stop them running it. An assessment written ' +
+        'after the fact to close a gap is worth nothing.</div>'
+      : '<div class="note good">Everybody who has booked production has been assessed to run what ' +
+        'they ran, and none of those assessments is overdue.</div>';
+  }
+
+  async function saveSkill(){
+    var msg = document.getElementById('sk-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    if (!g('sk-who'))  return say('Whose skill is this?');
+    if (!g('sk-what')) return say('What are they being assessed on — a machine or an operation?');
+    if (!g('sk-by'))   return say('Who assessed them? An assessment nobody signed is not evidence ' +
+                                  'of competence.');
+    if (!g('sk-on'))   return say('When were they assessed?');
+    var lvl = C.num(document.getElementById('sk-level').value);
+    if (lvl >= 3 && !g('sk-note'))
+      return say('At level ' + lvl + ' say what they were watched doing. "Competent" on its own is ' +
+                 'the assessment an auditor picks on first.');
+
+    var existing = skillOf(g('sk-who'), g('sk-what'));
+    try {
+      var hist = existing ? ((existing.data||{}).history || []).slice() : [];
+      hist.unshift({ on:g('sk-on'), by:g('sk-by'), level:lvl, note:g('sk-note') });
+      await C.idms.saveDoc({ docId: existing ? existing.doc_id : '', kind:'skill',
+        docNo: existing ? existing.doc_no : await C.docNumber('skill'), status:'Active',
+        data:{ person:g('sk-who'), thing:g('sk-what'), level:lvl,
+               assessedOn:g('sk-on'), assessedBy:g('sk-by'), note:g('sk-note'),
+               reassessMonths:C.num(g('sk-freq')) || 24, history:hist } },
+        existing ? 'skill reassessed' : 'skill recorded');
+      say(existing
+        ? 'Updated. ' + hist.length + ' assessment(s) now on record for ' + esc(g('sk-who')) + '.'
+        : 'Recorded.', true);
+      ['sk-what','sk-note'].forEach(function(id){ document.getElementById(id).value=''; });
+      await loadSkills();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  function drawSkillMatrix(){
+    var host = document.getElementById('sk-body');
+    var people = skillPeople(), things = skillThings();
+    if (!skills.length && !people.length){
+      host.innerHTML = '<div class="empty"><b>Nothing recorded yet</b>' +
+        'Names appear here as soon as production is booked against them.</div>';
+      return;
+    }
+    if (!things.length){
+      host.innerHTML = '<div class="empty"><b>No machines or operations yet</b></div>';
+      return;
+    }
+    host.innerHTML = '<div style="overflow-x:auto;"><table class="t"><thead><tr><th>Person</th>' +
+      things.map(function(t){
+        return '<th class="c" style="font-size:10.5px;">'+esc(t)+'</th>'; }).join('') +
+      '<th class="c">Can run alone</th></tr></thead><tbody>' +
+      people.map(function(p){
+        var able = 0;
+        var cells = things.map(function(t){
+          var sk = skillOf(p, t);
+          if (!sk) return '<td class="c hint">—</td>';
+          var lv = C.num((sk.data||{}).level), info = SK_LEVEL[lv] || SK_LEVEL[1];
+          var stale = skillStale(sk);
+          if (lv >= 3 && !stale) able++;
+          return '<td class="c"><span class="badge '+(stale?'ab':info.cls)+'" title="'+
+            esc(info.label + ' · assessed ' + C.fmtDate((sk.data||{}).assessedOn) +
+                ' by ' + ((sk.data||{}).assessedBy||'')) + '">' + lv +
+            (stale ? '!' : '') + '</span></td>';
+        }).join('');
+        return '<tr><td><b>'+esc(p)+'</b></td>' + cells +
+          '<td class="c">'+(able||'<span style="color:var(--bad)">none</span>')+'</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<div class="hint" style="margin-top:8px;">1 under instruction · 2 supervised · ' +
+      '3 can run alone · 4 can train others. A number with <b>!</b> is overdue for reassessment, ' +
+      'and counts as no longer current.</div>' +
+      (function(){
+        /* a machine only one person can run is a single point of failure, and it
+           is the sort of thing nobody notices until that person is off */
+        var thin = things.filter(function(t){
+          return people.filter(function(p){
+            var sk = skillOf(p, t);
+            return sk && C.num((sk.data||{}).level) >= 3 && !skillStale(sk); }).length === 1; });
+        var none = things.filter(function(t){
+          return !people.some(function(p){
+            var sk = skillOf(p, t);
+            return sk && C.num((sk.data||{}).level) >= 3 && !skillStale(sk); }); });
+        return (none.length
+          ? '<div class="note bad" style="margin-top:10px;"><b>Nobody is currently assessed to run ' +
+            none.map(esc).join(', ') + ' alone.</b></div>' : '') +
+          (thin.length
+            ? '<div class="note" style="margin-top:10px;"><b>Only one person can run ' +
+              thin.map(esc).join(', ') + '.</b> That is a machine idle the day they are off.</div>'
+            : '');
+      })();
+  }
+
+  function printSkillMatrix(){
+    var people = skillPeople(), things = skillThings();
+    if (!people.length) { toast('Nothing to print.'); return; }
+    var gaps = skillGaps();
+    C.openReport({
+      title:'Skill Matrix', kind:'Competence', landscape:true,
+      subtitle:people.length + ' people · ' + things.length + ' machines and operations',
+      sections:[
+        { type:'table', title:'Matrix', dense:true,
+          columns:[{label:'Person'}].concat(things.map(function(t){
+            return { label:t, align:'c' }; })).concat([{label:'Can run alone',align:'c'}]),
+          rows: people.map(function(p){
+            var able = 0;
+            var row = [esc(p)];
+            things.forEach(function(t){
+              var sk = skillOf(p, t);
+              if (!sk) { row.push('—'); return; }
+              var lv = C.num((sk.data||{}).level), stale = skillStale(sk);
+              if (lv >= 3 && !stale) able++;
+              row.push(stale ? { v:'<b>' + lv + '!</b>', cls:'ab' } : String(lv));
+            });
+            row.push(able || { v:'<b>none</b>', cls:'ab' });
+            return row;
+          }),
+          note:'1 under instruction · 2 supervised · 3 can run alone · 4 can train others. ' +
+               'A number with ! is overdue for reassessment and counts as no longer current.' },
+        gaps.length ? { type:'table', title:'Gaps between who ran the work and who was assessed to',
+          columns:[{label:'Person'},{label:'Machine or operation'},{label:'What is wrong'}],
+          rows: gaps.map(function(g){ return [esc(g.who), esc(g.what), esc(g.why)]; }) } : null,
+        { type:'text', title:'Signatures',
+          body:'Assessed by                              Production                              Quality' }
+      ].filter(Boolean) });
   }
 
   /* ---------------- Machines and preventive maintenance ----------------
@@ -4971,6 +5256,34 @@
               'optimistic. Correct the routing or find out why.', 'process_master', r.doc_no);
         }
       });
+      /* competence: somebody ran work they were not assessed for. This is read
+         from the bookings, so it cannot be dodged by not filling in a matrix. */
+      var sks = await C.idms.docs('skill');
+      looked.skills = sks.length;
+      var skFor = function(who, what){
+        return sks.filter(function(r){
+          var v = r.data||{};
+          return String(v.person||'').toLowerCase() === String(who).toLowerCase() &&
+                 String(v.thing||'').toLowerCase() === String(what).toLowerCase(); })[0]; };
+      var pairSeen = {};
+      prods.forEach(function(r){
+        var v = r.data||{};
+        var who = String(v.operator||'').trim(), what = String(v.machine||'').trim();
+        if (!who || !what || pairSeen[who+'|'+what]) return;
+        pairSeen[who+'|'+what] = 1;
+        var sk = skFor(who, what);
+        if (!sk)
+          add('med','Competence', who + ' has booked production on ' + what +
+            ' with no skill assessment on file',
+            'Competence has to be assessed and recorded before the work, not after a customer asks.',
+            'skill_matrix', '');
+        else if (C.num((sk.data||{}).level) < 3)
+          add('high','Competence', who + ' ran ' + what + ' alone but is assessed only at level ' +
+            (sk.data||{}).level,
+            'They were signed off as needing supervision. Either they are competent and the record ' +
+            'is wrong, or they should not have been running it.', 'skill_matrix', '');
+      });
+
       /* machines: overdue maintenance, and names on the routings that are not on
          the machine list — the second one splits a loading report silently */
       var mcs = await C.idms.docs('machine');
@@ -8605,6 +8918,13 @@
     });
     f.click();
   });
+
+  document.getElementById('sk-save').addEventListener('click', saveSkill);
+  document.getElementById('sk-clear').addEventListener('click', function(){
+    ['sk-who','sk-what','sk-note'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('sk-msg').style.display='none';
+  });
+  document.getElementById('sk-print').addEventListener('click', printSkillMatrix);
 
   document.getElementById('mm-save').addEventListener('click', saveMachine);
   document.getElementById('mm-clear').addEventListener('click', clearMachineForm);

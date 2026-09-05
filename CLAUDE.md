@@ -196,7 +196,7 @@ Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
 Self Inspection, Inward Inspection, Calibration, MSA, PDI, GRN, Delivery
 Challan, Production Entry, Sales Plan, Production Plan, Works Dashboard,
 Non-conformance & 8D, Open Actions, Machine Addition, Preventive Maintenance,
-Audit Readiness Agent,
+Skill Matrix, Audit Readiness Agent,
 NPD Agent, Supplier Watch
 Agent, Review Agent Work, Agent Run Log, People (HR records), Company Profile.
 
@@ -269,7 +269,24 @@ Recording maintenance demands a name; a record with nobody against it cannot be
 evidenced. A machine that has broken down more than once *and* is overdue is
 called out specifically.
 
-The **Audit Readiness Agent** reads machines too: overdue or never-maintained
+**Skill matrix.** Production records who ran each job; nothing checked they were
+assessed for it. Like the machine list, this starts from the names already on the
+bookings and setup approvals rather than presenting an empty grid. The gap it
+shows is computed from the bookings themselves — who ran what against who was
+assessed for it — so it **cannot be dodged by not filling the matrix in**; an
+empty matrix produces the most gaps, not the fewest.
+
+Levels are 1 under instruction, 2 supervised, 3 can run alone, 4 can train
+others. Level 3 or above demands a note of what the person was watched doing,
+because "competent" on its own is the first thing an auditor picks on. An
+assessment past its reassessment interval counts as **no longer current**, shown
+as `3!`. Reassessment updates the record and keeps the history. The matrix also
+flags machines only one person can run, and machines nobody can.
+
+The **Audit Readiness Agent** reads competence too: somebody who booked
+production with no assessment on file (medium), and somebody who ran a machine
+alone while assessed only at level 1 or 2 (high) — put as *either the record is
+wrong or they should not have been running it*. It reads machines too: overdue or never-maintained
 machines (high when the machine is critical, with its breakdown count quoted),
 and machine names on a routing that are not on the machine list. It reads
 corrective actions too: overdue ones (high

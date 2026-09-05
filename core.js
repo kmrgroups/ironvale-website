@@ -137,6 +137,9 @@
     savePart: (part, reason) => api('/api/idms', {
       method: 'POST', body: JSON.stringify({ what: 'parts', part: part, reason: reason || '' })
     }),
+    removePart: (partId, reason) =>
+      api('/api/idms', { method:'PATCH', body: JSON.stringify({ what:'parts', partId,
+        remove:true, reason }) }),
     setLifecycle: (partId, lifecycle, reason) => api('/api/idms', {
       method: 'PATCH',
       body: JSON.stringify({ what: 'parts', partId: partId, lifecycle: lifecycle, reason: reason || '' })

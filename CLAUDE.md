@@ -298,11 +298,22 @@ the part; PFD draws itself; PFMEA is drafted from the routing and dimensions;
 the control plan is drafted from the PFMEA; the CNC programme is drafted from
 the operation and the control plan parameters.
 
-**Sample data.** The home screen loads one worked example — customer, part,
-priced link, four operations, seven dimensions including two CC and one SC.
-Every record it writes carries `demo:true` and removal deletes on that flag
-alone, so real data can never be caught by it. Useful for demonstrating the
-chain to a prospective customer.
+**Sample data.** The home screen loads a whole works: 5 customers, 10 parts
+across every lifecycle stage, priced customer links, ~22 operations, ~30
+characteristics (CC and SC, plus a sub-contract operation), 6 gauges (one
+overdue, one never calibrated), 5 goods receipts, 4 inward inspections (one
+receipt deliberately left uninspected, one accepted under deviation, a repeat
+hardness failure at the same supplier), 3 setups (one rejected), 12 production
+bookings over four days (one booked with no approved setup, one bad day at 8%
+rejection, one breakdown), 3 PDI lots (one on hold), 4 challans, 6 customer
+orders (one already late, one due this week), and an open self-inspection sheet
+with a failed check and no containment.
+
+**It is deliberately imperfect.** Every agent has something real to find, and the
+dashboard shows a works with problems rather than a clean demo. Every record
+carries `demo:true`; removal deletes on that flag alone and takes the sample
+parts with it now that `PATCH what=parts remove` exists (admin role, stated
+reason, cascades to the part's records and reports how many).
 
 **The NPD chain**, each level hanging off the one above: customer → part →
 customer-part link (their number, their price) → process/routing → dimensions

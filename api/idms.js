@@ -155,6 +155,23 @@ export default async function handler(req, res) {
         const partId = String(body.partId || '');
         const prev = (await sql`SELECT * FROM idms_parts WHERE part_id = ${partId}`)[0];
         if (!prev) return res.status(404).json({ ok: false, error: 'No such part.' });
+
+        if (body.remove) {
+          // a part carries an APQP history, so deleting one is an administrator's
+          // decision with a reason, and everything hanging off it goes too --
+          // otherwise the orphans stay and quietly count towards nothing
+          if (!(await checkRole(token, ['developer', 'admin'])))
+            return res.status(403).json({ ok: false, error: 'Only an administrator may delete a part.' });
+          if (!String(body.reason || '').trim())
+            return res.status(400).json({ ok: false, error: 'State a reason for the deletion.' });
+          const kids = await sql`SELECT doc_id, kind FROM idms_docs WHERE part_id = ${partId}`;
+          await sql`DELETE FROM idms_docs WHERE part_id = ${partId}`;
+          await sql`DELETE FROM idms_parts WHERE part_id = ${partId}`;
+          await audit(who, 'part', partId, 'delete', prev, null,
+            body.reason + ' (with ' + kids.length + ' related record(s))');
+          return res.status(200).json({ ok: true, removed: true, alsoRemoved: kids.length });
+        }
+
         const life = body.lifecycle || prev.lifecycle;
         await sql`UPDATE idms_parts SET lifecycle = ${life},
                   data = ${JSON.stringify(body.patch !== undefined ? body.patch : prev.data)}::jsonb,

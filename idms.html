@@ -1782,92 +1782,381 @@
      A worked example so the chain can be seen before real work goes in. Every
      record carries demo:true, and removal deletes on that flag alone — real
      data can never be caught by it. */
-  var DEMO = {
-    customer:{ name:'Demo Motors Pvt Ltd', code:'DEMO-001', gstin:'29AAAAA0000A1Z5',
-      terms:'45 days from invoice', billing:'Plot 22, Industrial Estate, Bengaluru 560058',
-      despatch:'Plot 22, Industrial Estate, Bengaluru 560058',
-      contact:'Sample Contact', phone:'9000000000', email:'sample@example.com' },
-    part:{ name:'Bearing Housing', drawingNo:'DEMO-DRG-4471', drawingRev:'02',
-      rawMaterial:'EN8 bright bar Ø52', netWeight:0.42, grossWeight:0.55, uom:'Nos' },
-    link:{ custPartNo:'DM-4471', custDrawingNo:'DEMO-DRG-4471', hsn:'84831090', price:182.50 },
-    ops:[
-      { opNo:10, name:'CNC turning', machine:'Doosan Lynx 220', setupMin:45, cycleSec:82,
-        where:'in', description:'Rough and finish turn OD, face, bore, chamfer, part off',
-        dims:[
-          { balloon:'1', description:'Bore diameter after finish turn', nominal:32, upper:'+0.025',
-            lower:'-0.000', unit:'mm', gauge:'Bore gauge 25-50mm', cls:'CC', frequency:'5 pcs / hour' },
-          { balloon:'2', description:'Outside diameter', nominal:52, upper:'+0.05', lower:'-0.05',
-            unit:'mm', gauge:'Micrometer 50-75mm', cls:'', frequency:'5 pcs / hour' },
-          { balloon:'3', description:'Overall length', nominal:38, upper:'+0.1', lower:'-0.1',
-            unit:'mm', gauge:'Vernier caliper', cls:'', frequency:'First and last piece' }]},
-      { opNo:20, name:'CNC milling', machine:'Haas VF-2', setupMin:35, cycleSec:64,
-        where:'in', description:'Mill mounting face, drill and tap 4 × M8 on PCD',
-        dims:[
-          { balloon:'4', description:'Mounting face flatness', nominal:0.05, upper:'+0.00',
-            lower:'-0.05', unit:'mm', gauge:'Dial gauge on surface plate', cls:'SC',
-            frequency:'5 pcs / hour' },
-          { balloon:'5', description:'Tapped hole PCD', nominal:76, upper:'+0.2', lower:'-0.2',
-            unit:'mm', gauge:'CMM', cls:'', frequency:'First piece' }]},
-      { opNo:30, name:'Deburring and washing', machine:'Manual bench', setupMin:5, cycleSec:40,
-        where:'in', description:'Deburr all edges, wash and dry',
-        dims:[
-          { balloon:'6', description:'Surface finish in bore', nominal:1.6, upper:'+0.4',
-            lower:'-0.0', unit:'Ra', gauge:'Surface roughness tester', cls:'', frequency:'1 per shift' }]},
-      { opNo:40, name:'Final inspection', machine:'Inspection room', setupMin:0, cycleSec:55,
-        where:'in', description:'Check all characteristics against the control plan before despatch',
-        dims:[
-          { balloon:'7', description:'Bore diameter confirmation', nominal:32, upper:'+0.025',
-            lower:'-0.000', unit:'mm', gauge:'Air gauge', cls:'CC', frequency:'100%' }]}
-    ]
-  };
+  /* A whole works of data: five customers, ten parts across the lifecycle,
+     routings, characteristics, gauges, receipts, inspections, setups,
+     production, orders and despatches. Enough for the dashboard, the plan and
+     the agents to have something real to say — and deliberately imperfect, so
+     they have something to complain about. Every record carries demo:true and
+     removal deletes on that flag alone, so real work can never be caught by it. */
+  var DEMO_CUSTOMERS = [
+    { name:'Bosch Ltd', code:'BOSC-001', gstin:'29AAACB1234C1Z5', terms:'45 days from invoice',
+      billing:'Plot 14, Bidadi Industrial Area, Bengaluru 562109', contact:'S Kumar',
+      phone:'9900112233', email:'purchase@example.com' },
+    { name:'TVS Motor Company', code:'TVSM-002', gstin:'33AAACT5678D1Z9', terms:'60 days',
+      billing:'Post Box 4, Harita, Hosur 635109', contact:'R Balaji', phone:'9840011223' },
+    { name:'Ashok Leyland', code:'ASHK-003', gstin:'33AAACA9012E1Z4', terms:'45 days',
+      billing:'Ennore Works, Chennai 600057', contact:'M Devan', phone:'9445566778' },
+    { name:'Rane Brake Lining', code:'RANE-004', gstin:'33AAACR3456F1Z7', terms:'30 days',
+      billing:'Velachery, Chennai 600042', contact:'K Anitha', phone:'9789900112' },
+    { name:'Sundram Fasteners', code:'SUND-005', gstin:'33AAACS7890G1Z2', terms:'45 days',
+      billing:'Padi, Chennai 600050', contact:'V Raghav', phone:'9840099887' }
+  ];
+
+  var DEMO_PARTS = [
+    { name:'Bearing Housing', drg:'DEMO-DRG-4471', rev:'02', rm:'EN8 bright bar 52mm',
+      net:0.42, gross:0.55, life:'Series', cust:0, custNo:'BP-4471', price:182.50, hsn:'84831090',
+      ops:[
+        { no:10, name:'CNC turning', mc:'Doosan Lynx 220', setup:45, cycle:82,
+          what:'Rough and finish turn OD, face, bore, chamfer, part off',
+          dims:[['1','Bore diameter after finish turn',32,'+0.025','-0.000','mm','Bore gauge 25-50mm','CC','5 pcs / hour'],
+                ['2','Outside diameter',52,'+0.05','-0.05','mm','Micrometer 50-75mm','','5 pcs / hour'],
+                ['3','Overall length',38,'+0.1','-0.1','mm','Vernier caliper','','First and last piece']] },
+        { no:20, name:'CNC milling', mc:'Haas VF-2', setup:35, cycle:64,
+          what:'Mill mounting face, drill and tap 4 x M8 on PCD',
+          dims:[['4','Mounting face flatness',0.05,'+0.00','-0.05','mm','Dial gauge on surface plate','SC','5 pcs / hour'],
+                ['5','Tapped hole PCD',76,'+0.2','-0.2','mm','CMM','','First piece']] },
+        { no:30, name:'Deburring and washing', mc:'Manual bench', setup:5, cycle:40,
+          what:'Deburr all edges, wash and dry',
+          dims:[['6','Surface finish in bore',1.6,'+0.4','-0.0','Ra','Surface roughness tester','','1 per shift']] },
+        { no:40, name:'Final inspection', mc:'Inspection room', setup:0, cycle:55,
+          what:'Check all characteristics against the control plan before despatch',
+          dims:[['7','Bore diameter confirmation',32,'+0.025','-0.000','mm','Air gauge','CC','100%']] }
+      ] },
+    { name:'Cover Plate', drg:'DEMO-DRG-2210', rev:'01', rm:'EN8 plate 8mm',
+      net:0.18, gross:0.24, life:'Series', cust:0, custNo:'CP-2210', price:64.00, hsn:'84831090',
+      ops:[
+        { no:10, name:'CNC milling', mc:'Haas VF-2', setup:30, cycle:48,
+          what:'Mill profile and face both sides',
+          dims:[['1','Thickness',8,'+0.05','-0.05','mm','Micrometer 0-25mm','','5 pcs / hour'],
+                ['2','Profile width',120,'+0.2','-0.2','mm','Vernier caliper','','First and last piece']] },
+        { no:20, name:'Drilling', mc:'Radial drill', setup:15, cycle:36,
+          what:'Drill 6 clearance holes',
+          dims:[['3','Hole diameter',9,'+0.1','-0.0','mm','Plug gauge 9mm','','10 pcs / hour']] },
+        { no:30, name:'Final inspection', mc:'Inspection room', setup:0, cycle:30,
+          what:'Verify all characteristics',
+          dims:[['4','Hole position',60,'+0.15','-0.15','mm','CMM','SC','First and last piece']] }
+      ] },
+    { name:'Pivot Pin', drg:'DEMO-DRG-3305', rev:'00', rm:'EN31 bar 20mm',
+      net:0.09, gross:0.12, life:'Series', cust:1, custNo:'TV-3305', price:41.75, hsn:'73181500',
+      ops:[
+        { no:10, name:'CNC turning', mc:'Doosan Lynx 220', setup:25, cycle:38,
+          what:'Turn OD, form groove, chamfer and part off',
+          dims:[['1','Pin diameter',20,'+0.000','-0.021','mm','Micrometer 0-25mm','CC','5 pcs / hour'],
+                ['2','Groove width',3,'+0.1','-0.0','mm','Vernier caliper','','Hourly']] },
+        { no:20, name:'Heat treatment', mc:'Sub-contract', setup:0, cycle:0, sub:true,
+          what:'Harden and temper to 58-62 HRC at approved vendor',
+          dims:[['3','Hardness',60,'+2','-2','HRC','Hardness tester','CC','5 per batch']] },
+        { no:30, name:'Centreless grinding', mc:'Centreless grinder', setup:40, cycle:22,
+          what:'Grind OD to final size',
+          dims:[['4','Ground diameter',19.98,'+0.005','-0.005','mm','Micrometer 0-25mm','CC','5 pcs / hour']] },
+        { no:40, name:'Final inspection', mc:'Inspection room', setup:0, cycle:25,
+          what:'Verify size, hardness and finish',
+          dims:[['5','Surface finish',0.8,'+0.2','-0.0','Ra','Surface roughness tester','','1 per shift']] }
+      ] },
+    { name:'Clutch Lever', drg:'DEMO-DRG-5590', rev:'03', rm:'EN19 forging',
+      net:0.66, gross:0.90, life:'PPAP', cust:1, custNo:'TV-5590', price:265.00, hsn:'87089900',
+      ops:[
+        { no:10, name:'CNC turning', mc:'Doosan Lynx 220', setup:50, cycle:96,
+          what:'Turn boss and bore pivot hole',
+          dims:[['1','Pivot bore',16,'+0.018','-0.000','mm','Bore gauge 10-25mm','CC','5 pcs / hour'],
+                ['2','Boss diameter',34,'+0.1','-0.1','mm','Vernier caliper','','Hourly']] },
+        { no:20, name:'CNC milling', mc:'Haas VF-2', setup:45, cycle:88,
+          what:'Mill lever arm profile and slot',
+          dims:[['3','Slot width',10,'+0.05','-0.00','mm','Slip gauges','SC','5 pcs / hour']] },
+        { no:30, name:'Final inspection', mc:'Inspection room', setup:0, cycle:60,
+          what:'Full dimensional check for PPAP submission',
+          dims:[['4','Centre distance',128,'+0.15','-0.15','mm','CMM','CC','100%']] }
+      ] },
+    { name:'Brake Anchor Bracket', drg:'DEMO-DRG-6612', rev:'01', rm:'SG iron casting',
+      net:1.24, gross:1.60, life:'Sample', cust:2, custNo:'AL-6612', price:410.00, hsn:'87083000',
+      ops:[
+        { no:10, name:'CNC milling', mc:'Haas VF-2', setup:60, cycle:145,
+          what:'Machine mounting faces and locating bosses',
+          dims:[['1','Face to face',96,'+0.1','-0.1','mm','Micrometer 75-100mm','','5 pcs / hour'],
+                ['2','Bore diameter',28,'+0.021','-0.000','mm','Bore gauge','CC','5 pcs / hour']] },
+        { no:20, name:'Drilling and tapping', mc:'VMC', setup:30, cycle:70,
+          what:'Drill and tap fixing holes',
+          dims:[['3','Thread depth',18,'+2','-0','mm','Depth gauge','','Hourly']] }
+      ] },
+    { name:'Spacer Ring', drg:'DEMO-DRG-7734', rev:'00', rm:'EN8 tube 40mm',
+      net:0.05, gross:0.07, life:'Series', cust:3, custNo:'RB-7734', price:22.40, hsn:'84831090',
+      ops:[
+        { no:10, name:'CNC turning', mc:'Sliding head lathe', setup:20, cycle:18,
+          what:'Turn and part off from bar',
+          dims:[['1','Width',6,'+0.05','-0.05','mm','Micrometer 0-25mm','','10 pcs / hour'],
+                ['2','Bore',30,'+0.05','-0.00','mm','Plug gauge 30mm','','10 pcs / hour']] },
+        { no:20, name:'Final inspection', mc:'Inspection room', setup:0, cycle:12,
+          what:'Check width and bore',
+          dims:[['3','Bore confirmation',30,'+0.05','-0.00','mm','Plug gauge 30mm','','100%']] }
+      ] },
+    { name:'Shift Fork', drg:'DEMO-DRG-8845', rev:'02', rm:'EN353 forging',
+      net:0.38, gross:0.52, life:'APQP', cust:2, custNo:'AL-8845', price:198.00, hsn:'87084000',
+      ops:[
+        { no:10, name:'CNC turning', mc:'Doosan Lynx 220', setup:40, cycle:74,
+          what:'Turn hub and bore',
+          dims:[['1','Hub bore',22,'+0.021','-0.000','mm','Bore gauge','CC','5 pcs / hour']] },
+        { no:20, name:'CNC milling', mc:'Haas VF-2', setup:50, cycle:92,
+          what:'Mill fork pads and radius',
+          dims:[['2','Pad thickness',7.5,'+0.05','-0.05','mm','Micrometer','SC','5 pcs / hour']] }
+      ] },
+    { name:'Flange Adaptor', drg:'DEMO-DRG-9901', rev:'00', rm:'EN8 bright bar 75mm',
+      net:0.88, gross:1.15, life:'APQP', cust:4, custNo:'SF-9901', price:320.00, hsn:'73072900',
+      ops:[
+        { no:10, name:'CNC turning', mc:'Doosan Lynx 220', setup:55, cycle:118,
+          what:'Turn flange face, spigot and bore',
+          dims:[['1','Spigot diameter',60,'+0.000','-0.030','mm','Micrometer 50-75mm','CC','5 pcs / hour'],
+                ['2','Flange thickness',12,'+0.1','-0.1','mm','Vernier caliper','','Hourly']] }
+      ] },
+    { name:'Locking Collar', drg:'DEMO-DRG-1120', rev:'01', rm:'EN8 bar 45mm',
+      net:0.21, gross:0.29, life:'New', cust:3, custNo:'RB-1120', price:58.00, hsn:'84831090',
+      ops:[] },
+    { name:'Thrust Washer', drg:'DEMO-DRG-1188', rev:'00', rm:'Phosphor bronze strip',
+      net:0.03, gross:0.04, life:'New', cust:4, custNo:'SF-1188', price:16.20, hsn:'84833000',
+      ops:[] }
+  ];
+
+  var DEMO_GAUGES = [
+    { d:'Bore gauge 25-50mm', t:'Bore gauge', r:'25-50 mm', lc:'0.001 mm', loc:'Inspection room', f:12, ago:2 },
+    { d:'Micrometer 50-75mm', t:'Micrometer', r:'50-75 mm', lc:'0.001 mm', loc:'Shop floor', f:12, ago:5 },
+    { d:'Vernier caliper', t:'Vernier', r:'0-150 mm', lc:'0.02 mm', loc:'Shop floor', f:6, ago:8 },
+    { d:'CMM', t:'CMM', r:'700 x 700 x 600', lc:'0.001 mm', loc:'Inspection room', f:12, ago:3 },
+    { d:'Micrometer 0-25mm', t:'Micrometer', r:'0-25 mm', lc:'0.001 mm', loc:'Shop floor', f:12, ago:14 },
+    { d:'Surface roughness tester', t:'Surface roughness tester', r:'0.05-10 Ra', lc:'0.01 Ra',
+      loc:'Inspection room', f:12, ago:null }
+  ];
+
+  var DEMO_SUPPLIERS = [
+    { s:'Sundaram Steel', mat:'EN8 bright bar 52mm', qty:1200, rej:0, inv:'SS/2609/118', disp:'accept' },
+    { s:'Sundaram Steel', mat:'EN8 bright bar 75mm', qty:600, rej:0, inv:'SS/2609/126', disp:'accept' },
+    { s:'Ganesh Metals', mat:'EN31 bar 20mm', qty:400, rej:40, inv:'GM/4471', disp:'deviation',
+      fail:'Hardness', dev:'A Rao (Quality Head)' },
+    { s:'Ganesh Metals', mat:'EN31 bar 20mm', qty:400, rej:35, inv:'GM/4502', disp:'return',
+      fail:'Hardness' },
+    { s:'Prakash Alloys', mat:'SG iron castings', qty:250, rej:0, inv:'PA/8890', disp:null }
+  ];
+
+  function demoDate(daysAgo){
+    var d = new Date(); d.setDate(d.getDate() - daysAgo);
+    return d.toISOString().slice(0,10);
+  }
 
   async function loadDemo(){
     var msg = document.getElementById('demo-msg');
     var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
                                  msg.innerHTML=t; };
     var btn = document.getElementById('demo-add');
-    btn.disabled = true; btn.textContent = 'Loading…';
+    btn.disabled = true;
+    var step = function(t){ btn.textContent = t; say(t, true); };
+    var n = { customers:0, parts:0, links:0, ops:0, dims:0, gauges:0, grn:0, inward:0,
+              setups:0, production:0, orders:0, pdi:0, dc:0, sheets:0 };
     try {
       var already = (await C.idms.docs('customer'))
         .filter(function(c){ return (c.data||{}).demo; }).length;
       if (already) { say('Sample data is already loaded. Remove it first if you want it fresh.');
         btn.disabled=false; btn.textContent='Load sample data'; return; }
 
-      var cj = await C.idms.saveDoc({ kind:'customer', docNo:DEMO.customer.code, status:'Active',
-        data: Object.assign({demo:true}, DEMO.customer) }, 'sample data loaded');
+      step('Adding customers');
+      var custIds = [];
+      for (var i = 0; i < DEMO_CUSTOMERS.length; i++){
+        var c = DEMO_CUSTOMERS[i];
+        var cj = await C.idms.saveDoc({ kind:'customer', docNo:c.code, status:'Active',
+          data: Object.assign({ demo:true, despatch:c.billing }, c) }, 'sample data');
+        custIds.push(cj.docId); n.customers++;
+      }
 
-      var internal = await C.docNumber('part');
-      var pj = await C.idms.savePart({ customer:'', partNo:internal, partName:DEMO.part.name,
-        lifecycle:'APQP', data: Object.assign({demo:true}, DEMO.part) }, 'sample data loaded');
+      var partIds = [], opIds = {};
+      for (var pi = 0; pi < DEMO_PARTS.length; pi++){
+        var dp = DEMO_PARTS[pi];
+        step('Adding part ' + (pi+1) + ' of ' + DEMO_PARTS.length);
+        var internal = await C.docNumber('part');
+        var pj = await C.idms.savePart({ customer:'', partNo:internal, partName:dp.name,
+          lifecycle:dp.life,
+          data:{ demo:true, drawingNo:dp.drg, drawingRev:dp.rev, rawMaterial:dp.rm,
+                 netWeight:dp.net, grossWeight:dp.gross, uom:'Nos' } }, 'sample data');
+        partIds.push(pj.partId); n.parts++;
 
-      await C.idms.saveDoc({ kind:'cust_part', partId:pj.partId, status:'Active',
-        docNo:DEMO.link.custPartNo,
-        data: Object.assign({demo:true, partId:pj.partId, internalNo:internal,
-          customerId:cj.docId, customerName:DEMO.customer.name,
-          effectiveFrom:new Date().toISOString().slice(0,10)}, DEMO.link) }, 'sample data loaded');
+        await C.idms.saveDoc({ kind:'cust_part', partId:pj.partId, status:'Active', docNo:dp.custNo,
+          data:{ demo:true, partId:pj.partId, internalNo:internal,
+                 customerId:custIds[dp.cust], customerName:DEMO_CUSTOMERS[dp.cust].name,
+                 custPartNo:dp.custNo, custDrawingNo:dp.drg, hsn:dp.hsn, price:dp.price,
+                 uom:'Nos', effectiveFrom:demoDate(120) } }, 'sample data');
+        n.links++;
 
-      var dimCount = 0;
-      for (var i = 0; i < DEMO.ops.length; i++) {
-        var o = DEMO.ops[i];
-        var oj = await C.idms.saveDoc({ kind:'process', partId:pj.partId, status:'Active',
-          docNo:String(o.opNo),
-          data:{ demo:true, partId:pj.partId, opNo:o.opNo, name:o.name, machine:o.machine,
-                 setupMin:o.setupMin, cycleSec:o.cycleSec, where:o.where,
-                 description:o.description } }, 'sample data loaded');
-        for (var k = 0; k < o.dims.length; k++) {
-          var dm = o.dims[k];
-          await C.idms.saveDoc({ kind:'dimension', partId:pj.partId, status:'Active',
-            docNo:dm.balloon,
-            data: Object.assign({demo:true, partId:pj.partId, processId:oj.docId, opNo:o.opNo}, dm)
-          }, 'sample data loaded');
-          dimCount++;
+        opIds[pj.partId] = [];
+        for (var oi = 0; oi < dp.ops.length; oi++){
+          var o = dp.ops[oi];
+          var oj = await C.idms.saveDoc({ kind:'process', partId:pj.partId, status:'Active',
+            docNo:String(o.no),
+            data:{ demo:true, partId:pj.partId, opNo:o.no, name:o.name, machine:o.mc,
+                   setupMin:o.setup, cycleSec:o.cycle, where:o.sub ? 'sub' : 'in',
+                   description:o.what } }, 'sample data');
+          opIds[pj.partId].push({ id:oj.docId, no:o.no, name:o.name, mc:o.mc, cycle:o.cycle });
+          n.ops++;
+          for (var di = 0; di < (o.dims||[]).length; di++){
+            var m = o.dims[di];
+            await C.idms.saveDoc({ kind:'dimension', partId:pj.partId, status:'Active', docNo:m[0],
+              data:{ demo:true, partId:pj.partId, processId:oj.docId, opNo:o.no, balloon:m[0],
+                     description:m[1], nominal:m[2], upper:m[3], lower:m[4], unit:m[5],
+                     gauge:m[6], cls:m[7], frequency:m[8] } }, 'sample data');
+            n.dims++;
+          }
         }
       }
-      say('Loaded: <b>' + esc(DEMO.customer.name) + '</b>, part <b>' + esc(internal) + '</b> (' +
-          esc(DEMO.part.name) + '), ' + DEMO.ops.length + ' operations and ' + dimCount +
-          ' dimensions. Open <b>Process Flow Diagram</b> to see the chain drawn.', true);
+
+      step('Adding the gauge register');
+      for (var gi = 0; gi < DEMO_GAUGES.length; gi++){
+        var g = DEMO_GAUGES[gi], last = '';
+        if (g.ago !== null){ var dd = new Date(); dd.setMonth(dd.getMonth() - g.ago);
+                             last = dd.toISOString().slice(0,10); }
+        await C.idms.saveDoc({ kind:'gauge', docNo: await C.docNumber('gauge'), status:'Active',
+          data:{ demo:true, description:g.d, type:g.t, range:g.r, leastCount:g.lc, location:g.loc,
+                 frequencyMonths:g.f, lastCalibrated:last,
+                 agency: last ? 'Precision Calibration Services (NABL)' : '',
+                 certificate: last ? 'NABL/2026/' + (4400 + gi) : '' } }, 'sample data');
+        n.gauges++;
+      }
+
+      step('Adding goods receipts');
+      for (var si = 0; si < DEMO_SUPPLIERS.length; si++){
+        var sp = DEMO_SUPPLIERS[si];
+        var grnNo = await C.docNumber('grn');
+        var gj = await C.idms.saveDoc({ kind:'grn', partId:'',
+          status: sp.rej ? 'With rejection' : 'Received', docNo: grnNo,
+          data:{ demo:true, supplier:sp.s, invoice:sp.inv, date:demoDate(30 - si*5),
+                 description:sp.mat, qty:sp.qty, uom:'Kg',
+                 accepted:sp.qty - sp.rej, rejected:sp.rej } }, 'sample data');
+        n.grn++;
+        if (!sp.disp) continue;                 // one receipt left uninspected on purpose
+        await C.idms.saveDoc({ kind:'inward', partId:'',
+          status: sp.rej ? 'With rejection' : 'Accepted', docNo: await C.docNumber('ii'),
+          data:{ demo:true, grnId:gj.docId, grnNo:grnNo, supplier:sp.s, invoice:sp.inv,
+                 description:sp.mat, received:sp.qty, uom:'Kg',
+                 accepted:sp.qty - sp.rej, rejected:sp.rej, disposition:sp.disp,
+                 dispositionLabel:{ accept:'Accepted', deviation:'Accepted under deviation',
+                   'return':'Returned to supplier' }[sp.disp],
+                 deviationBy:sp.dev || '', sample:5, testCert:'TC-' + (7700 + si),
+                 heat:'HT-' + (330 + si), inspectedBy:'S Rao',
+                 lines: sp.fail
+                   ? [{ what:'Bar diameter', spec:'to drawing', observed:'within', result:'ok' },
+                      { what:sp.fail, spec:'per specification', observed:'out of range', result:'no' }]
+                   : [{ what:'Bar diameter', spec:'to drawing', observed:'within', result:'ok' },
+                      { what:'Chemistry per test certificate', spec:'to grade',
+                        observed:'conforms', result:'ok' }],
+                 at:new Date().toISOString() } }, 'sample data');
+        n.inward++;
+      }
+
+      step('Booking production');
+      for (var k = 0; k < 3; k++){
+        var pid = partIds[k], ops = opIds[pid] || [];
+        if (!ops.length) continue;
+        var op = ops[0], approved = k !== 2;   // one part's latest setup was rejected
+        var setupNo = await C.docNumber('setup');
+        await C.idms.saveDoc({ kind:'setup', partId:pid, status: approved ? 'Approved' : 'Rejected',
+          docNo: setupNo,
+          data:{ demo:true, partId:pid, partNo:'', partName:DEMO_PARTS[k].name,
+                 processId:op.id, opNo:op.no, opName:op.name, machine:op.mc,
+                 operator:'R Kumar', shift:'A', reason:'New setup', pieces:3, rows:[],
+                 approvedBy:'M Prasad',
+                 remarks: approved ? '' : 'bore oversize on all three pieces',
+                 at:new Date(Date.now() - (6-k)*86400000).toISOString() } }, 'sample data');
+        n.setups++;
+
+        for (var day = 1; day <= 4; day++){
+          var made = 180 + k*40 + day*15;
+          var rej = (k === 1 && day === 2) ? 22 : Math.round(made * 0.01);
+          var down = day === 3 ? 55 : 15;
+          await C.idms.saveDoc({ kind:'production', partId:pid,
+            status: rej ? 'With rejection' : 'Booked', docNo: await C.docNumber('prod'),
+            data:{ demo:true, partId:pid, partNo:'', partName:DEMO_PARTS[k].name,
+                   processId:op.id, opNo:op.no, opName:op.name,
+                   date:demoDate(day), shift: day % 2 ? 'A' : 'B', machine:op.mc,
+                   operator: day % 2 ? 'R Kumar' : 'S Babu',
+                   from:'08:00', to:'16:00', minutes:480, runMinutes:480 - down,
+                   made:made, rejected:rej, reworked:0, good:made - rej,
+                   rejectReason: rej ? ((k === 1 && day === 2) ? 'Oversize' : 'Burr not removed') : '',
+                   downtime:down,
+                   downtimeReason: day === 3 ? 'Machine breakdown' : 'Tool change',
+                   plannedCycle:op.cycle,
+                   actualCycle: Math.round(((480 - down) * 60 / made) * 10) / 10,
+                   setupRef: approved ? setupNo : '',
+                   bookedWithoutSetup: approved ? null : 'A Rao - customer short, setter off sick',
+                   at:new Date().toISOString() } }, 'sample data');
+          n.production++;
+        }
+
+        await C.idms.saveDoc({ kind:'pdi', partId:pid, status: k === 2 ? 'On hold' : 'Cleared',
+          docNo: await C.docNumber('pdi'),
+          data:{ demo:true, partId:pid, partNo:'', partName:DEMO_PARTS[k].name,
+                 lot:'LOT-' + (2600 + k), customerId:custIds[DEMO_PARTS[k].cust],
+                 customerName:DEMO_CUSTOMERS[DEMO_PARTS[k].cust].name,
+                 offered:500, accepted: k === 2 ? 0 : 480, rejected:20, despatched:0,
+                 sampleSize:3, rows:[], inspectedBy:'S Rao',
+                 remarks: k === 2 ? 'bore oversize on two pieces, lot held' : '',
+                 at:new Date().toISOString() } }, 'sample data');
+        n.pdi++;
+      }
+
+      step('Adding despatches');
+      for (var dci = 0; dci < 4; dci++){
+        var dpi = dci % 2, cu = DEMO_PARTS[dpi].cust;
+        await C.idms.saveDoc({ kind:'dc', partId:partIds[dpi], status:'Despatched',
+          docNo: await C.docNumber('dc'),
+          data:{ demo:true, customer:DEMO_CUSTOMERS[cu].name, date:demoDate(10 - dci*2),
+                 vehicle:'KA 05 MJ ' + (4500 + dci), returnable:'no',
+                 lines:[{ partId:partIds[dpi], description:DEMO_PARTS[dpi].name,
+                          qty:100 + dci*20, uom:'Nos', rate:DEMO_PARTS[dpi].price }],
+                 clearedLots:[{ lot:'LOT-' + (2600 + dpi), qty:100 + dci*20, pdi:'sample' }],
+                 remarks:'' } }, 'sample data');
+        n.dc++;
+      }
+
+      step('Adding the order book');
+      var dueIn = [-6, 4, 18, 35, 52, 70];
+      var qty = [1200, 800, 2000, 600, 1500, 900];
+      for (var oi2 = 0; oi2 < 6; oi2++){
+        var pp = DEMO_PARTS[oi2];
+        await C.idms.saveDoc({ kind:'order', partId:partIds[oi2], status:'Open',
+          docNo: await C.docNumber('so'),
+          data:{ demo:true, partId:partIds[oi2], partNo:'', partName:pp.name,
+                 customerId:custIds[pp.cust], customerName:DEMO_CUSTOMERS[pp.cust].name,
+                 po:'PO-' + (9100 + oi2), qty:qty[oi2], due:demoDate(-dueIn[oi2]),
+                 orderedOn:demoDate(40),
+                 kind: oi2 < 4 ? 'Firm order' : 'Schedule release' } }, 'sample data');
+        n.orders++;
+      }
+
+      /* one sheet left open with a failed check and no containment, so the
+         dashboard and the agents have something real to complain about */
+      var sops = opIds[partIds[0]] || [];
+      if (sops.length){
+        await C.idms.saveDoc({ kind:'self_insp', partId:partIds[0], status:'Open',
+          docNo: await C.docNumber('si'),
+          data:{ demo:true, key:sops[0].id + '|' + demoDate(1) + '|A', partId:partIds[0],
+                 partNo:'', partName:DEMO_PARTS[0].name, processId:sops[0].id,
+                 opNo:sops[0].no, opName:sops[0].name, date:demoDate(1), shift:'A',
+                 operator:'R Kumar', machine:sops[0].mc,
+                 chars:[{ balloon:'1', description:'Bore diameter after finish turn', nominal:32,
+                          upper:'+0.025', lower:'-0.000', unit:'mm', cls:'CC',
+                          gauge:'Bore gauge 25-50mm', frequency:'5 pcs / hour' }],
+                 rounds:[{ at:'09:00', readings:['32.012'], containment:'' },
+                         { at:'11:00', readings:['32.031'], containment:'' }] } }, 'sample data');
+        n.sheets++;
+      }
+
+      say('Loaded ' + [
+        n.customers + ' customers', n.parts + ' parts', n.links + ' priced links',
+        n.ops + ' operations', n.dims + ' characteristics', n.gauges + ' gauges',
+        n.grn + ' goods receipts', n.inward + ' inward inspections', n.setups + ' setups',
+        n.production + ' production bookings', n.pdi + ' lots', n.dc + ' challans',
+        n.orders + ' orders', n.sheets + ' inspection sheet'
+      ].join(', ') + '. Open the <b>Works Dashboard</b> — there is deliberately plenty wrong with ' +
+        'this works for the agents to find.', true);
       loadHome();
-    } catch(e){ say(esc(e.message)); }
+    } catch(e){
+      say('Stopped part way: ' + esc(e.message) + '. Whatever was loaded before that is still ' +
+          'there; remove it and try again.');
+    }
     btn.disabled = false; btn.textContent = 'Load sample data';
   }
 
@@ -1877,26 +2166,35 @@
                                  msg.innerHTML=t; };
     if (!confirm('Remove every record marked as sample data?\n\nReal records are not touched.')) return;
     var btn = document.getElementById('demo-del');
-    btn.disabled = true; btn.textContent = 'Removing…';
+    btn.disabled = true; btn.textContent = 'Removing';
     var gone = 0, kept = 0;
     try {
-      /* dimensions before operations before the part, so nothing is orphaned
-         part-way through if a delete is refused */
-      var kinds = ['dimension','process','cust_part','customer'];
-      for (var i = 0; i < kinds.length; i++) {
+      /* children before parents, so nothing is orphaned part way through */
+      var kinds = ['self_insp','production','setup','pdi','dc','inward','grn','msa','ppap',
+                   'control_plan','pfmea','dimension','process','cust_part','order','gauge',
+                   'agent_run','customer'];
+      for (var i = 0; i < kinds.length; i++){
         var rows = (await C.idms.docs(kinds[i])).filter(function(x){ return (x.data||{}).demo; });
-        for (var k = 0; k < rows.length; k++) {
+        for (var k = 0; k < rows.length; k++){
           try { await C.idms.patchDoc({ docId:rows[k].doc_id, remove:true,
                   reason:'sample data removed' }); gone++; }
           catch(e){ kept++; }
         }
       }
+      /* deleting a part takes its records with it, which is right — but if
+         anybody added real work to a sample part, that goes too, so say so */
       var demoParts = (await C.idms.parts()).filter(function(p){ return (p.data||{}).demo; });
+      var cascaded = 0;
+      for (var j = 0; j < demoParts.length; j++){
+        try {
+          var r = await C.idms.removePart(demoParts[j].part_id, 'sample data removed');
+          gone++; cascaded += C.num(r.alsoRemoved);
+        } catch(e){ kept++; }
+      }
       say('Removed ' + gone + ' sample record(s)' +
-          (kept ? ', ' + kept + ' could not be removed' : '') + '.' +
-          (demoParts.length ? ' The sample <b>part</b> is still there — parts are deliberately not ' +
-            'deletable from this screen, because a part carries an APQP history. Remove it in the ' +
-            'database if you need to.' : ''), true);
+          (kept ? ', ' + kept + ' could not be removed' : '') +
+          (cascaded ? ', and ' + cascaded + ' record(s) that were attached to a sample part' : '') +
+          '. Nothing attached to a real part has been touched.', !kept);
       loadHome();
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Remove sample data';

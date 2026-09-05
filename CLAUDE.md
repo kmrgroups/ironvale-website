@@ -195,7 +195,8 @@ Parts (+ customer/price links), Process Master (routing), Dimensions Master,
 Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
 Self Inspection, Inward Inspection, Calibration, MSA, PDI, GRN, Delivery
 Challan, Production Entry, Sales Plan, Production Plan, Works Dashboard,
-Non-conformance & 8D, Open Actions, Audit Readiness Agent,
+Non-conformance & 8D, Open Actions, Machine Addition, Preventive Maintenance,
+Audit Readiness Agent,
 NPD Agent, Supplier Watch
 Agent, Review Agent Work, Agent Run Log, People (HR records), Company Profile.
 
@@ -253,7 +254,25 @@ statement plus the part's actual route and characteristics. It is told it is not
 deciding anything, that "operator error" and "lack of training" are not root
 causes, and it **never overwrites a field a person has already written in**.
 
-The **Audit Readiness Agent** reads corrective actions too: overdue ones (high
+**Machines and maintenance.** Machines were free text on the routings, which
+costs two things quietly: the same machine spelled two ways splits the loading
+report, and a breakdown pattern spread across those spellings is invisible. The
+machine screen therefore **starts from what the routings actually say** — every
+name in use that is not on the list is shown with where it appears, to be adopted
+or corrected — rather than starting a clean list nobody uses. Sub-contract
+operations are excluded. The same machine twice is refused whatever the case.
+
+Preventive maintenance derives the due date from last-maintained plus interval,
+and **counts breakdowns and lost minutes from the production bookings** where the
+downtime reason was a machine breakdown — nobody types a downtime figure twice.
+Recording maintenance demands a name; a record with nobody against it cannot be
+evidenced. A machine that has broken down more than once *and* is overdue is
+called out specifically.
+
+The **Audit Readiness Agent** reads machines too: overdue or never-maintained
+machines (high when the machine is critical, with its breakdown count quoted),
+and machine names on a routing that are not on the machine list. It reads
+corrective actions too: overdue ones (high
 past 30 days), ones with no containment recorded, and **rejections of 10 or more
 with no non-conformance raised at all** — the parts were scrapped and nothing
 followed it to a cause. It also reads production and orders: runs booked

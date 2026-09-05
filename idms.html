@@ -307,6 +307,66 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="entry_machine">
+      <div class="card">
+        <h4>Machines</h4>
+        <div class="hint" style="margin-bottom:10px;">Machines are typed by hand on the routings
+          today, so the same machine spelled two ways splits the loading report and hides a
+          breakdown pattern. Anything the routings and production bookings mention that is not on
+          this list is shown below to be adopted or corrected.</div>
+        <div id="mm-unknown"></div>
+        <div class="row four" style="margin-top:10px;">
+          <div><label>Machine name</label><input id="mm-name" placeholder="exactly as it is on the routing"></div>
+          <div><label>Code</label><input id="mm-code" placeholder="left blank = generated"></div>
+          <div><label>Make and model</label><input id="mm-make"></div>
+          <div><label>Location</label><input id="mm-loc"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Type</label><select id="mm-type">
+            <option>CNC turning centre</option><option>CNC machining centre</option>
+            <option>Conventional lathe</option><option>Milling machine</option>
+            <option>Grinder</option><option>Drilling machine</option>
+            <option>Press</option><option>Inspection</option><option>Other</option></select></div>
+          <div><label>Criticality</label><select id="mm-crit">
+            <option>Critical — no alternative</option><option>Important — one alternative</option>
+            <option>General</option></select></div>
+          <div><label>Maintenance every (days)</label><input class="num" id="mm-freq" value="90"></div>
+          <div><label>Last maintained</label><input type="date" id="mm-last"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="mm-save">Save machine</button>
+          <button class="btn" id="mm-clear">Clear</button>
+        </div>
+        <div class="note" id="mm-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Machine list</h4>
+        <div id="mm-list"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="maintenance">
+      <div class="card">
+        <h4>Preventive Maintenance</h4>
+        <div class="hint" style="margin-bottom:10px;">What is due, what is overdue, and what each
+          machine has actually cost you in breakdown time. The breakdown figures are counted from
+          the production bookings — nobody types them twice.</div>
+        <div class="row four">
+          <div><label>Period for breakdowns</label><select id="pm-days">
+            <option value="30">Last 30 days</option><option value="90" selected>Last 90 days</option>
+            <option value="365">Last year</option></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="pm-run">Refresh</button></div>
+          <div style="align-self:end;"><button class="btn" id="pm-print">Print schedule</button></div>
+        </div>
+        <div class="note" id="pm-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><div id="pm-summary"></div></div>
+      <div class="card">
+        <h4>Schedule</h4>
+        <div id="pm-body"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="ncr">
       <div class="card">
         <h4>Non-conformance and corrective action</h4>
@@ -1318,7 +1378,7 @@
     ['entry','✏️','Entry','Key Process',[
       ['form','🔑','Key Process Input'],['entry_supplier','🏭','Supplier Addition'],
       ['entry_rawmat','🪨','Raw Material Addition'],['entry_customer','👤','Customer Addition',1],
-      ['entry_machine','⚙','Machine Addition']]],
+      ['entry_machine','⚙','Machine Addition',1]]],
     ['pm','🎛','Process Master','Configuration',[
       ['process_master','🎛','Process Master Configuration',1],['machine_process','⚙','Machine & Process'],
       ['pfmea_master','🧠','PFMEA Master'],['dim_entry','📐','Dimensions Master',1],
@@ -1350,6 +1410,7 @@
       ['report_pdi','✓','PDI Report',1],['report_setup_approval','✅','Setup Approval Report',1],
       ['report_tool_history','🔧','Tool History Card'],
       ['report_machine_checksheet','⚙','Machine Check Sheet'],
+      ['maintenance','🔧','Preventive Maintenance',1],
       ['report_calibration','📏','Calibration Report',1],['report_msa','🔬','MSA Study Report',1],
       ['report_control_charts','📊','Control Charts']]],
     ['capa','🛠','Corrective Action','Problems and what was done about them',[
@@ -1449,6 +1510,8 @@
     if (s === 'sales_plan')     loadOrders();
     if (s === 'dashboard')      loadDashboard();
     if (s === 'ncr')            loadNcr();
+    if (s === 'entry_machine')  loadMachines();
+    if (s === 'maintenance')    loadMaintenance();
     if (s === 'ncr_open')       loadOpenActions();
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
@@ -2362,6 +2425,314 @@
 'or inspection only, give a PARAM block with TOOL: not applicable.';
 
     return prompt;
+  }
+
+  /* ---------------- Machines and preventive maintenance ----------------
+     Machines have been free text on the routings until now, which quietly costs
+     two things: the same machine spelled two ways splits the loading report, and
+     a breakdown pattern spread across those spellings is invisible. So the first
+     job of this screen is to show what the routings actually say and let it be
+     reconciled, rather than starting a clean list nobody uses.
+
+     The breakdown figures are counted from the production bookings. Nothing here
+     asks anybody to type a downtime figure a second time. */
+  var machines = [], mmEditing = null, pmRows = [];
+
+  async function loadMachines(){
+    try { machines = await C.idms.docs('machine'); } catch(e){ machines = []; }
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    drawUnknownMachines();
+    drawMachineList();
+  }
+
+  function machineNamesInUse(){
+    var seen = {};
+    processes.forEach(function(o){
+      var m = String((o.data||{}).machine||'').trim();
+      if (m && (o.data||{}).where !== 'sub') (seen[m] = seen[m] || { routings:0, bookings:0 }).routings++;
+    });
+    prodDocs.forEach(function(r){
+      var m = String((r.data||{}).machine||'').trim();
+      if (m) (seen[m] = seen[m] || { routings:0, bookings:0 }).bookings++;
+    });
+    return seen;
+  }
+
+  function drawUnknownMachines(){
+    var host = document.getElementById('mm-unknown');
+    var seen = machineNamesInUse();
+    var known = machines.map(function(m){ return String((m.data||{}).name||'').toLowerCase(); });
+    var unknown = Object.keys(seen).filter(function(n){
+      return known.indexOf(n.toLowerCase()) < 0; });
+    if (!unknown.length){
+      host.innerHTML = machines.length
+        ? '<div class="note good">Every machine named on a routing or a production booking is on ' +
+          'the list.</div>'
+        : '<div class="hint">Nothing on the routings yet.</div>';
+      return;
+    }
+    host.innerHTML = '<div class="note"><b>' + unknown.length + ' machine name(s) are in use but ' +
+      'not on the list.</b> Adopt the ones that are real machines. If two of them are the same ' +
+      'machine spelled differently, fix the routing rather than adding it twice — that is what ' +
+      'splits a loading report.</div>' +
+      '<table class="t"><thead><tr><th>Name as it appears</th><th class="r">On routings</th>' +
+      '<th class="r">On bookings</th><th></th></tr></thead><tbody>' +
+      unknown.map(function(n){
+        return '<tr><td><b>'+esc(n)+'</b></td>' +
+          '<td class="r">'+seen[n].routings+'</td><td class="r">'+seen[n].bookings+'</td>' +
+          '<td><button class="btn mm-adopt" data-n="'+esc(n)+'">Adopt</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.mm-adopt').forEach(function(b){
+      b.addEventListener('click', function(){
+        document.getElementById('mm-name').value = b.dataset.n;
+        document.getElementById('mm-name').scrollIntoView({ behavior:'smooth', block:'center' });
+      });
+    });
+  }
+
+  function pmDue(m){
+    var v = m.data||{};
+    if (!v.lastMaintained) return null;
+    var d = new Date(v.lastMaintained);
+    d.setDate(d.getDate() + (C.num(v.frequencyDays) || 90));
+    return d;
+  }
+  function pmState(m){
+    if (m.status === 'Retired') return { key:'retired', label:'Retired', cls:'new' };
+    var due = pmDue(m);
+    if (!due) return { key:'never', label:'Never maintained', cls:'ab' };
+    var days = Math.floor((due - new Date()) / 86400000);
+    if (days < 0) return { key:'overdue', label:'Overdue by ' + (-days) + ' days', cls:'ab', days:days };
+    if (days <= 14) return { key:'due', label:'Due in ' + days + ' days', cls:'sample', days:days };
+    return { key:'ok', label:'In date', cls:'series', days:days };
+  }
+
+  function drawMachineList(){
+    var host = document.getElementById('mm-list');
+    if (!machines.length){
+      host.innerHTML = '<div class="empty"><b>No machines on the list yet</b>' +
+        'Adopt the names above, or add one by hand.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Code</th><th>Machine</th><th>Type</th>' +
+      '<th>Location</th><th class="c">Criticality</th><th>Last maintained</th><th>Due</th>' +
+      '<th class="c">Status</th><th></th></tr></thead><tbody>' +
+      machines.map(function(m){
+        var v = m.data||{}, st = pmState(m), due = pmDue(m);
+        return '<tr><td><b>'+esc(m.doc_no||'')+'</b></td>' +
+          '<td>'+esc(v.name||'')+'<div class="hint">'+esc(v.make||'')+'</div></td>' +
+          '<td class="hint">'+esc(v.type||'')+'</td>' +
+          '<td class="hint">'+esc(v.location||'—')+'</td>' +
+          '<td class="c hint">'+esc(String(v.criticality||'').split(' —')[0])+'</td>' +
+          '<td class="hint">'+(v.lastMaintained?C.fmtDate(v.lastMaintained):'—')+'</td>' +
+          '<td class="hint">'+(due?C.fmtDate(due):'—')+'</td>' +
+          '<td class="c"><span class="badge '+st.cls+'">'+esc(st.label)+'</span></td>' +
+          '<td><button class="btn mm-edit" data-id="'+esc(m.doc_id)+'">Edit</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.mm-edit').forEach(function(b){
+      b.addEventListener('click', function(){ editMachine(b.dataset.id); });
+    });
+  }
+
+  function editMachine(id){
+    var m = machines.filter(function(x){ return x.doc_id === id; })[0];
+    if (!m) return;
+    mmEditing = id;
+    var v = m.data||{}, set = function(f,x){ document.getElementById(f).value = x == null ? '' : x; };
+    set('mm-name', v.name); set('mm-code', m.doc_no); set('mm-make', v.make);
+    set('mm-loc', v.location); set('mm-freq', v.frequencyDays); set('mm-last', v.lastMaintained);
+    if (v.type) document.getElementById('mm-type').value = v.type;
+    if (v.criticality) document.getElementById('mm-crit').value = v.criticality;
+    var msg = document.getElementById('mm-msg');
+    msg.style.display=''; msg.className='note';
+    msg.innerHTML = 'Editing <b>'+esc(v.name||'')+'</b>. ' +
+      ((v.history||[]).length) + ' maintenance record(s) on file.';
+  }
+
+  function clearMachineForm(){
+    mmEditing = null;
+    ['mm-name','mm-code','mm-make','mm-loc','mm-last'].forEach(function(id){
+      document.getElementById(id).value=''; });
+    document.getElementById('mm-freq').value = '90';
+    document.getElementById('mm-msg').style.display='none';
+  }
+
+  async function saveMachine(){
+    var msg = document.getElementById('mm-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    if (!g('mm-name')) return say('The machine needs a name, spelled the way the routing spells it.');
+    if (!C.num(g('mm-freq'))) return say('A maintenance interval is needed, or nothing is ever due.');
+
+    /* the same machine twice is the very thing this screen exists to stop */
+    var clash = machines.filter(function(m){
+      return m.doc_id !== mmEditing &&
+        String((m.data||{}).name||'').toLowerCase() === g('mm-name').toLowerCase(); })[0];
+    if (clash) return say('<b>'+esc(g('mm-name'))+'</b> is already on the list as <b>'+
+      esc(clash.doc_no)+'</b>. Two entries for one machine split its loading and its breakdowns.');
+
+    try {
+      var prev = mmEditing ? (machines.filter(function(m){ return m.doc_id===mmEditing; })[0]||{}) : {};
+      var code = g('mm-code') || prev.doc_no || await C.docNumber('mc');
+      await C.idms.saveDoc({ docId: mmEditing || '', kind:'machine', docNo: code,
+        status: prev.status || 'Active',
+        data: Object.assign({}, prev.data||{}, {
+          name:g('mm-name'), make:g('mm-make'), location:g('mm-loc'),
+          type:document.getElementById('mm-type').value,
+          criticality:document.getElementById('mm-crit').value,
+          frequencyDays:C.num(g('mm-freq')), lastMaintained:g('mm-last') }) },
+        mmEditing ? 'machine updated' : 'machine added');
+      say('Saved as <b>'+esc(code)+'</b>.', true);
+      clearMachineForm();
+      await loadMachines();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  /* ---- the maintenance screen ---- */
+  async function loadMaintenance(){
+    try { machines = await C.idms.docs('machine'); } catch(e){ machines = []; }
+    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    runMaintenance();
+  }
+
+  function runMaintenance(){
+    var days = C.num(document.getElementById('pm-days').value) || 90;
+    var since = Date.now() - days*86400000;
+    var byMachine = {};
+    prodDocs.forEach(function(r){
+      var v = r.data||{};
+      if (new Date(v.date||0).getTime() < since) return;
+      var m = String(v.machine||'').trim();
+      if (!m) return;
+      var s = byMachine[m] || (byMachine[m] = { breakdowns:0, breakMins:0, allDown:0, made:0 });
+      s.made += C.num(v.made);
+      s.allDown += C.num(v.downtime);
+      if (String(v.downtimeReason||'') === 'Machine breakdown'){
+        s.breakdowns++; s.breakMins += C.num(v.downtime);
+      }
+    });
+
+    pmRows = machines.map(function(m){
+      var v = m.data||{}, st = pmState(m), due = pmDue(m);
+      var b = byMachine[String(v.name||'').trim()] || { breakdowns:0, breakMins:0, allDown:0, made:0 };
+      return { id:m.doc_id, code:m.doc_no, name:v.name||'', type:v.type||'',
+        crit:v.criticality||'', last:v.lastMaintained||'', due:due, state:st,
+        breakdowns:b.breakdowns, breakMins:b.breakMins, allDown:b.allDown, made:b.made };
+    }).sort(function(a,b){
+      var rank = { never:0, overdue:1, due:2, ok:3, retired:4 };
+      if (rank[a.state.key] !== rank[b.state.key]) return rank[a.state.key] - rank[b.state.key];
+      return b.breakMins - a.breakMins;
+    });
+    drawMaintenance(days);
+  }
+
+  function drawMaintenance(days){
+    var sum = document.getElementById('pm-summary');
+    var host = document.getElementById('pm-body');
+    var over = pmRows.filter(function(r){ return r.state.key === 'overdue' || r.state.key === 'never'; }).length;
+    var soon = pmRows.filter(function(r){ return r.state.key === 'due'; }).length;
+    var mins = pmRows.reduce(function(t,r){ return t + r.breakMins; }, 0);
+    var events = pmRows.reduce(function(t,r){ return t + r.breakdowns; }, 0);
+
+    sum.innerHTML = '<div class="stat">' +
+      [['Machines', pmRows.length], ['Overdue or never done', over], ['Due within a fortnight', soon],
+       ['Breakdowns', events], ['Lost to breakdown', C.qty(mins) + ' min']]
+      .map(function(x){ return '<div class="b"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'; }).join('') +
+      '</div>' +
+      (over ? '<div class="note bad" style="margin-top:12px;"><b>' + over + ' machine(s) are overdue ' +
+        'or have never been maintained.</b> On a critical machine that is a breakdown waiting to ' +
+        'happen, and a breakdown is worth more lost hours than the service.</div>' : '');
+
+    if (!pmRows.length){
+      host.innerHTML = '<div class="empty"><b>No machines on the list</b>' +
+        'Add them on Machine Addition — the names already on your routings are offered there.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Code</th><th>Machine</th>' +
+      '<th class="c">Criticality</th><th>Last</th><th>Due</th><th class="c">Status</th>' +
+      '<th class="r">Breakdowns</th><th class="r">Lost</th><th class="r">Made</th><th></th>' +
+      '</tr></thead><tbody>' + pmRows.map(function(r){
+        return '<tr><td><b>'+esc(r.code)+'</b></td>' +
+          '<td>'+esc(r.name)+'<div class="hint">'+esc(r.type)+'</div></td>' +
+          '<td class="c hint">'+esc(String(r.crit).split(' —')[0])+'</td>' +
+          '<td class="hint">'+(r.last?C.fmtDate(r.last):'—')+'</td>' +
+          '<td class="hint">'+(r.due?C.fmtDate(r.due):'—')+'</td>' +
+          '<td class="c"><span class="badge '+r.state.cls+'">'+esc(r.state.label)+'</span></td>' +
+          '<td class="r">'+(r.breakdowns?'<b style="color:var(--bad)">'+r.breakdowns+'</b>':'—')+'</td>' +
+          '<td class="r">'+(r.breakMins?C.qty(r.breakMins)+' m':'—')+'</td>' +
+          '<td class="r">'+C.qty(r.made)+'</td>' +
+          '<td><button class="btn pm-do" data-id="'+esc(r.id)+'">Record</button></td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<div class="hint" style="margin-top:8px;">Breakdowns and lost minutes are counted from the ' +
+      'production bookings over the last ' + days + ' days, where the downtime reason was a machine ' +
+      'breakdown.</div>' +
+      (pmRows.some(function(r){ return r.breakdowns >= 2 && r.state.key !== 'ok'; })
+        ? '<div class="note bad" style="margin-top:10px;">A machine that has broken down more than ' +
+          'once and is also overdue for maintenance is telling you something. Service it before it ' +
+          'chooses its own moment.</div>' : '');
+
+    host.querySelectorAll('.pm-do').forEach(function(b){
+      b.addEventListener('click', function(){ recordMaintenance(b.dataset.id); });
+    });
+  }
+
+  async function recordMaintenance(id){
+    var m = machines.filter(function(x){ return x.doc_id === id; })[0];
+    if (!m) return;
+    var msg = document.getElementById('pm-msg');
+    var when = prompt('Date the maintenance was done (YYYY-MM-DD):',
+      new Date().toISOString().slice(0,10));
+    if (when === null) return;
+    var by = prompt('Who did it?');
+    if (by === null) return;
+    if (!String(by).trim()){
+      msg.style.display=''; msg.className='note bad';
+      msg.textContent = 'A maintenance record with nobody against it cannot be evidenced.';
+      return;
+    }
+    var found = prompt('What was found or replaced? (leave blank if nothing)') || '';
+    var hist = ((m.data||{}).history || []).slice();
+    hist.unshift({ on:when, by:String(by).trim(), found:String(found).trim() });
+    try {
+      await C.idms.saveDoc({ docId:m.doc_id, kind:'machine', docNo:m.doc_no, status:m.status,
+        data: Object.assign({}, m.data, { lastMaintained:when, history:hist }) },
+        'maintenance recorded by ' + String(by).trim());
+      msg.style.display=''; msg.className='note good';
+      msg.innerHTML = 'Recorded. Next due in ' + ((m.data||{}).frequencyDays || 90) + ' days.';
+      await loadMaintenance();
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent = e.message; }
+  }
+
+  function printMaintenance(){
+    if (!pmRows.length) { toast('No machines to print.'); return; }
+    var days = C.num(document.getElementById('pm-days').value) || 90;
+    var over = pmRows.filter(function(r){
+      return r.state.key === 'overdue' || r.state.key === 'never'; }).length;
+    C.openReport({
+      title:'Preventive Maintenance Schedule', kind:'Maintenance', landscape:true,
+      subtitle:pmRows.length + ' machine(s) · breakdowns over the last ' + days + ' days',
+      sections:[
+        { type:'table', title:'Schedule',
+          columns:[{label:'Code'},{label:'Machine'},{label:'Type'},{label:'Criticality'},
+            {label:'Last maintained'},{label:'Due'},{label:'Status'},
+            {label:'Breakdowns',align:'r'},{label:'Lost minutes',align:'r'},{label:'Made',align:'r'}],
+          rows: pmRows.map(function(r){
+            return [esc(r.code), esc(r.name), esc(r.type), esc(String(r.crit).split(' —')[0]),
+              r.last ? C.fmtDate(r.last) : '—', r.due ? C.fmtDate(r.due) : '—',
+              (r.state.key === 'overdue' || r.state.key === 'never')
+                ? { v:'<b>'+esc(r.state.label)+'</b>', cls:'ab' } : esc(r.state.label),
+              r.breakdowns || '—', r.breakMins ? C.qty(r.breakMins) : '—', C.qty(r.made)];
+          }),
+          note: over
+            ? over + ' machine(s) are overdue or have never been maintained. Breakdown figures are ' +
+              'counted from the production bookings, not estimated.'
+            : 'Every machine is within its maintenance interval. Breakdown figures are counted from ' +
+              'the production bookings, not estimated.' },
+        { type:'text', title:'Signatures',
+          body:'Maintenance                              Production                              Plant head' }
+      ]});
   }
 
   /* ---------------- Non-conformance and 8D ----------------
@@ -4600,6 +4971,37 @@
               'optimistic. Correct the routing or find out why.', 'process_master', r.doc_no);
         }
       });
+      /* machines: overdue maintenance, and names on the routings that are not on
+         the machine list — the second one splits a loading report silently */
+      var mcs = await C.idms.docs('machine');
+      looked.machines = mcs.length;
+      mcs.filter(function(m){ return m.status !== 'Retired'; }).forEach(function(m){
+        var v = m.data||{}, st = pmState(m);
+        if (st.key === 'never' || st.key === 'overdue'){
+          var breaks = prods.filter(function(r){
+            return String((r.data||{}).machine||'').trim() === String(v.name||'').trim() &&
+              String((r.data||{}).downtimeReason||'') === 'Machine breakdown'; }).length;
+          add(/^Critical/.test(v.criticality||'') ? 'high' : 'med','Maintenance',
+            (v.name||'') + ' is ' + st.label.toLowerCase(),
+            (breaks ? 'It has already broken down ' + breaks + ' time(s). ' : '') +
+            'A breakdown costs more hours than the service does.',
+            'maintenance', m.doc_no);
+        }
+      });
+      if (mcs.length){
+        var known = mcs.map(function(m){ return String((m.data||{}).name||'').toLowerCase(); });
+        var used = {};
+        procs.forEach(function(o){
+          var nm = String((o.data||{}).machine||'').trim();
+          if (nm && (o.data||{}).where !== 'sub') used[nm] = 1; });
+        Object.keys(used).forEach(function(nm){
+          if (known.indexOf(nm.toLowerCase()) < 0)
+            add('low','Maintenance', '"' + nm + '" is on a routing but is not on the machine list',
+              'Its hours and its breakdowns are counted against nothing, and a second spelling of ' +
+              'the same machine splits the loading report.', 'entry_machine', '');
+        });
+      }
+
       /* a rejection with no non-conformance behind it, and actions that have
          stalled — the two halves of a corrective action system that is not working */
       var ncs = await C.idms.docs('ncr');
@@ -8203,6 +8605,12 @@
     });
     f.click();
   });
+
+  document.getElementById('mm-save').addEventListener('click', saveMachine);
+  document.getElementById('mm-clear').addEventListener('click', clearMachineForm);
+  document.getElementById('pm-run').addEventListener('click', loadMaintenance);
+  document.getElementById('pm-days').addEventListener('change', runMaintenance);
+  document.getElementById('pm-print').addEventListener('click', printMaintenance);
 
   document.getElementById('nc-raise').addEventListener('click', raiseNcr);
   document.getElementById('nc-refresh').addEventListener('click', loadNcr);

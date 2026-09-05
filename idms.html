@@ -307,6 +307,37 @@
       </div>
     </div>
 
+    <div class="panel" data-panel="agent_audit">
+      <div class="card">
+        <h4>Audit Readiness Agent</h4>
+        <div class="hint" style="margin-bottom:10px;">Reads across every module and reports what an
+          auditor would find. The checks themselves are arithmetic, not opinion — the agent runs
+          them, then asks the AI only to put them in the order a person should work through.
+          <b>It changes nothing.</b> Every finding links to the screen where it can be fixed.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="ag-run">Run the check</button>
+          <button class="btn" id="ag-explain">Ask the AI to prioritise</button>
+          <button class="btn" id="ag-print">Print findings</button>
+        </div>
+        <div class="note" id="ag-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><div id="ag-summary"></div></div>
+      <div class="card">
+        <h4>Findings</h4>
+        <div id="ag-body"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="agent_runs">
+      <div class="card">
+        <h4>Agent Run Log</h4>
+        <div class="hint" style="margin-bottom:10px;">Every agent run is recorded: what it looked at,
+          what it found, who started it. An agent that cannot be audited has no place in a quality
+          system.</div>
+        <div id="ag-runs"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="report_pdi">
       <div class="card">
         <h4>Pre-Despatch Inspection</h4>
@@ -1028,6 +1059,11 @@
       ['cft_master','👥','CFT Members Master'],['doc_master_pfd','📑','Master List — PFD'],
       ['doc_master_pfmea','📑','Master List — PFMEA'],['doc_master_cp','📑','Master List — Control Plan'],
       ['users','👥','User Management']]],
+    ['agent','🤖','Agents','Autonomous checks and drafting',[
+      ['agent_audit','🔎','Audit Readiness Agent',1],
+      ['agent_npd','🗂','NPD Agent'],
+      ['agent_supplier','🏭','Supplier Watch Agent'],
+      ['agent_runs','📜','Agent Run Log',1]]],
     ['dash','📊','Dashboard','Overview',[
       ['home','🏠','Home',1],['dashboard','📊','Production Dashboard'],['accounts_pl','💹','P&L']]]
   ];
@@ -1098,6 +1134,8 @@
     if (s === 'report_calibration') loadCalibration();
     if (s === 'report_msa')     loadMsa();
     if (s === 'report_pdi')     loadPdi();
+    if (s === 'agent_audit')    loadAgent();
+    if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
   }
 
@@ -1597,6 +1635,328 @@
       loadHome();
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Remove sample data';
+  }
+
+  /* ---------------- Agents ----------------
+     Two rules hold everywhere an agent appears in this system.
+
+     One: the agent does the looking, a person does the deciding. Nothing here
+     signs, approves, releases or despatches. The checks below are arithmetic
+     over records that already exist — they are not the AI's opinion, and they
+     give the same answer every time. The AI is asked only to put the findings in
+     a sensible order and say why, which is a judgement it is actually good at
+     and which nothing depends on being exactly right.
+
+     Two: every run is recorded. An agent whose work cannot be audited has no
+     place in a quality system. */
+  var agentFindings = [], agentRuns = [], agentNarrative = '';
+
+  var SEV = { high:{ rank:3, label:'Must fix', cls:'ab' },
+              med:{ rank:2, label:'Should fix', cls:'sample' },
+              low:{ rank:1, label:'Worth knowing', cls:'new' } };
+
+  async function loadAgent(){
+    document.getElementById('ag-summary').innerHTML =
+      '<div class="empty"><b>Nothing checked yet</b>Press <b>Run the check</b>. It reads every ' +
+      'module and reports what an auditor would find.</div>';
+    document.getElementById('ag-body').innerHTML = '';
+  }
+
+  /* Every check is a small, stated rule. If one of these is wrong it can be
+     argued about on its own terms, which is the point. */
+  async function runAuditAgent(){
+    var msg = document.getElementById('ag-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'');
+                                 msg.innerHTML=t; };
+    var btn = document.getElementById('ag-run');
+    btn.disabled = true; btn.textContent = 'Reading…';
+    say('Reading parts, routings, dimensions, PFMEAs, control plans, gauges, studies, ' +
+        'inspections and receipts.');
+
+    var f = [], looked = {};
+    var add = function(sev, area, what, why, go, ref){
+      f.push({ sev:sev, area:area, what:what, why:why, go:go, ref:ref||'' });
+    };
+    try {
+      var parts = await C.idms.parts();
+      var procs = await C.idms.docs('process');
+      var dims  = await C.idms.docs('dimension');
+      var fmeas = await C.idms.docs('pfmea');
+      var cps   = await C.idms.docs('control_plan');
+      var gs    = await C.idms.docs('gauge');
+      var msas  = await C.idms.docs('msa');
+      var ppaps = await C.idms.docs('ppap');
+      var sis   = await C.idms.docs('self_insp');
+      var grns  = await C.idms.docs('grn');
+      var inws  = await C.idms.docs('inward');
+      var pdis  = await C.idms.docs('pdi');
+      looked = { parts:parts.length, operations:procs.length, dimensions:dims.length,
+        pfmea:fmeas.length, controlPlans:cps.length, gauges:gs.length, studies:msas.length,
+        ppap:ppaps.length, selfInspection:sis.length, receipts:grns.length, lots:pdis.length };
+
+      var live = parts.filter(function(p){ return p.lifecycle !== 'New'; });
+      var byPart = function(list, pid){ return list.filter(function(x){
+        return (x.data||{}).partId === pid || x.part_id === pid; }); };
+
+      live.forEach(function(p){
+        var nm = p.part_no + ' ' + (p.part_name||'');
+        var ops = byPart(procs, p.part_id);
+        if (!ops.length){
+          add('high','Routing', nm + ' has no routing',
+            'A part past New with no operations cannot have a flow, a PFMEA or a control plan behind it.',
+            'process_master', p.part_no);
+          return;
+        }
+        ops.forEach(function(o){
+          var od = dims.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
+          if (!od.length)
+            add('med','Dimensions', nm + ' — operation ' + (o.data||{}).opNo + ' has no characteristics',
+              'The control plan will leave this step uncontrolled and the PFMEA has nothing to reason about.',
+              'dim_entry', p.part_no);
+        });
+        byPart(dims, p.part_id).forEach(function(d){
+          var q = d.data||{};
+          if (q.cls && (!q.gauge || !q.frequency))
+            add('high','Dimensions', nm + ' — ' + (q.cls) + ' characteristic "' + (q.description||'') +
+              '" has no ' + (!q.gauge ? 'gauge' : 'check frequency'),
+              'A special characteristic that cannot be measured or has no frequency is a control plan ' +
+              'the shop floor cannot work to.', 'dim_entry', p.part_no);
+        });
+
+        var fm = byPart(fmeas, p.part_id)[0];
+        if (!fm)
+          add('high','PFMEA', nm + ' has no PFMEA',
+            'Required for any part past New, and the control plan should be derived from it.',
+            'fmea', p.part_no);
+        else {
+          if (!(fm.data||{}).reviewedBy)
+            add('med','PFMEA', nm + ' PFMEA is an unsigned draft',
+              'A PFMEA nobody has signed is not evidence of a cross-functional review.',
+              'fmea', fm.doc_no);
+          ((fm.data||{}).rows||[]).forEach(function(r){
+            if (C.num(r.sev)*C.num(r.occ)*C.num(r.det) >= 100 && !String(r.action||'').trim())
+              add('high','PFMEA', nm + ' — RPN ' + (r.sev*r.occ*r.det) + ' on "' +
+                (r.failureMode||'') + '" with no action',
+                'A high risk left without an action is the finding an auditor writes up first.',
+                'fmea', fm.doc_no);
+          });
+        }
+
+        var cp = byPart(cps, p.part_id)[0];
+        if (!cp)
+          add('high','Control plan', nm + ' has no control plan',
+            'Nothing tells the shop floor what to check, how often, or what to do when it is out.',
+            'control_plan', p.part_no);
+        else {
+          if (!(cp.data||{}).approvedBy)
+            add('med','Control plan', nm + ' control plan is unapproved',
+              'The shop floor is being held to a document nobody has approved.',
+              'control_plan', cp.doc_no);
+          if ((cp.data||{}).fmeaApproved === false)
+            add('low','Control plan', nm + ' control plan came from an unsigned PFMEA',
+              'The two documents cross-check at audit; one signed and one not is a weak position.',
+              'control_plan', cp.doc_no);
+        }
+
+        /* a special characteristic with no measurement study */
+        var ccs = byPart(dims, p.part_id).filter(function(d){ return (d.data||{}).cls === 'CC'; });
+        if (ccs.length && !byPart(msas, p.part_id).length)
+          add('med','MSA', nm + ' has ' + ccs.length + ' critical characteristic(s) and no gauge study',
+            'Readings on a critical characteristic are only as good as the gauge proving them.',
+            'report_msa', p.part_no);
+
+        if (p.lifecycle === 'Series'){
+          var pp = byPart(ppaps, p.part_id)[0];
+          if (!pp || !(pp.data||{}).signedBy)
+            add('high','PPAP', nm + ' is in series production with no signed warrant',
+              'Series parts are being shipped without a submitted PPAP.', 'ppap', p.part_no);
+        }
+      });
+
+      msas.filter(function(m){ return m.status === 'Not acceptable'; }).forEach(function(m){
+        add('high','MSA', 'Gauge study ' + m.doc_no + ' on ' + ((m.data||{}).gaugeDesc||'') +
+          ' is not acceptable',
+          'Readings from that gauge cannot be relied on to accept or reject parts.',
+          'report_msa', m.doc_no);
+      });
+
+      gs.filter(function(g){ return g.status !== 'Withdrawn'; }).forEach(function(g){
+        var st = calState(g);
+        if (st.key === 'overdue' || st.label === 'Never calibrated')
+          add('high','Calibration', (g.data||{}).description + ' is ' + st.label.toLowerCase(),
+            'Every reading taken with it since its last valid calibration is in question.',
+            'report_calibration', g.doc_no);
+        else if (st.key === 'due')
+          add('low','Calibration', (g.data||{}).description + ' — ' + st.label,
+            'Book it before it lapses.', 'report_calibration', g.doc_no);
+      });
+
+      /* gauges the control plans call for that are not on the register */
+      var named = {};
+      cps.forEach(function(cp){ ((cp.data||{}).rows||[]).forEach(function(r){
+        var t = String(r.technique||'').trim();
+        if (t && !/^n\/?a$/i.test(t)) named[t.toLowerCase()] = t; }); });
+      var have = gs.filter(function(g){ return g.status !== 'Withdrawn'; })
+        .map(function(g){ return String((g.data||{}).description||'').toLowerCase(); });
+      Object.keys(named).forEach(function(k){
+        if (!have.some(function(h){ return h && (h.indexOf(k.slice(0,12))>=0 || k.indexOf(h.slice(0,12))>=0); }))
+          add('med','Calibration', '"' + named[k] + '" is called for by a control plan but is not on ' +
+            'the gauge register',
+            'The plan asks for a measurement nobody can prove is valid.', 'report_calibration', '');
+      });
+
+      sis.forEach(function(sh){
+        var v = sh.data||{}, chars = v.chars||[];
+        (v.rounds||[]).forEach(function(r){
+          var bad = r.readings.some(function(x,i){ return x !== '' && chars[i] && verdict(chars[i], x) !== 'ok'; });
+          if (bad && !String(r.containment||'').trim())
+            add('high','Self inspection', (v.partNo||'') + ' ' + C.fmtDate(v.date) + ' shift ' +
+              (v.shift||'') + ' — failed check at ' + r.at + ' with no containment',
+              'Nobody has said what happened to the parts made since the last good check.',
+              'report_self_inspection', sh.doc_no);
+        });
+        if (sh.status !== 'Closed')
+          add('low','Self inspection', (v.partNo||'') + ' sheet for ' + C.fmtDate(v.date) +
+            ' shift ' + (v.shift||'') + ' is still open',
+            'An open sheet is an incomplete record of that shift.', 'report_self_inspection', sh.doc_no);
+      });
+
+      var inspected = {}; inws.forEach(function(x){ inspected[(x.data||{}).grnId] = true; });
+      grns.filter(function(g){ return !inspected[g.doc_id]; }).forEach(function(g){
+        add('med','Stores', 'Goods receipt ' + g.doc_no + ' from ' + ((g.data||{}).supplier||'') +
+          ' has not been inspected',
+          'Uninspected material should not be issued to production.',
+          'report_inward_inspection', g.doc_no);
+      });
+
+      pdis.filter(function(x){ return x.status !== 'Cleared'; }).forEach(function(x){
+        add('low','Despatch', 'Lot ' + ((x.data||{}).lot||'') + ' of ' + ((x.data||{}).partNo||'') +
+          ' is on hold', 'Nothing from it may be despatched until it is sorted.',
+          'report_pdi', x.doc_no);
+      });
+
+    } catch(e){
+      btn.disabled = false; btn.textContent = 'Run the check';
+      return say('Could not read everything: ' + esc(e.message));
+    }
+
+    f.sort(function(a,b){ return SEV[b.sev].rank - SEV[a.sev].rank; });
+    agentFindings = f; agentNarrative = '';
+    drawAgent(looked);
+
+    try {
+      await C.idms.saveDoc({ kind:'agent_run', partId:'', status:'Completed',
+        docNo: await C.docNumber('agent'),
+        data:{ agent:'Audit readiness', at:new Date().toISOString(), looked:looked,
+               counts:{ high:f.filter(function(x){return x.sev==='high';}).length,
+                        med:f.filter(function(x){return x.sev==='med';}).length,
+                        low:f.filter(function(x){return x.sev==='low';}).length },
+               findings:f } }, 'audit readiness agent run');
+    } catch(e){ /* a failed log must not lose the findings on screen */ }
+
+    say('Checked ' + Object.keys(looked).map(function(k){
+      return looked[k] + ' ' + k.replace(/([A-Z])/g,' $1').toLowerCase(); }).join(', ') + '.', true);
+    btn.disabled = false; btn.textContent = 'Run the check';
+  }
+
+  function drawAgent(looked){
+    var host = document.getElementById('ag-body');
+    var sum = document.getElementById('ag-summary');
+    var hi = agentFindings.filter(function(x){ return x.sev==='high'; }).length;
+    var me = agentFindings.filter(function(x){ return x.sev==='med'; }).length;
+    var lo = agentFindings.filter(function(x){ return x.sev==='low'; }).length;
+
+    sum.innerHTML =
+      '<div class="stat">' +
+      [['Must fix',hi],['Should fix',me],['Worth knowing',lo],
+       ['Records read', looked ? Object.keys(looked).reduce(function(t,k){ return t+looked[k]; },0) : 0]]
+      .map(function(x){ return '<div class="b"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'; }).join('') +
+      '</div>' +
+      (agentNarrative ? '<div class="note" style="margin-top:12px;">' + agentNarrative + '</div>' : '') +
+      (!agentFindings.length
+        ? '<div class="note good" style="margin-top:12px;">Nothing found. Every part past New has a ' +
+          'routing, dimensions, a PFMEA and a control plan; every special characteristic has a gauge ' +
+          'and a frequency; every gauge is in date; nothing is waiting on inspection.</div>' : '');
+
+    if (!agentFindings.length){ host.innerHTML = ''; return; }
+    host.innerHTML = '<table class="t"><thead><tr><th class="c">Priority</th><th>Area</th>' +
+      '<th>Finding</th><th>Why it matters</th><th></th></tr></thead><tbody>' +
+      agentFindings.map(function(x, i){
+        return '<tr><td class="c"><span class="badge '+SEV[x.sev].cls+'">'+SEV[x.sev].label+'</span></td>' +
+          '<td class="hint">'+esc(x.area)+'</td>' +
+          '<td>'+esc(x.what)+(x.ref?'<div class="hint">'+esc(x.ref)+'</div>':'')+'</td>' +
+          '<td class="hint">'+esc(x.why)+'</td>' +
+          '<td><button class="btn ag-go" data-go="'+esc(x.go)+'">Fix</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.ag-go').forEach(function(b){
+      b.addEventListener('click', function(){ go(b.dataset.go); });
+    });
+  }
+
+  /* The AI's part: not what is wrong, but what to do first. Nothing depends on
+     it being exactly right, and the findings stand without it. */
+  async function explainAgent(){
+    var msg = document.getElementById('ag-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    if (!agentFindings.length) return say('Run the check first.');
+    var btn = document.getElementById('ag-explain');
+    btn.disabled = true; btn.textContent = 'Thinking…';
+    var list = agentFindings.map(function(x, i){
+      return (i+1) + '. [' + SEV[x.sev].label + '] ' + x.area + ': ' + x.what; }).join('\n');
+    try {
+      var txt = await C.callAI(
+        'These are the open findings in a Tier-2 automotive machining company\'s quality system, ' +
+        'produced by fixed rules, not by you:\n\n' + list + '\n\n' +
+        'In no more than 120 words of plain prose, say what to work through first and why. ' +
+        'Group things that are one job. Name the finding numbers you mean. Do not invent findings, ' +
+        'do not repeat the list back, and do not reassure — if the position is bad, say so.',
+        { maxTokens: 400 });
+      agentNarrative = '<b>Where to start.</b> ' + esc(C.stripMarkup(txt));
+      drawAgent(null);
+      say('', true); msg.style.display = 'none';
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Ask the AI to prioritise';
+  }
+
+  async function loadAgentRuns(){
+    var host = document.getElementById('ag-runs');
+    try { agentRuns = await C.idms.docs('agent_run'); } catch(e){ agentRuns = []; }
+    if (!agentRuns.length){
+      host.innerHTML = '<div class="empty"><b>No agent has run yet</b></div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Run</th><th>Agent</th><th>When</th>' +
+      '<th class="r">Must fix</th><th class="r">Should fix</th><th class="r">Worth knowing</th>' +
+      '<th>Records read</th></tr></thead><tbody>' + agentRuns.slice(0,30).map(function(r){
+        var v = r.data||{}, c = v.counts||{};
+        return '<tr><td><b>'+esc(r.doc_no||'')+'</b></td><td>'+esc(v.agent||'')+'</td>' +
+          '<td class="hint">'+new Date(v.at||r.updated_at).toLocaleString('en-GB')+'</td>' +
+          '<td class="r">'+(c.high||0)+'</td><td class="r">'+(c.med||0)+'</td>' +
+          '<td class="r">'+(c.low||0)+'</td>' +
+          '<td class="hint">'+Object.keys(v.looked||{}).map(function(k){
+            return v.looked[k]+' '+k; }).join(', ')+'</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function printAgent(){
+    if (!agentFindings.length) { toast('Run the check first.'); return; }
+    var hi = agentFindings.filter(function(x){ return x.sev==='high'; }).length;
+    C.openReport({
+      title:'Audit Readiness — open findings', kind:'Agent report', landscape:true,
+      subtitle:agentFindings.length + ' finding(s), ' + hi + ' must fix',
+      sections:[
+        { type:'table', title:'Findings',
+          columns:[{label:'Priority'},{label:'Area'},{label:'Finding'},{label:'Reference'},
+                   {label:'Why it matters'}],
+          rows: agentFindings.map(function(x){
+            return [ x.sev==='high' ? { v:'<b>Must fix</b>', cls:'ab' } : SEV[x.sev].label,
+              esc(x.area), esc(x.what), esc(x.ref||'—'), esc(x.why) ]; }),
+          note:'Produced by fixed rules over the records held in this system on ' +
+               new Date().toLocaleString('en-GB') + '. Nothing was changed.' },
+        agentNarrative ? { type:'text', title:'Where to start',
+          body: agentNarrative.replace(/<[^>]+>/g,'') } : null
+      ].filter(Boolean) });
   }
 
   /* ---------------- Pre-despatch inspection ----------------
@@ -5092,6 +5452,10 @@
     });
     f.click();
   });
+
+  document.getElementById('ag-run').addEventListener('click', runAuditAgent);
+  document.getElementById('ag-explain').addEventListener('click', explainAgent);
+  document.getElementById('ag-print').addEventListener('click', printAgent);
 
   document.getElementById('pd-load').addEventListener('click', loadPdiChars);
   document.getElementById('pd-sample').addEventListener('input', function(){

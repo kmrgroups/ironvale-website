@@ -22,10 +22,36 @@ Neon database**. Elixir Tec (elixirtec.com) and Devasya Udyoga
 (devasyaudyoga.com) run identical files. A third customer means a copy of the
 repo, one `DATABASE_URL`, and filling in their profile.
 
-**The two deployed `index.html` files must stay byte-identical.** Anything that
-differs between companies belongs in the database, never in the code.
+**Only the Ironvale/Elixir Tec package is being shipped from v90 onward.** The
+Devasya deployment shares the same files; copy `index.html`, `idms.html`,
+`core.js` and `core.css` across when it is next updated. Anything that differs
+between companies belongs in the database, never in the code.
 
 ---
+
+## Agents — the two rules
+
+Agentic features are wanted throughout this platform, and these two rules hold
+wherever one appears.
+
+**1. The agent looks; a person decides.** No agent signs, approves, releases,
+despatches or posts G-code. Where an agent produces something, it produces a
+*draft* in the state an unreviewed draft would be in. The Audit Readiness Agent
+is read-only and says so on its own screen.
+
+**2. The rules are arithmetic; the AI only ranks.** Every finding the audit agent
+reports comes from a fixed rule over records that already exist — same input,
+same answer, and each rule can be argued with on its own terms. The AI is asked
+one thing, separately and optionally: what to work through first. Nothing depends
+on that being exactly right, and the findings stand without it. Do not move a
+check into the prompt to "make it smarter".
+
+Every run writes an `agent_run` record with what it read and what it found. An
+agent whose work cannot be audited has no place in a quality system.
+
+Planned next: **NPD Agent** (chain routing → dimensions → PFD → PFMEA → control
+plan for one part, pausing at each step, writing only drafts) and **Supplier
+Watch Agent** (rejection rates, repeat non-conformances, overdue inspections).
 
 ## Hard rules
 
@@ -121,7 +147,8 @@ idempotent — once sent, the button is replaced by a confirmation.
 Parts (+ customer/price links), Process Master (routing), Dimensions Master,
 Process Flow Diagram, PFMEA, Control Plan, CNC Programme, PPAP, Setup Approval,
 Self Inspection, Inward Inspection, Calibration, MSA, PDI, GRN, Delivery
-Challan, People (HR records), Company Profile.
+Challan, Audit Readiness Agent, Agent Run Log, People (HR records), Company
+Profile.
 
 **Setup approval** is the first shop-floor screen and the pattern for the rest:
 what gets checked comes from the **control plan** for that operation (falling

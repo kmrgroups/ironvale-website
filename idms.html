@@ -2836,8 +2836,19 @@
 
     document.addEventListener('click', function(){ closeAllGroups(bar); });
     /* A fixed-position dropdown doesn't move with the page, so close it on
-       scroll/resize rather than letting it drift away from its button. */
-    window.addEventListener('scroll', function(){ closeAllGroups(bar); }, true);
+       scroll/resize rather than letting it drift away from its button. But
+       the dropdown's own list can scroll internally when it's taller than
+       the space below its button (see positionDrop above) — that scroll
+       fires a 'scroll' event on the .drop element itself, which still
+       passes through this capturing listener on its way down from window to
+       the target. Without the guard below, the very first scroll tick
+       inside an open dropdown closed it immediately, which is what made the
+       list look unscrollable rather than merely closing too eagerly. */
+    window.addEventListener('scroll', function(e){
+      var t = e.target;
+      if (t && t.nodeType === 1 && t.closest('.mgroup.open .drop')) return;
+      closeAllGroups(bar);
+    }, true);
     window.addEventListener('resize', function(){ closeAllGroups(bar); });
   }
 

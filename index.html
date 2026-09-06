@@ -919,7 +919,7 @@
       <h2 class="t-title" id="d-contact-title">Contact</h2>
       <p class="t-subtitle" id="d-contact-sub"></p>
       <div class="contact-list">
-        <div class="contact-item"><span class="k">Address</span><span id="d-contact-address"></span></div>
+        <div class="contact-item"><span class="k" id="d-contact-address-k">Address</span><span id="d-contact-address"></span></div>
         <div class="contact-item"><span class="k">Phone</span><span id="d-contact-phone"></span></div>
         <div class="contact-item"><span class="k">Email</span><span id="d-contact-email"></span></div>
       </div>
@@ -1976,6 +1976,8 @@ I would recommend this company as a place to work</textarea></div></div>
       <div class="field-hint" id="logo-source-note" style="margin-top:8px;"></div>
 
       <div class="field" style="margin-top:24px;"><label>Registered Address</label></div>
+      <div class="field"><label>Plant / Location Label</label><input type="text" id="in-co-plantLabel" placeholder="Plant-1 or Head Office">
+        <div class="field-hint">Shown on the website next to this address, e.g. “Plant-1”, “Head Office”. Leave blank to show plain “Address”.</div></div>
       <div class="field"><label>Address Line 1</label><input type="text" id="in-co-addr1"></div>
       <div class="field"><label>Address Line 2</label><input type="text" id="in-co-addr2"></div>
       <div class="field"><label>City</label><input type="text" id="in-co-city"></div>
@@ -1984,7 +1986,7 @@ I would recommend this company as a place to work</textarea></div></div>
       <div class="field"><label>PIN / ZIP</label><input type="text" id="in-co-pin"></div>
 
       <div class="field" style="margin-top:24px;"><label>Plants / Works</label>
-        <div class="field-hint" style="margin-top:0;margin-bottom:12px;">Add as many locations as you need. Those marked “show on documents” appear on quotations and cost sheets.</div>
+        <div class="field-hint" style="margin-top:0;margin-bottom:12px;">Add as many locations as you need, and give each one a Plant label (e.g. “Plant-1”, “Plant-2”, “Plant-3”). “Show on website” controls the Contact section at the bottom of the site; “Show on documents” controls quotations and cost sheets — the two can be switched independently.</div>
       </div>
       <div id="list-plants"></div>
       <button type="button" class="add-btn" id="add-plants">+ Add Plant</button>
@@ -2535,6 +2537,7 @@ I would recommend this company as a place to work</textarea></div></div>
     company:{
       legalName:"",displayName:"",tagline:"",regNumber:"",
       addr1:"",addr2:"",city:"",state:"",country:"",pin:"",
+      plantLabel:"",
       plantName:"",plantAddr:"",
       plants:[],
       useWebsiteLogo:true,
@@ -2698,7 +2701,7 @@ I would recommend this company as a place to work</textarea></div></div>
         // carry an older single-plant entry into the new list
         if(!data.company.plants.length && (data.company.plantName||data.company.plantAddr)){
           data.company.plants=[{id:'p1',name:data.company.plantName||'Plant 1',
-            addr:data.company.plantAddr||'',city:'',state:'',pin:'',phone:'',showOnQuote:true}];
+            addr:data.company.plantAddr||'',city:'',state:'',pin:'',phone:'',showOnQuote:true,showOnWebsite:true}];
         }
         data.quoteCfg=Object.assign({},DEFAULTS.quoteCfg,j.data.quoteCfg||{});
         data.costBase=Object.assign({},DEFAULTS.costBase,j.data.costBase||{});
@@ -2846,7 +2849,7 @@ I would recommend this company as a place to work</textarea></div></div>
   }
   function renderPlantsPublic(){
     const el=document.getElementById('public-plants'); if(!el) return;
-    const list=plantsForDocuments();
+    const list=plantsForWebsite();
     el.innerHTML=list.length?`<div class="contact-list" style="margin-top:20px;">`+
       list.map(p=>`<div class="contact-item"><span class="k">${esc(p.name||'Works')}</span>
         <span>${esc(plantLine(p).replace(new RegExp('^'+(p.name||'')+',\\s*'),''))}</span></div>`).join('')+
@@ -3026,6 +3029,7 @@ I would recommend this company as a place to work</textarea></div></div>
     const co=CO();
     const regAddr=companyAddressLines().join(', ');
     setText('d-contact-address', data.contactAddress || regAddr || '');
+    setText('d-contact-address-k', (data.company&&data.company.plantLabel) || 'Address');
     setText('d-contact-phone', data.contactPhone || co.phone || co.mobile || '');
     setText('d-contact-email', data.contactEmail || co.rfqEmail || co.email || '');
     renderPlantsPublic();
@@ -10891,6 +10895,9 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
   function plantsForDocuments(){
     return ((CO().plants)||[]).filter(p=>p.showOnQuote!==false&&(p.name||p.addr));
   }
+  function plantsForWebsite(){
+    return ((CO().plants)||[]).filter(p=>p.showOnWebsite!==false&&(p.name||p.addr));
+  }
   function plantLine(p){
     return [p.name,p.addr,[p.city,p.state].filter(Boolean).join(', '),p.pin,p.phone]
       .filter(Boolean).join(', ');
@@ -10901,26 +10908,33 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     host.innerHTML=plants.map((p,pi)=>`<div class="list-item">
       <div class="list-item-head"><span>Plant ${pi+1}</span>
         <button type="button" class="item-delete pl-del" data-pi="${pi}">Delete</button></div>
-      <div class="field"><label>Plant Name</label><input type="text" class="pl-in" data-pi="${pi}" data-k="name" value="${esc(p.name)}" placeholder="Plant 2 — Unit II"></div>
+      <div class="field"><label>Plant Label</label><input type="text" class="pl-in" data-pi="${pi}" data-k="name" value="${esc(p.name)}" placeholder="Plant-2"></div>
       <div class="field"><label>Address</label><textarea class="pl-in" data-pi="${pi}" data-k="addr" rows="2">${esc(p.addr)}</textarea></div>
       <div class="cs-row"><div><label>City</label><input type="text" class="pl-in" data-pi="${pi}" data-k="city" value="${esc(p.city)}"></div>
         <div><label>State</label><input type="text" class="pl-in" data-pi="${pi}" data-k="state" value="${esc(p.state)}"></div></div>
       <div class="cs-row" style="margin-top:10px;"><div><label>PIN</label><input type="text" class="pl-in" data-pi="${pi}" data-k="pin" value="${esc(p.pin)}"></div>
         <div><label>Phone</label><input type="text" class="pl-in" data-pi="${pi}" data-k="phone" value="${esc(p.phone)}"></div></div>
+      <div class="toggle-row"><span>Show on website</span>
+        <div class="switch ${p.showOnWebsite===false?'':'on'} pl-web" data-pi="${pi}"></div></div>
       <div class="toggle-row"><span>Show on quotations &amp; cost sheets</span>
         <div class="switch ${p.showOnQuote===false?'':'on'} pl-vis" data-pi="${pi}"></div></div>
     </div>`).join('')||'<p class="field-hint" style="margin-bottom:12px;">No plants added yet.</p>';
 
     host.querySelectorAll('.pl-in').forEach(inp=>inp.addEventListener('input',()=>{
-      CO().plants[+inp.dataset.pi][inp.dataset.k]=inp.value; markDirty();
+      CO().plants[+inp.dataset.pi][inp.dataset.k]=inp.value; renderPlantsPublic(); markDirty();
     }));
     host.querySelectorAll('.pl-del').forEach(b=>b.addEventListener('click',()=>{
-      CO().plants.splice(+b.dataset.pi,1); renderPlantsAdmin(); markDirty();
+      CO().plants.splice(+b.dataset.pi,1); renderPlantsAdmin(); renderPlantsPublic(); markDirty();
     }));
     host.querySelectorAll('.pl-vis').forEach(sw=>sw.addEventListener('click',()=>{
       const p=CO().plants[+sw.dataset.pi];
       p.showOnQuote=p.showOnQuote===false;
       sw.classList.toggle('on',p.showOnQuote!==false); markDirty();
+    }));
+    host.querySelectorAll('.pl-web').forEach(sw=>sw.addEventListener('click',()=>{
+      const p=CO().plants[+sw.dataset.pi];
+      p.showOnWebsite=p.showOnWebsite===false;
+      sw.classList.toggle('on',p.showOnWebsite!==false); renderPlantsPublic(); markDirty();
     }));
   }
 
@@ -11252,8 +11266,8 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.getElementById('add-plants').addEventListener('click',()=>{
       data.company.plants=data.company.plants||[];
       const n=data.company.plants.length+1;
-      data.company.plants.push({id:'p'+Date.now().toString(36),name:'Plant '+n,
-        addr:'',city:'',state:'',pin:'',phone:'',showOnQuote:true});
+      data.company.plants.push({id:'p'+Date.now().toString(36),name:'Plant-'+n,
+        addr:'',city:'',state:'',pin:'',phone:'',showOnQuote:true,showOnWebsite:true});
       renderPlantsAdmin(); markDirty();
     });
     document.getElementById('wa-test').addEventListener('click',testWhatsapp);

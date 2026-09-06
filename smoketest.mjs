@@ -129,7 +129,7 @@ await wait(250);
 check('signed in — app visible', $('app').style.display === '');
 
 // ---- 3. the menu ----
-const groups = [...window.document.querySelectorAll('#menubar .mgroup > button')].map(b => b.textContent.trim());
+const groups = [...window.document.querySelectorAll('#menubar .mgroup > a')].map(b => b.textContent.trim());
 const want = ['Home', 'Top Management', 'QMS', 'Marketing', 'NPD', 'Purchase & SCM', 'PPC & MMD',
   'Production', 'Quality Assurance', 'Maintenance', 'HRM', 'Accounts', 'Admin'];
 want.forEach(w => check('menu has ' + w, groups.some(g => g.includes(w)), groups.join(' | ')));

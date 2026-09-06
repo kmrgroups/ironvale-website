@@ -39,18 +39,27 @@
   cursor:pointer;padding:0;}
 .themes button.on{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.25);}
 
+/* The menu bar sits in its own stacking context, well above any card or table
+   content in the panels below it (cards never carry a z-index of their own,
+   but this is set generously high on purpose so a future card that does can
+   never trap a dropdown behind it). */
 .menubar{background:var(--white);border-bottom:1px solid var(--line);padding:6px 14px;
-  display:flex;flex-wrap:wrap;gap:3px;position:relative;z-index:50;box-shadow:var(--shadow-sm);}
+  display:flex;flex-wrap:wrap;gap:3px;position:relative;z-index:500;box-shadow:var(--shadow-sm);}
 .mgroup{position:relative;}
-.mgroup>button{background:transparent;border:0;cursor:pointer;padding:8px 13px;border-radius:8px;
+.mgroup>a{background:transparent;border:0;cursor:pointer;padding:8px 13px;border-radius:8px;
   font-family:var(--body);font-weight:600;font-size:12.5px;color:var(--navy);
-  display:flex;align-items:center;gap:6px;}
-.mgroup>button:hover{background:var(--sky-wash);}
-.mgroup.open>button{background:var(--sky-wash);color:var(--sky-deep);}
-.mgroup>button .ar{font-size:9px;opacity:.55;}
-.mgroup .drop{display:none;position:absolute;top:100%;left:0;min-width:268px;background:var(--white);
-  border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-md);padding:7px;z-index:60;}
+  display:flex;align-items:center;gap:6px;text-decoration:none;}
+.mgroup>a:hover{background:var(--sky-wash);}
+.mgroup.open>a{background:var(--sky-wash);color:var(--sky-deep);}
+.mgroup>a .ar{font-size:9px;opacity:.55;}
+/* top:100% + a small gap keeps the dropdown flush under the bar; max-height +
+   scroll stops a long dropdown (HRM, Quality) from running past the bottom of
+   the screen where it would look "cut off" behind the content underneath. */
+.mgroup .drop{display:none;position:absolute;top:100%;left:0;margin-top:2px;min-width:268px;
+  max-width:min(340px,92vw);max-height:min(70vh,520px);overflow-y:auto;background:var(--white);
+  border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-md);padding:7px;z-index:600;}
 .mgroup.open .drop{display:block;}
+.mgroup.edge .drop{left:auto;right:0;}
 .drop .sec{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;
   color:var(--ink-soft);padding:6px 10px 4px;}
 .drop a{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:7px 10px;
@@ -58,6 +67,12 @@
 .drop a:hover{background:var(--sky-wash);}
 .drop a .soon{font-family:var(--mono);font-size:9px;color:var(--ink-soft);
   border:1px solid var(--line);border-radius:100px;padding:1px 7px;}
+
+/* Full-width, no crop and no upscaling blur: the image keeps its own aspect
+   ratio and is simply scaled down by the browser to fit the available width,
+   so it is never stretched, letterboxed or covered by a filter/veil. */
+.hero-banner{width:100%;margin:16px 0 0;border-radius:var(--radius);overflow:hidden;line-height:0;}
+.hero-banner img{display:block;width:100%;height:auto;max-width:100%;}
 
 .banner{position:relative;margin:16px 0;border-radius:var(--radius);overflow:hidden;min-height:210px;
   display:flex;align-items:center;justify-content:center;text-align:center;
@@ -381,7 +396,7 @@
   <div class="top">
     <div class="id">
       <div id="t-logo"></div>
-      <div><div class="co" id="t-co">—</div><div class="tag" id="t-tag"></div></div>
+      <div><div class="co" id="t-co">—</div></div>
     </div>
     <div class="spacer"></div>
     <div class="themes" id="t-themes"></div>
@@ -404,9 +419,18 @@
   <div class="app-body">
 
     <div class="panel on" data-panel="home">
-      <!-- The banner is set in Admin → Home Banner, like every other piece of
-           branding, so it is the same for everyone and not editable from the
-           screen it appears on. -->
+      <!-- The Hero Banner is not IDMS-owned content: it is read live from the
+           website's own Admin Panel → Website → Hero → Hero Banner (the same
+           image the public site's hero section uses), so it stays a single
+           source of truth and needs no separate upload here. It is shown at
+           its native quality — no crop, no filter, no overlay — and simply
+           scales with the available width. -->
+      <div class="hero-banner" id="hero-banner" style="display:none;">
+        <img id="hb-img" alt="">
+      </div>
+      <!-- The banner below is set in Admin → Home Banner, like every other
+           piece of branding, so it is the same for everyone and not editable
+           from the screen it appears on. -->
       <div class="banner">
         <img class="bg" id="bn-img" style="display:none;" alt="">
         <div class="veil" id="bn-veil" style="display:none;"></div>
@@ -2954,38 +2978,74 @@
     LABEL[it[0]] = it[2]; ICON[it[0]] = it[1]; if (it[3]) LIVE[it[0]] = 1;
   });});
 
+  /* Every menu/sub-menu entry is a real <a href="#s=..."> so the browser's own
+     right-click menu ("Open Link in New Tab" / "Open Link in New Window") works
+     on it like any ordinary link — the href alone is enough for that, the
+     browser never asks our JS. A plain left-click still runs the app's own
+     in-page navigation via navigate(), which is what most people use day to
+     day; only the click handler calls preventDefault, so ctrl/cmd-click,
+     middle-click and the browser's own context menu are left alone and open a
+     fresh tab that lands on the same screen (see the hash read in start()). */
   function drawMenu(){
     var bar = document.getElementById('menubar');
-    bar.innerHTML = '<div class="mgroup"><button data-home="1">🏠 Home</button></div>' +
+    bar.innerHTML = '<div class="mgroup"><a href="#s=home" data-home="1">🏠 Home</a></div>' +
       MENU.map(function(g,gi){
         var items = g[4].filter(function(it){ return isPermitted(it[0]); });
         if (!items.length) return '';
-        return '<div class="mgroup" data-gi="'+gi+'"><button>'+g[1]+' '+esc(g[2])+
-          ' <span class="ar">▼</span></button><div class="drop"><div class="sec">'+esc(g[3])+'</div>'+
+        var firstLive = items.filter(function(it){ return it[3]; })[0] || items[0];
+        return '<div class="mgroup" data-gi="'+gi+'"><a href="#s='+firstLive[0]+'" class="mg-toggle">'+g[1]+' '+esc(g[2])+
+          ' <span class="ar">▼</span></a><div class="drop"><div class="sec">'+esc(g[3])+'</div>'+
           items.map(function(it){
-            return '<a data-s="'+it[0]+'"><span>'+it[1]+' '+esc(it[2])+'</span>'+
+            return '<a href="#s='+it[0]+'" data-s="'+it[0]+'"><span>'+it[1]+' '+esc(it[2])+'</span>'+
               (it[3]?'':'<span class="soon">soon</span>')+'</a>';
           }).join('')+'</div></div>';
       }).join('');
-    bar.querySelector('[data-home]').addEventListener('click', function(){ go('home'); });
-    bar.querySelectorAll('.mgroup[data-gi] > button').forEach(function(b){
+    bar.querySelector('[data-home]').addEventListener('click', function(e){
+      e.preventDefault();
+      bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
+      navigate('home');
+    });
+    bar.querySelectorAll('.mgroup[data-gi] > a.mg-toggle').forEach(function(b){
       b.addEventListener('click', function(e){
+        e.preventDefault();
         e.stopPropagation();
         var g = b.parentNode, was = g.classList.contains('open');
         bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
-        if (!was) g.classList.add('open');
+        if (!was){
+          g.classList.add('open');
+          /* flip the dropdown to hang from the right edge of its button when
+             opening it left-aligned would run it off the side of the screen */
+          var drop = g.querySelector('.drop'), r = drop.getBoundingClientRect();
+          g.classList.toggle('edge', r.right > window.innerWidth);
+        }
       });
     });
     bar.querySelectorAll('.drop a').forEach(function(a){
-      a.addEventListener('click', function(){
+      a.addEventListener('click', function(e){
+        e.preventDefault();
         bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
-        go(a.dataset.s);
+        navigate(a.dataset.s);
       });
     });
     document.addEventListener('click', function(){
       bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
     });
   }
+
+  /* Keeps the URL's hash in step with whichever screen is open, so the address
+     itself names the page: right-clicking any menu link and choosing "Open
+     Link in New Tab/Window" opens a fresh copy of the IDMS that lands on that
+     exact screen once signed in (see the hash read at the end of start()),
+     and the Back/Forward buttons move between screens too. */
+  function navigate(s){
+    var wantHash = '#s=' + s;
+    if (location.hash !== wantHash) history.pushState(null, '', wantHash);
+    go(s);
+  }
+  window.addEventListener('popstate', function(){
+    var s = (location.hash || '').replace(/^#s=/, '') || 'home';
+    go(s);
+  });
 
   /* An administrator (role 'developer') always sees everything. Anyone else
      sees everything too UNLESS an administrator has switched restrictAccess
@@ -8797,7 +8857,32 @@
 
   /* ---------------- home ---------------- */
   var settings = {};
+  /* Reads the website's own content record — the same one its Admin Panel →
+     Website → Hero tab writes to (site_content, served by /api/content). The
+     endpoint's GET is public by design (the public site reads it with no
+     token), so the IDMS can read it too without needing a session for it.
+     Called every time Home is opened, so anything added, changed, replaced or
+     removed from that admin screen shows up here the next time a user lands
+     on Home — no separate IDMS upload, no redeploy. */
+  async function loadHeroBanner(){
+    var host = document.getElementById('hero-banner'), img = document.getElementById('hb-img');
+    try {
+      var res = await fetch('/api/content');
+      var j = await res.json();
+      var d = (j && j.data) || {};
+      if (d.heroBannerDataUrl) {
+        img.src = d.heroBannerDataUrl;
+        img.alt = d.heroHeadline || '';
+        host.style.display = '';
+      } else {
+        host.style.display = 'none';
+      }
+    } catch (e) {
+      host.style.display = 'none'; // no banner set, or the site content isn't reachable — fail quiet, Home still works
+    }
+  }
   async function loadHome(){
+    loadHeroBanner();
     var p = C.getProfile();
     document.getElementById('bn-title').textContent = p.name || 'Your company';
     document.getElementById('bn-sub').textContent = (settings.banner && settings.banner.tagline) || '';
@@ -16424,7 +16509,9 @@
     try {
       var p = await C.loadProfile();
       document.getElementById('t-co').textContent = p.name || 'Company not set';
-      document.getElementById('t-tag').textContent = p.address || '';
+      /* The location/address used to be shown here as a line under the company
+         name. It has been removed from the title bar by request — the company
+         profile itself (Admin → Company Profile) still holds the address. */
       document.getElementById('t-logo').innerHTML = p.logo
         ? '<img src="'+p.logo+'" alt="">'
         : '<div class="mark">'+esc(p.docPrefix.slice(0,2))+'</div>';
@@ -16438,7 +16525,12 @@
 
     drawThemes(settings.theme && settings.theme.name);
     drawMenu();
-    go('home');
+    /* Land on whatever screen the URL names — this is what makes "Open Link in
+       New Tab/Window" on a menu item actually open that screen: the new tab
+       loads with #s=<screen> already in the address, and after sign-in here
+       we go straight to it instead of always defaulting to Home. */
+    var wanted = (location.hash || '').replace(/^#s=/, '');
+    go(wanted && LABEL.hasOwnProperty(wanted) ? wanted : 'home');
   }
 
   /* ---------------- wiring ---------------- */

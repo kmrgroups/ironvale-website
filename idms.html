@@ -96,6 +96,22 @@
 .gate .powered a{color:var(--sky-deep);text-decoration:none;font-weight:600;}
 .gate .powered a:hover{text-decoration:underline;}
 
+/* ---- organisation chart ---- */
+.org-co{text-align:center;margin-bottom:18px;}
+.org-co b{font-family:var(--disp);font-size:17px;}
+.org-depts{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+.org-dept{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--white);overflow:hidden;}
+.org-dept > header{background:var(--navy);color:#fff;padding:9px 12px;}
+.org-dept > header b{font-family:var(--disp);font-size:13.5px;display:block;}
+.org-dept > header span{font-family:var(--mono);font-size:10px;opacity:.8;}
+.org-role{border-top:1px solid var(--line);padding:9px 12px;}
+.org-role b{font-size:12.5px;}
+.org-role .who{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.org-role .who span{background:var(--sky-wash);border:1px solid var(--line);border-radius:20px;
+  padding:2px 9px;font-size:11px;}
+.org-role .vac{background:#FBE9E7;border-color:#E5B4AC;color:#8A2F22;}
+.org-empty-dept{padding:11px 12px;font-size:11.5px;color:var(--ink-soft);}
+
 /* ---- KPI dashboards ---- */
 .kpi-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));}
 .kpi-card{margin:0;}
@@ -344,6 +360,93 @@
         <div class="note" id="ap-msg" style="display:none;"></div>
       </div>
       <div id="ap-body"></div>
+    </div>
+
+    <!-- ============ Organisation chart ============ -->
+    <div class="panel" data-panel="org_chart">
+      <div class="card">
+        <h4>Organisation Chart</h4>
+        <div class="hint" style="margin-bottom:10px;">Drawn, not drawn up. Departments, designations
+          and sanctioned posts come from the organisation masters; who holds each one comes from the
+          employee records. Nothing is arranged by hand here, so the chart cannot quietly disagree
+          with the payroll — if somebody is in the wrong box, their record says the wrong thing.</div>
+        <div class="row four">
+          <div><label>Show</label><select id="oc-filter">
+            <option value="all">Every department</option>
+            <option value="vacant">Departments with a vacancy</option></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="oc-run">Redraw</button></div>
+          <div style="align-self:end;"><button class="btn" id="oc-print">Print</button></div>
+        </div>
+        <div class="note" id="oc-msg" style="display:none;"></div>
+      </div>
+      <div id="oc-body"></div>
+    </div>
+
+    <!-- ============ Roles and responsibilities ============ -->
+    <div class="panel" data-panel="roles_resp">
+      <div class="card">
+        <h4>Roles &amp; Responsibilities</h4>
+        <div class="hint" style="margin-bottom:10px;">One controlled sheet per designation: what the
+          role is for, what it is answerable for, and what it may decide without asking. The
+          <b>competence</b> section is not typed here — it is read from the competency map, so the
+          role description and the skill matrix cannot say different things about the same job.</div>
+        <div class="row four">
+          <div><label>Designation</label><select id="rr-desig"></select></div>
+          <div><label>Reports to</label><input id="rr-reports"></div>
+          <div><label>Deputised by</label><input id="rr-deputy"></div>
+          <div style="align-self:end;"><button class="btn" id="rr-print">Print the sheet</button></div>
+        </div>
+        <div class="row" style="margin-top:9px;">
+          <div><label>What the role is for</label><input id="rr-purpose"
+            placeholder="one line — why the post exists"></div>
+        </div>
+        <div class="row" style="margin-top:9px;">
+          <div><label>Answerable for (one per line)</label>
+            <textarea id="rr-resp" rows="6"></textarea></div>
+          <div><label>May decide without asking (one per line)</label>
+            <textarea id="rr-auth" rows="6"></textarea></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="rr-save">Save the sheet</button>
+          <button class="btn green" id="rr-issue">Issue it</button>
+        </div>
+        <div class="note" id="rr-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>Competence this role requires</h4><div id="rr-comp"></div></div>
+      <div class="card"><h4>Who holds it</h4><div id="rr-holders"></div></div>
+      <div class="card"><h4>Sheets on file</h4><div id="rr-list"></div></div>
+    </div>
+
+    <!-- ============ Succession planning ============ -->
+    <div class="panel" data-panel="succession_plan">
+      <div class="card">
+        <h4>Succession Planning</h4>
+        <div class="hint" style="margin-bottom:10px;">Who could do the job if the person doing it
+          stopped tomorrow. Readiness is <b>not an opinion typed in here</b>: each candidate is
+          measured against the competency map for the target role, using the levels on the skill
+          matrix. Ready now means no gap; ready with training means a gap of one level and nothing
+          on safety or quality; not ready means anything more than that.</div>
+        <div class="row four">
+          <div><label>Position</label><select id="sp-pos"></select></div>
+          <div><label>Candidate</label><input id="sp-cand" list="sp-people"></div>
+          <datalist id="sp-people"></datalist>
+          <div style="align-self:end;"><button class="btn" id="sp-add">Add the candidate</button></div>
+          <div style="align-self:end;"><button class="btn" id="sp-print">Print</button></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Reviewed by</label><input id="sp-by"></div>
+          <div style="align-self:end;"><button class="btn gold" id="sp-save">Record the review</button></div>
+        </div>
+        <div class="note" id="sp-msg" style="display:none;"></div>
+      </div>
+      <div id="sp-body"></div>
+      <div class="card">
+        <h4>Where the works is exposed</h4>
+        <div class="hint" style="margin-bottom:10px;">Posts held by one person with nobody ready to
+          take over. Worked out from the sanctioned strength, who is on the roll, and the readiness
+          above — it is not a list somebody maintains.</div>
+        <div id="sp-risk"></div>
+      </div>
     </div>
 
     <!-- ============ Competency map ============ -->
@@ -2103,11 +2206,11 @@
       ['emb_hr','💼','HR & Payroll',1],
       ['emb_me','🪪','My Attendance',1],
       ['skill_matrix','📊','Skill Matrix',1],
-      ['org_chart','🏗','Organisation Chart'],['roles_resp','📋','Roles & Responsibilities'],
+      ['org_chart','🏗','Organisation Chart',1],['roles_resp','📋','Roles & Responsibilities',1],
       ['competency_map','🎯','Competency Mapping',1],['gap_analysis','📈','Skill Gap Analysis',1],
       ['tni','📚','Training Need Identification',1],
       ['training_plan_actual','📅','Training Plan vs Actual',1],
-      ['training_effectiveness','✅','Training Effectiveness',1],['succession_plan','🎖','Succession Planning']]],
+      ['training_effectiveness','✅','Training Effectiveness',1],['succession_plan','🎖','Succession Planning',1]]],
     ['accounts','💹','Accounts','Budget and cost',[
       ['dash_accounts','📊','Accounts Dashboard',1],
       ['accounts_pl','💹','P&L']]],
@@ -2214,6 +2317,9 @@
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
+    if (s === 'org_chart')             loadOrgChart();
+    if (s === 'roles_resp')            loadRoles();
+    if (s === 'succession_plan')       loadSuccession();
     if (s === 'competency_map')        loadCompetency();
     if (s === 'gap_analysis')          loadGapAnalysis();
     if (s === 'tni')                   loadTni();
@@ -2234,6 +2340,541 @@
     if (s === 'kpi_entry')         loadKpiEntry();
     if (s === 'admin_banner')      loadBannerScreen();
     if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
+  }
+
+  /* ================= ORGANISATION CHART =================
+     Drawn from the masters and the employee records, never arranged by hand.
+     A chart somebody positions boxes on is a chart that disagrees with the
+     payroll within a month; this one cannot, because it has no positions of its
+     own to disagree with. If a person is in the wrong box, their record is
+     wrong — which is the useful thing to find out. */
+  async function loadOrgChart(){
+    await compLoad();
+    drawOrgChart();
+  }
+  function holdersOf(desig, dept){
+    return compEmployees.filter(function(e){
+      var d = empData(e);
+      if (String(d.status||'Active') === 'Left') return false;
+      if (String(d.designation||'') !== desig) return false;
+      if (dept && String(d.department||'') !== dept) return false;
+      return true;
+    }).map(function(e){ return empData(e); });
+  }
+  function orgStructure(){
+    var depts = compOrg.filter(function(r){ return (r.data||{}).type === 'department'; });
+    var desigs = compOrg.filter(function(r){ return (r.data||{}).type === 'designation'; });
+    var posns = compOrg.filter(function(r){ return (r.data||{}).type === 'position'; });
+    return depts.map(function(d){
+      var dv = d.data||{};
+      var roles = desigs.filter(function(g){ return (g.data||{}).department === dv.name; })
+        .map(function(g){
+          var gv = g.data||{};
+          var people = holdersOf(gv.name, dv.name);
+          var sanctioned = posns.filter(function(p){
+            var pv = p.data||{};
+            return pv.designation === gv.name && (!pv.department || pv.department === dv.name);
+          }).reduce(function(t,p){ return t + C.num((p.data||{}).sanctioned); }, 0);
+          return { name:gv.name, grade:gv.code||'', people:people, sanctioned:sanctioned,
+                   vacant: Math.max(0, sanctioned - people.length) };
+        });
+      return { name:dv.name, code:dv.code||'', head:dv.reportsTo||'', roles:roles,
+               vacant: roles.reduce(function(t,r){ return t + r.vacant; }, 0),
+               headcount: roles.reduce(function(t,r){ return t + r.people.length; }, 0) };
+    });
+  }
+  function drawOrgChart(){
+    var host = document.getElementById('oc-body'), msg = document.getElementById('oc-msg');
+    var all = orgStructure();
+    if (!all.length){
+      host.innerHTML = '<div class="card"><div class="empty"><b>No departments yet</b>' +
+        'The chart is drawn from the organisation masters. ' +
+        '<a data-goto="dept_master" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">' +
+        'Add them →</a></div></div>';
+      host.querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
+      msg.style.display = 'none';
+      return;
+    }
+    var rows = document.getElementById('oc-filter').value === 'vacant'
+      ? all.filter(function(d){ return d.vacant > 0; }) : all;
+
+    var p = C.getProfile() || {};
+    var unplaced = compEmployees.filter(function(e){
+      var d = empData(e);
+      if (String(d.status||'Active') === 'Left') return false;
+      return !all.some(function(dep){
+        return dep.name === d.department &&
+               dep.roles.some(function(r){ return r.name === d.designation; }); });
+    }).map(function(e){ return empData(e); });
+
+    host.innerHTML = '<div class="card">' +
+      '<div class="org-co"><b>' + esc(p.name || 'The company') + '</b>' +
+      '<div class="hint">' + all.length + ' departments · ' +
+      all.reduce(function(t,d){ return t + d.headcount; }, 0) + ' people on the roll · ' +
+      all.reduce(function(t,d){ return t + d.vacant; }, 0) + ' sanctioned posts unfilled</div></div>' +
+      '<div class="org-depts">' + rows.map(function(d){
+        return '<div class="org-dept"><header><b>' + esc(d.name) + '</b>' +
+          '<span>' + (d.head ? esc(d.head) : 'no head recorded') + ' · ' + d.headcount + ' people</span></header>' +
+          (d.roles.length ? d.roles.map(function(r){
+            return '<div class="org-role"><b>' + esc(r.name) + '</b>' +
+              (r.grade ? ' <span class="hint">' + esc(r.grade) + '</span>' : '') +
+              (r.sanctioned ? '<span class="hint"> · ' + r.people.length + ' of ' + r.sanctioned +
+                ' sanctioned</span>' : '') +
+              '<div class="who">' +
+              r.people.map(function(x){ return '<span>' + esc(x.name||'') + '</span>'; }).join('') +
+              (r.vacant ? Array(r.vacant + 1).join('|').split('|').slice(1)
+                .map(function(){ return '<span class="vac">vacant</span>'; }).join('') : '') +
+              (!r.people.length && !r.vacant ? '<span class="hint">nobody in post</span>' : '') +
+              '</div></div>';
+          }).join('') : '<div class="org-empty-dept">No designations on this department yet.</div>') +
+          '</div>';
+      }).join('') + '</div></div>' +
+      (unplaced.length
+        ? '<div class="card"><h4>People the chart could not place</h4>' +
+          '<div class="hint" style="margin-bottom:9px;">Their record names a department or ' +
+          'designation that is not on the masters, so there is no box to put them in. That is a ' +
+          'record to correct, not a box to invent.</div>' +
+          '<table class="t"><thead><tr><th>Person</th><th>Department on their record</th>' +
+          '<th>Designation on their record</th></tr></thead><tbody>' +
+          unplaced.map(function(x){
+            return '<tr><td><b>'+esc(x.name||'')+'</b></td><td>'+esc(x.department||'—')+'</td>' +
+              '<td>'+esc(x.designation||'—')+'</td></tr>'; }).join('') +
+          '</tbody></table></div>'
+        : '');
+
+    msg.style.display=''; msg.className = 'note' + (unplaced.length ? '' : ' good');
+    msg.innerHTML = unplaced.length
+      ? '<b>' + unplaced.length + ' person/people could not be placed</b> — their department or ' +
+        'designation does not match the masters. They are listed under the chart.'
+      : 'Every person on the roll sits in a box on this chart.';
+  }
+  function printOrgChart(){
+    var all = orgStructure();
+    if (!all.length) { toast('Nothing to print.'); return; }
+    var secs = all.map(function(d){
+      return { type:'table', dense:true,
+        title: d.name + (d.head ? ' — headed by ' + d.head : ''),
+        columns:[{label:'Designation'},{label:'Grade'},{label:'In post',align:'r'},
+                 {label:'Sanctioned',align:'r'},{label:'Vacant',align:'r'},{label:'Who'}],
+        rows: d.roles.map(function(r){
+          return [r.name, r.grade||'—', r.people.length, r.sanctioned||'—', r.vacant||'—',
+                  r.people.map(function(x){ return x.name; }).join(', ') || 'nobody in post']; }) };
+    });
+    secs.push({ type:'text', title:'How this was drawn',
+      body:'Departments, designations and sanctioned strength come from the organisation masters; ' +
+           'who is in post comes from the employee records. No part of this chart is positioned by ' +
+           'hand, so it cannot disagree with the records it is drawn from.' });
+    C.openReport({ title:'Organisation Chart', landscape:true, sections:secs });
+  }
+
+  /* ================= ROLES AND RESPONSIBILITIES =================
+     One sheet per designation. The competence section is READ from the
+     competency map rather than typed, so a role description and the skill matrix
+     cannot end up saying different things about the same job — which is the
+     usual finding when they are maintained separately. */
+  var roleDocs = [], roleOpen = null;
+
+  async function loadRoles(){
+    await compLoad();
+    try { roleDocs = await C.idms.docs('role'); } catch(e){ roleDocs = []; }
+    var sel = document.getElementById('rr-desig'), keep = sel.value;
+    var ds = designations();
+    sel.innerHTML = ds.length
+      ? ds.map(function(d){ return '<option>'+esc(d)+'</option>'; }).join('')
+      : '<option value="">— no designations on the master —</option>';
+    if (keep && ds.indexOf(keep) >= 0) sel.value = keep;
+    openRole();
+  }
+  function openRole(){
+    var d = document.getElementById('rr-desig').value;
+    roleOpen = roleDocs.filter(function(r){ return (r.data||{}).designation === d; })[0] || null;
+    var v = roleOpen ? (roleOpen.data||{}) : {};
+    document.getElementById('rr-purpose').value = v.purpose || '';
+    document.getElementById('rr-reports').value = v.reportsTo || '';
+    document.getElementById('rr-deputy').value = v.deputy || '';
+    document.getElementById('rr-resp').value = (v.responsibilities||[]).join('\n');
+    document.getElementById('rr-auth').value = (v.authorities||[]).join('\n');
+    document.getElementById('rr-msg').style.display = 'none';
+    drawRoleCompetence();
+    drawRoleHolders();
+    drawRoleList();
+  }
+  function roleRequirements(d){
+    return comps.filter(function(c){
+      var v = c.data||{};
+      return v.designation === d && !v.withdrawn; });
+  }
+  function drawRoleCompetence(){
+    var d = document.getElementById('rr-desig').value;
+    var reqs = roleRequirements(d);
+    var host = document.getElementById('rr-comp');
+    host.innerHTML = reqs.length
+      ? '<table class="t"><thead><tr><th>Machine or operation</th><th class="c">Level required</th>' +
+        '<th>Why it matters</th></tr></thead><tbody>' + reqs.map(function(c){
+          var v = c.data||{};
+          return '<tr><td>'+esc(v.thing||'')+'</td>' +
+            '<td class="c"><b>'+C.num(v.level)+'</b><div class="hint">'+
+              esc(LEVEL_NAME[C.num(v.level)]||'')+'</div></td>' +
+            '<td class="hint'+(v.criticality!=='Ordinary'?' bad':'')+'">'+
+              esc(v.criticality||'Ordinary')+'</td></tr>'; }).join('') + '</tbody></table>' +
+        '<div class="hint" style="margin-top:8px;">Read from the competency map. To change what this ' +
+        'role must be able to do, change it there — this sheet then says the same thing by itself.</div>'
+      : '<div class="empty"><b>Nothing required yet</b>Set what this role must be able to do on the ' +
+        '<a data-goto="competency_map" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">' +
+        'competency map</a>.</div>';
+    host.querySelectorAll('[data-goto]').forEach(function(a){
+      a.addEventListener('click', function(){ go(a.dataset.goto); }); });
+  }
+  function drawRoleHolders(){
+    var d = document.getElementById('rr-desig').value;
+    var people = compEmployees.filter(function(e){
+      var x = empData(e);
+      return String(x.status||'Active') !== 'Left' && String(x.designation||'') === d;
+    }).map(function(e){ return empData(e); });
+    var host = document.getElementById('rr-holders');
+    host.innerHTML = people.length
+      ? '<table class="t"><thead><tr><th>Person</th><th>Employee number</th><th>Department</th>' +
+        '</tr></thead><tbody>' + people.map(function(x){
+          return '<tr><td><b>'+esc(x.name||'')+'</b></td><td class="hint">'+esc(x.empId||'—')+'</td>' +
+            '<td class="hint">'+esc(x.department||'—')+'</td></tr>'; }).join('') + '</tbody></table>' +
+        '<div class="hint" style="margin-top:8px;">Everybody here should have been given this sheet. ' +
+        'Issuing it records the date; it does not send it.</div>'
+      : '<div class="hint">Nobody currently holds this designation.</div>';
+  }
+  function drawRoleList(){
+    var host = document.getElementById('rr-list');
+    host.innerHTML = roleDocs.length
+      ? '<table class="t"><thead><tr><th>Designation</th><th>Answerable for</th><th>Status</th>' +
+        '<th>Issued</th></tr></thead><tbody>' + roleDocs.map(function(r){
+          var v = r.data||{};
+          return '<tr><td><b>'+esc(v.designation||'')+'</b></td>' +
+            '<td class="r">'+((v.responsibilities||[]).length)+' point(s)</td>' +
+            '<td>'+esc(r.status||'Draft')+'</td>' +
+            '<td class="hint">'+(v.issuedOn?C.fmtDate(v.issuedOn)+' by '+esc(v.issuedBy||''):'—')+'</td></tr>';
+        }).join('') + '</tbody></table>'
+      : '<div class="hint">No sheets yet.</div>';
+  }
+  function roleFields(){
+    var lines = function(id){
+      return document.getElementById(id).value.split('\n')
+        .map(function(x){ return x.trim(); }).filter(Boolean); };
+    return {
+      designation: document.getElementById('rr-desig').value,
+      purpose: document.getElementById('rr-purpose').value.trim(),
+      reportsTo: document.getElementById('rr-reports').value.trim(),
+      deputy: document.getElementById('rr-deputy').value.trim(),
+      responsibilities: lines('rr-resp'),
+      authorities: lines('rr-auth')
+    };
+  }
+  async function saveRole(issuing){
+    var msg = document.getElementById('rr-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var f = roleFields();
+    if (!f.designation) return say('Choose a designation.');
+    if (issuing){
+      if (!f.purpose) return say('Say in one line why the post exists. A sheet that starts with the ' +
+        'duties and never says what the job is for cannot be used to judge whether it is being done.');
+      if (!f.responsibilities.length) return say('A role with nothing it is answerable for cannot be ' +
+        'issued. If the duties are genuinely elsewhere, say where in the purpose line.');
+      if (!roleRequirements(f.designation).length) return say('This role has no competence set against ' +
+        'it on the competency map, so the sheet would be issued saying nobody needs to be able to do ' +
+        'anything. Set the requirement first — the sheet reads it automatically.');
+    }
+    var prev = roleOpen ? (roleOpen.data||{}) : {};
+    var data = Object.assign({}, prev, f);
+    if (issuing){
+      data.issuedOn = new Date().toISOString().slice(0,10);
+      data.issuedBy = (me && me.user) || '';
+      data.revision = C.num(prev.revision) + 1;
+    }
+    var btn = document.getElementById(issuing ? 'rr-issue' : 'rr-save'); btn.disabled = true;
+    try {
+      var res = await C.idms.saveDoc({ docId: roleOpen ? roleOpen.doc_id : '', kind:'role',
+        docNo: (roleOpen && roleOpen.doc_no) || await C.docNumber('role'),
+        status: issuing ? 'Issued' : 'Draft', data:data },
+        issuing ? 'role sheet issued' : 'role sheet saved');
+      if (!roleOpen) roleOpen = { doc_id:res.docId, doc_no:'', data:{} };
+      roleOpen.data = data; roleOpen.status = issuing ? 'Issued' : 'Draft';
+      say(issuing ? 'Issued as revision ' + data.revision + '.' : 'Saved as a draft.', true);
+      await loadRoles();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+  function printRole(){
+    var f = roleFields();
+    if (!f.designation) { toast('Choose a designation.'); return; }
+    var reqs = roleRequirements(f.designation);
+    var v = roleOpen ? (roleOpen.data||{}) : {};
+    var people = compEmployees.filter(function(e){
+      var x = empData(e);
+      return String(x.status||'Active') !== 'Left' && String(x.designation||'') === f.designation;
+    }).map(function(e){ return empData(e).name; });
+    C.openReport({ title:'Role & Responsibilities — ' + f.designation, sections:[
+      { type:'pairs', title:'The role', rows:[
+        ['Designation', esc(f.designation)], ['Purpose', esc(f.purpose||'—')],
+        ['Reports to', esc(f.reportsTo||'—')], ['Deputised by', esc(f.deputy||'—')],
+        ['Revision', v.revision || 'draft'],
+        ['Issued', v.issuedOn ? C.fmtDate(v.issuedOn) + ' by ' + esc(v.issuedBy||'') : 'not issued'] ] },
+      { type:'table', title:'Answerable for', dense:true, columns:[{label:'#',align:'r'},{label:'Point'}],
+        rows: f.responsibilities.map(function(x,i){ return [i+1, x]; }) },
+      { type:'table', title:'May decide without asking', dense:true,
+        columns:[{label:'#',align:'r'},{label:'Point'}],
+        rows: f.authorities.map(function(x,i){ return [i+1, x]; }) },
+      { type:'table', title:'Competence required', dense:true,
+        columns:[{label:'Machine or operation'},{label:'Level',align:'c'},{label:'Why it matters'}],
+        rows: reqs.map(function(c){
+          var cv = c.data||{};
+          return [cv.thing, C.num(cv.level) + ' — ' + (LEVEL_NAME[C.num(cv.level)]||''),
+                  cv.criticality||'Ordinary']; }),
+        note:'Read from the competency map, not entered on this sheet.' },
+      { type:'text', title:'Currently held by',
+        body: people.length ? people.join(', ') : 'Nobody currently holds this designation.' } ] });
+  }
+
+  /* ================= SUCCESSION PLANNING =================
+     Readiness is measured, not asserted. Each candidate is compared against the
+     competency map for the target role using the levels on the skill matrix:
+
+       ready now              no gap on anything the role requires
+       ready with training    one level short, and nothing on safety or quality
+       not ready              anything more than that
+
+     The rule is printed on the screen so nobody has to guess what "ready" meant
+     when they read the plan a year later. */
+  var succDocs = [], succOpen = null;
+
+  async function loadSuccession(){
+    await compLoad();
+    try { succDocs = await C.idms.docs('succession'); } catch(e){ succDocs = []; }
+    var posns = compOrg.filter(function(r){ return (r.data||{}).type === 'position'; });
+    var sel = document.getElementById('sp-pos'), keep = sel.value;
+    sel.innerHTML = posns.length
+      ? posns.map(function(p){
+          var v = p.data||{};
+          return '<option value="'+esc(p.doc_id)+'">'+esc(v.name||'')+
+            (v.department?' · '+esc(v.department):'')+'</option>'; }).join('')
+      : '<option value="">— no positions on the master —</option>';
+    if (keep && [].slice.call(sel.options).some(function(o){ return o.value === keep; })) sel.value = keep;
+    document.getElementById('sp-people').innerHTML =
+      compEmployees.map(function(e){ return '<option value="'+esc(empData(e).name||'')+'">'; }).join('');
+    openSuccession();
+  }
+
+  /* one candidate against one role */
+  function readinessOf(name, designation){
+    var reqs = roleRequirements(designation);
+    if (!reqs.length) return { verdict:'no requirement set', gaps:[], rank:3 };
+    var gaps = [];
+    reqs.forEach(function(c){
+      var v = c.data||{}, have = levelOf(name, v.thing);
+      var lvl = have ? have.level : 0;
+      if (lvl < C.num(v.level))
+        gaps.push({ thing:v.thing, required:C.num(v.level), actual:lvl,
+                    criticality:v.criticality||'Ordinary' });
+    });
+    if (!gaps.length) return { verdict:'ready now', gaps:gaps, rank:0 };
+    var worst = Math.max.apply(null, gaps.map(function(g){ return g.required - g.actual; }));
+    var critical = gaps.some(function(g){ return g.criticality !== 'Ordinary'; });
+    if (worst <= 1 && !critical) return { verdict:'ready with training', gaps:gaps, rank:1 };
+    return { verdict:'not ready', gaps:gaps, rank:2 };
+  }
+
+  function openSuccession(){
+    var id = document.getElementById('sp-pos').value;
+    succOpen = succDocs.filter(function(s){ return (s.data||{}).positionId === id; })[0] || null;
+    document.getElementById('sp-by').value = succOpen ? ((succOpen.data||{}).reviewedBy || '') : '';
+    drawSuccession();
+    drawSuccessionRisk();
+  }
+  function currentPosition(){
+    var id = document.getElementById('sp-pos').value;
+    return compOrg.filter(function(r){ return r.doc_id === id; })[0] || null;
+  }
+  function drawSuccession(){
+    var host = document.getElementById('sp-body');
+    var pos = currentPosition();
+    if (!pos){
+      host.innerHTML = '<div class="card"><div class="empty"><b>No positions yet</b>' +
+        'Succession is planned against a sanctioned post. ' +
+        '<a data-goto="position_master" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">' +
+        'Add them →</a></div></div>';
+      host.querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
+      return;
+    }
+    var pv = pos.data||{};
+    var incumbents = holdersOf(pv.designation, pv.department);
+    var cands = (succOpen && (succOpen.data||{}).candidates) || [];
+
+    var rows = cands.map(function(c, i){
+      var r = readinessOf(c.name, pv.designation);
+      var cls = r.rank === 0 ? 'series' : r.rank === 1 ? 'sample' : 'ab';
+      return '<tr><td><b>'+esc(c.name)+'</b>'+(c.empId?'<div class="hint">'+esc(c.empId)+'</div>':'')+'</td>' +
+        '<td><span class="badge '+cls+'">'+esc(r.verdict)+'</span></td>' +
+        '<td class="hint">'+(r.gaps.length
+          ? r.gaps.map(function(g){
+              return esc(g.thing)+' — has '+(g.actual||'none')+', needs '+g.required +
+                (g.criticality!=='Ordinary'?' ('+esc(g.criticality)+')':''); }).join('<br>')
+          : 'nothing outstanding')+'</td>' +
+        '<td><button class="btn del sp-rm" data-i="'+i+'">Remove</button></td></tr>';
+    }).join('');
+
+    host.innerHTML = '<div class="card"><h4>' + esc(pv.name||'') + '</h4>' +
+      '<div class="kpi-src">' + esc(pv.designation||'no designation') +
+      (pv.department ? ' · ' + esc(pv.department) : '') + ' · ' +
+      C.num(pv.sanctioned) + ' sanctioned, ' + incumbents.length + ' in post' +
+      (incumbents.length ? ' (' + incumbents.map(function(x){ return esc(x.name||''); }).join(', ') + ')' : '') +
+      '</div>' +
+      (cands.length
+        ? '<table class="t"><thead><tr><th>Candidate</th><th>Readiness</th>' +
+          '<th>What is short</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>' +
+          '<div class="hint" style="margin-top:9px;">Readiness is worked out from the competency map ' +
+          'for ' + esc(pv.designation||'this role') + ' against the skill matrix. Nobody types it, so ' +
+          'it changes on its own when somebody is reassessed or trained.</div>'
+        : '<div class="empty"><b>No candidate named</b>A post with nobody behind it is the whole ' +
+          'point of this screen — add one above, or accept that this is a risk and it will appear ' +
+          'in the list below.</div>') +
+      ((succOpen && (succOpen.data||{}).reviewedOn)
+        ? '<div class="note good" style="margin-top:10px;">Last reviewed ' +
+          C.fmtDate(succOpen.data.reviewedOn) + ' by ' + esc(succOpen.data.reviewedBy||'') + '.</div>'
+        : '') + '</div>';
+
+    host.querySelectorAll('.sp-rm').forEach(function(b){
+      b.addEventListener('click', function(){ removeCandidate(+b.dataset.i); });
+    });
+  }
+
+  function drawSuccessionRisk(){
+    var host = document.getElementById('sp-risk');
+    var posns = compOrg.filter(function(r){ return (r.data||{}).type === 'position'; });
+    if (!posns.length){ host.innerHTML = '<div class="hint">No positions on the master.</div>'; return; }
+    var risks = [];
+    posns.forEach(function(p){
+      var v = p.data||{};
+      var inPost = holdersOf(v.designation, v.department);
+      var plan = succDocs.filter(function(s){ return (s.data||{}).positionId === p.doc_id; })[0];
+      var cands = (plan && (plan.data||{}).candidates) || [];
+      var ready = cands.filter(function(c){ return readinessOf(c.name, v.designation).rank <= 1; });
+      if (inPost.length <= 1 && !ready.length)
+        risks.push({ name:v.name||'', designation:v.designation||'', department:v.department||'',
+                     inPost:inPost.length, who: inPost.map(function(x){ return x.name; }).join(', '),
+                     candidates:cands.length });
+    });
+    host.innerHTML = risks.length
+      ? '<table class="t"><thead><tr><th>Position</th><th>Department</th><th class="r">In post</th>' +
+        '<th>Who</th><th>Candidates named</th></tr></thead><tbody>' + risks.map(function(r){
+          return '<tr><td><b>'+esc(r.name)+'</b><div class="hint">'+esc(r.designation)+'</div></td>' +
+            '<td class="hint">'+esc(r.department||'—')+'</td>' +
+            '<td class="r'+(r.inPost===0?' bad':'')+'">'+r.inPost+'</td>' +
+            '<td class="hint">'+esc(r.who||'nobody')+'</td>' +
+            '<td class="hint'+(r.candidates?'':' bad')+'">'+(r.candidates
+              ? r.candidates + ' named, none ready' : 'none named')+'</td></tr>';
+        }).join('') + '</tbody></table>'
+      : '<div class="note good">Every sanctioned post either has more than one person in it, or has ' +
+        'somebody ready or nearly ready to take it on.</div>';
+  }
+
+  async function writeSuccession(data, reason){
+    var pos = currentPosition();
+    var res = await C.idms.saveDoc({ docId: succOpen ? succOpen.doc_id : '', kind:'succession',
+      docNo: (succOpen && succOpen.doc_no) || await C.docNumber('succ'), status:'Active',
+      data: data }, reason);
+    if (!succOpen) succOpen = { doc_id:res.docId, doc_no:'', data:{} };
+    succOpen.data = data;
+    var idx = succDocs.findIndex(function(x){ return x.doc_id === succOpen.doc_id; });
+    if (idx >= 0) succDocs[idx] = succOpen; else succDocs.push(succOpen);
+    drawSuccession(); drawSuccessionRisk();
+  }
+
+  async function addCandidate(){
+    var msg = document.getElementById('sp-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var pos = currentPosition();
+    if (!pos) return say('Choose a position.');
+    var pv = pos.data||{};
+    var name = document.getElementById('sp-cand').value.trim();
+    if (!name) return say('Name a candidate.');
+    var emp = compEmployees.filter(function(e){
+      return String(empData(e).name||'').toLowerCase() === name.toLowerCase(); })[0];
+    if (!emp) return say('<b>'+esc(name)+'</b> is not on the employee records. A succession plan ' +
+      'naming somebody who does not work here is worse than an empty one.');
+    var ed = empData(emp);
+    if (String(ed.status||'Active') === 'Left')
+      return say(esc(name) + ' has left.');
+
+    var cands = ((succOpen && (succOpen.data||{}).candidates) || []).slice();
+    if (cands.some(function(c){ return String(c.name||'').toLowerCase() === name.toLowerCase(); }))
+      return say(esc(name) + ' is already named for this post.');
+
+    /* the classic empty succession plan: the person already doing the job, named
+       as the person who would do the job if they stopped */
+    var inPost = holdersOf(pv.designation, pv.department);
+    if (inPost.length === 1 &&
+        String(inPost[0].name||'').toLowerCase() === name.toLowerCase())
+      return say('<b>'+esc(name)+'</b> is the only person in this post. Naming them as their own ' +
+        'successor is the plan reading back what it was asked. Name somebody who could take over ' +
+        'if they stopped tomorrow.');
+
+    cands.push({ name:name, empId: ed.empId||'' });
+    var data = Object.assign({}, (succOpen && succOpen.data) || {}, {
+      positionId: pos.doc_id, positionName: pv.name||'', designation: pv.designation||'',
+      department: pv.department||'', candidates: cands });
+    try {
+      await writeSuccession(data, 'succession candidate named');
+      document.getElementById('sp-cand').value = '';
+      var r = readinessOf(name, pv.designation);
+      say(esc(name) + ' added — <b>' + esc(r.verdict) + '</b>' +
+        (r.gaps.length ? ', ' + r.gaps.length + ' thing(s) short' : '') + '.', r.rank === 0);
+    } catch(e){ say(esc(e.message)); }
+  }
+  async function removeCandidate(i){
+    var cands = ((succOpen && (succOpen.data||{}).candidates) || []).slice();
+    cands.splice(i, 1);
+    var data = Object.assign({}, (succOpen && succOpen.data) || {}, { candidates: cands });
+    try { await writeSuccession(data, 'succession candidate removed'); }
+    catch(e){ toast(e.message); }
+  }
+  async function reviewSuccession(){
+    var msg = document.getElementById('sp-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var by = document.getElementById('sp-by').value.trim();
+    if (!by) return say('Say who reviewed it.');
+    if (!succOpen || !((succOpen.data||{}).candidates||[]).length)
+      return say('There is nobody named for this post, so there is nothing to review. An empty plan ' +
+        'signed off is worse than an empty plan, because it looks answered.');
+    var data = Object.assign({}, succOpen.data, {
+      reviewedBy: by, reviewedOn: new Date().toISOString().slice(0,10) });
+    try { await writeSuccession(data, 'succession plan reviewed'); say('Review recorded.', true); }
+    catch(e){ say(esc(e.message)); }
+  }
+  function printSuccession(){
+    var pos = currentPosition();
+    if (!pos) { toast('Choose a position.'); return; }
+    var pv = pos.data||{};
+    var cands = (succOpen && (succOpen.data||{}).candidates) || [];
+    var inPost = holdersOf(pv.designation, pv.department);
+    C.openReport({ title:'Succession Plan — ' + (pv.name||''), sections:[
+      { type:'pairs', title:'The post', rows:[
+        ['Position', esc(pv.name||'')], ['Designation', esc(pv.designation||'—')],
+        ['Department', esc(pv.department||'—')], ['Sanctioned', C.num(pv.sanctioned)],
+        ['In post', inPost.map(function(x){ return esc(x.name||''); }).join(', ') || 'nobody'],
+        ['Reviewed', (succOpen && succOpen.data && succOpen.data.reviewedOn)
+          ? C.fmtDate(succOpen.data.reviewedOn) + ' by ' + esc(succOpen.data.reviewedBy||'')
+          : 'not reviewed'] ] },
+      { type:'table', title:'Candidates', dense:true,
+        columns:[{label:'Candidate'},{label:'Readiness'},{label:'What is short'}],
+        rows: cands.map(function(c){
+          var r = readinessOf(c.name, pv.designation);
+          return [c.name, r.verdict, r.gaps.map(function(g){
+            return g.thing + ' (has ' + (g.actual||'none') + ', needs ' + g.required + ')'; }).join('; ') || '—'];
+        }) },
+      { type:'text', title:'How readiness was decided',
+        body:'Each candidate is compared against the competency map for this role using the levels ' +
+             'on the skill matrix. Ready now means no gap; ready with training means one level short ' +
+             'with nothing on safety or quality; not ready means more than that. No part of it is ' +
+             'entered by hand, so it changes when the person is reassessed or trained.' } ] });
   }
 
   /* ================= THE COMPETENCY CHAIN =================
@@ -12549,6 +13190,20 @@
     document.getElementById('ab-file').value = '';
     bannerPreview();
   });
+
+  document.getElementById('oc-run').addEventListener('click', loadOrgChart);
+  document.getElementById('oc-filter').addEventListener('change', drawOrgChart);
+  document.getElementById('oc-print').addEventListener('click', printOrgChart);
+
+  document.getElementById('rr-desig').addEventListener('change', openRole);
+  document.getElementById('rr-save').addEventListener('click', function(){ saveRole(false); });
+  document.getElementById('rr-issue').addEventListener('click', function(){ saveRole(true); });
+  document.getElementById('rr-print').addEventListener('click', printRole);
+
+  document.getElementById('sp-pos').addEventListener('change', openSuccession);
+  document.getElementById('sp-add').addEventListener('click', addCandidate);
+  document.getElementById('sp-save').addEventListener('click', reviewSuccession);
+  document.getElementById('sp-print').addEventListener('click', printSuccession);
 
   document.getElementById('cm-save').addEventListener('click', saveCompetency);
   document.getElementById('cm-print').addEventListener('click', function(){

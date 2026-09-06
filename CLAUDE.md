@@ -746,15 +746,66 @@ longer exists leaves the select **blank**, and the screen then complains that
 nothing was chosen while an option is plainly visible. Restore a remembered
 choice only after checking it is still in the list.
 
-**Declared but not built:** the screens still marked `soon` in the menu (26 at
-v108, down from 42), each showing an explanation rather than a blank page.
+## Modules added in v109 — organisation, roles, succession
 
-**Suggested order for the rest**: succession planning and the organisation chart,
-both of which now have everything they need (org masters, employees, the
-competency map and the gap analysis) and are small; roles and responsibilities,
-which hangs off the same masters; then the QMS document levels and audit
-calendars — the largest remaining block, and the one that would turn roughly
-twenty entry-only KPIs into computed ones.
+All three finish the HR block and all three are mostly **read** rather than
+maintained.
+
+**Organisation Chart.** Drawn, not drawn up. Departments, designations and
+sanctioned strength come from the organisation masters; who is in post comes from
+the employee records. There are no positions to arrange, so the chart **cannot
+drift from the payroll** — a chart people drag boxes around on disagrees with the
+records within a month. Unfilled sanctioned posts appear as *vacant* chips
+(3 of 5 in post draws two of them), and anybody whose department or designation
+is not on the masters is **listed underneath as unplaceable** rather than dropped:
+that is a record to correct, not a box to invent.
+
+**Roles & Responsibilities.** One controlled sheet per designation. The
+**competence section is read from the competency map**, not typed, so the role
+description and the skill matrix cannot say different things about the same job —
+which is the usual finding when they are kept separately. Issuing is gated: no
+purpose line, no responsibilities, or **no competence set against the role** all
+block it. That last one matters — a role sheet issued with an empty competence
+section says nobody needs to be able to do anything. Issuing stamps a revision,
+the date and the user; saving without issuing leaves it a draft.
+
+**Succession Planning.** Readiness is measured, never typed:
+
+- **ready now** — no gap on anything the role requires
+- **ready with training** — one level short, and nothing on safety or quality
+- **not ready** — anything more
+
+Each candidate is compared against the competency map for the target role using
+the levels on the skill matrix, so a plan updates itself when somebody is
+reassessed or trained. The rule is printed on the screen and on the report, so
+nobody has to guess what "ready" meant a year later.
+
+Three refusals worth keeping: a candidate who is not on the employee records
+(a plan naming somebody who does not work here is worse than an empty one); **the
+sole incumbent named as their own successor** — the classic empty plan, which
+reads back the question it was asked; and signing off a plan with nobody named,
+because an empty plan signed off looks answered.
+
+*Where the works is exposed* is derived too: posts with one person or nobody in
+them and no candidate at ready or nearly-ready. It is not a list anybody
+maintains, so removing the only ready candidate puts the post straight back on it.
+
+Records: kind `role` (one per designation), `succession` (one per position).
+
+**Declared but not built:** the screens still marked `soon` in the menu (23 at
+v109, down from 42), each showing an explanation rather than a blank page.
+
+**Suggested order for the rest.** The QMS block is now the whole of what is left
+that matters: the four document levels, the master lists, the document format
+numbers, signatories and CFT members, and the audit calendars. It is the largest
+remaining piece and the one that would turn roughly **twenty entry-only KPIs into
+computed ones** — every "audit plan vs actual" and "NC closure" figure on the QMS
+dashboard is typed today because there is no audit record to count. Build the
+audit calendar and the NC closure first for that reason; the document levels are
+mostly filing and can follow.
+
+After that: the remaining production screens (DWM, task list, machine check
+sheet, tool history), Key Process Input, P&L, and User Management.
 
 **One item needs a decision before it is built.** `report_inprocess_inspection`
 is still on the menu as `soon`, but **Self Inspection already is in-process
@@ -887,7 +938,10 @@ If you formalise this, keep two habits that mattered:
 2. **Test what matters, not what is easy.** Testing that a fold worked passed
    while the Save button was being folded away with it.
 
-`competencytest.mjs` (42 checks over the v108 chain: the unmatched-name report,
+`orgtest.mjs` (33 checks over the v109 screens: vacancies drawn from sanctioned
+strength, the unplaceable-employee report, the role issuing gates, and readiness
+coming out ready / not ready from the competency map with the sole-incumbent
+refusal). `competencytest.mjs` (42 checks over the v108 chain: the unmatched-name report,
 "never" rather than zero, the duplicate-need refusal, the training rules, and the
 30-day wait with level-on-the-day read out of the assessment history).
 `planningtest.mjs` (24 checks over the v107 modules: two machines with

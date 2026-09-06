@@ -184,7 +184,7 @@ await wait(250);
 $('ke-dept').value = 'production';
 $('ke-dept').dispatchEvent(new window.Event('change'));
 await wait(250);
-$('ke-kpi').value = 'prd_toolbreak';
+$('ke-kpi').value = 'prd_rework';
 $('ke-kpi').dispatchEvent(new window.Event('change'));
 await wait(250);
 const inputs = [...$('ke-form').querySelectorAll('.kpi-in')];
@@ -193,13 +193,13 @@ inputs[0].value = '1500'; inputs[1].value = '900';
 $('ke-save').dispatchEvent(new window.Event('click'));
 await wait(350);
 check('saving reports success', /Saved/.test($('ke-msg').textContent), $('ke-msg').textContent);
-check('the KPI record was written', docs.some(d => d.kind === 'kpi' && d.data.kpiId === 'prd_toolbreak'));
+check('the KPI record was written', docs.some(d => d.kind === 'kpi' && d.data.kpiId === 'prd_rework'));
 
 // saving again must update, not create a second record for the same year
 $('ke-save').dispatchEvent(new window.Event('click'));
 await wait(350);
 check('saving twice does not duplicate the record',
-  docs.filter(d => d.kind === 'kpi' && d.data.kpiId === 'prd_toolbreak').length === 1,
+  docs.filter(d => d.kind === 'kpi' && d.data.kpiId === 'prd_rework').length === 1,
   'count=' + docs.filter(d => d.kind === 'kpi').length);
 
 nav('dash_production');

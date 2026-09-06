@@ -362,6 +362,106 @@
       <div id="ap-body"></div>
     </div>
 
+    <!-- ============ User management ============ -->
+    <div class="panel" data-panel="users">
+      <div class="card">
+        <h4>User Management</h4>
+        <div class="hint" style="margin-bottom:10px;">Who can sign in, and what they are allowed to
+          change. Only the developer login can open this screen — the server checks that as well, so
+          hiding the menu entry is not what protects it. Setting somebody's password here
+          <b>immediately ends every session they have open</b>, which is the point of doing it this
+          way rather than telling them a new one over the phone.</div>
+        <div id="us-gate"></div>
+        <div id="us-form" style="display:none;">
+          <div class="row four">
+            <div><label>Username</label><input id="us-name" autocomplete="off"></div>
+            <div><label>Role</label><select id="us-role">
+              <option value="staff">Staff — day-to-day work</option>
+              <option value="developer">Developer — everything, including this screen</option>
+            </select></div>
+            <div><label>Email</label><input id="us-email" autocomplete="off"></div>
+            <div><label>WhatsApp number</label><input id="us-wa" autocomplete="off"></div>
+          </div>
+          <div class="row four" style="margin-top:9px;">
+            <div><label>Password</label><input id="us-pass" type="password" autocomplete="new-password"
+              placeholder="leave blank to keep the current one"></div>
+            <div><label>Ask for a code at sign-in</label><select id="us-2fa">
+              <option value="no">No</option><option value="yes">Yes</option></select></div>
+            <div style="align-self:end;"><button class="btn gold" id="us-save">Save the login</button></div>
+            <div style="align-self:end;"><button class="btn" id="us-clear">Clear</button></div>
+          </div>
+          <div class="note" id="us-msg" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="card" id="us-list-card" style="display:none;">
+        <h4>Logins</h4><div id="us-list"></div>
+      </div>
+    </div>
+
+    <!-- ============ Tool history card ============ -->
+    <div class="panel" data-panel="report_tool_history">
+      <div class="card">
+        <h4>Tool History Card</h4>
+        <div class="hint" style="margin-bottom:10px;">One card per tool, from the day it was issued to
+          the day it was scrapped. Every event carries a cost, and the tool breakage and tool
+          consumption figures on the production dashboard are <b>added up from these cards</b> — they
+          are not typed anywhere. A tool that has done more than its expected life is flagged, because
+          the piece it breaks on is usually somebody else's problem by then.</div>
+        <div class="row four">
+          <div><label>Tool number</label><input id="th-no" placeholder="left blank = generated"></div>
+          <div><label>Description</label><input id="th-desc" placeholder="e.g. CNMG 120408 insert"></div>
+          <div><label>Type</label><select id="th-type">
+            <option>Cutting insert</option><option>Drill</option><option>Reamer</option>
+            <option>Tap</option><option>End mill</option><option>Grinding wheel</option>
+            <option>Fixture</option><option>Form tool</option><option>Other</option></select></div>
+          <div><label>Machine</label><input id="th-machine" list="th-machines"></div>
+          <datalist id="th-machines"></datalist>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Part it runs on</label><select id="th-part"></select></div>
+          <div><label>Expected life</label><input class="num" id="th-life"></div>
+          <div><label>Life measured in</label><select id="th-unit">
+            <option>pieces</option><option>regrinds</option><option>hours</option></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="th-save">Save the tool</button></div>
+        </div>
+        <div class="note" id="th-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>Tools</h4><div id="th-list"></div></div>
+      <div class="card" id="th-card" style="display:none;">
+        <h4 id="th-card-title">History</h4>
+        <div id="th-card-body"></div>
+      </div>
+    </div>
+
+    <!-- ============ Machine check sheet ============ -->
+    <div class="panel" data-panel="report_machine_checksheet">
+      <div class="card">
+        <h4>Machine Check Sheet</h4>
+        <div class="hint" style="margin-bottom:10px;">The daily check before the machine runs. The
+          list of checks is held against the machine, so it is the same list every shift and changing
+          it is a decision rather than an oversight. A sheet <b>cannot be signed off with a failed
+          check that nobody has answered</b> — the machine either ran on it or it did not, and both
+          answers belong on the record.</div>
+        <div class="row four">
+          <div><label>Machine</label><select id="cs-machine"></select></div>
+          <div><label>Date</label><input type="date" id="cs-date"></div>
+          <div><label>Shift</label><select id="cs-shift">
+            <option>A</option><option>B</option><option>C</option><option>General</option></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="cs-open">Open the sheet</button></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div style="align-self:end;"><button class="btn" id="cs-edit-list">Change what is checked</button></div>
+          <div style="align-self:end;"><button class="btn" id="cs-print">Print</button></div>
+        </div>
+        <div class="note" id="cs-msg" style="display:none;"></div>
+      </div>
+      <div class="card" id="cs-card" style="display:none;">
+        <h4 id="cs-title">Sheet</h4>
+        <div id="cs-body"></div>
+      </div>
+      <div class="card"><h4>Recent sheets</h4><div id="cs-list"></div></div>
+    </div>
+
     <!-- ============ Document format numbers ============ -->
     <div class="panel" data-panel="doc_format_master">
       <div class="card">
@@ -2396,8 +2496,8 @@
       ['report_self_inspection','🔍','Self Inspection',1],
       ['entry_machine','⚙','Machine Addition',1],
       ['dwm','📊','DWM — Daily Work Management'],['task_list','✅','Task List'],
-      ['report_machine_checksheet','⚙','Machine Check Sheet'],
-      ['report_tool_history','🔧','Tool History Card']]],
+      ['report_machine_checksheet','⚙','Machine Check Sheet',1],
+      ['report_tool_history','🔧','Tool History Card',1]]],
     ['quality','🔬','Quality Assurance','Inspection, gauges and corrective action',[
       ['dash_quality','📊','Quality Dashboard',1],
       ['report_pdi','✓','PDI Report',1],
@@ -2427,7 +2527,7 @@
       ['admin_site','🌐','Website Content',1],
       ['admin_banner','🖼','Home Banner',1],
       ['profile','🏢','Company Profile',1],
-      ['users','👥','User Management'],
+      ['users','👥','User Management',1],
       ['dept_master','🏢','Department Master',1],['desig_master','🎖','Designation Master',1],
       ['position_master','📌','Position Master',1],
       ['admin_backup','💾','Backup & Restore',1],
@@ -2528,6 +2628,9 @@
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
+    if (s === 'users')                 loadUsers();
+    if (s === 'report_tool_history')   loadTools();
+    if (s === 'report_machine_checksheet') loadCheckSheet();
     if (s === 'doc_format_master')     loadFormats();
     if (s === 'signatories')           loadSignatories();
     if (s.indexOf('qms_level') === 0)  loadQmsDocs(C.num(s.slice(9)));
@@ -2558,6 +2661,485 @@
     if (s === 'kpi_entry')         loadKpiEntry();
     if (s === 'admin_banner')      loadBannerScreen();
     if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
+  }
+
+  /* ================= USER MANAGEMENT =================
+     The server checks the role on every one of these calls, so what this screen
+     does is make the rules visible rather than enforce them. Two of them are
+     worth saying out loud on the page, because people are surprised by them:
+     setting a password here ends that person's open sessions, and a deleted
+     login stops working immediately rather than when its session expires. */
+  var userRows = [], usEditing = null;
+
+  async function loadUsers(){
+    var gate = document.getElementById('us-gate');
+    if (String((me && me.role) || '') !== 'developer'){
+      gate.innerHTML = '<div class="note bad">Only the developer login can manage logins. You are ' +
+        'signed in as <b>' + esc((me && me.user) || '') + '</b> with the role <b>' +
+        esc((me && me.role) || 'unknown') + '</b>. The server would refuse these changes even if this ' +
+        'screen let you make them.</div>';
+      document.getElementById('us-form').style.display = 'none';
+      document.getElementById('us-list-card').style.display = 'none';
+      return;
+    }
+    gate.innerHTML = '';
+    document.getElementById('us-form').style.display = '';
+    document.getElementById('us-list-card').style.display = '';
+    try {
+      var j = await C.api('/api/auth', { method:'POST',
+        body: JSON.stringify({ action:'listUsers' }) });
+      userRows = j.users || [];
+    } catch(e){
+      gate.innerHTML = '<div class="note bad">' + esc(e.message) + '</div>';
+      userRows = [];
+    }
+    drawUsers();
+  }
+  function drawUsers(){
+    var host = document.getElementById('us-list');
+    if (!userRows.length){ host.innerHTML = '<div class="hint">No logins to show.</div>'; return; }
+    var devs = userRows.filter(function(u){ return u.role === 'developer'; }).length;
+    host.innerHTML = '<div class="scroll-x"><table class="t"><thead><tr><th>Username</th><th>Role</th>' +
+      '<th>Email</th><th>WhatsApp</th><th class="c">Code at sign-in</th><th></th></tr></thead><tbody>' +
+      userRows.map(function(u){
+        var isMe = u.username === ((me && me.user) || '');
+        return '<tr><td><b>'+esc(u.username)+'</b>'+(isMe?'<div class="hint">this is you</div>':'')+'</td>' +
+          '<td>'+esc(u.role||'')+'</td><td class="hint">'+esc(u.email||'—')+'</td>' +
+          '<td class="hint">'+esc(u.whatsapp||'—')+'</td>' +
+          '<td class="c">'+(u.twofa?'yes':'no')+'</td>' +
+          '<td><button class="btn us-edit" data-u="'+esc(u.username)+'">Edit</button> ' +
+          (isMe ? '' : '<button class="btn del us-del" data-u="'+esc(u.username)+'">Remove</button>') +
+          '</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      (devs <= 1 ? '<div class="note" style="margin-top:10px;">There is one developer login. If it is ' +
+        'lost, nobody can manage logins or edit the website — a second one is worth having, and it ' +
+        'costs nothing.</div>' : '');
+    host.querySelectorAll('.us-edit').forEach(function(b){
+      b.addEventListener('click', function(){ editUser(b.dataset.u); });
+    });
+    host.querySelectorAll('.us-del').forEach(function(b){
+      b.addEventListener('click', function(){ removeUser(b.dataset.u); });
+    });
+  }
+  function editUser(name){
+    var u = userRows.filter(function(x){ return x.username === name; })[0];
+    if (!u) return;
+    usEditing = name;
+    document.getElementById('us-name').value = u.username;
+    document.getElementById('us-role').value = u.role || 'staff';
+    document.getElementById('us-email').value = u.email || '';
+    document.getElementById('us-wa').value = u.whatsapp || '';
+    document.getElementById('us-2fa').value = u.twofa ? 'yes' : 'no';
+    document.getElementById('us-pass').value = '';
+    var msg = document.getElementById('us-msg');
+    msg.style.display=''; msg.className='note';
+    msg.innerHTML = 'Editing <b>'+esc(name)+'</b>. Leaving the password blank keeps their current one; ' +
+      'typing one ends every session they have open.';
+  }
+  function clearUserForm(){
+    usEditing = null;
+    ['us-name','us-email','us-wa','us-pass'].forEach(function(i){ document.getElementById(i).value=''; });
+    document.getElementById('us-role').value = 'staff';
+    document.getElementById('us-2fa').value = 'no';
+    document.getElementById('us-msg').style.display = 'none';
+  }
+  async function saveUser(){
+    var msg = document.getElementById('us-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var name = document.getElementById('us-name').value.trim();
+    var pass = document.getElementById('us-pass').value;
+    var role = document.getElementById('us-role').value;
+    if (!name) return say('A username is needed.');
+    var existing = userRows.filter(function(u){ return u.username === name; })[0];
+    if (!existing && (!pass || pass.length < 8))
+      return say('A new login needs a password of at least eight characters.');
+    if (pass && pass.length < 8)
+      return say('That password is too short — eight characters at the very least.');
+
+    /* the last developer must not be able to demote themselves out of the system */
+    if (existing && existing.role === 'developer' && role !== 'developer'){
+      var devs = userRows.filter(function(u){ return u.role === 'developer'; });
+      if (devs.length <= 1)
+        return say('<b>'+esc(name)+'</b> is the only developer login. Changing it to staff would ' +
+          'leave nobody able to manage logins or edit the website, and no way back in. Create a ' +
+          'second developer login first.');
+    }
+
+    var btn = document.getElementById('us-save'); btn.disabled = true;
+    try {
+      await C.api('/api/auth', { method:'POST', body: JSON.stringify({
+        action:'saveUser', username:name, role:role, password:pass,
+        email:document.getElementById('us-email').value.trim(),
+        whatsapp:document.getElementById('us-wa').value.trim(),
+        twofa:document.getElementById('us-2fa').value === 'yes' }) });
+      say(existing
+        ? 'Saved.' + (pass ? ' Their password was changed, so any session they had open has ended.' : '')
+        : 'Login created.', true);
+      clearUserForm();
+      await loadUsers();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+  async function removeUser(name){
+    var msg = document.getElementById('us-msg');
+    if (!confirm('Remove the login "' + name + '"?\n\nThey are signed out immediately and cannot ' +
+                 'sign in again. Everything they recorded stays on the record with their name on it.'))
+      return;
+    try {
+      await C.api('/api/auth', { method:'POST',
+        body: JSON.stringify({ action:'deleteUser', username:name }) });
+      msg.style.display=''; msg.className='note good';
+      msg.textContent = name + ' removed and signed out.';
+      await loadUsers();
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent = e.message; }
+  }
+
+  /* ================= TOOL HISTORY CARD =================
+     One card per tool, and every event on it carries a cost. That is what turns
+     the tool breakage and tool consumption figures on the production dashboard
+     from something somebody types each month into something the shop floor has
+     already recorded. */
+  var toolDocs = [], toolOpen = null, toolEditing = null;
+  var TOOL_EVENTS = ['Issued to the machine', 'Reground', 'Broken', 'Worn out and scrapped',
+                     'Returned to stores'];
+
+  async function loadTools(){
+    await fetchParts();
+    document.getElementById('th-part').innerHTML = partOptions(document.getElementById('th-part').value);
+    try { toolDocs = await C.idms.docs('tool'); } catch(e){ toolDocs = []; }
+    try { machines = await C.idms.docs('machine'); } catch(e){ machines = []; }
+    document.getElementById('th-machines').innerHTML = machines.map(function(m){
+      return '<option value="'+esc((m.data||{}).name||'')+'">'; }).join('');
+    drawToolList();
+    if (toolOpen) drawToolCard();
+  }
+  function toolLifeUsed(v){
+    return (v.history||[]).reduce(function(t,h){
+      return t + (/regr/i.test(h.event) ? 0 : C.num(h.qty)); }, 0);
+  }
+  function toolRegrinds(v){
+    return (v.history||[]).filter(function(h){ return /regr/i.test(h.event); }).length;
+  }
+  function toolLifeNow(v){
+    return String(v.lifeUnit||'') === 'regrinds' ? toolRegrinds(v) : toolLifeUsed(v);
+  }
+  function drawToolList(){
+    var host = document.getElementById('th-list');
+    if (!toolDocs.length){
+      host.innerHTML = '<div class="empty"><b>No tools yet</b>Add one above. Until a tool has a card, ' +
+        'what it cost when it broke is nobody\'s number.</div>';
+      return;
+    }
+    host.innerHTML = '<div class="scroll-x"><table class="t"><thead><tr><th>Tool</th><th>Type</th>' +
+      '<th>Machine</th><th>Part</th><th class="r">Life used</th><th class="r">Expected</th>' +
+      '<th class="r">Spent on it</th><th class="c">Status</th><th></th></tr></thead><tbody>' +
+      toolDocs.map(function(t){
+        var v = t.data||{};
+        var used = toolLifeNow(v), exp = C.num(v.expectedLife);
+        var over = exp > 0 && used > exp;
+        var spent = (v.history||[]).reduce(function(s,h){ return s + C.num(h.cost); }, 0);
+        return '<tr><td><b>'+esc(t.doc_no||'')+'</b><div class="hint">'+esc(v.description||'')+'</div></td>' +
+          '<td class="hint">'+esc(v.type||'')+'</td>' +
+          '<td class="hint">'+esc(v.machine||'—')+'</td>' +
+          '<td class="hint">'+esc(v.partNo||'—')+'</td>' +
+          '<td class="r'+(over?' bad':'')+'">'+C.qty(used)+' '+esc(v.lifeUnit||'')+
+            (over?'<div class="hint">past its life</div>':'')+'</td>' +
+          '<td class="r hint">'+(exp?C.qty(exp):'—')+'</td>' +
+          '<td class="r">'+(spent?C.rate(spent):'—')+'</td>' +
+          '<td class="c">'+esc(t.status||'In use')+'</td>' +
+          '<td><button class="btn th-open" data-id="'+esc(t.doc_id)+'">Open</button></td></tr>';
+      }).join('') + '</tbody></table></div>';
+    host.querySelectorAll('.th-open').forEach(function(b){
+      b.addEventListener('click', function(){
+        toolOpen = toolDocs.filter(function(x){ return x.doc_id === b.dataset.id; })[0];
+        drawToolCard();
+      });
+    });
+  }
+  async function saveTool(){
+    var msg = document.getElementById('th-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var desc = document.getElementById('th-desc').value.trim();
+    if (!desc) return say('A tool needs a description — "insert" on its own will not identify it ' +
+      'when somebody is looking for the one that broke.');
+    var no = document.getElementById('th-no').value.trim();
+    if (no && toolDocs.some(function(t){ return t.doc_no === no && t.doc_id !== toolEditing; }))
+      return say('<b>'+esc(no)+'</b> is already the number of another tool.');
+    var pid = document.getElementById('th-part').value;
+    var p = allParts.filter(function(x){ return x.part_id === pid; })[0];
+    var btn = document.getElementById('th-save'); btn.disabled = true;
+    try {
+      await C.idms.saveDoc({ docId: toolEditing || '', kind:'tool', partId: pid,
+        docNo: no || await C.docNumber('tool'), status:'In use',
+        data:{ description:desc, type:document.getElementById('th-type').value,
+               machine:document.getElementById('th-machine').value.trim(),
+               partId:pid, partNo:p?p.part_no:'',
+               expectedLife:C.num(document.getElementById('th-life').value),
+               lifeUnit:document.getElementById('th-unit').value, history:[] } },
+        'tool card opened');
+      say('Card opened.', true);
+      ['th-no','th-desc','th-life'].forEach(function(i){ document.getElementById(i).value=''; });
+      await loadTools();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+  function drawToolCard(){
+    if (!toolOpen) return;
+    var v = toolOpen.data||{}, hist = (v.history||[]).slice().sort(function(a,b){
+      return String(b.on||'').localeCompare(String(a.on||'')); });
+    var used = toolLifeNow(v), exp = C.num(v.expectedLife);
+    document.getElementById('th-card').style.display = '';
+    document.getElementById('th-card-title').textContent =
+      (toolOpen.doc_no||'') + ' — ' + (v.description||'');
+
+    document.getElementById('th-card-body').innerHTML =
+      '<div class="stat" style="margin-bottom:12px;">' +
+      [['Life used', C.qty(used) + ' ' + (v.lifeUnit||'')],
+       ['Expected', exp ? C.qty(exp) + ' ' + (v.lifeUnit||'') : 'not set'],
+       ['Regrinds', toolRegrinds(v)],
+       ['Spent on it', C.rate((v.history||[]).reduce(function(s,h){ return s + C.num(h.cost); }, 0))]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
+      '</div>' +
+      (exp > 0 && used > exp
+        ? '<div class="note bad">This tool has done more than its expected life. Either the life ' +
+          'figure is wrong or the tool is running on borrowed time — the piece it breaks on will be ' +
+          'somebody else\'s problem by then.</div>' : '') +
+      '<div class="row four" style="margin-top:11px;">' +
+      '<div><label>What happened</label><select id="th-ev">' +
+        TOOL_EVENTS.map(function(e){ return '<option>'+esc(e)+'</option>'; }).join('') + '</select></div>' +
+      '<div><label>On</label><input type="date" id="th-on" value="' +
+        new Date().toISOString().slice(0,10) + '"></div>' +
+      '<div><label>Life this event (' + esc(v.lifeUnit||'') + ')</label><input class="num" id="th-qty"></div>' +
+      '<div><label>Cost</label><input class="num" id="th-cost"></div></div>' +
+      '<div class="row four" style="margin-top:9px;">' +
+      '<div><label>By</label><input id="th-by"></div>' +
+      '<div><label>Note</label><input id="th-note" placeholder="what was seen"></div>' +
+      '<div style="align-self:end;"><button class="btn gold" id="th-add">Record it</button></div></div>' +
+      (hist.length
+        ? '<div class="scroll-x" style="margin-top:14px;"><table class="t"><thead><tr><th>Date</th>' +
+          '<th>Event</th><th class="r">Life</th><th class="r">Cost</th><th>By</th><th>Note</th>' +
+          '</tr></thead><tbody>' + hist.map(function(h){
+            return '<tr><td class="hint">'+C.fmtDate(h.on)+'</td>' +
+              '<td'+(/broken/i.test(h.event)?' class="bad"':'')+'><b>'+esc(h.event)+'</b></td>' +
+              '<td class="r">'+(h.qty?C.qty(h.qty):'—')+'</td>' +
+              '<td class="r">'+(h.cost?C.rate(h.cost):'—')+'</td>' +
+              '<td class="hint">'+esc(h.by||'—')+'</td>' +
+              '<td class="hint">'+esc(h.note||'')+'</td></tr>'; }).join('') + '</tbody></table></div>'
+        : '<div class="hint" style="margin-top:12px;">Nothing recorded on this card yet.</div>');
+
+    document.getElementById('th-add').addEventListener('click', addToolEvent);
+  }
+  async function addToolEvent(){
+    var msg = document.getElementById('th-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var ev = document.getElementById('th-ev').value;
+    var on = document.getElementById('th-on').value;
+    var cost = C.num(document.getElementById('th-cost').value);
+    var by = document.getElementById('th-by').value.trim();
+    if (!on) return say('Say when.');
+    if (!by) return say('Say who. A tool that broke and nobody recorded who was running it teaches ' +
+      'nothing.');
+    /* the whole point of the card is the cost; a breakage with no cost against it
+       is a breakage the dashboard cannot count */
+    if (/broken|scrapp/i.test(ev) && !cost)
+      return say('Put a cost against it. Breakages and scrapped tools are what the tool cost figures ' +
+        'on the production dashboard are added up from — one with no cost is one that never happened ' +
+        'as far as that chart is concerned.');
+    var v = Object.assign({}, toolOpen.data||{});
+    v.history = (v.history||[]).concat([{ on:on, event:ev,
+      qty:C.num(document.getElementById('th-qty').value), cost:cost, by:by,
+      note:document.getElementById('th-note').value.trim() }]);
+    var status = /scrapp/i.test(ev) ? 'Scrapped' : /broken/i.test(ev) ? 'Broken' : 'In use';
+    try {
+      await C.idms.saveDoc({ docId: toolOpen.doc_id, kind:'tool', partId: v.partId||'',
+        docNo: toolOpen.doc_no, status: status, data: v }, 'tool event recorded');
+      toolOpen.data = v; toolOpen.status = status;
+      var i = toolDocs.findIndex(function(x){ return x.doc_id === toolOpen.doc_id; });
+      if (i >= 0) toolDocs[i] = toolOpen;
+      say('Recorded.', true);
+      drawToolList(); drawToolCard();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  /* ================= MACHINE CHECK SHEET =================
+     The list of checks lives on the machine, so it is the same list every shift
+     and changing it is a decision rather than somebody's memory. The sheet
+     cannot be signed off with a failed check nobody has answered — the machine
+     either ran on it or it did not, and both answers belong on the record. */
+  var csDocs = [], csOpen = null, csMachine = null;
+  var DEFAULT_CHECKS = [
+    'Oil level in the tank', 'Coolant level and condition', 'Air pressure',
+    'Way lubrication working', 'Guards and interlocks in place', 'Emergency stop works',
+    'Chuck or fixture clamping firmly', 'Chip conveyor clear', 'No abnormal noise or vibration',
+    'Work area clean and clear'
+  ];
+
+  async function loadCheckSheet(){
+    try { machines = await C.idms.docs('machine'); } catch(e){ machines = []; }
+    try { csDocs = await C.idms.docs('checksheet'); } catch(e){ csDocs = []; }
+    var sel = document.getElementById('cs-machine'), keep = sel.value;
+    sel.innerHTML = machines.length
+      ? machines.map(function(m){
+          return '<option value="'+esc(m.doc_id)+'">'+esc((m.data||{}).name||'')+'</option>'; }).join('')
+      : '<option value="">— no machines on the master —</option>';
+    if (keep && [].slice.call(sel.options).some(function(o){ return o.value === keep; })) sel.value = keep;
+    if (!document.getElementById('cs-date').value)
+      document.getElementById('cs-date').value = new Date().toISOString().slice(0,10);
+    drawCsList();
+    /* open today's sheet for the first machine straight away — the check is done
+       at the start of the shift, and a screen that makes you press Open first is
+       a screen somebody skips */
+    if (sel.value) openCheckSheet();
+  }
+  function csChecksFor(m){
+    var v = (m && m.data) || {};
+    return (v.checks && v.checks.length) ? v.checks : DEFAULT_CHECKS;
+  }
+  function csKey(){
+    return document.getElementById('cs-machine').value + '|' +
+           document.getElementById('cs-date').value + '|' +
+           document.getElementById('cs-shift').value;
+  }
+  function openCheckSheet(){
+    var msg = document.getElementById('cs-msg');
+    var mid = document.getElementById('cs-machine').value;
+    if (!mid){ msg.style.display=''; msg.className='note bad';
+               msg.textContent = 'There are no machines on the master to check.'; return; }
+    csMachine = machines.filter(function(m){ return m.doc_id === mid; })[0] || null;
+    var key = csKey();
+    csOpen = csDocs.filter(function(d){ return (d.data||{}).key === key; })[0] || null;
+    msg.style.display = 'none';
+    drawCheckSheet();
+  }
+  function drawCheckSheet(){
+    var checks = csChecksFor(csMachine);
+    var v = csOpen ? (csOpen.data||{}) : {};
+    var answers = v.items || checks.map(function(n){ return { name:n, result:'', note:'' }; });
+    var closed = csOpen && csOpen.status === 'Signed off';
+    document.getElementById('cs-card').style.display = '';
+    document.getElementById('cs-title').textContent =
+      ((csMachine && (csMachine.data||{}).name) || '') + ' · ' +
+      C.fmtDate(document.getElementById('cs-date').value) + ' · shift ' +
+      document.getElementById('cs-shift').value + (closed ? ' — signed off' : '');
+
+    document.getElementById('cs-body').innerHTML =
+      '<div class="scroll-x"><table class="t"><thead><tr><th style="min-width:230px;">Check</th>' +
+      '<th class="c">Result</th><th>If it failed, what was done</th></tr></thead><tbody>' +
+      answers.map(function(a, i){
+        return '<tr><td>'+esc(a.name)+'</td>' +
+          '<td class="c"><select class="cs-r" data-i="'+i+'"'+(closed?' disabled':'')+'>' +
+            ['','OK','Not OK','Not applicable'].map(function(o){
+              return '<option'+(a.result===o?' selected':'')+'>'+esc(o)+'</option>'; }).join('') +
+            '</select></td>' +
+          '<td><input class="cs-n" data-i="'+i+'" value="'+esc(a.note||'')+'"'+(closed?' disabled':'')+
+            ' placeholder="action taken"></td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      (closed
+        ? '<div class="note good" style="margin-top:12px;">Signed off by <b>' + esc(v.checkedBy||'') +
+          '</b> on ' + C.fmtDate(v.closedOn||'') + '.</div>'
+        : '<div class="row four" style="margin-top:12px;">' +
+          '<div><label>Checked by</label><input id="cs-by" value="'+esc(v.checkedBy||'')+'"></div>' +
+          '<div style="align-self:end;"><button class="btn" id="cs-save">Save as it stands</button></div>' +
+          '<div style="align-self:end;"><button class="btn green" id="cs-close">Sign it off</button></div>' +
+          '</div>');
+
+    var s = document.getElementById('cs-save');
+    if (s) s.addEventListener('click', function(){ saveCheckSheet(false); });
+    var c = document.getElementById('cs-close');
+    if (c) c.addEventListener('click', function(){ saveCheckSheet(true); });
+  }
+  function csCollect(){
+    var checks = csChecksFor(csMachine), out = [];
+    document.getElementById('cs-body').querySelectorAll('.cs-r').forEach(function(sel){
+      var i = +sel.dataset.i;
+      var note = document.getElementById('cs-body').querySelector('.cs-n[data-i="'+i+'"]');
+      out.push({ name: checks[i], result: sel.value, note: note ? note.value.trim() : '' });
+    });
+    return out;
+  }
+  async function saveCheckSheet(closing){
+    var msg = document.getElementById('cs-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var items = csCollect();
+    var by = (document.getElementById('cs-by')||{}).value;
+    by = by ? by.trim() : '';
+    if (closing){
+      if (!by) return say('Say who did the checks.');
+      var unanswered = items.filter(function(a){ return !a.result; });
+      if (unanswered.length)
+        return say(unanswered.length + ' check(s) have no answer. A blank is not a pass — if a check ' +
+          'does not apply to this machine, say so.');
+      var failed = items.filter(function(a){ return a.result === 'Not OK' && !a.note; });
+      if (failed.length)
+        return say('<b>'+failed.length+' failed check(s) have nothing written against them.</b> The ' +
+          'machine either ran on it or it did not, and both answers belong on the record — say what ' +
+          'was done, even if what was done was to run anyway and tell maintenance.');
+    }
+    var mv = (csMachine && csMachine.data) || {};
+    var data = { key: csKey(), machineId: document.getElementById('cs-machine').value,
+      machineName: mv.name||'', date: document.getElementById('cs-date').value,
+      shift: document.getElementById('cs-shift').value, items: items, checkedBy: by };
+    if (closing){ data.closedOn = new Date().toISOString().slice(0,10); }
+    try {
+      var res = await C.idms.saveDoc({ docId: csOpen ? csOpen.doc_id : '', kind:'checksheet',
+        docNo: (csOpen && csOpen.doc_no) || await C.docNumber('mcs'),
+        status: closing ? 'Signed off' : 'Open', data:data },
+        closing ? 'machine check sheet signed off' : 'machine check sheet saved');
+      if (!csOpen){ csOpen = { doc_id:res.docId, doc_no:'', data:{} }; csDocs.push(csOpen); }
+      csOpen.data = data; csOpen.status = closing ? 'Signed off' : 'Open';
+      say(closing ? 'Signed off.' : 'Saved.', true);
+      drawCheckSheet(); drawCsList();
+    } catch(e){ say(esc(e.message)); }
+  }
+  async function editCheckList(){
+    if (!csMachine){ toast('Choose a machine first.'); return; }
+    var mv = Object.assign({}, csMachine.data||{});
+    var current = csChecksFor(csMachine).join('\n');
+    var next = prompt('What is checked on ' + (mv.name||'this machine') +
+      ', one per line.\n\nThis is the list every shift will see.', current);
+    if (next === null) return;
+    var list = String(next).split('\n').map(function(x){ return x.trim(); }).filter(Boolean);
+    if (!list.length){ toast('A check sheet with nothing on it is not a check sheet.'); return; }
+    mv.checks = list;
+    try {
+      await C.idms.saveDoc({ docId: csMachine.doc_id, kind:'machine', docNo: csMachine.doc_no,
+        status: csMachine.status||'Active', data: mv }, 'machine check list changed');
+      csMachine.data = mv;
+      toast('Saved for every shift on this machine.');
+      drawCheckSheet();
+    } catch(e){ toast(e.message); }
+  }
+  function drawCsList(){
+    var host = document.getElementById('cs-list');
+    var rows = csDocs.slice().sort(function(a,b){
+      return String((b.data||{}).date||'').localeCompare(String((a.data||{}).date||'')); }).slice(0, 40);
+    if (!rows.length){ host.innerHTML = '<div class="hint">No sheets recorded yet.</div>'; return; }
+    host.innerHTML = '<div class="scroll-x"><table class="t"><thead><tr><th>Date</th><th>Machine</th>' +
+      '<th class="c">Shift</th><th class="r">Failed</th><th>Checked by</th><th class="c">Status</th>' +
+      '</tr></thead><tbody>' + rows.map(function(d){
+        var v = d.data||{};
+        var bad = (v.items||[]).filter(function(a){ return a.result === 'Not OK'; }).length;
+        return '<tr><td class="hint">'+C.fmtDate(v.date)+'</td>' +
+          '<td><b>'+esc(v.machineName||'')+'</b></td>' +
+          '<td class="c hint">'+esc(v.shift||'')+'</td>' +
+          '<td class="r'+(bad?' bad':'')+'">'+(bad||'—')+'</td>' +
+          '<td class="hint">'+esc(v.checkedBy||'—')+'</td>' +
+          '<td class="c">'+(d.status === 'Signed off'
+            ? '<span class="badge series">signed off</span>'
+            : '<span class="badge sample">open</span>')+'</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  function printCheckSheet(){
+    if (!csOpen) { toast('Open a sheet first.'); return; }
+    var v = csOpen.data||{};
+    C.openReport({ title:'Machine Check Sheet — ' + (v.machineName||''), sections:[
+      { type:'pairs', title:'Sheet', rows:[
+        ['Machine', esc(v.machineName||'')], ['Date', C.fmtDate(v.date)],
+        ['Shift', esc(v.shift||'')], ['Checked by', esc(v.checkedBy||'—')],
+        ['Status', esc(csOpen.status||'Open')] ] },
+      { type:'table', title:'Checks', dense:true,
+        columns:[{label:'Check'},{label:'Result',align:'c'},{label:'If it failed, what was done'}],
+        rows: (v.items||[]).map(function(a){ return [a.name, a.result||'—', a.note||'—']; }) } ] });
   }
 
   /* ================= DOCUMENT FORMAT NUMBERS =================
@@ -6813,7 +7395,10 @@
 
   function fillKpiChoices(){
     var dept = document.getElementById('ke-dept').value;
-    var list = window.KPIX.forDept(dept).filter(function (k){ return !k.mirror; });
+    /* a KPI whose figure is computed end to end has nothing to type, so offering
+       it here is a dead end — the same filter the outstanding list uses */
+    var list = window.KPIX.forDept(dept).filter(function (k){
+      return !k.mirror && !(k.derive && !k.plan); });
     document.getElementById('ke-kpi').innerHTML = list.map(function (k){
       return '<option value="' + k.id + '">' + esc(k.name) + '</option>';
     }).join('') || '<option value="">Nothing to enter — every KPI here is computed</option>';
@@ -14439,6 +15024,18 @@
     document.getElementById('ab-file').value = '';
     bannerPreview();
   });
+
+  document.getElementById('us-save').addEventListener('click', saveUser);
+  document.getElementById('us-clear').addEventListener('click', clearUserForm);
+
+  document.getElementById('th-save').addEventListener('click', saveTool);
+
+  document.getElementById('cs-open').addEventListener('click', openCheckSheet);
+  document.getElementById('cs-machine').addEventListener('change', openCheckSheet);
+  document.getElementById('cs-date').addEventListener('change', openCheckSheet);
+  document.getElementById('cs-shift').addEventListener('change', openCheckSheet);
+  document.getElementById('cs-edit-list').addEventListener('click', editCheckList);
+  document.getElementById('cs-print').addEventListener('click', printCheckSheet);
 
   ['df-prefix','df-digits','df-next'].forEach(function(id){
     document.getElementById(id).addEventListener('input', drawFormatExample); });

@@ -883,24 +883,63 @@ has to reset its own filters when the entry changes.**
 Records: kind `docformat`, `signatory`, `qmsdoc`. The master lists and the trail
 store nothing.
 
-**Declared but not built:** 12 screens still marked `soon` (down from 42):
+## Modules added in v112 — logins, tools, machine checks
+
+**User Management.** The server already checked the role on every one of these
+calls, so what this screen does is make the rules visible. Two are stated on the
+page because people are surprised by them: setting a password here **ends every
+session that person has open**, and a deleted login stops working immediately
+rather than when its session expires. One rule is added client-side that the
+server does not have: **the only developer login cannot be demoted to staff**,
+because that leaves nobody able to manage logins or edit the website and no way
+back in. The screen also points out when there is only one developer login at
+all — a second costs nothing and is worth having.
+
+**Tool History Card.** One card per tool, and every event on it carries a cost
+and a date. That is what turns the two tool cost lines on the production
+dashboard from a monthly guess into something the shop floor already recorded:
+**`prd_toolbreak` and `prd_toolcons` are now computed** (48 of 101 overall). A
+breakage or a scrapping **cannot be recorded without a cost** — one with no cost
+is one that never happened as far as that chart is concerned. Consumption counts
+issues, regrinds and wear-out; breakages sit on their own line and are **not
+double-counted**. A tool past its expected life is flagged, because the piece it
+breaks on is somebody else's problem by then.
+
+**Machine Check Sheet.** The list of checks lives **on the machine record**, so it
+is the same list every shift and changing it is a decision rather than an
+oversight; a machine with no list of its own gets the standard ten. Two refusals:
+a blank result is **not** treated as a pass (if a check does not apply, say so),
+and a failed check with nothing written against it blocks sign-off — the machine
+either ran on it or it did not, and both answers belong on the record. The sheet
+for today opens on arrival rather than behind an Open button, because the check is
+done at the start of the shift and a screen you have to press first is a screen
+somebody skips.
+
+**One KPI-engine correction came out of the regression suite.** When these two
+tool KPIs became fully derived, the KPI Data Entry screen still offered them —
+you could type a figure that nothing would ever read. Fully derived KPIs
+(`derive` with no `plan`) are now filtered out of the entry list, the same filter
+the outstanding-items list already used. **Any KPI moved from entered to computed
+has to be checked against that entry screen**, or it becomes a dead end that
+looks like it works.
+
+Records: kind `tool`, `checksheet`, and `machine.data.checks` for the per-machine
+list (no new kind).
+
+**Declared but not built:** 9 screens still marked `soon` (down from 42):
 `machine_process`, `pfmea_master`, `pp_spec_master`, `supplier_competency`,
-`form`, `dwm`, `task_list`, `report_machine_checksheet`, `report_tool_history`,
-`report_inprocess_inspection`, `accounts_pl`, `users`.
+`form`, `dwm`, `task_list`, `report_inprocess_inspection`, `accounts_pl`.
 
-**Suggested order for the rest**, of the twelve left:
+**Suggested order for the rest**, of the nine left:
 
-1. **User Management** — the only one with a security consequence. Roles are
-   already enforced server-side; there is no screen to manage who holds them.
-2. **Tool history card** and **machine check sheet** — both feed maintenance
-   figures that are entry-only today, and both follow the calibration pattern.
-3. **DWM** and **task list** — shop-floor daily management; they read what the
-   production and NC screens already record.
-4. **Machine & process**, **PFMEA master**, **PP spec master**, **supplier
+1. **DWM** and **task list** — shop-floor daily management, reading what the
+   production, NC and check-sheet screens already record. The most useful of what
+   is left, because it is the screen a supervisor would open every morning.
+2. **Machine & process**, **PFMEA master**, **PP spec master**, **supplier
    competency** — reference screens over data that already exists.
-5. **Key Process Input** — needs a decision on what it is for; the name predates
+3. **Key Process Input** — needs a decision on what it is for; the name predates
    the process master, which may already cover it.
-6. **P&L** — should wait until there is a costing model, or it becomes another
+4. **P&L** — should wait until there is a costing model, or it becomes another
    entry screen pretending to be an account.
 
 **Still undecided: `report_inprocess_inspection`.** Self Inspection already is
@@ -1040,7 +1079,9 @@ If you formalise this, keep two habits that mattered:
 2. **Test what matters, not what is easy.** Testing that a fold worked passed
    while the Save button was being folded away with it.
 
-`qmstest.mjs` (38 checks over the v111 screens: the numbering refusals, the
+`opstest.mjs` (36 checks over the v112 screens: the demote-the-last-developer
+refusal, a breakage with no cost, a blank check not passing as OK, and the tool
+money reaching the production dashboard). `qmstest.mjs` (38 checks over the v111 screens: the numbering refusals, the
 prepare-and-approve control, the unauthorised-signature refusal, the missing-PFMEA
 finding, and the trail diff). `audittest.mjs` (38 checks over the v110 register: the two independence rules,
 the sequencing, the finding-closure requirements, and the QMS dashboard keeping

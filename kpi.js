@@ -560,6 +560,38 @@
     return { series: [{ name: 'On-time delivery', values: s.lines.map(function (v, i) { return pct(s.onTime[i], v); }) }] };
   };
 
+  /* ---- tools ----
+     Every event on a tool history card carries a cost and a date, so the two
+     tool cost lines on the production dashboard are added up from what the shop
+     floor already recorded rather than typed once a month from a notebook. */
+  async function toolEvents(fy) {
+    return once('toolev:' + fy, async function () {
+      var rows = await docs('tool'), out = [];
+      rows.forEach(function (t) {
+        ((t.data || {}).history || []).forEach(function (h) {
+          if (!inFy(h.on, fy)) return;
+          var i = mIndex(h.on); if (i < 0) return;
+          out.push({ i: i, event: String(h.event || ''), cost: num(h.cost) });
+        });
+      });
+      return out;
+    });
+  }
+  D.toolBreakage = async function (fy) {
+    var ev = await toolEvents(fy), out = zeros();
+    ev.forEach(function (e) { if (/broken/i.test(e.event)) out[e.i] += e.cost; });
+    return { series: [{ name: 'Tool breakage cost', values: out }] };
+  };
+  /* consumption is what was put on the machine and what wore out — a breakage is
+     counted on its own line above and not double-counted here */
+  D.toolConsumption = async function (fy) {
+    var ev = await toolEvents(fy), out = zeros();
+    ev.forEach(function (e) {
+      if (/issued|reground|worn/i.test(e.event)) out[e.i] += e.cost;
+    });
+    return { series: [{ name: 'Tool consumption cost', values: out }] };
+  };
+
   /* ---- audits ----
      One set of records answers three questions per audit type: was the audit
      done when it was planned, were its findings closed when they were due, and
@@ -753,8 +785,10 @@
     { id: 'prd_machine', dept: 'production', name: 'Machine efficiency', unit: '%', chart: 'barCat', derive: 'machineEff',
       note: 'From the bookings against each machine.' },
     { id: 'prd_fgvalue', dept: 'production', name: 'FG parts value moved to finished goods', unit: '₹', chart: 'bars', single: true },
-    { id: 'prd_toolbreak', dept: 'production', name: 'Tool breakage cost', unit: '₹', chart: 'bars', single: true },
-    { id: 'prd_toolcons', dept: 'production', name: 'Tool consumption cost', unit: '₹', chart: 'bars', single: true },
+    { id: 'prd_toolbreak', dept: 'production', name: 'Tool breakage cost', unit: '₹', chart: 'bars', single: true, derive: 'toolBreakage',
+      note: 'Added up from the breakages recorded on the tool history cards.' },
+    { id: 'prd_toolcons', dept: 'production', name: 'Tool consumption cost', unit: '₹', chart: 'bars', single: true, derive: 'toolConsumption',
+      note: 'Tools issued, reground and worn out, from the tool history cards. Breakages are on their own line and are not counted twice.' },
     { id: 'prd_offbudget', dept: 'production', name: 'Cost utilised not in the budget', unit: '₹', chart: 'bars', single: true },
     { id: 'prd_rework', dept: 'production', name: 'Rework cost', unit: '₹', chart: 'bars', single: true },
     { id: 'prd_losspareto', dept: 'production', name: 'Loss pareto — downtime by reason', unit: 'hours', chart: 'pareto', derive: 'lossPareto',

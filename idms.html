@@ -196,6 +196,156 @@
       </div>
     </div>
 
+    <!-- ============ Supplier master ============ -->
+    <div class="panel" data-panel="entry_supplier">
+      <div class="card">
+        <h4>Suppliers</h4>
+        <div class="hint" style="margin-bottom:10px;">Supplier names are typed by hand on the goods
+          receipts today, so the same supplier spelled two ways splits their delivery and quality
+          record — and a rating built on half a supplier's receipts is worse than none. Anything the
+          receipts mention that is not on this list is shown below to be adopted or corrected.</div>
+        <div id="su-unknown"></div>
+        <div class="row four" style="margin-top:10px;">
+          <div><label>Supplier name</label><input id="su-name" placeholder="exactly as it is on the receipts"></div>
+          <div><label>Code</label><input id="su-code" placeholder="left blank = generated"></div>
+          <div><label>What they supply</label><select id="su-cat">
+            <option>Raw material</option><option>Consumables</option><option>Tools &amp; fixtures</option>
+            <option>Sub-contract processing</option><option>Services</option></select></div>
+          <div><label>Status</label><select id="su-status">
+            <option>Under evaluation</option><option>Approved</option>
+            <option>Conditionally approved</option><option>On hold</option>
+            <option>Removed from the panel</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>GSTIN</label><input id="su-gstin"></div>
+          <div><label>Contact person</label><input id="su-contact"></div>
+          <div><label>Phone</label><input id="su-phone"></div>
+          <div><label>Email</label><input id="su-email"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Quality certification</label><select id="su-cert">
+            <option value="">None held</option><option>IATF 16949</option><option>ISO 9001</option>
+            <option>ISO 14001</option><option>Customer approved only</option></select></div>
+          <div><label>Certificate valid until</label><input type="date" id="su-certtill"></div>
+          <div><label>Payment terms</label><input id="su-terms" placeholder="e.g. 45 days from invoice"></div>
+          <div><label>Lead time (days)</label><input class="num" id="su-lead"></div>
+        </div>
+        <div class="row" style="margin-top:9px;">
+          <div><label>Address</label><input id="su-addr"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="su-save">Save supplier</button>
+          <button class="btn" id="su-clear">Clear</button>
+          <button class="btn" id="su-print">Print the panel</button>
+        </div>
+        <div class="note" id="su-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Approved supplier panel</h4>
+        <div class="hint" style="margin-bottom:10px;">Receipts are counted from the goods receipts on
+          file. The delivery and quality <i>rating</i> is not repeated here — it is worked out in one
+          place, by the Supplier Watch Agent, so there is only ever one answer to what a supplier's
+          record is.</div>
+        <div id="su-list"></div>
+      </div>
+    </div>
+
+    <!-- ============ Raw material master ============ -->
+    <div class="panel" data-panel="entry_rawmat">
+      <div class="card">
+        <h4>Raw material and bought-out items</h4>
+        <div class="hint" style="margin-bottom:10px;">The same material described three ways cannot be
+          counted, costed or reordered. Descriptions used on the goods receipts that are not on this
+          list are shown below. Everything else — the bill of materials, stock and reorder — is built
+          on this list, so a material entered loosely stays loose everywhere after it.</div>
+        <div id="rm-unknown"></div>
+        <div class="row four" style="margin-top:10px;">
+          <div><label>Description</label><input id="rm-desc" placeholder="e.g. EN8 bright bar"></div>
+          <div><label>Code</label><input id="rm-code" placeholder="left blank = generated"></div>
+          <div><label>Type</label><select id="rm-type">
+            <option>Raw material</option><option>Bought-out part</option><option>Consumable</option>
+            <option>Cutting tool</option><option>Packing material</option></select></div>
+          <div><label>Form</label><select id="rm-form">
+            <option>Bar</option><option>Tube</option><option>Sheet</option><option>Plate</option>
+            <option>Casting</option><option>Forging</option><option>Component</option>
+            <option>Not applicable</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Grade / specification</label><input id="rm-spec" placeholder="e.g. EN8 / C45"></div>
+          <div><label>Standard</label><input id="rm-std" placeholder="e.g. IS 1570"></div>
+          <div><label>Size</label><input id="rm-size" placeholder="e.g. Ø32 x 3000"></div>
+          <div><label>Unit</label><select id="rm-uom">
+            <option>Kg</option><option>Nos</option><option>Metre</option><option>Litre</option>
+            <option>Set</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Preferred supplier</label><select id="rm-sup"></select></div>
+          <div><label>Standard rate</label><input class="num" id="rm-rate"></div>
+          <div><label>Reorder level</label><input class="num" id="rm-reorder"></div>
+          <div><label>Shelf life (days, blank if none)</label><input class="num" id="rm-shelf"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="rm-save">Save material</button>
+          <button class="btn" id="rm-clear">Clear</button>
+          <button class="btn" id="rm-print">Print the list</button>
+        </div>
+        <div class="note" id="rm-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Material list</h4>
+        <div id="rm-list"></div>
+      </div>
+    </div>
+
+    <!-- ============ Organisation masters: department, designation, position ============ -->
+    <div class="panel" data-panel="orgmaster">
+      <div class="card">
+        <h4 id="om-title">Organisation</h4>
+        <div class="hint" id="om-note" style="margin-bottom:10px;"></div>
+        <div class="row four">
+          <div><label id="om-l1">Name</label><input id="om-name"></div>
+          <div><label id="om-l2">Code</label><input id="om-code"></div>
+          <div id="om-w3"><label id="om-l3">Department</label><select id="om-dept"></select></div>
+          <div id="om-w4"><label id="om-l4">Reports to</label><input id="om-reports"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div id="om-w5"><label id="om-l5">Designation</label><select id="om-desig"></select></div>
+          <div id="om-w6"><label id="om-l6">Sanctioned strength</label><input class="num" id="om-count"></div>
+          <div><label>Notes</label><input id="om-note-in"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="om-save">Save</button>
+          <button class="btn" id="om-clear">Clear</button>
+        </div>
+        <div class="note" id="om-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4 id="om-list-title">List</h4>
+        <div id="om-list"></div>
+      </div>
+    </div>
+
+    <!-- ============ APQP programme ============ -->
+    <div class="panel" data-panel="apqp">
+      <div class="card">
+        <h4>APQP Programme</h4>
+        <div class="hint" style="margin-bottom:10px;">The five phases for one part. Most of what an
+          APQP tracker asks you to tick is <b>already recorded somewhere in this system</b> — the
+          routing, the dimensions, the PFMEA, the control plan, the setup approval, the MSA, the
+          PPAP. Those lines are read from the records and <b>cannot be ticked by hand</b>: a tick
+          that disagrees with the evidence is exactly what an auditor finds. The rest carry a
+          planned date, an actual date and a name.</div>
+        <div class="row four">
+          <div><label>Part</label><select id="ap-part"></select></div>
+          <div><label>Customer programme / SOP date</label><input type="date" id="ap-sop"></div>
+          <div style="align-self:end;"><button class="btn gold" id="ap-load">Open the programme</button></div>
+          <div style="align-self:end;"><button class="btn" id="ap-print">Print</button></div>
+        </div>
+        <div class="note" id="ap-msg" style="display:none;"></div>
+      </div>
+      <div id="ap-body"></div>
+    </div>
+
     <!-- ============ KPI dashboards: one panel, twelve departments ============ -->
     <div class="panel" data-panel="kpidash">
       <div class="card">
@@ -384,7 +534,10 @@
           save, using this company's document prefix. Two people saving at the same moment cannot be
           given the same number.</div>
         <div class="row four">
-          <div><label>Supplier</label><input id="gr-sup"></div>
+          <div><label>Supplier</label><input id="gr-sup" list="gr-sup-list" autocomplete="off">
+            <datalist id="gr-sup-list"></datalist>
+            <div class="hint">Type freely, but pick from the list where you can — a name spelled two
+              ways splits that supplier's record in two.</div></div>
           <div><label>Invoice / DC number</label><input id="gr-inv"></div>
           <div><label>Received on</label><input type="date" id="gr-date"></div>
           <div><label>Vehicle number</label><input id="gr-veh"></div>
@@ -1638,15 +1791,19 @@
     ['npd','🗂','NPD','New product development',[
       ['dash_npd','📊','NPD Dashboard',1],
       ['dash_engineering','📐','Engineering Dashboard',1],
-      ['parts','📦','Parts',1],['apqp','🗂','APQP Programme'],
+      ['parts','📦','Parts',1],['apqp','🗂','APQP Programme',1],
       ['process_master','🎛','Process Master Configuration',1],['dim_entry','📐','Dimensions Master',1],
       ['pfd','🔵','Process Flow Diagram',1],['fmea','⚠','PFMEA',1],['control_plan','📋','Control Plan',1],
-      ['cnc','⌨','CNC Programme',1],['ppap','📦','PPAP',1],['msa','🔬','MSA'],['spc','📈','SPC'],
+      ['cnc','⌨','CNC Programme',1],['ppap','📦','PPAP',1],
+      /* MSA and SPC were listed here as "soon" while the screens that do the work
+         sat under Quality Assurance — the same thing on the menu twice, and the
+         copy here a dead end. They are Quality's screens and are listed there
+         once; the APQP programme links straight to them. */
       ['machine_process','⚙','Machine & Process'],['pfmea_master','🧠','PFMEA Master'],
       ['pp_spec_master','📋','PP Spec Master'],['agent_npd','🤖','NPD Agent',1]]],
     ['purchase','🏭','Purchase & SCM','Suppliers and inward material',[
       ['dash_purchase','📊','Purchase & SCM Dashboard',1],
-      ['entry_supplier','🏭','Supplier Addition'],['entry_rawmat','🪨','Raw Material Addition'],
+      ['entry_supplier','🏭','Supplier Master',1],['entry_rawmat','🪨','Raw Material Master',1],
       ['grn','📥','GRN — Goods Receipt',1],['report_inward_inspection','📥','Inward Inspection Report',1],
       ['agent_supplier','🤖','Supplier Watch Agent',1],['supplier_competency','🤝','Supplier Competency']]],
     ['ppc','📦','PPC & MMD','Planning and material movement',[
@@ -1694,8 +1851,8 @@
       ['admin_banner','🖼','Home Banner',1],
       ['profile','🏢','Company Profile',1],
       ['users','👥','User Management'],
-      ['dept_master','🏢','Department Master'],['desig_master','🎖','Designation Master'],
-      ['position_master','📌','Position Master'],
+      ['dept_master','🏢','Department Master',1],['desig_master','🎖','Designation Master',1],
+      ['position_master','📌','Position Master',1],
       ['admin_backup','💾','Backup & Restore',1],
       ['admin_sample','🧪','Sample Data',1]]]
   ];
@@ -1703,6 +1860,7 @@
   /* Screens that share one panel: every department dashboard draws into the same
      markup, and every screen served by the website shows in the same frame. */
   var PANEL_OF = {
+    dept_master: 'orgmaster', desig_master: 'orgmaster', position_master: 'orgmaster',
     kpi_entry: 'kpi_entry', admin_banner: 'admin_banner',
     admin_backup: 'admin_backup', admin_sample: 'admin_sample',
     admin_site: 'embed', emb_pipeline: 'embed', emb_ppc: 'embed', emb_hr: 'embed', emb_me: 'embed'
@@ -1758,7 +1916,7 @@
     }
     if (s === 'home')    loadHome();
     if (s === 'parts')   loadParts();
-    if (s === 'grn')     loadGrn();
+    if (s === 'grn')     { loadGrn(); fillGrnSuppliers(); }
     if (s === 'dc')      loadDc();
     if (s === 'hrm')     loadHrm();
     if (s === 'entry_customer') loadCustomers();
@@ -1791,10 +1949,867 @@
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
+    if (s === 'entry_supplier')    loadSuppliers();
+    if (s === 'entry_rawmat')      loadRawmats();
+    if (s === 'dept_master')       loadOrgMaster('department');
+    if (s === 'desig_master')      loadOrgMaster('designation');
+    if (s === 'position_master')   loadOrgMaster('position');
+    if (s === 'apqp')              loadApqp();
     if (s.indexOf('dash_') === 0)  loadKpiDash(s.slice(5));
     if (s === 'kpi_entry')         loadKpiEntry();
     if (s === 'admin_banner')      loadBannerScreen();
     if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
+  }
+
+  /* ================= SUPPLIER MASTER =================
+     The same lesson as the machine list: a name typed on a receipt is the only
+     identity a supplier has today, so two spellings are two suppliers, and the
+     rating on each is built from half the evidence. This list starts from the
+     names already in use rather than from an empty page nobody fills in. */
+  var suppliers = [], supEditing = null, supGrns = [];
+
+  function supNamesInUse(){
+    var seen = {};
+    supGrns.forEach(function(g){
+      var n = String((g.data||{}).supplier||'').trim();
+      if (!n) return;
+      seen[n] = (seen[n] || 0) + 1;
+    });
+    return seen;
+  }
+  function supByName(n){
+    var k = String(n||'').trim().toLowerCase();
+    return suppliers.filter(function(s){
+      return String((s.data||{}).name||'').trim().toLowerCase() === k; })[0] || null;
+  }
+  function certExpired(v){
+    return v.certTill && new Date(v.certTill) < new Date(new Date().toDateString());
+  }
+
+  async function loadSuppliers(){
+    try { suppliers = await C.idms.docs('supplier'); } catch(e){ suppliers = []; }
+    try { supGrns = await C.idms.docs('grn'); } catch(e){ supGrns = []; }
+    drawUnknownSuppliers();
+    drawSupplierList();
+    fillSupplierPickers();
+  }
+
+  function drawUnknownSuppliers(){
+    var host = document.getElementById('su-unknown');
+    var seen = supNamesInUse();
+    var unknown = Object.keys(seen).filter(function(n){ return !supByName(n); });
+    if (!unknown.length){
+      host.innerHTML = suppliers.length
+        ? '<div class="note good">Every supplier named on a goods receipt is on the panel.</div>'
+        : '<div class="hint">No goods receipts yet, so there is nothing to adopt.</div>';
+      return;
+    }
+    host.innerHTML = '<div class="note"><b>' + unknown.length + ' supplier name(s) appear on receipts ' +
+      'but are not on the panel.</b> Adopt the ones that are real suppliers. If two of them are the ' +
+      'same supplier spelled differently, correct the receipt rather than adding both — two entries ' +
+      'is how one supplier ends up with two half-records.</div>' +
+      '<table class="t"><thead><tr><th>Name as it appears</th><th class="r">Receipts</th><th></th></tr></thead><tbody>' +
+      unknown.map(function(n){
+        return '<tr><td><b>'+esc(n)+'</b></td><td class="r">'+seen[n]+'</td>' +
+          '<td><button class="btn su-adopt" data-n="'+esc(n)+'">Adopt</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.su-adopt').forEach(function(b){
+      b.addEventListener('click', function(){
+        document.getElementById('su-name').value = b.dataset.n;
+        document.getElementById('su-name').scrollIntoView({ behavior:'smooth', block:'center' });
+      });
+    });
+  }
+
+  function drawSupplierList(){
+    var host = document.getElementById('su-list');
+    if (!suppliers.length){
+      host.innerHTML = '<div class="empty"><b>No suppliers yet</b>Adopt the names from the receipts ' +
+        'above, or add one with the form.</div>';
+      return;
+    }
+    var seen = supNamesInUse();
+    host.innerHTML = '<table class="t"><thead><tr><th>Code</th><th>Supplier</th><th>Supplies</th>' +
+      '<th>Status</th><th>Certification</th><th class="r">Receipts</th><th></th></tr></thead><tbody>' +
+      suppliers.map(function(s){
+        var v = s.data || {}, gone = certExpired(v);
+        var cert = v.cert
+          ? esc(v.cert) + (v.certTill ? '<div class="hint' + (gone ? ' bad' : '') + '">' +
+              (gone ? 'expired ' : 'valid to ') + C.fmtDate(v.certTill) + '</div>' : '')
+          : '<span class="hint">none held</span>';
+        var warn = (v.status === 'Approved' && gone)
+          ? '<div class="hint bad">approved with an expired certificate</div>' : '';
+        return '<tr><td><b>'+esc(s.doc_no||'—')+'</b></td>' +
+          '<td>'+esc(v.name||'—')+'<div class="hint">'+esc(v.contact||'')+
+            (v.phone?' · '+esc(v.phone):'')+'</div>'+warn+'</td>' +
+          '<td class="hint">'+esc(v.category||'—')+'</td>' +
+          '<td>'+esc(v.status||'—')+'</td>' +
+          '<td>'+cert+'</td>' +
+          '<td class="r">'+(seen[String(v.name||'').trim()]||0)+'</td>' +
+          '<td><button class="btn su-edit" data-id="'+esc(s.doc_id)+'">Edit</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.su-edit').forEach(function(b){
+      b.addEventListener('click', function(){ editSupplier(b.dataset.id); });
+    });
+  }
+
+  function editSupplier(id){
+    var s = suppliers.filter(function(x){ return x.doc_id === id; })[0];
+    if (!s) return;
+    var v = s.data || {};
+    supEditing = id;
+    var set = function(i, x){ document.getElementById(i).value = x || ''; };
+    set('su-name', v.name); set('su-code', s.doc_no); set('su-gstin', v.gstin);
+    set('su-contact', v.contact); set('su-phone', v.phone); set('su-email', v.email);
+    set('su-certtill', v.certTill); set('su-terms', v.terms); set('su-lead', v.leadDays);
+    set('su-addr', v.address);
+    document.getElementById('su-cat').value = v.category || 'Raw material';
+    document.getElementById('su-status').value = v.status || 'Under evaluation';
+    document.getElementById('su-cert').value = v.cert || '';
+    document.getElementById('su-save').textContent = 'Update supplier';
+    document.getElementById('su-name').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+
+  function clearSupplierForm(){
+    supEditing = null;
+    ['su-name','su-code','su-gstin','su-contact','su-phone','su-email','su-certtill',
+     'su-terms','su-lead','su-addr'].forEach(function(i){ document.getElementById(i).value = ''; });
+    document.getElementById('su-cert').value = '';
+    document.getElementById('su-save').textContent = 'Save supplier';
+    document.getElementById('su-msg').style.display = 'none';
+  }
+
+  async function saveSupplier(){
+    var g = function(i){ return document.getElementById(i).value.trim(); };
+    var msg = document.getElementById('su-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var name = g('su-name');
+    if (!name) return say('A supplier needs a name — it is the only thing the receipts key on.');
+    var dup = supByName(name);
+    if (dup && dup.doc_id !== supEditing)
+      return say('<b>'+esc(name)+'</b> is already on the panel. Edit that record rather than adding ' +
+                 'a second one, or the receipts will split between them.');
+    /* An approved supplier whose certificate has run out is a finding waiting to
+       happen, so it is refused here rather than reported later. */
+    var till = g('su-certtill');
+    if (document.getElementById('su-status').value === 'Approved' && till &&
+        new Date(till) < new Date(new Date().toDateString()))
+      return say('That certificate expired on ' + C.fmtDate(till) + '. A supplier cannot be marked ' +
+                 'Approved on an expired certificate — record the renewal, or set the status to ' +
+                 '<b>On hold</b> until it arrives.');
+
+    var btn = document.getElementById('su-save'); btn.disabled = true;
+    try {
+      var code = g('su-code') || (supEditing ?
+        (suppliers.filter(function(x){ return x.doc_id === supEditing; })[0]||{}).doc_no :
+        await C.docNumber('sup'));
+      await C.idms.saveDoc({ docId: supEditing || '', kind:'supplier', docNo: code,
+        status: document.getElementById('su-status').value,
+        data:{ name:name, code:code, category:document.getElementById('su-cat').value,
+               status:document.getElementById('su-status').value, gstin:g('su-gstin'),
+               contact:g('su-contact'), phone:g('su-phone'), email:g('su-email'),
+               cert:document.getElementById('su-cert').value, certTill:till,
+               terms:g('su-terms'), leadDays:C.num(g('su-lead')), address:g('su-addr') } },
+        supEditing ? 'supplier updated' : 'supplier added');
+      say(supEditing ? 'Updated.' : 'Added to the panel.', true);
+      clearSupplierForm();
+      await loadSuppliers();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+
+  function printSuppliers(){
+    if (!suppliers.length) { toast('Nothing on the panel to print.'); return; }
+    var seen = supNamesInUse();
+    C.openReport({ title:'Approved Supplier Panel', landscape:true, sections:[
+      { type:'table', title:'Suppliers', dense:true,
+        columns:[{label:'Code'},{label:'Supplier'},{label:'Supplies'},{label:'Status'},
+                 {label:'Certification'},{label:'Valid to'},{label:'Receipts',align:'r'}],
+        rows: suppliers.map(function(s){
+          var v = s.data||{};
+          return [s.doc_no, v.name, v.category, v.status, v.cert||'none held',
+                  v.certTill ? C.fmtDate(v.certTill) : '—',
+                  seen[String(v.name||'').trim()]||0];
+        }),
+        note:'Receipt counts come from the goods receipts on file. The delivery and quality rating ' +
+             'is produced by the Supplier Watch Agent and is not repeated here.' } ] });
+  }
+
+  function fillSupplierPickers(){
+    var sel = document.getElementById('rm-sup');
+    if (!sel) return;
+    var keep = sel.value;
+    sel.innerHTML = '<option value="">— none chosen —</option>' + suppliers.map(function(s){
+      return '<option value="'+esc(s.doc_id)+'">'+esc((s.data||{}).name||'')+'</option>';
+    }).join('');
+    sel.value = keep;
+  }
+
+  /* The goods receipt keeps its free-text field — refusing an unknown supplier
+     mid-delivery would stop the stores working — but it offers the panel, and the
+     supplier screen lists anything typed that is not on it. */
+  async function fillGrnSuppliers(){
+    var list = document.getElementById('gr-sup-list');
+    if (!list) return;
+    try {
+      if (!suppliers.length) suppliers = await C.idms.docs('supplier');
+      list.innerHTML = suppliers.map(function(s){
+        return '<option value="'+esc((s.data||{}).name||'')+'"></option>'; }).join('');
+    } catch(e){ /* the field still works without suggestions */ }
+  }
+
+  /* ================= RAW MATERIAL MASTER ================= */
+  var rawmats = [], rmEditing = null;
+
+  async function loadRawmats(){
+    try { rawmats = await C.idms.docs('rawmat'); } catch(e){ rawmats = []; }
+    try { suppliers = await C.idms.docs('supplier'); } catch(e){ suppliers = []; }
+    try { supGrns = await C.idms.docs('grn'); } catch(e){ supGrns = []; }
+    fillSupplierPickers();
+    drawUnknownMaterials();
+    drawRawmatList();
+  }
+  function rmByDesc(d){
+    var k = String(d||'').trim().toLowerCase();
+    return rawmats.filter(function(r){
+      return String((r.data||{}).description||'').trim().toLowerCase() === k; })[0] || null;
+  }
+  function drawUnknownMaterials(){
+    var host = document.getElementById('rm-unknown');
+    var seen = {};
+    supGrns.forEach(function(g){
+      var d = String((g.data||{}).description||(g.data||{}).desc||'').trim();
+      if (d) seen[d] = (seen[d]||0) + 1;
+    });
+    var unknown = Object.keys(seen).filter(function(d){ return !rmByDesc(d); });
+    if (!unknown.length){
+      host.innerHTML = rawmats.length
+        ? '<div class="note good">Every material described on a receipt is on the list.</div>'
+        : '<div class="hint">No material descriptions on the receipts yet.</div>';
+      return;
+    }
+    host.innerHTML = '<div class="note"><b>' + unknown.length + ' material description(s) are used on ' +
+      'receipts but are not on the list.</b></div>' +
+      '<table class="t"><thead><tr><th>Description as it appears</th><th class="r">Receipts</th>' +
+      '<th></th></tr></thead><tbody>' + unknown.map(function(d){
+        return '<tr><td><b>'+esc(d)+'</b></td><td class="r">'+seen[d]+'</td>' +
+          '<td><button class="btn rm-adopt" data-n="'+esc(d)+'">Adopt</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.rm-adopt').forEach(function(b){
+      b.addEventListener('click', function(){
+        document.getElementById('rm-desc').value = b.dataset.n;
+        document.getElementById('rm-desc').scrollIntoView({ behavior:'smooth', block:'center' });
+      });
+    });
+  }
+  function drawRawmatList(){
+    var host = document.getElementById('rm-list');
+    if (!rawmats.length){
+      host.innerHTML = '<div class="empty"><b>No materials yet</b>The bill of materials and stock ' +
+        'are built on this list, so it is the first thing to fill in.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Code</th><th>Description</th><th>Grade</th>' +
+      '<th>Size</th><th>Unit</th><th class="r">Rate</th><th class="r">Reorder at</th>' +
+      '<th>Preferred supplier</th><th></th></tr></thead><tbody>' +
+      rawmats.map(function(r){
+        var v = r.data || {};
+        var sup = suppliers.filter(function(s){ return s.doc_id === v.supplierId; })[0];
+        return '<tr><td><b>'+esc(r.doc_no||'—')+'</b></td>' +
+          '<td>'+esc(v.description||'—')+'<div class="hint">'+esc(v.type||'')+
+            (v.form && v.form !== 'Not applicable' ? ' · '+esc(v.form) : '')+'</div></td>' +
+          '<td class="hint">'+esc(v.spec||'—')+(v.standard?'<div class="hint">'+esc(v.standard)+'</div>':'')+'</td>' +
+          '<td class="hint">'+esc(v.size||'—')+'</td><td class="hint">'+esc(v.uom||'')+'</td>' +
+          '<td class="r">'+(v.rate?C.rate(v.rate):'—')+'</td>' +
+          '<td class="r">'+(v.reorder?C.qty(v.reorder):'—')+'</td>' +
+          '<td class="hint">'+esc(sup ? (sup.data||{}).name : '—')+'</td>' +
+          '<td><button class="btn rm-edit" data-id="'+esc(r.doc_id)+'">Edit</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.rm-edit').forEach(function(b){
+      b.addEventListener('click', function(){ editRawmat(b.dataset.id); });
+    });
+  }
+  function editRawmat(id){
+    var r = rawmats.filter(function(x){ return x.doc_id === id; })[0];
+    if (!r) return;
+    var v = r.data || {};
+    rmEditing = id;
+    var set = function(i, x){ document.getElementById(i).value = x == null ? '' : x; };
+    set('rm-desc', v.description); set('rm-code', r.doc_no); set('rm-spec', v.spec);
+    set('rm-std', v.standard); set('rm-size', v.size); set('rm-rate', v.rate);
+    set('rm-reorder', v.reorder); set('rm-shelf', v.shelfDays);
+    document.getElementById('rm-type').value = v.type || 'Raw material';
+    document.getElementById('rm-form').value = v.form || 'Bar';
+    document.getElementById('rm-uom').value = v.uom || 'Kg';
+    document.getElementById('rm-sup').value = v.supplierId || '';
+    document.getElementById('rm-save').textContent = 'Update material';
+    document.getElementById('rm-desc').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+  function clearRawmatForm(){
+    rmEditing = null;
+    ['rm-desc','rm-code','rm-spec','rm-std','rm-size','rm-rate','rm-reorder','rm-shelf']
+      .forEach(function(i){ document.getElementById(i).value = ''; });
+    document.getElementById('rm-sup').value = '';
+    document.getElementById('rm-save').textContent = 'Save material';
+    document.getElementById('rm-msg').style.display = 'none';
+  }
+  async function saveRawmat(){
+    var g = function(i){ return document.getElementById(i).value.trim(); };
+    var msg = document.getElementById('rm-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var d = g('rm-desc');
+    if (!d) return say('A material needs a description — it is what the receipts are matched on.');
+    var dup = rmByDesc(d);
+    if (dup && dup.doc_id !== rmEditing)
+      return say('<b>'+esc(d)+'</b> is already on the list as <b>'+esc(dup.doc_no)+'</b>. Two codes for ' +
+                 'one material means stock is counted twice and neither figure is right.');
+    var btn = document.getElementById('rm-save'); btn.disabled = true;
+    try {
+      var code = g('rm-code') || (rmEditing ?
+        (rawmats.filter(function(x){ return x.doc_id === rmEditing; })[0]||{}).doc_no :
+        await C.docNumber('rm'));
+      await C.idms.saveDoc({ docId: rmEditing || '', kind:'rawmat', docNo: code, status:'Active',
+        data:{ description:d, code:code, type:document.getElementById('rm-type').value,
+               form:document.getElementById('rm-form').value, spec:g('rm-spec'),
+               standard:g('rm-std'), size:g('rm-size'), uom:document.getElementById('rm-uom').value,
+               supplierId:document.getElementById('rm-sup').value,
+               supplierName:(suppliers.filter(function(s){
+                 return s.doc_id === document.getElementById('rm-sup').value; })[0]||{data:{}}).data.name || '',
+               rate:C.num(g('rm-rate')), reorder:C.num(g('rm-reorder')),
+               shelfDays:C.num(g('rm-shelf')) } },
+        rmEditing ? 'material updated' : 'material added');
+      say(rmEditing ? 'Updated.' : 'Added.', true);
+      clearRawmatForm();
+      await loadRawmats();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+  function printRawmats(){
+    if (!rawmats.length) { toast('Nothing to print.'); return; }
+    C.openReport({ title:'Material Master', landscape:true, sections:[
+      { type:'table', title:'Materials and bought-out items', dense:true,
+        columns:[{label:'Code'},{label:'Description'},{label:'Type'},{label:'Grade'},{label:'Size'},
+                 {label:'Unit'},{label:'Rate',align:'r'},{label:'Reorder at',align:'r'},{label:'Supplier'}],
+        rows: rawmats.map(function(r){
+          var v = r.data||{};
+          return [r.doc_no, v.description, v.type, v.spec, v.size, v.uom,
+                  v.rate?C.rate(v.rate):'—', v.reorder?C.qty(v.reorder):'—', v.supplierName||'—'];
+        }) } ] });
+  }
+
+  /* ================= ORGANISATION MASTERS =================
+     Department, designation and position are three views of one small list, so
+     they share a screen rather than three near-identical ones. A position knows
+     how many are sanctioned; how many are FILLED is counted from the employee
+     records, never typed — a vacancy figure somebody maintains by hand is a
+     vacancy figure nobody believes. */
+  var orgRows = [], orgType = 'department', orgEditing = null, orgEmployees = [];
+  var ORG_META = {
+    department: ['Departments', 'The list every designation, position and employee record hangs off.',
+                 'Department name', 'Code', null, 'Head of department', null, null],
+    designation: ['Designations', 'A designation belongs to a department and carries a grade. ' +
+                  'The skill matrix and training records read these.',
+                  'Designation', 'Grade', 'Department', null, null, null],
+    position: ['Positions', 'A sanctioned post. How many are filled is counted from the employee ' +
+               'records, so the vacancy shown here cannot drift from who is actually on the roll.',
+               'Position title', 'Code', 'Department', null, 'Designation', 'Sanctioned strength']
+  };
+
+  async function loadOrgMaster(type){
+    orgType = type; orgEditing = null;
+    var m = ORG_META[type];
+    document.getElementById('om-title').textContent = m[0];
+    document.getElementById('om-note').textContent = m[1];
+    document.getElementById('om-list-title').textContent = m[0];
+    document.getElementById('om-l1').textContent = m[2];
+    document.getElementById('om-l2').textContent = m[3];
+    document.getElementById('om-w3').style.display = m[4] ? '' : 'none';
+    document.getElementById('om-w4').style.display = m[5] ? '' : 'none';
+    document.getElementById('om-w5').style.display = m[6] ? '' : 'none';
+    document.getElementById('om-w6').style.display = m[7] ? '' : 'none';
+    if (m[4]) document.getElementById('om-l3').textContent = m[4];
+    if (m[5]) document.getElementById('om-l4').textContent = m[5];
+    if (m[6]) document.getElementById('om-l5').textContent = m[6];
+    if (m[7]) document.getElementById('om-l6').textContent = m[7];
+    clearOrgForm();
+
+    try { orgRows = await C.idms.docs('orgmaster'); } catch(e){ orgRows = []; }
+    if (type === 'position') {
+      try { orgEmployees = (await C.api('/api/hr?what=employees')).employees || []; }
+      catch(e){ orgEmployees = []; }
+    }
+    fillOrgPickers();
+    drawOrgList();
+  }
+  function orgOf(type){
+    return orgRows.filter(function(r){ return (r.data||{}).type === type; });
+  }
+  function fillOrgPickers(){
+    var depts = orgOf('department');
+    document.getElementById('om-dept').innerHTML = '<option value="">— choose —</option>' +
+      depts.map(function(d){ return '<option>'+esc((d.data||{}).name||'')+'</option>'; }).join('');
+    var desigs = orgOf('designation');
+    document.getElementById('om-desig').innerHTML = '<option value="">— choose —</option>' +
+      desigs.map(function(d){ return '<option>'+esc((d.data||{}).name||'')+'</option>'; }).join('');
+  }
+  /* filled = employees whose record names this designation (and department, when
+     the position gives one). Read, not typed. */
+  function filledFor(v){
+    return orgEmployees.filter(function(e){
+      var d = e.data || e;
+      if (String(d.status||'Active') === 'Left') return false;
+      if (v.designation && String(d.designation||'') !== v.designation) return false;
+      if (v.department && String(d.department||'') !== v.department) return false;
+      return !!(v.designation || v.department);
+    }).length;
+  }
+  function drawOrgList(){
+    var host = document.getElementById('om-list'), rows = orgOf(orgType);
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>Nothing on this list yet</b>Add the first one with the ' +
+        'form above.</div>';
+      return;
+    }
+    var head, body;
+    if (orgType === 'department'){
+      head = '<tr><th>Code</th><th>Department</th><th>Head</th><th>Notes</th><th></th></tr>';
+      body = rows.map(function(r){ var v=r.data||{};
+        return '<tr><td><b>'+esc(v.code||'—')+'</b></td><td>'+esc(v.name||'')+'</td>' +
+          '<td class="hint">'+esc(v.reportsTo||'—')+'</td><td class="hint">'+esc(v.note||'')+'</td>' +
+          '<td><button class="btn om-edit" data-id="'+esc(r.doc_id)+'">Edit</button></td></tr>'; }).join('');
+    } else if (orgType === 'designation'){
+      head = '<tr><th>Grade</th><th>Designation</th><th>Department</th><th>Notes</th><th></th></tr>';
+      body = rows.map(function(r){ var v=r.data||{};
+        return '<tr><td><b>'+esc(v.code||'—')+'</b></td><td>'+esc(v.name||'')+'</td>' +
+          '<td class="hint">'+esc(v.department||'—')+'</td><td class="hint">'+esc(v.note||'')+'</td>' +
+          '<td><button class="btn om-edit" data-id="'+esc(r.doc_id)+'">Edit</button></td></tr>'; }).join('');
+    } else {
+      head = '<tr><th>Code</th><th>Position</th><th>Department</th><th>Designation</th>' +
+        '<th class="r">Sanctioned</th><th class="r">Filled</th><th class="r">Vacant</th><th></th></tr>';
+      body = rows.map(function(r){
+        var v = r.data||{}, filled = filledFor(v), sanc = C.num(v.sanctioned), vac = sanc - filled;
+        return '<tr><td><b>'+esc(v.code||'—')+'</b></td><td>'+esc(v.name||'')+'</td>' +
+          '<td class="hint">'+esc(v.department||'—')+'</td>' +
+          '<td class="hint">'+esc(v.designation||'—')+'</td>' +
+          '<td class="r">'+sanc+'</td><td class="r">'+filled+'</td>' +
+          '<td class="r'+(vac>0?' bad':(vac<0?' bad':''))+'">'+vac+
+            (vac<0?'<div class="hint">over strength</div>':'')+'</td>' +
+          '<td><button class="btn om-edit" data-id="'+esc(r.doc_id)+'">Edit</button></td></tr>'; }).join('');
+    }
+    host.innerHTML = '<table class="t"><thead>'+head+'</thead><tbody>'+body+'</tbody></table>' +
+      (orgType === 'position'
+        ? '<div class="hint" style="margin-top:8px;">Filled is counted from the employee records that ' +
+          'name this designation and department. If it reads zero where people are in post, their ' +
+          'records do not carry the same wording as this list — fix the record, not the number.</div>'
+        : '');
+    host.querySelectorAll('.om-edit').forEach(function(b){
+      b.addEventListener('click', function(){ editOrg(b.dataset.id); });
+    });
+  }
+  function editOrg(id){
+    var r = orgRows.filter(function(x){ return x.doc_id === id; })[0];
+    if (!r) return;
+    var v = r.data || {};
+    orgEditing = id;
+    document.getElementById('om-name').value = v.name || '';
+    document.getElementById('om-code').value = v.code || '';
+    document.getElementById('om-dept').value = v.department || '';
+    document.getElementById('om-reports').value = v.reportsTo || '';
+    document.getElementById('om-desig').value = v.designation || '';
+    document.getElementById('om-count').value = v.sanctioned || '';
+    document.getElementById('om-note-in').value = v.note || '';
+    document.getElementById('om-save').textContent = 'Update';
+    document.getElementById('om-name').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+  function clearOrgForm(){
+    orgEditing = null;
+    ['om-name','om-code','om-reports','om-count','om-note-in'].forEach(function(i){
+      document.getElementById(i).value = ''; });
+    var d = document.getElementById('om-dept'), g = document.getElementById('om-desig');
+    if (d) d.value = ''; if (g) g.value = '';
+    document.getElementById('om-save').textContent = 'Save';
+    document.getElementById('om-msg').style.display = 'none';
+  }
+  async function saveOrg(){
+    var msg = document.getElementById('om-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var name = document.getElementById('om-name').value.trim();
+    if (!name) return say('A name is needed.');
+    var dup = orgOf(orgType).filter(function(r){
+      return String((r.data||{}).name||'').toLowerCase() === name.toLowerCase() &&
+             r.doc_id !== orgEditing; })[0];
+    if (dup) return say('<b>'+esc(name)+'</b> is already on this list.');
+    if (orgType === 'position' && !document.getElementById('om-desig').value)
+      return say('A position needs a designation — that is what the employee records are matched on, ' +
+                 'and without it the filled count cannot be worked out.');
+
+    var btn = document.getElementById('om-save'); btn.disabled = true;
+    try {
+      await C.idms.saveDoc({ docId: orgEditing || '', kind:'orgmaster',
+        docNo: document.getElementById('om-code').value.trim() || name.slice(0,12).toUpperCase(),
+        status:'Active',
+        data:{ type:orgType, name:name,
+               code:document.getElementById('om-code').value.trim(),
+               department:document.getElementById('om-dept').value,
+               designation:document.getElementById('om-desig').value,
+               reportsTo:document.getElementById('om-reports').value.trim(),
+               sanctioned:C.num(document.getElementById('om-count').value),
+               note:document.getElementById('om-note-in').value.trim() } },
+        orgEditing ? 'organisation master updated' : 'organisation master added');
+      say(orgEditing ? 'Updated.' : 'Saved.', true);
+      clearOrgForm();
+      await loadOrgMaster(orgType);
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+
+  /* ================= APQP PROGRAMME =================
+     The point of an APQP tracker here is not another list of tick boxes. Most of
+     what it asks about is already recorded: the routing, the dimensions, the
+     PFD, the PFMEA, the control plan, the programme, the setup approval, the
+     MSA, the PPAP. Those lines are READ from the records, cannot be ticked, and
+     name the screen where the work is done. A phase cannot be signed off while
+     one of them is outstanding — which makes the sign-off mean something. */
+  var apqpPart = null, apqpDoc = null, apqpB = null;
+
+  var APQP = [
+    [1, 'Plan & Define', [
+      ['req',    'Customer requirement and quotation on file', function(B){
+        return B.part.quote_ref ? { ok:true, note:'Quotation ' + B.part.quote_ref }
+             : { ok:false, note:'No quotation reference on the part' }; }, 'parts'],
+      ['custpart','Customer part number, drawing and price linked', function(B){
+        var cp = B.custParts[0];
+        return cp ? { ok:true, note:'Their part ' + ((cp.data||{}).custPartNo||'—') + ' at ' +
+                      C.rate((cp.data||{}).price) }
+                  : { ok:false, note:'No customer link — add it on Parts' }; }, 'parts'],
+      ['bom',    'Preliminary bill of materials', null],
+      ['flow',   'Preliminary process flow', function(B){
+        return B.processes.length ? { ok:true, note:B.processes.length + ' operations on the routing' }
+             : { ok:false, note:'No routing yet' }; }, 'process_master'],
+      ['assump', 'Product and process assumptions agreed', null],
+      ['feas',   'Team feasibility commitment signed', null]
+    ]],
+    [2, 'Product Design & Development', [
+      ['drg',    'Drawing number and revision recorded', function(B){
+        var cp = (B.custParts[0]||{}).data || {};
+        return cp.custDrawingNo ? { ok:true, note:'Drawing ' + cp.custDrawingNo }
+             : { ok:false, note:'No customer drawing number recorded' }; }, 'parts'],
+      ['dims',   'Dimensions recorded against every operation', function(B){
+        if (!B.processes.length) return { ok:false, note:'No routing yet' };
+        var bare = B.processes.filter(function(p){
+          return !B.dimensions.filter(function(d){ return (d.data||{}).processId === p.doc_id; }).length;
+        });
+        return bare.length
+          ? { ok:false, note:bare.length + ' operation(s) carry no characteristics' }
+          : { ok:true, note:B.dimensions.length + ' characteristics over ' + B.processes.length + ' operations' };
+      }, 'dim_entry'],
+      ['sc',     'Special characteristics identified', function(B){
+        var n = B.dimensions.filter(function(d){ return (d.data||{}).cls; }).length;
+        return n ? { ok:true, note:n + ' marked SC or CC' }
+                 : { ok:false, note:'Nothing marked SC or CC — if that is right, say so in the notes' }; }, 'dim_entry'],
+      ['gauges', 'A gauge and a frequency against every SC and CC', function(B){
+        var sc = B.dimensions.filter(function(d){ return (d.data||{}).cls; });
+        if (!sc.length) return { ok:false, note:'No SC or CC characteristics yet' };
+        var bad = sc.filter(function(d){ var v=d.data||{}; return !v.gauge || !v.frequency; });
+        return bad.length ? { ok:false, note:bad.length + ' special characteristic(s) have no gauge or frequency' }
+                          : { ok:true, note:'All ' + sc.length + ' have a gauge and a frequency' }; }, 'dim_entry'],
+      ['proto',  'Prototype or sample build completed', null]
+    ]],
+    [3, 'Process Design & Development', [
+      ['pfd',    'Process flow diagram', function(B){
+        return B.processes.length ? { ok:true, note:'Drawn from the routing' }
+             : { ok:false, note:'No routing to draw it from' }; }, 'pfd'],
+      ['pfmea',  'PFMEA prepared and signed', function(B){
+        var f = B.pfmea[0];
+        if (!f) return { ok:false, note:'No PFMEA yet' };
+        var v = f.data || {};
+        return (v.signedBy || f.status === 'Approved')
+          ? { ok:true, note:'Signed — ' + (f.doc_no||'') }
+          : { ok:false, note:(f.doc_no||'Drafted') + ', not signed off by the CFT' }; }, 'fmea'],
+      ['cp',     'Control plan prepared', function(B){
+        var c = B.controlPlans[0];
+        return c ? { ok:true, note:c.doc_no || 'Prepared' } : { ok:false, note:'No control plan yet' }; }, 'control_plan'],
+      ['cnc',    'Machining programme prepared and proved', function(B){
+        if (!B.cnc.length) return { ok:false, note:'No programme recorded' };
+        var unproven = B.cnc.filter(function(p){ return String(p.status||'') !== 'Proven'; });
+        return unproven.length ? { ok:false, note:unproven.length + ' programme(s) still unproven' }
+                               : { ok:true, note:B.cnc.length + ' proved at the machine' }; }, 'cnc'],
+      ['wi',     'Work instructions issued to the shop floor', null],
+      ['pack',   'Packing standard agreed with the customer', null],
+      ['msaplan','Measurement system study planned', null]
+    ]],
+    [4, 'Product & Process Validation', [
+      ['setup',  'Setup approved on the line', function(B){
+        var ok = B.setups.filter(function(s){ return String(s.status||'') === 'Approved'; });
+        return ok.length ? { ok:true, note:ok.length + ' approved setup(s)' }
+                         : { ok:false, note:'No approved setup on file' }; }, 'report_setup_approval'],
+      ['run',    'Significant production run completed', function(B){
+        if (!B.production.length) return { ok:false, note:'Nothing booked against this part' };
+        var made = B.production.reduce(function(t,p){ return t + C.num((p.data||{}).made); }, 0);
+        return { ok:made > 0, note:C.qty(made) + ' pieces booked over ' + B.production.length + ' runs' };
+      }, 'entry_prod'],
+      ['msa',    'Measurement systems analysis acceptable', function(B){
+        if (!B.msa.length) return { ok:false, note:'No study on file' };
+        var bad = B.msa.filter(function(m){ return /not acceptable/i.test((m.data||{}).verdict || m.status || ''); });
+        return bad.length ? { ok:false, note:bad.length + ' study/studies not acceptable' }
+                          : { ok:true, note:B.msa.length + ' study/studies acceptable' }; }, 'report_msa'],
+      ['cal',    'Every gauge the control plan calls for is in the register', function(B){
+        var want = {}, cp = B.controlPlans[0];
+        if (!cp) return { ok:false, note:'No control plan to check against' };
+        ((cp.data||{}).lines || (cp.data||{}).characteristics || []).forEach(function(l){
+          var g = String(l.technique || l.gauge || '').trim();
+          if (g) want[g.toLowerCase()] = g;
+        });
+        var names = Object.keys(want);
+        if (!names.length) return { ok:false, note:'The control plan names no measuring technique' };
+        var have = B.gauges.map(function(g){ return String((g.data||{}).name||'').toLowerCase(); });
+        var miss = names.filter(function(n){
+          return !have.some(function(h){ return h.indexOf(n) >= 0 || n.indexOf(h) >= 0; }); });
+        return miss.length ? { ok:false, note:miss.length + ' not in the gauge register: ' +
+                               miss.map(function(n){ return want[n]; }).slice(0,4).join(', ') }
+                           : { ok:true, note:'All ' + names.length + ' are registered' }; }, 'report_calibration'],
+      ['pdi',    'Pre-despatch inspection passed', function(B){
+        if (!B.pdi.length) return { ok:false, note:'No lot inspected yet' };
+        var held = B.pdi.filter(function(p){ return /hold|fail/i.test(p.status||''); });
+        return held.length ? { ok:false, note:held.length + ' lot(s) on hold' }
+                           : { ok:true, note:B.pdi.length + ' lot(s) cleared' }; }, 'report_pdi'],
+      ['ppap',   'PPAP submitted to the customer', function(B){
+        var p = B.ppap[0];
+        return p ? { ok:true, note:(p.doc_no||'Submitted') + ' — ' + (p.status||'') }
+                 : { ok:false, note:'No PPAP package yet' }; }, 'ppap']
+    ]],
+    [5, 'Feedback, Assessment & Corrective Action', [
+      ['nc',     'No non-conformance left open on this part', function(B){
+        var open = B.ncrs.filter(function(n){ return !/closed/i.test(n.status||''); });
+        return open.length ? { ok:false, note:open.length + ' still open' }
+                           : { ok:true, note:B.ncrs.length ? 'All ' + B.ncrs.length + ' closed' : 'None raised' }; }, 'ncr'],
+      ['var',    'Variation reduced and capability demonstrated', null],
+      ['csat',   'Customer satisfaction confirmed', null],
+      ['lessons','Lessons learnt recorded and shared', null]
+    ]]
+  ];
+
+  async function loadApqp(){
+    await fetchParts();
+    var sel = document.getElementById('ap-part');
+    sel.innerHTML = partOptions(sel.value);
+    if (sel.value) await openApqp();
+    else document.getElementById('ap-body').innerHTML =
+      '<div class="card"><div class="empty"><b>Choose a part</b>The programme is per part, because ' +
+      'that is the thread everything else in this system hangs off.</div></div>';
+  }
+
+  async function openApqp(){
+    var pid = document.getElementById('ap-part').value;
+    var msg = document.getElementById('ap-msg');
+    msg.style.display = 'none';
+    if (!pid) { toast('Choose a part first.'); return; }
+    var body = document.getElementById('ap-body');
+    body.innerHTML = '<div class="card"><div class="hint">Reading the records for this part…</div></div>';
+
+    apqpPart = allParts.filter(function(p){ return p.part_id === pid; })[0] || null;
+    if (!apqpPart) { body.innerHTML = '<div class="card"><div class="note bad">That part could not be read.</div></div>'; return; }
+
+    async function d(kind){ try { return await C.idms.docs(kind, pid); } catch(e){ return []; } }
+    apqpB = {
+      part: apqpPart,
+      custParts: await d('cust_part'), processes: await d('process'), dimensions: await d('dimension'),
+      pfmea: await d('pfmea'), controlPlans: await d('control_plan'), cnc: await d('cnc'),
+      setups: await d('setup'), production: await d('production'), msa: await d('msa'),
+      pdi: await d('pdi'), ppap: await d('ppap'), ncrs: await d('ncr'),
+      gauges: []
+    };
+    try { apqpB.gauges = await C.idms.docs('gauge'); } catch(e){ apqpB.gauges = []; }
+    var all = await d('apqp');
+    apqpDoc = all[0] || null;
+    if (apqpDoc && (apqpDoc.data||{}).sop) document.getElementById('ap-sop').value = apqpDoc.data.sop;
+    drawApqp();
+  }
+
+  function apqpState(){
+    var manual = (apqpDoc && apqpDoc.data && apqpDoc.data.manual) || {};
+    var gates = (apqpDoc && apqpDoc.data && apqpDoc.data.gates) || {};
+    return { manual: manual, gates: gates };
+  }
+  function apqpLineStatus(item, st){
+    if (item[2]) {                                   // read from the records
+      var r;
+      try { r = item[2](apqpB); } catch(e){ r = { ok:false, note:'could not be read: ' + e.message }; }
+      return { kind:'evidence', ok:r.ok, note:r.note };
+    }
+    var m = st.manual[item[0]] || {};
+    return { kind:'manual', ok: !!m.actual, note: m.note || '' };
+  }
+  function apqpOutstanding(phase, st){
+    return phase[2].filter(function(it){ return !apqpLineStatus(it, st).ok; });
+  }
+
+  function drawApqp(){
+    var st = apqpState(), p = apqpPart;
+    var doneAll = 0, totalAll = 0;
+
+    var html = '<div class="card"><h4>' + esc(p.part_no) + ' · ' + esc(p.part_name||'') + '</h4>' +
+      '<div class="hint">Lifecycle stage <b>' + esc(p.lifecycle||'—') + '</b>' +
+      (p.customer ? ' · ' + esc(p.customer) : '') + '</div><div id="ap-summary"></div></div>';
+
+    APQP.forEach(function(phase){
+      var rows = phase[2].map(function(it){
+        var s = apqpLineStatus(it, st);
+        totalAll++; if (s.ok) doneAll++;
+        var m = st.manual[it[0]] || {};
+        var badge = s.ok
+          ? '<span class="pill ok">done</span>'
+          : '<span class="pill">outstanding</span>';
+        if (s.kind === 'evidence'){
+          return '<tr><td>' + esc(it[1]) +
+            '<div class="hint">read from the records · <a data-goto="' + esc(it[3]) +
+            '" style="cursor:pointer;color:var(--sky-deep);">open the screen</a></div></td>' +
+            '<td>' + badge + '</td><td class="hint" colspan="3">' + esc(s.note) + '</td></tr>';
+        }
+        return '<tr><td>' + esc(it[1]) + '<div class="hint">recorded here</div></td>' +
+          '<td>' + badge + '</td>' +
+          '<td><input type="date" class="ap-in" data-k="' + it[0] + '" data-f="plan" value="' + esc(m.plan||'') + '"></td>' +
+          '<td><input type="date" class="ap-in" data-k="' + it[0] + '" data-f="actual" value="' + esc(m.actual||'') + '"></td>' +
+          '<td><input class="ap-in" data-k="' + it[0] + '" data-f="owner" placeholder="who" value="' + esc(m.owner||'') + '"></td></tr>';
+      }).join('');
+
+      var out = apqpOutstanding(phase, st);
+      var gate = st.gates[phase[0]] || null;
+      html += '<div class="card"><h4>Phase ' + phase[0] + ' — ' + esc(phase[1]) + '</h4>' +
+        '<div class="scroll-x"><table class="t"><thead><tr><th style="min-width:280px;">Deliverable</th>' +
+        '<th>Status</th><th>Planned</th><th>Actual</th><th>Owner</th></tr></thead><tbody>' +
+        rows + '</tbody></table></div>' +
+        (gate
+          ? '<div class="note good" style="margin-top:10px;">Phase signed off by <b>' + esc(gate.by) +
+            '</b> on ' + C.fmtDate(gate.on) + '.</div>'
+          : '<div class="row four" style="margin-top:11px;">' +
+            '<div><label>Signed off by</label><input class="ap-gate-by" data-p="' + phase[0] + '"></div>' +
+            '<div style="align-self:end;"><button class="btn gold ap-gate" data-p="' + phase[0] + '">Sign this phase off</button></div>' +
+            '<div style="align-self:end;" class="hint">' + (out.length
+              ? out.length + ' deliverable(s) still outstanding'
+              : 'Everything in this phase is done') + '</div></div>') +
+        '</div>';
+    });
+
+    document.getElementById('ap-body').innerHTML = html;
+
+    var pctDone = totalAll ? Math.round(doneAll / totalAll * 100) : 0;
+    document.getElementById('ap-summary').innerHTML =
+      '<div class="stat" style="margin-top:10px;">' +
+      [['Deliverables done', doneAll + ' of ' + totalAll], ['Complete', pctDone + '%'],
+       ['Phases signed off', Object.keys(st.gates).length + ' of 5']]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') + '</div>';
+
+    document.getElementById('ap-body').querySelectorAll('[data-goto]').forEach(function(a){
+      a.addEventListener('click', function(){ go(a.dataset.goto); });
+    });
+    document.getElementById('ap-body').querySelectorAll('.ap-in').forEach(function(inp){
+      inp.addEventListener('change', saveApqpManual);
+    });
+    document.getElementById('ap-body').querySelectorAll('.ap-gate').forEach(function(b){
+      b.addEventListener('click', function(){ signApqpPhase(+b.dataset.p); });
+    });
+  }
+
+  function apqpCollect(){
+    var manual = {};
+    document.getElementById('ap-body').querySelectorAll('.ap-in').forEach(function(inp){
+      var k = inp.dataset.k;
+      manual[k] = manual[k] || {};
+      manual[k][inp.dataset.f] = inp.value;
+    });
+    return manual;
+  }
+  /* Every date field fires a save on change, and a person filling a phase in
+     changes several in a row. The first write has no doc_id yet, so without this
+     queue the second, third and fourth all insert — one part ended up with four
+     APQP records, each holding part of the answer. Writes are chained: the next
+     one waits for the previous to come back with the id. */
+  var apqpQueue = Promise.resolve();
+  function writeApqp(manual, gates, reason){
+    apqpQueue = apqpQueue.then(function(){ return writeApqpNow(manual, gates, reason); },
+                               function(){ return writeApqpNow(manual, gates, reason); });
+    return apqpQueue;
+  }
+  async function writeApqpNow(manual, gates, reason){
+    var res = await C.idms.saveDoc({
+      docId: apqpDoc ? apqpDoc.doc_id : '', kind:'apqp', partId: apqpPart.part_id,
+      docNo: (apqpDoc && apqpDoc.doc_no) || await C.docNumber('apqp'),
+      status: Object.keys(gates).length >= 5 ? 'Complete' : 'In progress',
+      data:{ partId: apqpPart.part_id, partNo: apqpPart.part_no,
+             sop: document.getElementById('ap-sop').value,
+             manual: manual, gates: gates }
+    }, reason);
+    if (!apqpDoc) apqpDoc = { doc_id: res.docId, doc_no: res.docNo || '', data:{} };
+    apqpDoc.data = { partId: apqpPart.part_id, sop: document.getElementById('ap-sop').value,
+                     manual: manual, gates: gates };
+    return res;
+  }
+  async function saveApqpManual(){
+    var st = apqpState();
+    try { await writeApqp(apqpCollect(), st.gates, 'APQP dates updated'); drawApqp(); }
+    catch(e){ toast(e.message); }
+  }
+
+  /* The gate. Signing a phase off while a deliverable is outstanding is how an
+     APQP file ends up saying one thing and the records another, so it is
+     refused and the outstanding lines are named. */
+  async function signApqpPhase(no){
+    var st = apqpState();
+    st.manual = apqpCollect();
+    var phase = APQP.filter(function(p){ return p[0] === no; })[0];
+    var byEl = document.querySelector('.ap-gate-by[data-p="' + no + '"]');
+    var by = byEl ? byEl.value.trim() : '';
+    var msg = document.getElementById('ap-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+
+    if (!by) return say('A phase sign-off needs a name. "Approved" with nobody against it is not a record.');
+    var out = apqpOutstanding(phase, st);
+    if (out.length)
+      return say('<b>Phase ' + no + ' cannot be signed off.</b> Still outstanding:<br>· ' +
+        out.map(function(it){ return esc(it[1]); }).join('<br>· ') +
+        '<br><br>The lines read from the records cannot be ticked here — do the work on the screen ' +
+        'named against them and this phase will close itself.');
+
+    var gates = Object.assign({}, st.gates);
+    gates[no] = { by: by, on: new Date().toISOString().slice(0,10) };
+    try {
+      await writeApqp(st.manual, gates, 'APQP phase ' + no + ' signed off by ' + by);
+      say('Phase ' + no + ' signed off.', true);
+      drawApqp();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  function printApqp(){
+    if (!apqpPart || !apqpB) { toast('Open a programme first.'); return; }
+    var st = apqpState();
+    var secs = [{ type:'pairs', title:'Part', rows:[
+      ['Part number', esc(apqpPart.part_no)], ['Part name', esc(apqpPart.part_name||'')],
+      ['Customer', esc(apqpPart.customer||'—')], ['Lifecycle stage', esc(apqpPart.lifecycle||'—')],
+      ['Customer SOP date', document.getElementById('ap-sop').value
+        ? C.fmtDate(document.getElementById('ap-sop').value) : '—'] ] }];
+    APQP.forEach(function(phase){
+      var gate = st.gates[phase[0]];
+      secs.push({ type:'table', dense:true,
+        title:'Phase ' + phase[0] + ' — ' + phase[1] +
+          (gate ? '   (signed off by ' + gate.by + ' on ' + C.fmtDate(gate.on) + ')' : '   (not signed off)'),
+        columns:[{label:'Deliverable'},{label:'Source'},{label:'Status'},{label:'Evidence / dates'}],
+        rows: phase[2].map(function(it){
+          var s = apqpLineStatus(it, st), m = st.manual[it[0]] || {};
+          return [it[1], s.kind === 'evidence' ? 'read from records' : 'entered',
+                  s.ok ? 'Done' : 'Outstanding',
+                  s.kind === 'evidence' ? s.note
+                    : [m.plan ? 'planned ' + C.fmtDate(m.plan) : '',
+                       m.actual ? 'done ' + C.fmtDate(m.actual) : '',
+                       m.owner || ''].filter(Boolean).join(' · ') || '—'];
+        }) });
+    });
+    secs.push({ type:'text', title:'How to read this',
+      body:'Lines marked "read from records" are computed from what is actually in the system at the ' +
+           'moment of printing — the routing, dimensions, PFMEA, control plan, programmes, setup ' +
+           'approvals, studies, inspections and non-conformances for this part. They cannot be ticked ' +
+           'by hand, and a phase cannot be signed off while any of them is outstanding.' });
+    C.openReport({ title:'APQP Programme — ' + apqpPart.part_no, landscape:true, sections:secs });
   }
 
   /* ---------------- KPI dashboards ----------------
@@ -9473,6 +10488,21 @@
     document.getElementById('ab-file').value = '';
     bannerPreview();
   });
+
+  document.getElementById('su-save').addEventListener('click', saveSupplier);
+  document.getElementById('su-clear').addEventListener('click', clearSupplierForm);
+  document.getElementById('su-print').addEventListener('click', printSuppliers);
+
+  document.getElementById('rm-save').addEventListener('click', saveRawmat);
+  document.getElementById('rm-clear').addEventListener('click', clearRawmatForm);
+  document.getElementById('rm-print').addEventListener('click', printRawmats);
+
+  document.getElementById('om-save').addEventListener('click', saveOrg);
+  document.getElementById('om-clear').addEventListener('click', clearOrgForm);
+
+  document.getElementById('ap-load').addEventListener('click', openApqp);
+  document.getElementById('ap-part').addEventListener('change', openApqp);
+  document.getElementById('ap-print').addEventListener('click', printApqp);
 
   document.getElementById('kd-run').addEventListener('click', function(){ loadKpiDash(kpiDept); });
   document.getElementById('kd-fy').addEventListener('change', function(){

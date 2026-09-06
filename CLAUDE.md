@@ -543,8 +543,80 @@ and the priced link. Nothing in that path is typed by hand: the quotation line
 carries the customer's part number, drawing number, revision and HSN, and
 "Add to quotation" on the costing screen fills those from the title block the AI
 already read off the drawing.
-**Declared but not built:** the screens marked `soon` in the menu, each showing
-an explanation rather than a blank page.
+## Modules added in v105
+
+**Supplier master.** Suppliers were free text on the goods receipts, which is the
+same defect the machine list fixed: two spellings are two suppliers, and the
+Supplier Watch rating on each is then built from half the evidence. The screen
+**starts from the names already on the receipts** and offers them for adoption,
+rather than an empty list nobody fills in. Two rules: the same name twice is
+refused (fix the receipt, do not add both), and a supplier cannot be marked
+**Approved on an expired certificate** — record the renewal or set them On hold.
+The GRN keeps its free-text field, because refusing an unknown supplier mid-
+delivery would stop the stores working; it now offers the panel as suggestions.
+The screen shows receipt counts but **deliberately does not repeat the rating** —
+that is worked out in one place, by the agent, so there is only ever one answer.
+
+**Raw material master.** The list the bill of materials, stock and reorder will
+be built on. Same adopt-from-usage pattern against the material descriptions on
+the receipts. One description = one code, refused otherwise: two codes for one
+material means stock is counted twice and neither figure is right.
+
+**Organisation masters** (department, designation, position) share one screen,
+since they are three views of one small list. A position carries its sanctioned
+strength; **how many are filled is counted from the employee records**, never
+typed, so the vacancy figure cannot drift from who is actually on the roll. A
+position with no designation is refused, because the designation is what the
+employee records are matched on. If filled reads zero where people are in post,
+the employee records do not carry the same wording — fix the record, not the
+number.
+
+**APQP programme** — the one CLAUDE.md has had at the top of the list since v90.
+The point is not another sheet of tick boxes. Of its 26 deliverables, **16 are
+read from records that already exist**: the quotation on the part, the customer
+part and price link, the routing, dimensions against every operation, SC/CC
+marking, a gauge and frequency on every special characteristic, the PFD, whether
+the PFMEA is signed, the control plan, whether the CNC programmes are proved, an
+approved setup, pieces actually booked, MSA verdicts, whether every gauge the
+control plan names is in the register, PDI lots on hold, the PPAP, and open
+non-conformances. Those lines **cannot be ticked by hand** and name the screen
+where the work is done. The remaining 10 carry a planned date, an actual date and
+an owner.
+
+The gate is what makes the sign-off worth having: **a phase cannot be signed off
+while any deliverable in it is outstanding**, the outstanding ones are named, and
+a sign-off with no name against it is refused. Do not add a path that marks a
+phase complete without both.
+
+Records: kind `supplier`, `rawmat`, `orgmaster` (with `data.type`), `apqp` (one
+per part, `{manual, gates, sop}`). No migration — the generic `idms_docs` store.
+
+**A bug worth keeping in mind.** Every date field on the APQP screen saves on
+change, and somebody filling in a phase changes several in a row. The first write
+has no `doc_id` yet, so the second, third and fourth all inserted: one part ended
+up with four APQP records, each holding part of the answer. Writes are now
+chained through `apqpQueue` so the next waits for the previous to come back with
+the id. **Any screen that saves on `change` rather than on a Save button has this
+same hazard.**
+
+**Menu correction.** MSA and SPC were listed under NPD as `soon` while the screens
+that do the work sat under Quality Assurance — the same thing on the menu twice,
+and the NPD copy a dead end. They are listed once, under Quality, and the APQP
+programme links straight to them.
+
+**Declared but not built:** the screens still marked `soon` in the menu (36 at
+v105, down from 42), each showing an explanation rather than a blank page.
+
+**Suggested order for the rest**, by what unblocks the most: bill of materials
+and raw material stock (both now have a master to hang off); in-process
+inspection (the `limitsOf`/`verdict` pattern already exists, so reuse it rather
+than writing a third one); control charts, which are computed from the self- and
+in-process inspection readings; capacity plan and machine loading, which are
+computable from the routing and the order book the production plan already
+reads; then the HR competency chain (TNI → training plan/actual → effectiveness →
+gap → succession), which feeds the HR dashboard KPIs that are entry-only today.
+The QMS document levels and the audit calendars are the largest remaining block
+and would turn roughly twenty entry-only KPIs into computed ones.
 
 ## The menu, and the KPI dashboards (v104)
 
@@ -661,7 +733,10 @@ If you formalise this, keep two habits that mattered:
 2. **Test what matters, not what is easy.** Testing that a fold worked passed
    while the Save button was being folded away with it.
 
-`smoketest.mjs` (IDMS: 65 checks — no auto sign-in, the gate branding, the menu
+`moduletest.mjs` (41 checks over the v105 modules: adoption from receipts, the
+duplicate and expired-certificate refusals, the derived filled/vacancy count, and
+the APQP gate refusing a sign-off that is unnamed or has work outstanding — it is
+what caught the four-records bug above). `smoketest.mjs` (IDMS: 65 checks — no auto sign-in, the gate branding, the menu
 order, the home screen, the top bar, all twelve dashboards rendering without an
 error note, KPI entry saving *and updating rather than duplicating*, the framed
 screens, the banner) and `sitetest.mjs` (website: 20 checks — no staff entry

@@ -221,6 +221,23 @@
   }
   const getProfile = () => profile || { name: '', address: '', gstin: '', logo: '', docPrefix: 'DOC' };
 
+  /* ---------------- the Hero Banner ----------------
+     Single source: Admin Panel → Website → Hero → Hero Banner (the same
+     record the public site's hero section reads). Nowhere else may hold a
+     second copy of this image or its wording — read fresh each time rather
+     than cached like the profile, so an edit published there shows up the
+     next time a page reads it, with no separate save step anywhere else. */
+  async function loadHero() {
+    let d = {};
+    try { d = (await api('/api/content')).data || {}; } catch (e) { d = {}; }
+    return {
+      image: d.heroBannerDataUrl || '',
+      eyebrow: d.heroEyebrow || '',
+      headline: d.heroHeadline || '',
+      sub: d.heroSub || ''
+    };
+  }
+
   /* A document number built from the profile and a database counter, e.g.
      ELIX-GRN-0042. No company initials appear anywhere in the code. */
   async function docNumber(kind, pad) {
@@ -544,7 +561,7 @@
     newId: newId, toast: toast,
     api: api, signIn: signIn, verifyCode: verifyCode, setToken: setToken, getToken: getToken,
     checkSession: checkSession, signOut: signOut,
-    idms: idms, loadProfile: loadProfile, getProfile: getProfile, docNumber: docNumber,
+    idms: idms, loadProfile: loadProfile, loadHero: loadHero, getProfile: getProfile, docNumber: docNumber,
     openReport: openReport, callAI: callAI, uploadFile: uploadFile,
     parseAiJson: parseAiJson, stripMarkup: stripMarkup,
     setFavicon: setFavicon,

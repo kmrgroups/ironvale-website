@@ -21,7 +21,6 @@
 .top .id .mark{height:40px;width:40px;border-radius:8px;background:var(--gold);color:#fff;
   display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:15px;}
 .top .id .co{font-family:var(--disp);font-weight:800;font-size:15px;line-height:1.15;}
-.top .id .tag{font-family:var(--mono);font-size:10px;opacity:.7;letter-spacing:.04em;}
 .top .spacer{flex:1 1 auto;}
 .top .chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.10);
   border:1px solid rgba(255,255,255,.18);border-radius:100px;padding:5px 13px;font-size:11.5px;}
@@ -40,16 +39,22 @@
 .themes button.on{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.25);}
 
 .menubar{background:var(--white);border-bottom:1px solid var(--line);padding:6px 14px;
-  display:flex;flex-wrap:wrap;gap:3px;position:relative;z-index:50;box-shadow:var(--shadow-sm);}
+  display:flex;flex-wrap:wrap;gap:3px;position:relative;z-index:500;box-shadow:var(--shadow-sm);}
 .mgroup{position:relative;}
-.mgroup>button{background:transparent;border:0;cursor:pointer;padding:8px 13px;border-radius:8px;
+.mgroup>a,.mgroup>button{background:transparent;border:0;cursor:pointer;padding:8px 13px;border-radius:8px;
   font-family:var(--body);font-weight:600;font-size:12.5px;color:var(--navy);
-  display:flex;align-items:center;gap:6px;}
-.mgroup>button:hover{background:var(--sky-wash);}
-.mgroup.open>button{background:var(--sky-wash);color:var(--sky-deep);}
-.mgroup>button .ar{font-size:9px;opacity:.55;}
-.mgroup .drop{display:none;position:absolute;top:100%;left:0;min-width:268px;background:var(--white);
-  border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-md);padding:7px;z-index:60;}
+  display:flex;align-items:center;gap:6px;text-decoration:none;}
+.mgroup>a:hover,.mgroup>button:hover{background:var(--sky-wash);}
+.mgroup.open>a,.mgroup.open>button{background:var(--sky-wash);color:var(--sky-deep);}
+.mgroup>a .ar,.mgroup>button .ar{font-size:9px;opacity:.55;}
+/* The dropdown is positioned in fixed coordinates (computed in JS from the
+   trigger's own position) rather than relying purely on absolute+top:100%, so
+   it can never end up clipped or overlapped by page content underneath —
+   fixed-position content paints above the normal document flow regardless of
+   where in the DOM it sits. */
+.mgroup .drop{display:none;position:fixed;min-width:268px;background:var(--white);
+  border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-md);padding:7px;
+  z-index:600;max-height:calc(100vh - 24px);overflow-y:auto;}
 .mgroup.open .drop{display:block;}
 .drop .sec{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;
   color:var(--ink-soft);padding:6px 10px 4px;}
@@ -61,8 +66,13 @@
 
 .banner{position:relative;margin:16px 0;border-radius:var(--radius);overflow:hidden;min-height:210px;
   display:flex;align-items:center;justify-content:center;text-align:center;
-  background:linear-gradient(135deg,var(--sky-wash),var(--sky-light));padding:34px 22px;}
-.banner img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  background:linear-gradient(135deg,var(--sky-wash),var(--sky-light));padding:34px 22px;
+  width:100%;
+  /* Set from JS to the uploaded Hero Banner's own width/height once it loads,
+     so the box exactly matches the image's proportions — full width, scaled
+     down proportionally on smaller screens, never cropped or stretched. */
+  aspect-ratio:var(--banner-ar,auto);}
+.banner img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
 .banner .veil{position:absolute;inset:0;
   background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.88));}
 .banner .in{position:relative;}
@@ -241,7 +251,7 @@
   <div class="top">
     <div class="id">
       <div id="t-logo"></div>
-      <div><div class="co" id="t-co">—</div><div class="tag" id="t-tag"></div></div>
+      <div><div class="co" id="t-co">—</div></div>
     </div>
     <div class="spacer"></div>
     <div class="themes" id="t-themes"></div>
@@ -1281,38 +1291,11 @@
       <iframe class="embed-frame" id="em-frame" title="Screen"></iframe>
     </div>
 
-    <!-- ============ Admin: home banner ============ -->
-    <div class="panel" data-panel="admin_banner">
-      <div class="card">
-        <h4>Home Banner</h4>
-        <div class="hint" style="margin-bottom:10px;">The picture and wording across the top of the
-          home screen. Saved once, for everyone — the home screen itself has no edit button, because
-          branding is an admin decision and not a per-user one.</div>
-        <div class="row">
-          <div><label>Banner image</label><input type="file" id="ab-file" accept="image/*">
-            <div class="hint">Stored with the other site images and served by link, so the settings
-              record stays small.</div></div>
-          <div><label>Image address (optional, if you already have one)</label><input id="ab-url"></div>
-          <div><label>Line under the company name</label><input id="ab-tag"></div>
-          <div><label>Strapline at the bottom</label><input id="ab-strap"
-            placeholder="Intelligent Digital Manufacturing System"></div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-          <button class="btn gold" id="ab-save">Save banner</button>
-          <button class="btn del" id="ab-clear">Remove the image</button>
-        </div>
-        <div class="note" id="ab-msg" style="display:none;"></div>
-      </div>
-      <div class="card">
-        <h4>Preview</h4>
-        <div class="banner" style="margin:0;">
-          <img class="bg" id="ab-prev" style="display:none;" alt="">
-          <div class="veil" id="ab-veil" style="display:none;"></div>
-          <div class="in"><h1 id="ab-prev-title">—</h1><div class="sub" id="ab-prev-sub"></div>
-            <div class="strap" id="ab-prev-strap"></div></div>
-        </div>
-      </div>
-    </div>
+    <!-- The Home Banner admin screen used to live here, saving to its own
+         setting. It is gone: the Hero Banner shown on the Home screen now
+         reads straight from Website Content → Website → Hero → Hero Banner,
+         so there is exactly one place to manage it. See loadHome() and
+         C.loadHero(). -->
 
     <!-- ============ Admin: backup and restore ============ -->
     <div class="panel" data-panel="admin_backup">
@@ -2729,8 +2712,13 @@
       ['dash_accounts','📊','Accounts Dashboard',1],
       ['accounts_pl','💹','P&L']]],
     ['admin','⚙','Admin','Settings and the website',[
+      /* The Hero Banner (image + headline/eyebrow/sub) that shows on this Home
+         screen is not a separate setting — it is read straight from Website
+         Content → Website → Hero → Hero Banner, so there is exactly one place
+         to manage it and the Home screen always reflects whatever is live
+         there. There used to be a second, separate "Home Banner" screen here;
+         it is gone so that source can't drift out of sync with itself. */
       ['admin_site','🌐','Website Content',1],
-      ['admin_banner','🖼','Home Banner',1],
       ['profile','🏢','Company Profile',1],
       ['users','👥','User Management',1],
       ['dept_master','🏢','Department Master',1],['desig_master','🎖','Designation Master',1],
@@ -2745,7 +2733,7 @@
     dept_master: 'orgmaster', desig_master: 'orgmaster', position_master: 'orgmaster',
     qms_level1: 'qmsdocs', qms_level2: 'qmsdocs', qms_level3: 'qmsdocs', qms_level4: 'qmsdocs',
     doc_master_pfd: 'masterlist', doc_master_pfmea: 'masterlist', doc_master_cp: 'masterlist',
-    kpi_entry: 'kpi_entry', admin_banner: 'admin_banner',
+    kpi_entry: 'kpi_entry',
     admin_backup: 'admin_backup', admin_sample: 'admin_sample',
     admin_site: 'embed', emb_pipeline: 'embed', emb_ppc: 'embed', emb_hr: 'embed', emb_me: 'embed'
   };
@@ -2756,39 +2744,95 @@
     LABEL[it[0]] = it[2]; ICON[it[0]] = it[1]; if (it[3]) LIVE[it[0]] = 1;
   });});
 
+  /* Every main menu and sub-menu entry is a real <a href="#s=..."> so the
+     browser's own right-click menu (Open Link in New Tab / New Window, Copy
+     Link) works on all of them without any extra code — that's a native
+     anchor behaviour, not something we implement. A plain left click still
+     opens/toggles in place via JS; a modified click (ctrl/cmd/shift) or a
+     middle click is left alone so the browser opens it in a new tab exactly
+     as it would for any other link. See the hash router in go()/start() that
+     makes a URL like idms.html#s=parts land on that screen directly. */
+  function firstLive(items){
+    for (var i = 0; i < items.length; i++) { if (items[i][3]) return items[i][0]; }
+    return items.length ? items[0][0] : 'home';
+  }
+  function isModifiedClick(e){
+    return e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey;
+  }
+  function closeAllGroups(bar){
+    bar.querySelectorAll('.mgroup.open').forEach(function(x){ x.classList.remove('open'); });
+  }
+  function positionDrop(group){
+    var btn = group.querySelector(':scope > a, :scope > button'), drop = group.querySelector('.drop');
+    if (!btn || !drop) return;
+    var r = btn.getBoundingClientRect();
+    var minW = Math.max(drop.offsetWidth || 268, 268);
+    var left = Math.min(r.left, window.innerWidth - minW - 8);
+    left = Math.max(8, left);
+    drop.style.top = (r.bottom + 4) + 'px';
+    drop.style.left = left + 'px';
+  }
+
   function drawMenu(){
     var bar = document.getElementById('menubar');
-    bar.innerHTML = '<div class="mgroup"><button data-home="1">🏠 Home</button></div>' +
+    bar.innerHTML = '<div class="mgroup"><a data-home="1" href="#s=home">🏠 Home</a></div>' +
       MENU.map(function(g,gi){
-        return '<div class="mgroup" data-gi="'+gi+'"><button>'+g[1]+' '+esc(g[2])+
-          ' <span class="ar">▼</span></button><div class="drop"><div class="sec">'+esc(g[3])+'</div>'+
+        var groupHref = '#s=' + firstLive(g[4]);
+        return '<div class="mgroup" data-gi="'+gi+'"><a href="'+groupHref+'">'+g[1]+' '+esc(g[2])+
+          ' <span class="ar">▼</span></a><div class="drop"><div class="sec">'+esc(g[3])+'</div>'+
           g[4].map(function(it){
-            return '<a data-s="'+it[0]+'"><span>'+it[1]+' '+esc(it[2])+'</span>'+
+            return '<a data-s="'+it[0]+'" href="#s='+encodeURIComponent(it[0])+'"><span>'+it[1]+' '+esc(it[2])+'</span>'+
               (it[3]?'':'<span class="soon">soon</span>')+'</a>';
           }).join('')+'</div></div>';
       }).join('');
-    bar.querySelector('[data-home]').addEventListener('click', function(){ go('home'); });
-    bar.querySelectorAll('.mgroup[data-gi] > button').forEach(function(b){
-      b.addEventListener('click', function(e){
+
+    bar.querySelector('[data-home]').addEventListener('click', function(e){
+      if (isModifiedClick(e)) return;      // let the browser open a new tab/window itself
+      e.preventDefault();
+      go('home');
+    });
+
+    bar.querySelectorAll('.mgroup[data-gi] > a').forEach(function(a){
+      a.addEventListener('click', function(e){
+        if (isModifiedClick(e)) return;    // real navigation — don't intercept
+        e.preventDefault();
         e.stopPropagation();
-        var g = b.parentNode, was = g.classList.contains('open');
-        bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
-        if (!was) g.classList.add('open');
+        var g = a.parentNode, was = g.classList.contains('open');
+        closeAllGroups(bar);
+        if (!was) { g.classList.add('open'); positionDrop(g); }
       });
     });
+
     bar.querySelectorAll('.drop a').forEach(function(a){
-      a.addEventListener('click', function(){
-        bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
+      a.addEventListener('click', function(e){
+        if (isModifiedClick(e)) return;    // real navigation — don't intercept
+        e.preventDefault();
+        closeAllGroups(bar);
         go(a.dataset.s);
       });
     });
-    document.addEventListener('click', function(){
-      bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
-    });
+
+    document.addEventListener('click', function(){ closeAllGroups(bar); });
+    /* A fixed-position dropdown doesn't move with the page, so close it on
+       scroll/resize rather than letting it drift away from its button. */
+    window.addEventListener('scroll', function(){ closeAllGroups(bar); }, true);
+    window.addEventListener('resize', function(){ closeAllGroups(bar); });
   }
 
+  /* ---------------- hash routing (deep links, new tab / new window) ----------------
+     go(s) keeps the address bar's #s=<screen> in sync (via replaceState, so it
+     never grows the back/forward history), and start() reads that hash once at
+     boot. That's what makes "Open Link in New Tab" on a menu item actually land
+     on the right screen: the new tab loads idms.html#s=<screen> fresh, the user
+     signs in as usual, and start() below sends them straight there. */
+  var lastGo = null;
   function go(s){
+    lastGo = s;
     var want = LIVE[s] ? (PANEL_OF[s] || s) : 'placeholder';
+    try {
+      var newHash = '#s=' + encodeURIComponent(s);
+      if (location.hash !== newHash) history.replaceState(null, '', newHash);
+    } catch(e){ /* hash sync is a nicety, never a blocker */ }
     document.querySelectorAll('.panel').forEach(function(p){
       p.classList.toggle('on', p.dataset.panel === want);
     });
@@ -2866,7 +2910,6 @@
     if (s === 'apqp')              loadApqp();
     if (s.indexOf('dash_') === 0)  loadKpiDash(s.slice(5));
     if (s === 'kpi_entry')         loadKpiEntry();
-    if (s === 'admin_banner')      loadBannerScreen();
     if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
   }
 
@@ -8419,26 +8462,6 @@
     document.getElementById('em-open').href = url;
   }
 
-  /* ---------------- the home banner ---------------- */
-  function bannerPreview(){
-    var img = document.getElementById('ab-prev'), veil = document.getElementById('ab-veil');
-    var url = document.getElementById('ab-url').value.trim();
-    if (url) { img.src = url; img.style.display = ''; veil.style.display = ''; }
-    else { img.style.display = 'none'; veil.style.display = 'none'; }
-    document.getElementById('ab-prev-title').textContent = (C.getProfile() || {}).name || 'Your company';
-    document.getElementById('ab-prev-sub').textContent = document.getElementById('ab-tag').value;
-    document.getElementById('ab-prev-strap').textContent =
-      document.getElementById('ab-strap').value || 'Intelligent Digital Manufacturing System';
-  }
-  function loadBannerScreen(){
-    var b = settings.banner || {};
-    document.getElementById('ab-url').value = b.image || '';
-    document.getElementById('ab-tag').value = b.tagline || '';
-    document.getElementById('ab-strap').value = b.strap || '';
-    document.getElementById('ab-msg').style.display = 'none';
-    bannerPreview();
-  }
-
   /* ---------------- themes ---------------- */
   var THEMES = [['navy','#0B2A5B'],['forest','#1F6F4A'],['plum','#5B2BB8']];
   function applyTheme(name, save){
@@ -8463,14 +8486,35 @@
   var settings = {};
   async function loadHome(){
     var p = C.getProfile();
-    document.getElementById('bn-title').textContent = p.name || 'Your company';
-    document.getElementById('bn-sub').textContent = (settings.banner && settings.banner.tagline) || '';
-    document.getElementById('bn-strap').textContent =
-      (settings.banner && settings.banner.strap) || 'Intelligent Digital Manufacturing System';
+    var bannerEl = document.querySelector('.panel[data-panel="home"] .banner');
     var img = document.getElementById('bn-img'), veil = document.getElementById('bn-veil');
-    if (settings.banner && settings.banner.image) {
-      img.src = settings.banner.image; img.style.display = ''; veil.style.display = '';
-    } else { img.style.display = 'none'; veil.style.display = 'none'; }
+
+    /* The Hero Banner (image, eyebrow, headline, sub) is read fresh from
+       Website Content → Website → Hero → Hero Banner every time this screen
+       is opened, so a change made there — added, replaced or removed — shows
+       up here without anything else to save or sync. */
+    var hero = {};
+    try { hero = await C.loadHero(); } catch(e){ hero = {}; }
+
+    document.getElementById('bn-title').textContent = hero.headline || p.name || 'Your company';
+    document.getElementById('bn-sub').textContent = hero.sub || '';
+    document.getElementById('bn-strap').textContent =
+      hero.eyebrow || 'Intelligent Digital Manufacturing System';
+
+    if (hero.image) {
+      img.onload = function(){
+        /* Match the box's own proportions to the uploaded image's real
+           width/height, so it shows full width, scales down proportionally
+           on narrower screens, and is never cropped or stretched. */
+        if (img.naturalWidth && img.naturalHeight && bannerEl) {
+          bannerEl.style.setProperty('--banner-ar', img.naturalWidth + ' / ' + img.naturalHeight);
+        }
+      };
+      img.src = hero.image; img.style.display = ''; veil.style.display = '';
+    } else {
+      img.removeAttribute('src'); img.style.display = 'none'; veil.style.display = 'none';
+      if (bannerEl) bannerEl.style.removeProperty('--banner-ar');
+    }
 
     try {
       var parts = await C.idms.parts(), by = {};
@@ -15900,7 +15944,8 @@
     try {
       var p = await C.loadProfile();
       document.getElementById('t-co').textContent = p.name || 'Company not set';
-      document.getElementById('t-tag').textContent = p.address || '';
+      /* Location/address is intentionally not shown in the title bar — only the
+         company name sits next to the logo there. */
       document.getElementById('t-logo').innerHTML = p.logo
         ? '<img src="'+p.logo+'" alt="">'
         : '<div class="mark">'+esc(p.docPrefix.slice(0,2))+'</div>';
@@ -15913,8 +15958,22 @@
 
     drawThemes(settings.theme && settings.theme.name);
     drawMenu();
-    go('home');
+    /* Land on whatever screen the URL asks for — this is what makes a menu
+       item opened via "Open Link in New Tab"/"New Window" (or a pasted link)
+       open directly on that screen once the person signs in, instead of
+       always landing on Home. */
+    var initial = (location.hash.match(/^#s=([^&]+)$/) || [])[1];
+    go(initial ? decodeURIComponent(initial) : 'home');
   }
+
+  /* Keep in step if the hash is changed by hand, or via the back/forward
+     buttons — but never in response to our own go()-driven replaceState,
+     which does not fire 'hashchange'. */
+  window.addEventListener('hashchange', function(){
+    var m = (location.hash.match(/^#s=([^&]+)$/) || [])[1];
+    var s = m ? decodeURIComponent(m) : 'home';
+    if (s !== lastGo) go(s);
+  });
 
   /* ---------------- wiring ---------------- */
   document.getElementById('g-go').addEventListener('click', doSignIn);
@@ -15932,40 +15991,7 @@
   });
   document.getElementById('p-filter').addEventListener('change', loadParts);
 
-  /* ---------------- banner, KPI and dashboard wiring ---------------- */
-  ['ab-tag','ab-strap','ab-url'].forEach(function(id){
-    document.getElementById(id).addEventListener('input', bannerPreview);
-  });
-  document.getElementById('ab-file').addEventListener('change', async function(){
-    var f = this.files[0]; if (!f) return;
-    var msg = document.getElementById('ab-msg');
-    msg.style.display = ''; msg.className = 'note'; msg.textContent = 'Uploading…';
-    try {
-      var up = await C.uploadFile(f);
-      document.getElementById('ab-url').value = up.url;
-      bannerPreview();
-      msg.className = 'note good'; msg.textContent = 'Uploaded. Press Save banner to publish it.';
-    } catch(e){ msg.className = 'note bad'; msg.textContent = e.message; }
-  });
-  document.getElementById('ab-save').addEventListener('click', async function(){
-    var msg = document.getElementById('ab-msg');
-    settings.banner = {
-      image: document.getElementById('ab-url').value.trim(),
-      tagline: document.getElementById('ab-tag').value.trim(),
-      strap: document.getElementById('ab-strap').value.trim()
-    };
-    try {
-      await C.idms.saveSetting('banner', settings.banner);
-      msg.style.display=''; msg.className='note good'; msg.textContent='Saved — everyone sees this banner.';
-      loadHome();
-    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent=e.message; }
-  });
-  document.getElementById('ab-clear').addEventListener('click', function(){
-    document.getElementById('ab-url').value = '';
-    document.getElementById('ab-file').value = '';
-    bannerPreview();
-  });
-
+  /* ---------------- KPI and dashboard wiring ---------------- */
   document.getElementById('dw-dept').addEventListener('change', dwmFillEmployees);
   document.getElementById('dw-emp').addEventListener('change', dwmPreview);
   document.getElementById('dw-open').addEventListener('click', dwmOpen);

@@ -250,6 +250,31 @@
   /* ---------------- printing ----------------
      One print engine for every report in both applications. The letterhead is
      the profile, so a report never carries another company's name. */
+  /* Best-effort "Page N of M" footer for the plain window.print() pipeline.
+     Browsers give no per-printed-page hook, so this estimates a page's worth
+     of content from the @page size/margins just written and drops one small
+     absolutely-positioned label at each estimated page boundary. It will not
+     be pixel-exact against every printer/driver, but it is far better than
+     nothing for a document that is explicitly meant to be filed and re-read
+     on paper. Wrapped so a bad estimate never stops the report printing. */
+  function stampPageNumbers(w, landscape) {
+    try {
+      const mm = 96 / 25.4;               // px per mm at the CSS reference DPI
+      const marginMM = 12;
+      const pageHmm = (landscape ? 210 : 297) - marginMM * 2;
+      const pagePx = pageHmm * mm;
+      const totalPx = w.document.body.scrollHeight;
+      const pages = Math.max(1, Math.round(totalPx / pagePx));
+      for (let i = 0; i < pages; i++) {
+        const d = w.document.createElement('div');
+        d.textContent = 'Page ' + (i + 1) + ' of ' + pages;
+        d.style.cssText = 'position:absolute;left:0;right:0;text-align:center;' +
+          'font-size:6.8pt;color:#93a2b8;top:' + Math.round((i + 1) * pagePx - 16) + 'px;';
+        w.document.body.appendChild(d);
+      }
+    } catch (e) { /* the report still prints without page numbers */ }
+  }
+
   function openReport(report) {
     const p = getProfile();
     const w = window.open('', '_blank');
@@ -307,18 +332,33 @@
       '.ft{margin-top:16px;border-top:.7pt solid #dbe3ee;padding-top:6px;' +
       'font-size:6.8pt;color:#93a2b8;display:flex;justify-content:space-between;}' +
       '</style></head><body>' +
-      '<div class="lh">' +
-      (p.logo ? '<img src="' + p.logo + '">' : '<div class="co">' + esc(p.name) + '</div>') +
-      '<div class="rt">' + (p.logo ? '<b>' + esc(p.name) + '</b><br>' : '') +
-      esc(p.address) + (p.pin ? ' - ' + esc(p.pin) : '') +
-      (p.gstin ? '<br>GSTIN: ' + esc(p.gstin) : '') + '</div></div>' +
-      '<h1>' + esc(report.title || '') + '</h1>' +
-      '<div class="sub">' + esc(report.subtitle || '') + '</div>' +
+      /* titleInline: logo and title sit side by side at the top-left, for
+         reports whose title is effectively the letterhead itself (e.g. the
+         Approved Internal Auditors List). The default keeps the older
+         layout — logo/address strip, then a centred title — unchanged, so
+         nothing already using openReport shifts. */
+      (report.titleInline
+        ? '<div class="lh"><div style="display:flex;align-items:center;gap:14px;">' +
+          (p.logo ? '<img src="' + p.logo + '">' : '<div class="co">' + esc(p.name) + '</div>') +
+          '<div><h1 style="text-align:left;margin:0;">' + esc(report.title || '') + '</h1>' +
+          (report.subtitle ? '<div class="sub" style="text-align:left;margin:2px 0 0;">' +
+            esc(report.subtitle) + '</div>' : '') + '</div></div>' +
+          '<div class="rt">' + (p.logo ? '<b>' + esc(p.name) + '</b><br>' : '') +
+          esc(p.address) + (p.pin ? ' - ' + esc(p.pin) : '') +
+          (p.gstin ? '<br>GSTIN: ' + esc(p.gstin) : '') + '</div></div>'
+        : '<div class="lh">' +
+          (p.logo ? '<img src="' + p.logo + '">' : '<div class="co">' + esc(p.name) + '</div>') +
+          '<div class="rt">' + (p.logo ? '<b>' + esc(p.name) + '</b><br>' : '') +
+          esc(p.address) + (p.pin ? ' - ' + esc(p.pin) : '') +
+          (p.gstin ? '<br>GSTIN: ' + esc(p.gstin) : '') + '</div></div>' +
+          '<h1>' + esc(report.title || '') + '</h1>' +
+          '<div class="sub">' + esc(report.subtitle || '') + '</div>') +
       sections +
       '<div class="ft"><span>' + esc(report.kind || 'Record') + ' — system generated</span>' +
       '<span>' + new Date().toLocaleString('en-GB') + '</span></div>' +
       '</body></html>');
     w.document.close();
+    if (report.pageNumbers) stampPageNumbers(w, !!report.landscape);
     setTimeout(() => { try { w.print(); } catch (e) { /* the user can print manually */ } }, 350);
   }
 

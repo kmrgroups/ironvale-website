@@ -788,8 +788,8 @@
           <div><label>Requalify every (months)</label><input class="num" id="cf-freq" value="36"></div>
         </div>
         <div class="row" style="margin-top:9px;">
-          <div><label>Qualified to audit (tick what applies)</label>
-            <div id="cf-quals" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;"></div></div>
+          <div><label>Qualified to audit (tick what applies — attach the certificate for each)</label>
+            <div id="cf-quals" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;"></div></div>
         </div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn gold" id="cf-save">Save the member</button>
@@ -799,6 +799,27 @@
         <div class="note" id="cf-msg" style="display:none;"></div>
       </div>
       <div class="card"><h4>The team</h4><div id="cf-list"></div></div>
+
+      <div class="card">
+        <h4>Approved Internal Auditors List</h4>
+        <div class="hint" style="margin-bottom:10px;">Everybody above who is qualified for at least
+          one kind of audit, with a tick against each qualification and a link to its certificate
+          where one is on file. The remarks and the three names below print exactly as they appear
+          here — save them before printing if anything has changed.</div>
+        <div><label>Remarks</label>
+          <textarea id="cf-remarks" rows="3"
+            placeholder="Observations or comments for this list"></textarea></div>
+        <div class="row" style="margin-top:9px;">
+          <div><label>Prepared by</label><input id="cf-prep" placeholder="name / designation"></div>
+          <div><label>Reviewed by</label><input id="cf-rev" placeholder="name / designation"></div>
+          <div><label>Approved by</label><input id="cf-app" placeholder="name / designation"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" id="cf-report-save">Save remarks &amp; sign-off</button>
+          <button class="btn gold" id="cf-print-auditors">Print the Approved Internal Auditors List</button>
+        </div>
+        <div class="note" id="cf-report-msg" style="display:none;"></div>
+      </div>
     </div>
 
     <!-- ============ Audit plan and register ============ -->
@@ -4533,21 +4554,104 @@
      Who is qualified to do what. The audit register reads this, so a member
      record is not paperwork — it is what stops somebody being named as auditor
      for a job they are not qualified for. */
-  var cftDocs = [], cftEditing = null;
+  var cftDocs = [], cftEditing = null, cfCerts = {}, cftReportDoc = null;
   var AUDIT_TYPES = ['Process', 'Product', 'IQA', 'Layer process', 'Layout', 'Dock',
                      'SQA', 'Customer', 'External', 'MRM'];
   var QUALIFIABLE = ['Process', 'Product', 'IQA', 'Layer process', 'Layout', 'Dock', 'SQA'];
+  /* Display names only — the stored value (e.g. 'Dock') never changes, so
+     existing records and the audit register's qualification check keep
+     working. This is just what a person, and the printed list, reads. */
+  var QUAL_LABEL = { Process:'Process Audit', Product:'Product Audit', IQA:'IQA Audit',
+    'Layer process':'Layer Process Audit', Layout:'Layout Audit', Dock:'Doc Audit', SQA:'SQA Audit' };
 
   async function loadCft(){
     await compLoad();
     try { cftDocs = await C.idms.docs('cft'); } catch(e){ cftDocs = []; }
+    try { cftReportDoc = (await C.idms.docs('cft_report'))[0] || null; } catch(e){ cftReportDoc = null; }
     document.getElementById('cf-people').innerHTML =
       compEmployees.map(function(e){ return '<option value="'+esc(empData(e).name||'')+'">'; }).join('');
-    document.getElementById('cf-quals').innerHTML = QUALIFIABLE.map(function(q){
-      return '<label style="font-weight:400;display:flex;align-items:center;gap:5px;">' +
-        '<input type="checkbox" class="cf-q" value="'+esc(q)+'" style="width:auto;"> ' + esc(q) + '</label>';
-    }).join('');
+    renderCfQuals(false);
     drawCft();
+    drawCfReport();
+  }
+
+  /* ---- qualification checkboxes + the certificate attached to each ----
+     A certificate is stored the same way any other IDMS attachment is
+     (uploadFile -> the assets table -> a served link), keyed against the
+     qualification it was uploaded for so it travels with the member record. */
+  function cfQualsHtml(){
+    return QUALIFIABLE.map(function(q){
+      var cert = cfCerts[q];
+      return '<div style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:195px;">' +
+        '<label style="font-weight:400;display:flex;align-items:center;gap:5px;margin:0;' +
+        'text-transform:none;font-family:var(--body);font-size:12px;letter-spacing:0;color:var(--navy);">' +
+        '<input type="checkbox" class="cf-q" value="'+esc(q)+'" style="width:auto;"> ' +
+        esc(QUAL_LABEL[q]||q) + '</label>' +
+        '<div class="cf-cert-row" data-q="'+esc(q)+'" style="display:none;margin-top:6px;font-size:10.5px;">' +
+        (cert
+          ? ('<div><a href="'+esc(cert.url)+'" target="_blank" rel="noopener">📄 View / download certificate</a></div>' +
+             '<div class="hint" style="overflow-wrap:anywhere;">'+esc(cert.name||'')+'</div>' +
+             '<button type="button" class="btn cf-cert-btn" data-act="replace" data-q="'+esc(q)+'" ' +
+               'style="padding:2px 8px;font-size:9px;margin-top:4px;">Replace</button> ' +
+             '<button type="button" class="btn del cf-cert-btn" data-act="remove" data-q="'+esc(q)+'" ' +
+               'style="padding:2px 8px;font-size:9px;margin-top:4px;">Remove</button>')
+          : ('<button type="button" class="btn cf-cert-btn" data-act="upload" data-q="'+esc(q)+'" ' +
+               'style="padding:3px 10px;font-size:9.5px;">Attach qualification certificate</button>')) +
+        '</div></div>';
+    }).join('');
+  }
+  function syncCfCertRow(q){
+    var cb = document.querySelector('#cf-quals .cf-q[value="'+CSS.escape(q)+'"]');
+    var row = document.querySelector('#cf-quals .cf-cert-row[data-q="'+CSS.escape(q)+'"]');
+    if (cb && row) row.style.display = cb.checked ? '' : 'none';
+  }
+  function renderCfQuals(preserveChecks){
+    var host = document.getElementById('cf-quals');
+    var checkedBefore = {};
+    if (preserveChecks) host.querySelectorAll('.cf-q').forEach(function(cb){ checkedBefore[cb.value] = cb.checked; });
+    host.innerHTML = cfQualsHtml();
+    host.querySelectorAll('.cf-q').forEach(function(cb){
+      if (preserveChecks && checkedBefore[cb.value]) cb.checked = true;
+      cb.addEventListener('change', function(){
+        /* unchecking a qualification takes the certificate off the member —
+           the file itself is not deleted, only the link to it, since a
+           certificate for something nobody is qualified for any more is not
+           evidence of anything */
+        if (!cb.checked) { delete cfCerts[cb.value]; renderCfQuals(true); }
+        else syncCfCertRow(cb.value);
+      });
+      syncCfCertRow(cb.value);
+    });
+    host.querySelectorAll('.cf-cert-btn').forEach(function(b){
+      b.addEventListener('click', function(){
+        var act = b.dataset.act, q = b.dataset.q;
+        if (act === 'remove'){
+          if (!confirm('Remove the attached certificate for ' + (QUAL_LABEL[q]||q) + '?\n\n' +
+            'The file itself stays stored; only the link on this member is removed.')) return;
+          delete cfCerts[q];
+          renderCfQuals(true);
+        } else {
+          attachCfCert(q);
+        }
+      });
+    });
+  }
+  function attachCfCert(q){
+    var f = document.createElement('input');
+    f.type = 'file';
+    f.accept = '.pdf,.png,.jpg,.jpeg,image/*,application/pdf';
+    f.addEventListener('change', async function(){
+      var file = f.files[0]; if (!file) return;
+      try {
+        toast('Uploading certificate…');
+        var up = await C.uploadFile(file);
+        cfCerts[q] = { url: up.url, id: up.id, name: file.name, size: file.size, mime: file.type,
+                       uploadedOn: new Date().toISOString().slice(0,10) };
+        renderCfQuals(true);
+        toast('Certificate attached — save the member to keep it.');
+      } catch(e){ toast(e.message); }
+    });
+    f.click();
   }
   function cftQualDue(v){
     if (!v.qualifiedOn) return null;
@@ -4575,7 +4679,14 @@
           (left ? '<div class="hint bad">not on the roll</div>' : '') + '</td>' +
           '<td class="hint">'+esc(v.fn||'')+'</td>' +
           '<td class="hint">'+esc(v.department||'—')+'</td>' +
-          '<td>'+((v.quals||[]).join(', ') || '<span class="hint">none</span>')+'</td>' +
+          '<td>'+((v.quals||[]).length ? v.quals.map(function(q){
+            var c = (v.certs||{})[q];
+            return '<div style="white-space:nowrap;">' + esc(QUAL_LABEL[q]||q) +
+              (c ? ' <a href="'+esc(c.url)+'" target="_blank" rel="noopener" ' +
+                     'title="View / download certificate">📄</a>'
+                 : ' <span class="hint bad" title="No certificate on file">⚠ no certificate</span>') +
+              '</div>';
+          }).join('') : '<span class="hint">none</span>')+'</td>' +
           '<td class="hint">'+(v.qualifiedOn?C.fmtDate(v.qualifiedOn):'—')+'</td>' +
           '<td'+(lapsed?' class="bad"':' class="hint"')+'>'+(due?C.fmtDate(due.toISOString().slice(0,10)):'—')+
             (lapsed?'<div class="hint">lapsed</div>':'')+'</td>' +
@@ -4594,14 +4705,19 @@
     document.getElementById('cf-fn').value = v.fn || 'Quality';
     document.getElementById('cf-on').value = v.qualifiedOn || '';
     document.getElementById('cf-freq').value = v.requalifyMonths || 36;
+    cfCerts = JSON.parse(JSON.stringify(v.certs || {}));
+    renderCfQuals(false);
     document.getElementById('cf-quals').querySelectorAll('.cf-q').forEach(function(cb){
-      cb.checked = (v.quals||[]).indexOf(cb.value) >= 0; });
+      cb.checked = (v.quals||[]).indexOf(cb.value) >= 0;
+      syncCfCertRow(cb.value);
+    });
     document.getElementById('cf-save').textContent = 'Update the member';
   }
   function clearCftForm(){
     cftEditing = null;
+    cfCerts = {};
     ['cf-who','cf-on'].forEach(function(i){ document.getElementById(i).value = ''; });
-    document.getElementById('cf-quals').querySelectorAll('.cf-q').forEach(function(cb){ cb.checked = false; });
+    renderCfQuals(false);
     document.getElementById('cf-save').textContent = 'Save the member';
     document.getElementById('cf-msg').style.display = 'none';
   }
@@ -4625,6 +4741,10 @@
     if (quals.length && !on)
       return say('Say when they were qualified. A qualification with no date cannot be shown to ' +
                  'have been current when the audit was carried out.');
+    /* only carry a certificate for a qualification that is actually ticked —
+       cfCerts can hold a stale entry if the checkbox was toggled by script */
+    var certs = {};
+    quals.forEach(function(q){ if (cfCerts[q]) certs[q] = cfCerts[q]; });
     var d = empData(emp);
     var btn = document.getElementById('cf-save'); btn.disabled = true;
     try {
@@ -4632,7 +4752,7 @@
         docNo: (cftEditing ? (cftDocs.filter(function(x){ return x.doc_id === cftEditing; })[0]||{}).doc_no : null)
                || await C.docNumber('cft'), status:'Active',
         data:{ name:name, empId:d.empId||'', department:d.department||'', designation:d.designation||'',
-               fn:document.getElementById('cf-fn').value, quals:quals, qualifiedOn:on,
+               fn:document.getElementById('cf-fn').value, quals:quals, certs:certs, qualifiedOn:on,
                requalifyMonths:C.num(document.getElementById('cf-freq').value) || 36 } },
         cftEditing ? 'CFT member updated' : 'CFT member added');
       say(cftEditing ? 'Updated.' : 'Added.', true);
@@ -4649,9 +4769,88 @@
                  {label:'Qualified on'},{label:'Requalify by'}],
         rows: cftDocs.map(function(m){
           var v = m.data||{}, due = cftQualDue(v);
-          return [v.name, v.fn, v.department||'—', (v.quals||[]).join(', ')||'none',
+          return [v.name, v.fn, v.department||'—',
+                  (v.quals||[]).map(function(q){ return QUAL_LABEL[q]||q; }).join(', ')||'none',
                   v.qualifiedOn?C.fmtDate(v.qualifiedOn):'—',
                   due?C.fmtDate(due.toISOString().slice(0,10)):'—']; }) } ] });
+  }
+
+  /* ---- remarks and sign-off for the Approved Internal Auditors List ----
+     Kept as its own singleton record (kind 'cft_report') rather than typed
+     fresh at print time, so it is a saved fact — edited here, read on screen
+     and read again the next time the list is printed — not paperwork that
+     resets itself. */
+  function drawCfReport(){
+    var v = (cftReportDoc && cftReportDoc.data) || {};
+    document.getElementById('cf-remarks').value = v.remarks || '';
+    document.getElementById('cf-prep').value = v.preparedBy || '';
+    document.getElementById('cf-rev').value = v.reviewedBy || '';
+    document.getElementById('cf-app').value = v.approvedBy || '';
+  }
+  async function saveCfReport(){
+    var msg = document.getElementById('cf-report-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var btn = document.getElementById('cf-report-save'); btn.disabled = true;
+    try {
+      var data = { remarks: document.getElementById('cf-remarks').value.trim(),
+                   preparedBy: document.getElementById('cf-prep').value.trim(),
+                   reviewedBy: document.getElementById('cf-rev').value.trim(),
+                   approvedBy: document.getElementById('cf-app').value.trim() };
+      var docId = cftReportDoc ? cftReportDoc.doc_id : '';
+      var docNo = cftReportDoc ? cftReportDoc.doc_no : await C.docNumber('cftrpt');
+      await C.idms.saveDoc({ docId:docId, kind:'cft_report', docNo:docNo, status:'Active', data:data },
+        'Approved Internal Auditors List — remarks / sign-off updated');
+      try { cftReportDoc = (await C.idms.docs('cft_report'))[0] || null; } catch(e){}
+      say('Saved. The PDF will carry this the next time it is printed.', true);
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+
+  /* ---- the professional PDF: only members qualified for at least one kind
+     of audit, a tick against each qualification they actually hold, the
+     saved remarks, and the three saved sign-off names — same fields, same
+     order, on screen and on paper. */
+  function printApprovedAuditors(){
+    var approved = cftDocs.filter(function(m){ return ((m.data||{}).quals||[]).length; });
+    if (!approved.length){
+      toast('Nobody on the team is qualified for any audit type yet — there is nothing approved to list.');
+      return;
+    }
+    var rv = (cftReportDoc && cftReportDoc.data) || {};
+    var qualCols = QUALIFIABLE.map(function(q){ return { label: QUAL_LABEL[q] || (q + ' Audit'), align:'c' }; });
+    var sig = function(label, name){
+      return '<div style="flex:1;border:.7pt solid #dbe3ee;border-radius:6px;padding:10px 12px;">' +
+        '<div style="font-size:7pt;text-transform:uppercase;letter-spacing:.5pt;color:#8E6A19;' +
+        'margin-bottom:26px;">' + esc(label) + '</div>' +
+        '<div style="border-top:.7pt solid #12233f;padding-top:4px;font-size:8pt;min-height:11pt;">' +
+        (name ? esc(name) : '&nbsp;') + '</div>' +
+        '<div style="font-size:6.6pt;color:#93a2b8;margin-top:2px;">Signature &amp; date</div></div>';
+    };
+    C.openReport({
+      title: 'List of Approved Internal Auditors',
+      kind: 'QMS',
+      subtitle: 'As on ' + C.fmtDate(new Date().toISOString().slice(0,10)),
+      landscape: true,
+      titleInline: true,
+      pageNumbers: true,
+      sections: [
+        { type:'table', title:'Auditor Qualification', dense:true,
+          columns: [{label:'#'},{label:'Auditor'},{label:'Function'},{label:'Department'},
+                    {label:'Qualified on'},{label:'Requalify by'}].concat(qualCols),
+          rows: approved.map(function(m, i){
+            var v = m.data||{}, due = cftQualDue(v), quals = v.quals||[];
+            return [String(i+1), '<b>'+esc(v.name||'')+'</b>', esc(v.fn||'—'), esc(v.department||'—'),
+                    v.qualifiedOn ? C.fmtDate(v.qualifiedOn) : '—',
+                    due ? C.fmtDate(due.toISOString().slice(0,10)) : '—']
+              .concat(QUALIFIABLE.map(function(q){ return quals.indexOf(q) >= 0 ? '✓' : '—'; }));
+          }) },
+        { type:'text', title:'Remarks', body: rv.remarks || 'No remarks recorded.' },
+        { type:'html', title:'Sign-off', html:
+          '<div style="display:flex;gap:16px;margin-top:4px;">' +
+            sig('Prepared by', rv.preparedBy) + sig('Reviewed by', rv.reviewedBy) +
+            sig('Approved by', rv.approvedBy) + '</div>' }
+      ]
+    });
   }
 
   /* ================= AUDIT PLAN AND REGISTER =================
@@ -16056,6 +16255,8 @@
   document.getElementById('cf-save').addEventListener('click', saveCft);
   document.getElementById('cf-clear').addEventListener('click', clearCftForm);
   document.getElementById('cf-print').addEventListener('click', printCft);
+  document.getElementById('cf-report-save').addEventListener('click', saveCfReport);
+  document.getElementById('cf-print-auditors').addEventListener('click', printApprovedAuditors);
 
   document.getElementById('au-fy').addEventListener('change', drawAuditList);
   document.getElementById('au-type').addEventListener('change', drawAuditList);

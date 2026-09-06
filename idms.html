@@ -21,6 +21,7 @@
 .top .id .mark{height:40px;width:40px;border-radius:8px;background:var(--gold);color:#fff;
   display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:15px;}
 .top .id .co{font-family:var(--disp);font-weight:800;font-size:15px;line-height:1.15;}
+.top .id .tag{font-family:var(--mono);font-size:10px;opacity:.7;letter-spacing:.04em;}
 .top .spacer{flex:1 1 auto;}
 .top .chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.10);
   border:1px solid rgba(255,255,255,.18);border-radius:100px;padding:5px 13px;font-size:11.5px;}
@@ -39,22 +40,16 @@
 .themes button.on{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.25);}
 
 .menubar{background:var(--white);border-bottom:1px solid var(--line);padding:6px 14px;
-  display:flex;flex-wrap:wrap;gap:3px;position:relative;z-index:500;box-shadow:var(--shadow-sm);}
+  display:flex;flex-wrap:wrap;gap:3px;position:relative;z-index:50;box-shadow:var(--shadow-sm);}
 .mgroup{position:relative;}
-.mgroup>a,.mgroup>button{background:transparent;border:0;cursor:pointer;padding:8px 13px;border-radius:8px;
+.mgroup>button{background:transparent;border:0;cursor:pointer;padding:8px 13px;border-radius:8px;
   font-family:var(--body);font-weight:600;font-size:12.5px;color:var(--navy);
-  display:flex;align-items:center;gap:6px;text-decoration:none;}
-.mgroup>a:hover,.mgroup>button:hover{background:var(--sky-wash);}
-.mgroup.open>a,.mgroup.open>button{background:var(--sky-wash);color:var(--sky-deep);}
-.mgroup>a .ar,.mgroup>button .ar{font-size:9px;opacity:.55;}
-/* The dropdown is positioned in fixed coordinates (computed in JS from the
-   trigger's own position) rather than relying purely on absolute+top:100%, so
-   it can never end up clipped or overlapped by page content underneath —
-   fixed-position content paints above the normal document flow regardless of
-   where in the DOM it sits. */
-.mgroup .drop{display:none;position:fixed;min-width:268px;background:var(--white);
-  border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-md);padding:7px;
-  z-index:600;max-height:calc(100vh - 24px);overflow-y:auto;}
+  display:flex;align-items:center;gap:6px;}
+.mgroup>button:hover{background:var(--sky-wash);}
+.mgroup.open>button{background:var(--sky-wash);color:var(--sky-deep);}
+.mgroup>button .ar{font-size:9px;opacity:.55;}
+.mgroup .drop{display:none;position:absolute;top:100%;left:0;min-width:268px;background:var(--white);
+  border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-md);padding:7px;z-index:60;}
 .mgroup.open .drop{display:block;}
 .drop .sec{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;
   color:var(--ink-soft);padding:6px 10px 4px;}
@@ -66,13 +61,14 @@
 
 .banner{position:relative;margin:16px 0;border-radius:var(--radius);overflow:hidden;min-height:210px;
   display:flex;align-items:center;justify-content:center;text-align:center;
-  background:linear-gradient(135deg,var(--sky-wash),var(--sky-light));padding:34px 22px;
-  width:100%;
-  /* Set from JS to the uploaded Hero Banner's own width/height once it loads,
-     so the box exactly matches the image's proportions — full width, scaled
-     down proportionally on smaller screens, never cropped or stretched. */
-  aspect-ratio:var(--banner-ar,auto);}
-.banner img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
+  background:linear-gradient(135deg,var(--sky-wash),var(--sky-light));padding:34px 22px;}
+.banner img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.banner .veil{position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.88));}
+.banner .in{position:relative;}
+.banner h1{font-family:var(--disp);font-size:clamp(20px,3.2vw,34px);color:var(--navy);line-height:1.2;}
+.banner .sub{font-family:var(--disp);font-size:clamp(14px,1.8vw,19px);color:var(--sky-deep);margin-top:6px;}
+.banner .strap{font-size:12.5px;color:var(--ink-mid);margin-top:10px;}
 .banner .edit{position:absolute;top:12px;right:12px;z-index:3;}
 
 .qa-head{display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px;gap:10px;}
@@ -87,18 +83,82 @@
 .qa a b{font-size:12px;font-weight:600;line-height:1.3;display:block;}
 .qa a span{font-family:var(--mono);font-size:9px;color:var(--ink-soft);}
 
-/* ---- sign-in screen ---- */
-.gate .brandline{display:flex;align-items:center;gap:13px;justify-content:center;margin-bottom:14px;}
-.gate .brandline img{height:54px;width:54px;object-fit:contain;border-radius:10px;background:#fff;
-  padding:4px;border:1px solid var(--line);}
-.gate .brandline .mark{height:54px;width:54px;border-radius:10px;background:var(--gold);color:#fff;
-  display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:19px;}
-.gate .brandline b{font-family:var(--disp);font-size:18px;line-height:1.2;display:block;text-align:left;}
-.gate .brandline span{font-family:var(--mono);font-size:10px;color:var(--ink-soft);letter-spacing:.04em;}
-.gate .powered{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);text-align:center;
+/* ---- sign-in screen — professional split layout ----
+   #gate overrides core.css's centred single-box .gate (higher specificity
+   from the id, so no !important needed) to make room for the two halves. */
+#gate{padding:0;align-items:stretch;justify-content:stretch;background:var(--navy-deep);}
+.gate-shell{display:flex;width:100%;min-height:100vh;}
+.gate-left{flex:1 1 50%;background:radial-gradient(circle at 30% 20%,var(--sky-deep) 0%,var(--navy) 45%,var(--navy-deep) 100%);
+  color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:48px 40px;position:relative;overflow:hidden;}
+.gate-left::before{content:'';position:absolute;inset:0;
+  background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1px);
+  background-size:26px 26px;opacity:.5;pointer-events:none;}
+.gl-logo-wrap{position:relative;z-index:1;margin-bottom:22px;}
+.gl-logo{height:112px;width:112px;border-radius:24px;background:#fff;display:flex;align-items:center;
+  justify-content:center;overflow:hidden;position:relative;
+  animation:glow-pulse 3.2s ease-in-out infinite;}
+.gl-logo img{height:100%;width:100%;object-fit:contain;padding:10px;}
+.gl-logo .mark{font-family:var(--disp);font-weight:800;font-size:34px;color:var(--gold-deep);}
+@keyframes glow-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(224,180,78,.55),0 0 30px 6px rgba(63,169,224,.35);}
+  50%{box-shadow:0 0 0 10px rgba(224,180,78,0),0 0 46px 14px rgba(63,169,224,.55);}
+}
+.gl-title{position:relative;z-index:1;font-family:var(--disp);font-size:clamp(22px,2.6vw,32px);
+  font-weight:800;line-height:1.25;max-width:32ch;margin-bottom:12px;}
+.gl-sub{position:relative;z-index:1;font-size:13.5px;color:rgba(255,255,255,.78);max-width:44ch;
+  line-height:1.6;margin-bottom:28px;}
+.gl-gallery{position:relative;z-index:1;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;
+  max-width:520px;}
+.gl-gallery img{width:150px;height:104px;object-fit:cover;border-radius:10px;
+  border:1px solid rgba(255,255,255,.22);box-shadow:0 10px 24px rgba(0,0,0,.28);}
+.gl-gallery:empty{display:none;}
+
+.gate-right{flex:1 1 50%;background:var(--paper);display:flex;align-items:center;justify-content:center;
+  padding:40px 24px;}
+.gate-card{background:var(--white);border-radius:var(--radius);padding:30px 30px 22px;
+  width:min(420px,100%);box-shadow:var(--shadow-md);}
+.gate-card h1{font-family:var(--disp);font-size:19px;color:var(--navy);margin-bottom:6px;line-height:1.3;}
+.gate-card>p{font-size:12px;color:var(--ink-soft);margin-bottom:18px;}
+.gate-card .row{grid-template-columns:1fr;gap:12px;}
+
+.g-tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--sky-wash);border-radius:100px;padding:4px;}
+.g-tab{flex:1;background:transparent;border:0;border-radius:100px;padding:8px 6px;cursor:pointer;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ink-soft);font-weight:600;transition:.15s;}
+.g-tab.on{background:var(--navy);color:#fff;}
+.g-pane{display:none;} .g-pane.on{display:block;}
+
+.pass-wrap{position:relative;}
+.pass-wrap input{padding-right:38px;}
+.eye-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:transparent;
+  border:0;cursor:pointer;font-size:15px;padding:6px 8px;line-height:1;color:var(--ink-soft);}
+.eye-btn:hover{color:var(--navy);}
+
+.g-forgot{text-align:right;margin-top:8px;}
+.g-forgot a{font-size:11.5px;color:var(--sky-deep);text-decoration:none;cursor:pointer;font-weight:600;}
+.g-forgot a:hover{text-decoration:underline;}
+
+.gate-card .powered{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);text-align:center;
   font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;color:var(--ink-soft);}
-.gate .powered a{color:var(--sky-deep);text-decoration:none;font-weight:600;}
-.gate .powered a:hover{text-decoration:underline;}
+.gate-card .powered a{color:var(--sky-deep);text-decoration:none;font-weight:600;}
+.gate-card .powered a:hover{text-decoration:underline;}
+
+@media (max-width:860px){
+  .gate-shell{flex-direction:column;}
+  .gate-left{flex:0 0 auto;padding:32px 24px;}
+  .gl-logo{height:84px;width:84px;}
+  .gl-gallery{display:none;}
+  .gate-right{padding:26px 18px 44px;}
+}
+
+/* ---- forgot password / face ID overlays, on top of the cam-modal pattern ---- */
+.fp-modal{position:fixed;inset:0;z-index:9999;background:rgba(6,16,34,.82);display:flex;
+  align-items:center;justify-content:center;padding:16px;}
+.fp-box{background:var(--white);border-radius:14px;padding:22px;width:min(400px,100%);
+  box-shadow:0 24px 60px rgba(0,0,0,.4);}
+.fp-box h4{font-family:var(--disp);font-size:15px;color:var(--navy);margin-bottom:10px;}
+.fp-step{display:none;} .fp-step.on{display:block;}
 
 /* ---- daily work management board ---- */
 .dwm-pick{max-width:720px;margin:0 auto;}
@@ -215,28 +275,104 @@
 <body>
 
 <div class="gate" id="gate">
-  <div class="box">
-    <div class="brandline">
-      <div id="g-logo"><div class="mark">··</div></div>
-      <div><b id="g-co">Loading…</b><span id="g-addr"></span></div>
+  <div class="gate-shell">
+    <div class="gate-left">
+      <div class="gl-logo-wrap"><div id="g-logo" class="gl-logo"><div class="mark">··</div></div></div>
+      <h1 class="gl-title" id="g-welcome">Welcome to the future of manufacturing</h1>
+      <p class="gl-sub" id="g-welcome-text">Sign in to reach your parts, your quality records and
+        your production floor — all in one place.</p>
+      <div class="gl-gallery" id="gl-gallery"></div>
     </div>
-    <h1 id="g-welcome">Welcome</h1>
-    <p>Intelligent Digital Manufacturing System. Please sign in to continue — you will be
-      asked every time this page is opened.</p>
-    <div class="row">
-      <div><label>Username</label><input id="g-user" autocomplete="off" autocorrect="off"
-        autocapitalize="none" spellcheck="false" name="idms-account"></div>
-      <div><label>Password</label><input id="g-pass" type="password" autocomplete="new-password"
-        name="idms-secret"></div>
-      <div id="g-code-row" style="display:none;"><label>6-digit code</label>
-        <input id="g-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>
-      <div><button class="btn gold" id="g-go" style="width:100%;">Sign in</button></div>
+    <div class="gate-right">
+      <div class="gate-card">
+        <h1>AI-Agentic Intelligent Digital Manufacturing System</h1>
+        <p>Please sign in to continue — you will be asked every time this page is opened.</p>
+
+        <div class="g-tabs" id="g-tabs">
+          <button type="button" class="g-tab on" data-tab="password">Password</button>
+          <button type="button" class="g-tab" data-tab="otp">One-Time Code</button>
+          <button type="button" class="g-tab" data-tab="face">Face ID</button>
+        </div>
+
+        <div class="g-pane on" data-pane="password">
+          <div class="row">
+            <div><label>Username</label><input id="g-user" autocomplete="off" autocorrect="off"
+              autocapitalize="none" spellcheck="false" name="idms-account"></div>
+            <div><label>Password</label>
+              <div class="pass-wrap">
+                <input id="g-pass" type="password" autocomplete="new-password" name="idms-secret">
+                <button type="button" class="eye-btn" id="g-eye" aria-label="Show password" title="Show password">👁</button>
+              </div>
+            </div>
+            <div id="g-code-row" style="display:none;"><label>6-digit code</label>
+              <input id="g-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>
+            <div><button class="btn gold" id="g-go" style="width:100%;">Sign in</button></div>
+          </div>
+          <div class="g-forgot"><a id="g-forgot-link">Forgot password?</a></div>
+        </div>
+
+        <div class="g-pane" data-pane="otp">
+          <div class="row">
+            <div><label>Username</label><input id="go-user" autocomplete="off" autocorrect="off"
+              autocapitalize="none" spellcheck="false"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="btn" id="go-email" style="flex:1;">Code to Email</button>
+              <button type="button" class="btn" id="go-wa" style="flex:1;">Code to WhatsApp</button>
+            </div>
+            <div id="go-code-row" style="display:none;">
+              <label>6-digit code</label>
+              <input id="go-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+              <button class="btn gold" id="go-verify" style="width:100%;margin-top:10px;">Verify &amp; sign in</button>
+            </div>
+          </div>
+          <div class="note" id="go-msg" style="display:none;"></div>
+        </div>
+
+        <div class="g-pane" data-pane="face">
+          <p class="hint" style="margin-bottom:14px;">Face ID does not need a password or a code —
+            just look at the camera. You must have set up Face ID from inside the system first.</p>
+          <button type="button" class="btn gold" id="gf-go" style="width:100%;">Scan my face to sign in</button>
+          <div class="note" id="gf-msg" style="display:none;"></div>
+        </div>
+
+        <div class="note bad" id="g-msg" style="display:none;"></div>
+        <div class="hint" style="margin-top:14px;">This system holds live manufacturing and quality
+          records. Everything you change is recorded against your name.</div>
+        <div class="powered">Powered by —
+          <a href="https://www.kmr-groups.com" target="_blank" rel="noopener">KMR Groups of Companies</a></div>
+      </div>
     </div>
-    <div class="note bad" id="g-msg" style="display:none;"></div>
-    <div class="hint" style="margin-top:14px;">This system holds live manufacturing and quality
-      records. Everything you change is recorded against your name.</div>
-    <div class="powered">Powered by —
-      <a href="https://www.kmr-groups.com" target="_blank" rel="noopener">KMR Groups of Companies</a></div>
+  </div>
+</div>
+
+<!-- Forgot password: request a code, then set a new password with it. -->
+<div class="fp-modal" id="fp-modal" style="display:none;">
+  <div class="fp-box">
+    <div class="fp-step on" data-fp="1">
+      <h4>Reset your password</h4>
+      <p class="hint" style="margin-bottom:12px;">A 6-digit code will be sent to the email address
+        and WhatsApp number your administrator has on file for this account.</p>
+      <label>Username</label><input id="fp-user" autocomplete="off">
+      <div class="note" id="fp-msg1" style="display:none;margin-top:10px;"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button type="button" class="btn gold" id="fp-send" style="flex:1;">Send code</button>
+        <button type="button" class="btn" id="fp-cancel1">Cancel</button>
+      </div>
+    </div>
+    <div class="fp-step" data-fp="2">
+      <h4>Enter the code and a new password</h4>
+      <div class="row" style="grid-template-columns:1fr;gap:10px;">
+        <div><label>6-digit code</label>
+          <input id="fp-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>
+        <div><label>New password</label>
+          <input id="fp-newpass" type="password" autocomplete="new-password"></div>
+      </div>
+      <div class="note" id="fp-msg2" style="display:none;margin-top:10px;"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button type="button" class="btn gold" id="fp-reset" style="flex:1;">Reset password &amp; sign in</button>
+        <button type="button" class="btn" id="fp-cancel2">Cancel</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -245,7 +381,7 @@
   <div class="top">
     <div class="id">
       <div id="t-logo"></div>
-      <div><div class="co" id="t-co">—</div></div>
+      <div><div class="co" id="t-co">—</div><div class="tag" id="t-tag"></div></div>
     </div>
     <div class="spacer"></div>
     <div class="themes" id="t-themes"></div>
@@ -255,6 +391,8 @@
          is now a button that re-checks rather than a label that went stale. -->
     <button class="chip" id="t-db" title="Check the database connection again"
       style="cursor:pointer;font-family:inherit;color:#fff;"><span class="dot off"></span><span id="t-dbtext">Checking…</span></button>
+    <button class="chip" id="t-faceid" title="Set up or manage Face ID sign-in for your own account"
+      style="cursor:pointer;font-family:inherit;color:#fff;display:none;">🙂 Set up Face ID</button>
     <div class="who"><div class="av" id="t-av">?</div>
       <div><b id="t-user">—</b><span id="t-role"></span></div></div>
     <a class="btn ghost" href="/" style="text-decoration:none;line-height:1.9;">Website</a>
@@ -271,6 +409,12 @@
            screen it appears on. -->
       <div class="banner">
         <img class="bg" id="bn-img" style="display:none;" alt="">
+        <div class="veil" id="bn-veil" style="display:none;"></div>
+        <div class="in">
+          <h1 id="bn-title">—</h1>
+          <div class="sub" id="bn-sub"></div>
+          <div class="strap" id="bn-strap">Intelligent Digital Manufacturing System</div>
+        </div>
       </div>
       <div class="stat" id="home-stats"></div>
       <div class="card" style="margin-top:18px;">
@@ -545,19 +689,20 @@
     <!-- ============ User management ============ -->
     <div class="panel" data-panel="users">
       <div class="card">
-        <h4>User Management</h4>
-        <div class="hint" style="margin-bottom:10px;">Who can sign in, and what they are allowed to
-          change. Only the developer login can open this screen — the server checks that as well, so
-          hiding the menu entry is not what protects it. Setting somebody's password here
-          <b>immediately ends every session they have open</b>, which is the point of doing it this
-          way rather than telling them a new one over the phone.</div>
+        <h4>User Management &amp; Access Control</h4>
+        <div class="hint" style="margin-bottom:10px;">Who can sign in, how they may prove who they
+          are, and what they are allowed to see. Only an administrator can open this screen — the
+          server checks that as well, so hiding the menu entry is not what protects it. Logins are
+          created and changed only here: nobody sets up their own account. Setting somebody's
+          password here <b>immediately ends every session they have open</b>, and does not need
+          their email or a code — that is the point of an administrator being able to do it.</div>
         <div id="us-gate"></div>
         <div id="us-form" style="display:none;">
           <div class="row four">
             <div><label>Username</label><input id="us-name" autocomplete="off"></div>
             <div><label>Role</label><select id="us-role">
               <option value="staff">Staff — day-to-day work</option>
-              <option value="developer">Developer — everything, including this screen</option>
+              <option value="developer">Administrator — everything, including this screen</option>
             </select></div>
             <div><label>Email</label><input id="us-email" autocomplete="off"></div>
             <div><label>WhatsApp number</label><input id="us-wa" autocomplete="off"></div>
@@ -565,8 +710,37 @@
           <div class="row four" style="margin-top:9px;">
             <div><label>Password</label><input id="us-pass" type="password" autocomplete="new-password"
               placeholder="leave blank to keep the current one"></div>
-            <div><label>Ask for a code at sign-in</label><select id="us-2fa">
+            <div><label>Ask for a code at sign-in too</label><select id="us-2fa">
               <option value="no">No</option><option value="yes">Yes</option></select></div>
+            <div><label>Account status</label><select id="us-active">
+              <option value="yes">Active</option><option value="no">Deactivated</option></select></div>
+            <div><label>Face ID</label><div class="hint" id="us-face-status" style="margin-top:7px;">Not enrolled</div></div>
+          </div>
+
+          <div class="sub" style="margin-top:16px;">How this person may sign in</div>
+          <div class="hint" style="margin-bottom:8px;">Switch off any method they should not be
+            offered. Face ID still has to be set up by the person themselves, from inside the
+            system, once they have signed in another way — this only allows or blocks it.</div>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;">
+            <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-family:var(--body);font-size:12px;color:var(--navy);">
+              <input type="checkbox" id="us-am-password" style="width:auto;"> Username &amp; password</label>
+            <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-family:var(--body);font-size:12px;color:var(--navy);">
+              <input type="checkbox" id="us-am-otpemail" style="width:auto;"> OTP by email</label>
+            <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-family:var(--body);font-size:12px;color:var(--navy);">
+              <input type="checkbox" id="us-am-otpwa" style="width:auto;"> OTP by WhatsApp</label>
+            <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-family:var(--body);font-size:12px;color:var(--navy);">
+              <input type="checkbox" id="us-am-face" style="width:auto;"> Face ID</label>
+            <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-family:var(--body);font-size:12px;color:var(--bad);">
+              <input type="checkbox" id="us-face-clear" style="width:auto;"> Clear their enrolled Face ID</label>
+          </div>
+
+          <div class="sub" style="margin-top:16px;">Module &amp; menu access</div>
+          <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-family:var(--body);font-size:12px;color:var(--navy);margin-bottom:8px;">
+            <input type="checkbox" id="us-restrict" style="width:auto;">
+            Restrict this login to only the modules ticked below (an administrator always sees everything)</label>
+          <div id="us-perm-grid" class="card" style="background:var(--paper);box-shadow:none;padding:10px;max-height:280px;overflow:auto;"></div>
+
+          <div class="row four" style="margin-top:12px;">
             <div style="align-self:end;"><button class="btn gold" id="us-save">Save the login</button></div>
             <div style="align-self:end;"><button class="btn" id="us-clear">Clear</button></div>
           </div>
@@ -575,6 +749,31 @@
       </div>
       <div class="card" id="us-list-card" style="display:none;">
         <h4>Logins</h4><div id="us-list"></div>
+      </div>
+    </div>
+
+    <!-- ============ Login screen branding ============ -->
+    <div class="panel" data-panel="login_screen">
+      <div class="card">
+        <h4>Login Screen</h4>
+        <div class="hint" style="margin-bottom:10px;">What appears on the left-hand side of the
+          sign-in screen, before anyone has signed in. The company logo itself always follows
+          Admin → Company Profile, so it does not need setting twice.</div>
+        <div class="row">
+          <div><label>Welcome title</label><input id="ls-title" placeholder="Welcome to the future of manufacturing"></div>
+          <div><label>Welcome message</label><textarea id="ls-text" rows="3"
+            placeholder="Sign in to reach your parts, your quality records and your production floor — all in one place."></textarea></div>
+        </div>
+        <div class="sub" style="margin-top:14px;">Gallery images</div>
+        <div class="hint" style="margin-bottom:8px;">Photos of the plant, products or people at
+          work — shown in a strip under the welcome message. Up to six.</div>
+        <div id="ls-images" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;"></div>
+        <input type="file" id="ls-file" accept="image/*" style="display:none;">
+        <button class="btn" id="ls-add-img">Add an image</button>
+        <div class="row four" style="margin-top:14px;">
+          <div style="align-self:end;"><button class="btn gold" id="ls-save">Save</button></div>
+        </div>
+        <div class="note" id="ls-msg" style="display:none;"></div>
       </div>
     </div>
 
@@ -788,8 +987,8 @@
           <div><label>Requalify every (months)</label><input class="num" id="cf-freq" value="36"></div>
         </div>
         <div class="row" style="margin-top:9px;">
-          <div><label>Qualified to audit (tick what applies — attach the certificate for each)</label>
-            <div id="cf-quals" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;"></div></div>
+          <div><label>Qualified to audit (tick what applies)</label>
+            <div id="cf-quals" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;"></div></div>
         </div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn gold" id="cf-save">Save the member</button>
@@ -799,27 +998,6 @@
         <div class="note" id="cf-msg" style="display:none;"></div>
       </div>
       <div class="card"><h4>The team</h4><div id="cf-list"></div></div>
-
-      <div class="card">
-        <h4>Approved Internal Auditors List</h4>
-        <div class="hint" style="margin-bottom:10px;">Everybody above who is qualified for at least
-          one kind of audit, with a tick against each qualification and a link to its certificate
-          where one is on file. The remarks and the three names below print exactly as they appear
-          here — save them before printing if anything has changed.</div>
-        <div><label>Remarks</label>
-          <textarea id="cf-remarks" rows="3"
-            placeholder="Observations or comments for this list"></textarea></div>
-        <div class="row" style="margin-top:9px;">
-          <div><label>Prepared by</label><input id="cf-prep" placeholder="name / designation"></div>
-          <div><label>Reviewed by</label><input id="cf-rev" placeholder="name / designation"></div>
-          <div><label>Approved by</label><input id="cf-app" placeholder="name / designation"></div>
-        </div>
-        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn" id="cf-report-save">Save remarks &amp; sign-off</button>
-          <button class="btn gold" id="cf-print-auditors">Print the Approved Internal Auditors List</button>
-        </div>
-        <div class="note" id="cf-report-msg" style="display:none;"></div>
-      </div>
     </div>
 
     <!-- ============ Audit plan and register ============ -->
@@ -1300,11 +1478,38 @@
       <iframe class="embed-frame" id="em-frame" title="Screen"></iframe>
     </div>
 
-    <!-- The Home Banner admin screen used to live here, saving to its own
-         setting. It is gone: the Hero Banner shown on the Home screen now
-         reads straight from Website Content → Website → Hero → Hero Banner,
-         so there is exactly one place to manage it. See loadHome() and
-         C.loadHero(). -->
+    <!-- ============ Admin: home banner ============ -->
+    <div class="panel" data-panel="admin_banner">
+      <div class="card">
+        <h4>Home Banner</h4>
+        <div class="hint" style="margin-bottom:10px;">The picture and wording across the top of the
+          home screen. Saved once, for everyone — the home screen itself has no edit button, because
+          branding is an admin decision and not a per-user one.</div>
+        <div class="row">
+          <div><label>Banner image</label><input type="file" id="ab-file" accept="image/*">
+            <div class="hint">Stored with the other site images and served by link, so the settings
+              record stays small.</div></div>
+          <div><label>Image address (optional, if you already have one)</label><input id="ab-url"></div>
+          <div><label>Line under the company name</label><input id="ab-tag"></div>
+          <div><label>Strapline at the bottom</label><input id="ab-strap"
+            placeholder="Intelligent Digital Manufacturing System"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+          <button class="btn gold" id="ab-save">Save banner</button>
+          <button class="btn del" id="ab-clear">Remove the image</button>
+        </div>
+        <div class="note" id="ab-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Preview</h4>
+        <div class="banner" style="margin:0;">
+          <img class="bg" id="ab-prev" style="display:none;" alt="">
+          <div class="veil" id="ab-veil" style="display:none;"></div>
+          <div class="in"><h1 id="ab-prev-title">—</h1><div class="sub" id="ab-prev-sub"></div>
+            <div class="strap" id="ab-prev-strap"></div></div>
+        </div>
+      </div>
+    </div>
 
     <!-- ============ Admin: backup and restore ============ -->
     <div class="panel" data-panel="admin_backup">
@@ -2721,13 +2926,9 @@
       ['dash_accounts','📊','Accounts Dashboard',1],
       ['accounts_pl','💹','P&L']]],
     ['admin','⚙','Admin','Settings and the website',[
-      /* The Hero Banner (image + headline/eyebrow/sub) that shows on this Home
-         screen is not a separate setting — it is read straight from Website
-         Content → Website → Hero → Hero Banner, so there is exactly one place
-         to manage it and the Home screen always reflects whatever is live
-         there. There used to be a second, separate "Home Banner" screen here;
-         it is gone so that source can't drift out of sync with itself. */
       ['admin_site','🌐','Website Content',1],
+      ['admin_banner','🖼','Home Banner',1],
+      ['login_screen','🔐','Login Screen',1],
       ['profile','🏢','Company Profile',1],
       ['users','👥','User Management',1],
       ['dept_master','🏢','Department Master',1],['desig_master','🎖','Designation Master',1],
@@ -2742,7 +2943,7 @@
     dept_master: 'orgmaster', desig_master: 'orgmaster', position_master: 'orgmaster',
     qms_level1: 'qmsdocs', qms_level2: 'qmsdocs', qms_level3: 'qmsdocs', qms_level4: 'qmsdocs',
     doc_master_pfd: 'masterlist', doc_master_pfmea: 'masterlist', doc_master_cp: 'masterlist',
-    kpi_entry: 'kpi_entry',
+    kpi_entry: 'kpi_entry', admin_banner: 'admin_banner',
     admin_backup: 'admin_backup', admin_sample: 'admin_sample',
     admin_site: 'embed', emb_pipeline: 'embed', emb_ppc: 'embed', emb_hr: 'embed', emb_me: 'embed'
   };
@@ -2752,120 +2953,57 @@
   MENU.forEach(function(g){ g[4].forEach(function(it){
     LABEL[it[0]] = it[2]; ICON[it[0]] = it[1]; if (it[3]) LIVE[it[0]] = 1;
   });});
-  /* 'home' isn't listed inside any MENU group — it's the standalone button
-     drawn before them — so the loop above never marks it live, and go('home')
-     was falling through to the "later phase" placeholder instead of showing
-     the real Home panel (and its Hero Banner). Mark it live explicitly. */
-  LIVE.home = 1; LABEL.home = 'Home'; ICON.home = '🏠';
-
-  /* Every main menu and sub-menu entry is a real <a href="#s=..."> so the
-     browser's own right-click menu (Open Link in New Tab / New Window, Copy
-     Link) works on all of them without any extra code — that's a native
-     anchor behaviour, not something we implement. A plain left click still
-     opens/toggles in place via JS; a modified click (ctrl/cmd/shift) or a
-     middle click is left alone so the browser opens it in a new tab exactly
-     as it would for any other link. See the hash router in go()/start() that
-     makes a URL like idms.html#s=parts land on that screen directly. */
-  function firstLive(items){
-    for (var i = 0; i < items.length; i++) { if (items[i][3]) return items[i][0]; }
-    return items.length ? items[0][0] : 'home';
-  }
-  function isModifiedClick(e){
-    return e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey;
-  }
-  function closeAllGroups(bar){
-    bar.querySelectorAll('.mgroup.open').forEach(function(x){ x.classList.remove('open'); });
-  }
-  function positionDrop(group){
-    var btn = group.querySelector(':scope > a, :scope > button'), drop = group.querySelector('.drop');
-    if (!btn || !drop) return;
-    var r = btn.getBoundingClientRect();
-    var minW = Math.max(drop.offsetWidth || 268, 268);
-    var left = Math.min(r.left, window.innerWidth - minW - 8);
-    left = Math.max(8, left);
-    var top = r.bottom + 4;
-    drop.style.top = top + 'px';
-    drop.style.left = left + 'px';
-    /* Clamp to the space actually left below the button — the CSS default
-       (calc(100vh - 24px)) assumes the drop starts at the top of the screen,
-       so a menu opened lower down (or a taskbar eating into the viewport)
-       could run off the bottom of the screen. The list scrolls internally
-       once it doesn't fit, instead of extending past the visible area. */
-    var available = window.innerHeight - top - 10;
-    drop.style.maxHeight = Math.max(120, available) + 'px';
-  }
 
   function drawMenu(){
     var bar = document.getElementById('menubar');
-    bar.innerHTML = '<div class="mgroup"><a data-home="1" href="#s=home">🏠 Home</a></div>' +
+    bar.innerHTML = '<div class="mgroup"><button data-home="1">🏠 Home</button></div>' +
       MENU.map(function(g,gi){
-        var groupHref = '#s=' + firstLive(g[4]);
-        return '<div class="mgroup" data-gi="'+gi+'"><a href="'+groupHref+'">'+g[1]+' '+esc(g[2])+
-          ' <span class="ar">▼</span></a><div class="drop"><div class="sec">'+esc(g[3])+'</div>'+
-          g[4].map(function(it){
-            return '<a data-s="'+it[0]+'" href="#s='+encodeURIComponent(it[0])+'"><span>'+it[1]+' '+esc(it[2])+'</span>'+
+        var items = g[4].filter(function(it){ return isPermitted(it[0]); });
+        if (!items.length) return '';
+        return '<div class="mgroup" data-gi="'+gi+'"><button>'+g[1]+' '+esc(g[2])+
+          ' <span class="ar">▼</span></button><div class="drop"><div class="sec">'+esc(g[3])+'</div>'+
+          items.map(function(it){
+            return '<a data-s="'+it[0]+'"><span>'+it[1]+' '+esc(it[2])+'</span>'+
               (it[3]?'':'<span class="soon">soon</span>')+'</a>';
           }).join('')+'</div></div>';
       }).join('');
-
-    bar.querySelector('[data-home]').addEventListener('click', function(e){
-      if (isModifiedClick(e)) return;      // let the browser open a new tab/window itself
-      e.preventDefault();
-      go('home');
-    });
-
-    bar.querySelectorAll('.mgroup[data-gi] > a').forEach(function(a){
-      a.addEventListener('click', function(e){
-        if (isModifiedClick(e)) return;    // real navigation — don't intercept
-        e.preventDefault();
+    bar.querySelector('[data-home]').addEventListener('click', function(){ go('home'); });
+    bar.querySelectorAll('.mgroup[data-gi] > button').forEach(function(b){
+      b.addEventListener('click', function(e){
         e.stopPropagation();
-        var g = a.parentNode, was = g.classList.contains('open');
-        closeAllGroups(bar);
-        if (!was) { g.classList.add('open'); positionDrop(g); }
+        var g = b.parentNode, was = g.classList.contains('open');
+        bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
+        if (!was) g.classList.add('open');
       });
     });
-
     bar.querySelectorAll('.drop a').forEach(function(a){
-      a.addEventListener('click', function(e){
-        if (isModifiedClick(e)) return;    // real navigation — don't intercept
-        e.preventDefault();
-        closeAllGroups(bar);
+      a.addEventListener('click', function(){
+        bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
         go(a.dataset.s);
       });
     });
-
-    document.addEventListener('click', function(){ closeAllGroups(bar); });
-    /* A fixed-position dropdown doesn't move with the page, so close it on
-       scroll/resize rather than letting it drift away from its button. But
-       the dropdown's own list can scroll internally when it's taller than
-       the space below its button (see positionDrop above) — that scroll
-       fires a 'scroll' event on the .drop element itself, which still
-       passes through this capturing listener on its way down from window to
-       the target. Without the guard below, the very first scroll tick
-       inside an open dropdown closed it immediately, which is what made the
-       list look unscrollable rather than merely closing too eagerly. */
-    window.addEventListener('scroll', function(e){
-      var t = e.target;
-      if (t && t.nodeType === 1 && t.closest('.mgroup.open .drop')) return;
-      closeAllGroups(bar);
-    }, true);
-    window.addEventListener('resize', function(){ closeAllGroups(bar); });
+    document.addEventListener('click', function(){
+      bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
+    });
   }
 
-  /* ---------------- hash routing (deep links, new tab / new window) ----------------
-     go(s) keeps the address bar's #s=<screen> in sync (via replaceState, so it
-     never grows the back/forward history), and start() reads that hash once at
-     boot. That's what makes "Open Link in New Tab" on a menu item actually land
-     on the right screen: the new tab loads idms.html#s=<screen> fresh, the user
-     signs in as usual, and start() below sends them straight there. */
-  var lastGo = null;
+  /* An administrator (role 'developer') always sees everything. Anyone else
+     sees everything too UNLESS an administrator has switched restrictAccess
+     on for their account, in which case only the ticked module keys show —
+     so nobody's menu narrows just because this feature shipped. */
+  function isPermitted(s){
+    if (s === 'home') return true;
+    if (me.role === 'developer') return true;
+    if (!me.restrictAccess) return true;
+    return (me.permissions || []).indexOf(s) !== -1;
+  }
+
   function go(s){
-    lastGo = s;
+    if (!isPermitted(s)){
+      toast('You do not have access to that screen. Ask your administrator.');
+      s = 'home';
+    }
     var want = LIVE[s] ? (PANEL_OF[s] || s) : 'placeholder';
-    try {
-      var newHash = '#s=' + encodeURIComponent(s);
-      if (location.hash !== newHash) history.replaceState(null, '', newHash);
-    } catch(e){ /* hash sync is a nicety, never a blocker */ }
     document.querySelectorAll('.panel').forEach(function(p){
       p.classList.toggle('on', p.dataset.panel === want);
     });
@@ -2913,6 +3051,7 @@
     if (s === 'dwm')                   loadDwm();
     if (s === 'task_list')             loadTasks();
     if (s === 'users')                 loadUsers();
+    if (s === 'login_screen')          loadLoginScreenAdmin();
     if (s === 'report_tool_history')   loadTools();
     if (s === 'report_machine_checksheet') loadCheckSheet();
     if (s === 'doc_format_master')     loadFormats();
@@ -2943,6 +3082,7 @@
     if (s === 'apqp')              loadApqp();
     if (s.indexOf('dash_') === 0)  loadKpiDash(s.slice(5));
     if (s === 'kpi_entry')         loadKpiEntry();
+    if (s === 'admin_banner')      loadBannerScreen();
     if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
   }
 
@@ -3511,18 +3651,44 @@
              'everything that is open, not so they can be closed twice.' } ] });
   }
 
-  /* ================= USER MANAGEMENT =================
+  /* ================= USER MANAGEMENT & ACCESS CONTROL =================
      The server checks the role on every one of these calls, so what this screen
-     does is make the rules visible rather than enforce them. Two of them are
-     worth saying out loud on the page, because people are surprised by them:
-     setting a password here ends that person's open sessions, and a deleted
-     login stops working immediately rather than when its session expires. */
+     does is make the rules visible rather than enforce them. Worth saying out
+     loud on the page, because people are surprised by them: setting a password
+     here ends that person's open sessions and needs none of their own email or
+     a code, a deactivated or deleted login stops working immediately rather
+     than at its session's natural expiry, and Face ID can only be switched on
+     or off here — enrolling it still has to happen from inside the app, by
+     the person themselves, since it must be their own face captured. */
   var userRows = [], usEditing = null;
+
+  /* One checkbox per live module key, grouped exactly like the menu itself,
+     so ticking access here lines up with what the person actually sees. */
+  function permGridHtml(checked){
+    checked = checked || [];
+    return MENU.map(function(g){
+      var items = g[4].filter(function(it){ return it[3]; });
+      if (!items.length) return '';
+      return '<div style="margin-bottom:10px;"><b style="font-size:11px;">'+g[1]+' '+esc(g[2])+'</b>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:4px;">' +
+        items.map(function(it){
+          var on = checked.indexOf(it[0]) !== -1;
+          return '<label style="display:flex;align-items:center;gap:5px;text-transform:none;' +
+            'font-family:var(--body);font-size:11.5px;color:var(--navy);">' +
+            '<input type="checkbox" class="us-perm" value="'+esc(it[0])+'" style="width:auto;" '+(on?'checked':'')+'> ' +
+            it[1]+' '+esc(it[2])+'</label>';
+        }).join('') + '</div></div>';
+    }).join('');
+  }
+  function permGridChecked(){
+    return Array.prototype.slice.call(document.querySelectorAll('#us-perm-grid .us-perm:checked'))
+      .map(function(c){ return c.value; });
+  }
 
   async function loadUsers(){
     var gate = document.getElementById('us-gate');
     if (String((me && me.role) || '') !== 'developer'){
-      gate.innerHTML = '<div class="note bad">Only the developer login can manage logins. You are ' +
+      gate.innerHTML = '<div class="note bad">Only an administrator can manage logins. You are ' +
         'signed in as <b>' + esc((me && me.user) || '') + '</b> with the role <b>' +
         esc((me && me.role) || 'unknown') + '</b>. The server would refuse these changes even if this ' +
         'screen let you make them.</div>';
@@ -3533,6 +3699,7 @@
     gate.innerHTML = '';
     document.getElementById('us-form').style.display = '';
     document.getElementById('us-list-card').style.display = '';
+    document.getElementById('us-perm-grid').innerHTML = permGridHtml([]);
     try {
       var j = await C.api('/api/auth', { method:'POST',
         body: JSON.stringify({ action:'listUsers' }) });
@@ -3548,19 +3715,24 @@
     if (!userRows.length){ host.innerHTML = '<div class="hint">No logins to show.</div>'; return; }
     var devs = userRows.filter(function(u){ return u.role === 'developer'; }).length;
     host.innerHTML = '<div class="scroll-x"><table class="t"><thead><tr><th>Username</th><th>Role</th>' +
-      '<th>Email</th><th>WhatsApp</th><th class="c">Code at sign-in</th><th></th></tr></thead><tbody>' +
+      '<th>Email</th><th>WhatsApp</th><th class="c">Status</th><th class="c">Face ID</th>' +
+      '<th>Password last changed</th><th></th></tr></thead><tbody>' +
       userRows.map(function(u){
         var isMe = u.username === ((me && me.user) || '');
-        return '<tr><td><b>'+esc(u.username)+'</b>'+(isMe?'<div class="hint">this is you</div>':'')+'</td>' +
-          '<td>'+esc(u.role||'')+'</td><td class="hint">'+esc(u.email||'—')+'</td>' +
+        return '<tr><td><b>'+esc(u.username)+'</b>'+(isMe?'<div class="hint">this is you</div>':'')+
+          (u.restrict_access ? '<div class="hint">Restricted access</div>' : '')+'</td>' +
+          '<td>'+esc(u.role === 'developer' ? 'Administrator' : (u.role||''))+'</td>' +
+          '<td class="hint">'+esc(u.email||'—')+'</td>' +
           '<td class="hint">'+esc(u.whatsapp||'—')+'</td>' +
-          '<td class="c">'+(u.twofa?'yes':'no')+'</td>' +
+          '<td class="c">'+(u.active === false ? '<span style="color:var(--bad);">Deactivated</span>' : 'Active')+'</td>' +
+          '<td class="c">'+(u.face_enrolled ? 'Enrolled' : '—')+'</td>' +
+          '<td class="hint">'+(u.pass_changed_at ? C.fmtDate(u.pass_changed_at)+' — '+esc(u.pass_changed_by||'') : '—')+'</td>' +
           '<td><button class="btn us-edit" data-u="'+esc(u.username)+'">Edit</button> ' +
           (isMe ? '' : '<button class="btn del us-del" data-u="'+esc(u.username)+'">Remove</button>') +
           '</td></tr>';
       }).join('') + '</tbody></table></div>' +
-      (devs <= 1 ? '<div class="note" style="margin-top:10px;">There is one developer login. If it is ' +
-        'lost, nobody can manage logins or edit the website — a second one is worth having, and it ' +
+      (devs <= 1 ? '<div class="note" style="margin-top:10px;">There is one administrator login. If it ' +
+        'is lost, nobody can manage logins or edit the website — a second one is worth having, and it ' +
         'costs nothing.</div>' : '');
     host.querySelectorAll('.us-edit').forEach(function(b){
       b.addEventListener('click', function(){ editUser(b.dataset.u); });
@@ -3578,7 +3750,18 @@
     document.getElementById('us-email').value = u.email || '';
     document.getElementById('us-wa').value = u.whatsapp || '';
     document.getElementById('us-2fa').value = u.twofa ? 'yes' : 'no';
+    document.getElementById('us-active').value = u.active === false ? 'no' : 'yes';
     document.getElementById('us-pass').value = '';
+    var am = u.auth_methods || {};
+    document.getElementById('us-am-password').checked = am.password !== false;
+    document.getElementById('us-am-otpemail').checked = am.otpEmail !== false;
+    document.getElementById('us-am-otpwa').checked = am.otpWhatsapp !== false;
+    document.getElementById('us-am-face').checked = am.face !== false;
+    document.getElementById('us-face-clear').checked = false;
+    document.getElementById('us-face-status').textContent = u.face_enrolled
+      ? 'Enrolled' + (u.face_enrolled_at ? ' on ' + C.fmtDate(u.face_enrolled_at) : '') : 'Not enrolled';
+    document.getElementById('us-restrict').checked = !!u.restrict_access;
+    document.getElementById('us-perm-grid').innerHTML = permGridHtml(u.permissions || []);
     var msg = document.getElementById('us-msg');
     msg.style.display=''; msg.className='note';
     msg.innerHTML = 'Editing <b>'+esc(name)+'</b>. Leaving the password blank keeps their current one; ' +
@@ -3589,6 +3772,14 @@
     ['us-name','us-email','us-wa','us-pass'].forEach(function(i){ document.getElementById(i).value=''; });
     document.getElementById('us-role').value = 'staff';
     document.getElementById('us-2fa').value = 'no';
+    document.getElementById('us-active').value = 'yes';
+    ['us-am-password','us-am-otpemail','us-am-otpwa','us-am-face'].forEach(function(i){
+      document.getElementById(i).checked = true;
+    });
+    document.getElementById('us-face-clear').checked = false;
+    document.getElementById('us-face-status').textContent = 'Not enrolled';
+    document.getElementById('us-restrict').checked = false;
+    document.getElementById('us-perm-grid').innerHTML = permGridHtml([]);
     document.getElementById('us-msg').style.display = 'none';
   }
   async function saveUser(){
@@ -3604,13 +3795,13 @@
     if (pass && pass.length < 8)
       return say('That password is too short — eight characters at the very least.');
 
-    /* the last developer must not be able to demote themselves out of the system */
+    /* the last administrator must not be able to demote themselves out of the system */
     if (existing && existing.role === 'developer' && role !== 'developer'){
       var devs = userRows.filter(function(u){ return u.role === 'developer'; });
       if (devs.length <= 1)
-        return say('<b>'+esc(name)+'</b> is the only developer login. Changing it to staff would ' +
+        return say('<b>'+esc(name)+'</b> is the only administrator login. Changing it to staff would ' +
           'leave nobody able to manage logins or edit the website, and no way back in. Create a ' +
-          'second developer login first.');
+          'second administrator login first.');
     }
 
     var btn = document.getElementById('us-save'); btn.disabled = true;
@@ -3619,7 +3810,17 @@
         action:'saveUser', username:name, role:role, password:pass,
         email:document.getElementById('us-email').value.trim(),
         whatsapp:document.getElementById('us-wa').value.trim(),
-        twofa:document.getElementById('us-2fa').value === 'yes' }) });
+        twofa:document.getElementById('us-2fa').value === 'yes',
+        active:document.getElementById('us-active').value !== 'no',
+        restrictAccess:document.getElementById('us-restrict').checked,
+        permissions:permGridChecked(),
+        clearFace:document.getElementById('us-face-clear').checked,
+        authMethods:{
+          password:document.getElementById('us-am-password').checked,
+          otpEmail:document.getElementById('us-am-otpemail').checked,
+          otpWhatsapp:document.getElementById('us-am-otpwa').checked,
+          face:document.getElementById('us-am-face').checked
+        } }) });
       say(existing
         ? 'Saved.' + (pass ? ' Their password was changed, so any session they had open has ended.' : '')
         : 'Login created.', true);
@@ -3641,6 +3842,65 @@
       await loadUsers();
     } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent = e.message; }
   }
+
+  /* ================= LOGIN SCREEN BRANDING =================
+     Held on the site content record (the one /api/content serves), because
+     that is the one thing the sign-in screen can read before anybody has a
+     session. Saving here reads the current record, changes only loginScreen,
+     and writes the whole thing back — the same read-modify-write the website's
+     own admin screen already does against this record. */
+  var lsImages = [];
+  async function loadLoginScreenAdmin(){
+    var msg = document.getElementById('ls-msg'); msg.style.display = 'none';
+    try {
+      var j = await C.api('/api/content');
+      var ls = (j.data && j.data.loginScreen) || {};
+      document.getElementById('ls-title').value = ls.welcomeTitle || '';
+      document.getElementById('ls-text').value = ls.welcomeText || '';
+      lsImages = (ls.images || []).slice(0, 6);
+      drawLsImages();
+    } catch(e){
+      msg.style.display=''; msg.className='note bad'; msg.textContent = e.message;
+    }
+  }
+  function drawLsImages(){
+    var host = document.getElementById('ls-images');
+    host.innerHTML = lsImages.map(function(u, i){
+      return '<div style="position:relative;">' +
+        '<img src="'+esc(u)+'" style="width:110px;height:78px;object-fit:cover;border-radius:8px;border:1px solid var(--line);">' +
+        '<button type="button" class="btn del ls-rm" data-i="'+i+'" ' +
+        'style="position:absolute;top:3px;right:3px;padding:2px 7px;font-size:9px;">✕</button></div>';
+    }).join('');
+    host.querySelectorAll('.ls-rm').forEach(function(b){
+      b.addEventListener('click', function(){ lsImages.splice(+b.dataset.i, 1); drawLsImages(); });
+    });
+  }
+  document.getElementById('ls-add-img').addEventListener('click', function(){
+    if (lsImages.length >= 6){ toast('Six images is the limit for the gallery strip.'); return; }
+    document.getElementById('ls-file').click();
+  });
+  document.getElementById('ls-file').addEventListener('change', async function(){
+    var f = this.files[0]; this.value = '';
+    if (!f) return;
+    try { var r = await C.uploadFile(f); lsImages.push(r.url); drawLsImages(); }
+    catch(e){ toast(e.message); }
+  });
+  document.getElementById('ls-save').addEventListener('click', async function(){
+    var msg = document.getElementById('ls-msg');
+    var btn = this; btn.disabled = true;
+    try {
+      var j = await C.api('/api/content');
+      var data = j.data || {};
+      data.loginScreen = {
+        welcomeTitle: document.getElementById('ls-title').value.trim(),
+        welcomeText: document.getElementById('ls-text').value.trim(),
+        images: lsImages
+      };
+      await C.api('/api/content', { method:'POST', body: JSON.stringify({ data: data }) });
+      msg.style.display=''; msg.className='note good'; msg.textContent = 'Saved.';
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent = e.message; }
+    btn.disabled = false;
+  });
 
   /* ================= TOOL HISTORY CARD =================
      One card per tool, and every event on it carries a cost. That is what turns
@@ -4565,104 +4825,21 @@
      Who is qualified to do what. The audit register reads this, so a member
      record is not paperwork — it is what stops somebody being named as auditor
      for a job they are not qualified for. */
-  var cftDocs = [], cftEditing = null, cfCerts = {}, cftReportDoc = null;
+  var cftDocs = [], cftEditing = null;
   var AUDIT_TYPES = ['Process', 'Product', 'IQA', 'Layer process', 'Layout', 'Dock',
                      'SQA', 'Customer', 'External', 'MRM'];
   var QUALIFIABLE = ['Process', 'Product', 'IQA', 'Layer process', 'Layout', 'Dock', 'SQA'];
-  /* Display names only — the stored value (e.g. 'Dock') never changes, so
-     existing records and the audit register's qualification check keep
-     working. This is just what a person, and the printed list, reads. */
-  var QUAL_LABEL = { Process:'Process Audit', Product:'Product Audit', IQA:'IQA Audit',
-    'Layer process':'Layer Process Audit', Layout:'Layout Audit', Dock:'Doc Audit', SQA:'SQA Audit' };
 
   async function loadCft(){
     await compLoad();
     try { cftDocs = await C.idms.docs('cft'); } catch(e){ cftDocs = []; }
-    try { cftReportDoc = (await C.idms.docs('cft_report'))[0] || null; } catch(e){ cftReportDoc = null; }
     document.getElementById('cf-people').innerHTML =
       compEmployees.map(function(e){ return '<option value="'+esc(empData(e).name||'')+'">'; }).join('');
-    renderCfQuals(false);
-    drawCft();
-    drawCfReport();
-  }
-
-  /* ---- qualification checkboxes + the certificate attached to each ----
-     A certificate is stored the same way any other IDMS attachment is
-     (uploadFile -> the assets table -> a served link), keyed against the
-     qualification it was uploaded for so it travels with the member record. */
-  function cfQualsHtml(){
-    return QUALIFIABLE.map(function(q){
-      var cert = cfCerts[q];
-      return '<div style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:195px;">' +
-        '<label style="font-weight:400;display:flex;align-items:center;gap:5px;margin:0;' +
-        'text-transform:none;font-family:var(--body);font-size:12px;letter-spacing:0;color:var(--navy);">' +
-        '<input type="checkbox" class="cf-q" value="'+esc(q)+'" style="width:auto;"> ' +
-        esc(QUAL_LABEL[q]||q) + '</label>' +
-        '<div class="cf-cert-row" data-q="'+esc(q)+'" style="display:none;margin-top:6px;font-size:10.5px;">' +
-        (cert
-          ? ('<div><a href="'+esc(cert.url)+'" target="_blank" rel="noopener">📄 View / download certificate</a></div>' +
-             '<div class="hint" style="overflow-wrap:anywhere;">'+esc(cert.name||'')+'</div>' +
-             '<button type="button" class="btn cf-cert-btn" data-act="replace" data-q="'+esc(q)+'" ' +
-               'style="padding:2px 8px;font-size:9px;margin-top:4px;">Replace</button> ' +
-             '<button type="button" class="btn del cf-cert-btn" data-act="remove" data-q="'+esc(q)+'" ' +
-               'style="padding:2px 8px;font-size:9px;margin-top:4px;">Remove</button>')
-          : ('<button type="button" class="btn cf-cert-btn" data-act="upload" data-q="'+esc(q)+'" ' +
-               'style="padding:3px 10px;font-size:9.5px;">Attach qualification certificate</button>')) +
-        '</div></div>';
+    document.getElementById('cf-quals').innerHTML = QUALIFIABLE.map(function(q){
+      return '<label style="font-weight:400;display:flex;align-items:center;gap:5px;">' +
+        '<input type="checkbox" class="cf-q" value="'+esc(q)+'" style="width:auto;"> ' + esc(q) + '</label>';
     }).join('');
-  }
-  function syncCfCertRow(q){
-    var cb = document.querySelector('#cf-quals .cf-q[value="'+CSS.escape(q)+'"]');
-    var row = document.querySelector('#cf-quals .cf-cert-row[data-q="'+CSS.escape(q)+'"]');
-    if (cb && row) row.style.display = cb.checked ? '' : 'none';
-  }
-  function renderCfQuals(preserveChecks){
-    var host = document.getElementById('cf-quals');
-    var checkedBefore = {};
-    if (preserveChecks) host.querySelectorAll('.cf-q').forEach(function(cb){ checkedBefore[cb.value] = cb.checked; });
-    host.innerHTML = cfQualsHtml();
-    host.querySelectorAll('.cf-q').forEach(function(cb){
-      if (preserveChecks && checkedBefore[cb.value]) cb.checked = true;
-      cb.addEventListener('change', function(){
-        /* unchecking a qualification takes the certificate off the member —
-           the file itself is not deleted, only the link to it, since a
-           certificate for something nobody is qualified for any more is not
-           evidence of anything */
-        if (!cb.checked) { delete cfCerts[cb.value]; renderCfQuals(true); }
-        else syncCfCertRow(cb.value);
-      });
-      syncCfCertRow(cb.value);
-    });
-    host.querySelectorAll('.cf-cert-btn').forEach(function(b){
-      b.addEventListener('click', function(){
-        var act = b.dataset.act, q = b.dataset.q;
-        if (act === 'remove'){
-          if (!confirm('Remove the attached certificate for ' + (QUAL_LABEL[q]||q) + '?\n\n' +
-            'The file itself stays stored; only the link on this member is removed.')) return;
-          delete cfCerts[q];
-          renderCfQuals(true);
-        } else {
-          attachCfCert(q);
-        }
-      });
-    });
-  }
-  function attachCfCert(q){
-    var f = document.createElement('input');
-    f.type = 'file';
-    f.accept = '.pdf,.png,.jpg,.jpeg,image/*,application/pdf';
-    f.addEventListener('change', async function(){
-      var file = f.files[0]; if (!file) return;
-      try {
-        toast('Uploading certificate…');
-        var up = await C.uploadFile(file);
-        cfCerts[q] = { url: up.url, id: up.id, name: file.name, size: file.size, mime: file.type,
-                       uploadedOn: new Date().toISOString().slice(0,10) };
-        renderCfQuals(true);
-        toast('Certificate attached — save the member to keep it.');
-      } catch(e){ toast(e.message); }
-    });
-    f.click();
+    drawCft();
   }
   function cftQualDue(v){
     if (!v.qualifiedOn) return null;
@@ -4690,14 +4867,7 @@
           (left ? '<div class="hint bad">not on the roll</div>' : '') + '</td>' +
           '<td class="hint">'+esc(v.fn||'')+'</td>' +
           '<td class="hint">'+esc(v.department||'—')+'</td>' +
-          '<td>'+((v.quals||[]).length ? v.quals.map(function(q){
-            var c = (v.certs||{})[q];
-            return '<div style="white-space:nowrap;">' + esc(QUAL_LABEL[q]||q) +
-              (c ? ' <a href="'+esc(c.url)+'" target="_blank" rel="noopener" ' +
-                     'title="View / download certificate">📄</a>'
-                 : ' <span class="hint bad" title="No certificate on file">⚠ no certificate</span>') +
-              '</div>';
-          }).join('') : '<span class="hint">none</span>')+'</td>' +
+          '<td>'+((v.quals||[]).join(', ') || '<span class="hint">none</span>')+'</td>' +
           '<td class="hint">'+(v.qualifiedOn?C.fmtDate(v.qualifiedOn):'—')+'</td>' +
           '<td'+(lapsed?' class="bad"':' class="hint"')+'>'+(due?C.fmtDate(due.toISOString().slice(0,10)):'—')+
             (lapsed?'<div class="hint">lapsed</div>':'')+'</td>' +
@@ -4716,19 +4886,14 @@
     document.getElementById('cf-fn').value = v.fn || 'Quality';
     document.getElementById('cf-on').value = v.qualifiedOn || '';
     document.getElementById('cf-freq').value = v.requalifyMonths || 36;
-    cfCerts = JSON.parse(JSON.stringify(v.certs || {}));
-    renderCfQuals(false);
     document.getElementById('cf-quals').querySelectorAll('.cf-q').forEach(function(cb){
-      cb.checked = (v.quals||[]).indexOf(cb.value) >= 0;
-      syncCfCertRow(cb.value);
-    });
+      cb.checked = (v.quals||[]).indexOf(cb.value) >= 0; });
     document.getElementById('cf-save').textContent = 'Update the member';
   }
   function clearCftForm(){
     cftEditing = null;
-    cfCerts = {};
     ['cf-who','cf-on'].forEach(function(i){ document.getElementById(i).value = ''; });
-    renderCfQuals(false);
+    document.getElementById('cf-quals').querySelectorAll('.cf-q').forEach(function(cb){ cb.checked = false; });
     document.getElementById('cf-save').textContent = 'Save the member';
     document.getElementById('cf-msg').style.display = 'none';
   }
@@ -4752,10 +4917,6 @@
     if (quals.length && !on)
       return say('Say when they were qualified. A qualification with no date cannot be shown to ' +
                  'have been current when the audit was carried out.');
-    /* only carry a certificate for a qualification that is actually ticked —
-       cfCerts can hold a stale entry if the checkbox was toggled by script */
-    var certs = {};
-    quals.forEach(function(q){ if (cfCerts[q]) certs[q] = cfCerts[q]; });
     var d = empData(emp);
     var btn = document.getElementById('cf-save'); btn.disabled = true;
     try {
@@ -4763,7 +4924,7 @@
         docNo: (cftEditing ? (cftDocs.filter(function(x){ return x.doc_id === cftEditing; })[0]||{}).doc_no : null)
                || await C.docNumber('cft'), status:'Active',
         data:{ name:name, empId:d.empId||'', department:d.department||'', designation:d.designation||'',
-               fn:document.getElementById('cf-fn').value, quals:quals, certs:certs, qualifiedOn:on,
+               fn:document.getElementById('cf-fn').value, quals:quals, qualifiedOn:on,
                requalifyMonths:C.num(document.getElementById('cf-freq').value) || 36 } },
         cftEditing ? 'CFT member updated' : 'CFT member added');
       say(cftEditing ? 'Updated.' : 'Added.', true);
@@ -4780,88 +4941,9 @@
                  {label:'Qualified on'},{label:'Requalify by'}],
         rows: cftDocs.map(function(m){
           var v = m.data||{}, due = cftQualDue(v);
-          return [v.name, v.fn, v.department||'—',
-                  (v.quals||[]).map(function(q){ return QUAL_LABEL[q]||q; }).join(', ')||'none',
+          return [v.name, v.fn, v.department||'—', (v.quals||[]).join(', ')||'none',
                   v.qualifiedOn?C.fmtDate(v.qualifiedOn):'—',
                   due?C.fmtDate(due.toISOString().slice(0,10)):'—']; }) } ] });
-  }
-
-  /* ---- remarks and sign-off for the Approved Internal Auditors List ----
-     Kept as its own singleton record (kind 'cft_report') rather than typed
-     fresh at print time, so it is a saved fact — edited here, read on screen
-     and read again the next time the list is printed — not paperwork that
-     resets itself. */
-  function drawCfReport(){
-    var v = (cftReportDoc && cftReportDoc.data) || {};
-    document.getElementById('cf-remarks').value = v.remarks || '';
-    document.getElementById('cf-prep').value = v.preparedBy || '';
-    document.getElementById('cf-rev').value = v.reviewedBy || '';
-    document.getElementById('cf-app').value = v.approvedBy || '';
-  }
-  async function saveCfReport(){
-    var msg = document.getElementById('cf-report-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
-    var btn = document.getElementById('cf-report-save'); btn.disabled = true;
-    try {
-      var data = { remarks: document.getElementById('cf-remarks').value.trim(),
-                   preparedBy: document.getElementById('cf-prep').value.trim(),
-                   reviewedBy: document.getElementById('cf-rev').value.trim(),
-                   approvedBy: document.getElementById('cf-app').value.trim() };
-      var docId = cftReportDoc ? cftReportDoc.doc_id : '';
-      var docNo = cftReportDoc ? cftReportDoc.doc_no : await C.docNumber('cftrpt');
-      await C.idms.saveDoc({ docId:docId, kind:'cft_report', docNo:docNo, status:'Active', data:data },
-        'Approved Internal Auditors List — remarks / sign-off updated');
-      try { cftReportDoc = (await C.idms.docs('cft_report'))[0] || null; } catch(e){}
-      say('Saved. The PDF will carry this the next time it is printed.', true);
-    } catch(e){ say(esc(e.message)); }
-    btn.disabled = false;
-  }
-
-  /* ---- the professional PDF: only members qualified for at least one kind
-     of audit, a tick against each qualification they actually hold, the
-     saved remarks, and the three saved sign-off names — same fields, same
-     order, on screen and on paper. */
-  function printApprovedAuditors(){
-    var approved = cftDocs.filter(function(m){ return ((m.data||{}).quals||[]).length; });
-    if (!approved.length){
-      toast('Nobody on the team is qualified for any audit type yet — there is nothing approved to list.');
-      return;
-    }
-    var rv = (cftReportDoc && cftReportDoc.data) || {};
-    var qualCols = QUALIFIABLE.map(function(q){ return { label: QUAL_LABEL[q] || (q + ' Audit'), align:'c' }; });
-    var sig = function(label, name){
-      return '<div style="flex:1;border:.7pt solid #dbe3ee;border-radius:6px;padding:10px 12px;">' +
-        '<div style="font-size:7pt;text-transform:uppercase;letter-spacing:.5pt;color:#8E6A19;' +
-        'margin-bottom:26px;">' + esc(label) + '</div>' +
-        '<div style="border-top:.7pt solid #12233f;padding-top:4px;font-size:8pt;min-height:11pt;">' +
-        (name ? esc(name) : '&nbsp;') + '</div>' +
-        '<div style="font-size:6.6pt;color:#93a2b8;margin-top:2px;">Signature &amp; date</div></div>';
-    };
-    C.openReport({
-      title: 'List of Approved Internal Auditors',
-      kind: 'QMS',
-      subtitle: 'As on ' + C.fmtDate(new Date().toISOString().slice(0,10)),
-      landscape: true,
-      titleInline: true,
-      pageNumbers: true,
-      sections: [
-        { type:'table', title:'Auditor Qualification', dense:true,
-          columns: [{label:'#'},{label:'Auditor'},{label:'Function'},{label:'Department'},
-                    {label:'Qualified on'},{label:'Requalify by'}].concat(qualCols),
-          rows: approved.map(function(m, i){
-            var v = m.data||{}, due = cftQualDue(v), quals = v.quals||[];
-            return [String(i+1), '<b>'+esc(v.name||'')+'</b>', esc(v.fn||'—'), esc(v.department||'—'),
-                    v.qualifiedOn ? C.fmtDate(v.qualifiedOn) : '—',
-                    due ? C.fmtDate(due.toISOString().slice(0,10)) : '—']
-              .concat(QUALIFIABLE.map(function(q){ return quals.indexOf(q) >= 0 ? '✓' : '—'; }));
-          }) },
-        { type:'text', title:'Remarks', body: rv.remarks || 'No remarks recorded.' },
-        { type:'html', title:'Sign-off', html:
-          '<div style="display:flex;gap:16px;margin-top:4px;">' +
-            sig('Prepared by', rv.preparedBy) + sig('Reviewed by', rv.reviewedBy) +
-            sig('Approved by', rv.approvedBy) + '</div>' }
-      ]
-    });
   }
 
   /* ================= AUDIT PLAN AND REGISTER =================
@@ -8673,6 +8755,26 @@
     document.getElementById('em-open').href = url;
   }
 
+  /* ---------------- the home banner ---------------- */
+  function bannerPreview(){
+    var img = document.getElementById('ab-prev'), veil = document.getElementById('ab-veil');
+    var url = document.getElementById('ab-url').value.trim();
+    if (url) { img.src = url; img.style.display = ''; veil.style.display = ''; }
+    else { img.style.display = 'none'; veil.style.display = 'none'; }
+    document.getElementById('ab-prev-title').textContent = (C.getProfile() || {}).name || 'Your company';
+    document.getElementById('ab-prev-sub').textContent = document.getElementById('ab-tag').value;
+    document.getElementById('ab-prev-strap').textContent =
+      document.getElementById('ab-strap').value || 'Intelligent Digital Manufacturing System';
+  }
+  function loadBannerScreen(){
+    var b = settings.banner || {};
+    document.getElementById('ab-url').value = b.image || '';
+    document.getElementById('ab-tag').value = b.tagline || '';
+    document.getElementById('ab-strap').value = b.strap || '';
+    document.getElementById('ab-msg').style.display = 'none';
+    bannerPreview();
+  }
+
   /* ---------------- themes ---------------- */
   var THEMES = [['navy','#0B2A5B'],['forest','#1F6F4A'],['plum','#5B2BB8']];
   function applyTheme(name, save){
@@ -8697,31 +8799,14 @@
   var settings = {};
   async function loadHome(){
     var p = C.getProfile();
-    var bannerEl = document.querySelector('.panel[data-panel="home"] .banner');
-    var img = document.getElementById('bn-img');
-
-    /* The Hero Banner image is read fresh from Website Content → Website →
-       Hero → Hero Banner every time this screen is opened, so a change made
-       there — added or replaced — shows up here without anything else to
-       save or sync. Shown here as the plain image only, at full clarity —
-       no overlay veil and no headline/eyebrow/sub text on top of it. */
-    var hero = {};
-    try { hero = await C.loadHero(); } catch(e){ hero = {}; }
-
-    if (hero.image) {
-      img.onload = function(){
-        /* Match the box's own proportions to the uploaded image's real
-           width/height, so it shows full width, scales down proportionally
-           on narrower screens, and is never cropped or stretched. */
-        if (img.naturalWidth && img.naturalHeight && bannerEl) {
-          bannerEl.style.setProperty('--banner-ar', img.naturalWidth + ' / ' + img.naturalHeight);
-        }
-      };
-      img.src = hero.image; img.style.display = '';
-    } else {
-      img.removeAttribute('src'); img.style.display = 'none';
-      if (bannerEl) bannerEl.style.removeProperty('--banner-ar');
-    }
+    document.getElementById('bn-title').textContent = p.name || 'Your company';
+    document.getElementById('bn-sub').textContent = (settings.banner && settings.banner.tagline) || '';
+    document.getElementById('bn-strap').textContent =
+      (settings.banner && settings.banner.strap) || 'Intelligent Digital Manufacturing System';
+    var img = document.getElementById('bn-img'), veil = document.getElementById('bn-veil');
+    if (settings.banner && settings.banner.image) {
+      img.src = settings.banner.image; img.style.display = ''; veil.style.display = '';
+    } else { img.style.display = 'none'; veil.style.display = 'none'; }
 
     try {
       var parts = await C.idms.parts(), by = {};
@@ -16105,7 +16190,17 @@
   }
 
   /* ---------------- sign in ---------------- */
-  var pendingUser = null, me = { user:'', role:'' };
+  var pendingUser = null, me = { user:'', role:'', restrictAccess:false, permissions:[],
+    authMethods:{ password:true, otpEmail:true, otpWhatsapp:true, face:true }, faceEnrolled:false };
+
+  function applyAccess(j){
+    me.user = j.user; me.role = j.role;
+    me.restrictAccess = !!j.restrictAccess;
+    me.permissions = j.permissions || [];
+    me.authMethods = j.authMethods || me.authMethods;
+    me.faceEnrolled = !!j.faceEnrolled;
+  }
+
   function gateMsg(t, good){
     var el = document.getElementById('g-msg');
     el.className = good ? 'note' : 'note bad';
@@ -16129,9 +16224,186 @@
           b.disabled = false; return;
         }
       }
-      if (j.token) { me = { user: j.user, role: j.role }; start(); }
+      if (j.token) { applyAccess(j); start(); }
     } catch(e){ gateMsg(e.message); }
     b.disabled = false;
+  }
+
+  /* ---- password show/hide ---- */
+  document.getElementById('g-eye').addEventListener('click', function(){
+    var inp = document.getElementById('g-pass');
+    var showing = inp.type === 'text';
+    inp.type = showing ? 'password' : 'text';
+    this.textContent = showing ? '👁' : '🙈';
+    this.title = showing ? 'Show password' : 'Hide password';
+  });
+
+  /* ---- sign-in method tabs ---- */
+  document.querySelectorAll('#g-tabs .g-tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      document.querySelectorAll('#g-tabs .g-tab').forEach(function(x){ x.classList.remove('on'); });
+      document.querySelectorAll('.g-pane').forEach(function(x){ x.classList.remove('on'); });
+      t.classList.add('on');
+      document.querySelector('.g-pane[data-pane="'+t.dataset.tab+'"]').classList.add('on');
+      gateMsg('');
+    });
+  });
+
+  /* ---- OTP-only sign in (no password) ---- */
+  var otpUser = null;
+  function otpMsg(t, good){
+    var el = document.getElementById('go-msg');
+    el.className = good ? 'note' : 'note bad';
+    el.style.display = t ? '' : 'none';
+    el.textContent = t || '';
+  }
+  async function otpSend(channel){
+    var user = document.getElementById('go-user').value.trim();
+    if (!user){ otpMsg('Enter your username first.'); return; }
+    try {
+      var j = await C.otpRequest(user, channel);
+      otpUser = user;
+      document.getElementById('go-code-row').style.display = '';
+      otpMsg(j.note || 'A code has been sent.', true);
+    } catch(e){ otpMsg(e.message); }
+  }
+  document.getElementById('go-email').addEventListener('click', function(){ otpSend('email'); });
+  document.getElementById('go-wa').addEventListener('click', function(){ otpSend('whatsapp'); });
+  document.getElementById('go-verify').addEventListener('click', async function(){
+    if (!otpUser){ otpMsg('Send yourself a code first.'); return; }
+    var btn = this; btn.disabled = true;
+    try {
+      var j = await C.verifyCode(otpUser, document.getElementById('go-code').value.trim());
+      if (j.token) { applyAccess(j); start(); }
+    } catch(e){ otpMsg(e.message); }
+    btn.disabled = false;
+  });
+
+  /* ---- forgot password ---- */
+  function fpShow(step){
+    document.querySelectorAll('.fp-step').forEach(function(s){
+      s.classList.toggle('on', s.dataset.fp === String(step));
+    });
+  }
+  function fpOpen(){
+    document.getElementById('fp-modal').style.display = 'flex';
+    document.getElementById('fp-user').value = document.getElementById('g-user').value.trim();
+    document.getElementById('fp-code').value = ''; document.getElementById('fp-newpass').value = '';
+    ['fp-msg1','fp-msg2'].forEach(function(id){ document.getElementById(id).style.display = 'none'; });
+    fpShow(1);
+  }
+  function fpClose(){ document.getElementById('fp-modal').style.display = 'none'; }
+  var fpUser = null;
+  document.getElementById('g-forgot-link').addEventListener('click', function(e){ e.preventDefault(); fpOpen(); });
+  document.getElementById('fp-cancel1').addEventListener('click', fpClose);
+  document.getElementById('fp-cancel2').addEventListener('click', fpClose);
+  document.getElementById('fp-modal').addEventListener('click', function(e){
+    if (e.target === this) fpClose();
+  });
+  document.getElementById('fp-send').addEventListener('click', async function(){
+    var user = document.getElementById('fp-user').value.trim();
+    var msg = document.getElementById('fp-msg1');
+    if (!user){ msg.style.display=''; msg.className='note bad'; msg.textContent='Enter your username.'; return; }
+    var btn = this; btn.disabled = true;
+    try {
+      var j = await C.forgotStart(user);
+      fpUser = user;
+      msg.style.display=''; msg.className='note good';
+      msg.textContent = j.note || 'A code has been sent.';
+      setTimeout(function(){ fpShow(2); }, 700);
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent = e.message; }
+    btn.disabled = false;
+  });
+  document.getElementById('fp-reset').addEventListener('click', async function(){
+    var msg = document.getElementById('fp-msg2');
+    var code = document.getElementById('fp-code').value.trim();
+    var newPass = document.getElementById('fp-newpass').value;
+    if (!fpUser){ msg.style.display=''; msg.className='note bad'; msg.textContent='Start again — request a code first.'; return; }
+    var btn = this; btn.disabled = true;
+    try {
+      var j = await C.forgotReset(fpUser, code, newPass);
+      if (j.token){ applyAccess(j); fpClose(); start(); }
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent = e.message; }
+    btn.disabled = false;
+  });
+
+  /* ---- Face ID: shared model loader ----
+     face-api.js and its three model files are fetched from a CDN only when
+     somebody actually opens the Face ID tab or the enrolment screen — nobody
+     pays for a face-recognition model on a page load that never uses it. */
+  var faceApiReady = null;
+  function loadFaceApi(){
+    if (faceApiReady) return faceApiReady;
+    faceApiReady = new Promise(function(resolve, reject){
+      if (window.faceapi) return resolve(window.faceapi);
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js';
+      s.onload = function(){
+        var base = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+        Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(base),
+          faceapi.nets.faceLandmark68Net.loadFromUri(base),
+          faceapi.nets.faceRecognitionNet.loadFromUri(base)
+        ]).then(function(){ resolve(window.faceapi); }).catch(reject);
+      };
+      s.onerror = function(){ reject(new Error('Could not load the Face ID component. Check your internet connection.')); };
+      document.head.appendChild(s);
+    });
+    return faceApiReady;
+  }
+  /* Takes a photo with capturePhoto(), then runs it through the model to get
+     a 128-number descriptor — the same shape whether enrolling or signing in. */
+  async function captureFaceDescriptor(){
+    var dataUrl = await C.capturePhoto();
+    if (!dataUrl) return null;
+    var faceapi = await loadFaceApi();
+    var img = await faceapi.fetchImage(dataUrl);
+    var det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks().withFaceDescriptor();
+    if (!det) throw new Error('No face was found in that photo. Try again in good, even light, facing the camera directly.');
+    return Array.from(det.descriptor);
+  }
+  function faceMsg(id, t, good){
+    var el = document.getElementById(id);
+    el.className = good ? 'note' : 'note bad';
+    el.style.display = t ? '' : 'none';
+    el.textContent = t || '';
+  }
+  document.getElementById('gf-go').addEventListener('click', async function(){
+    var btn = this; btn.disabled = true; btn.textContent = 'Loading Face ID…';
+    faceMsg('gf-msg', '');
+    try {
+      var descriptor = await captureFaceDescriptor();
+      if (!descriptor) { btn.disabled = false; btn.textContent = 'Scan my face to sign in'; return; }
+      btn.textContent = 'Checking…';
+      var j = await C.faceLogin(descriptor);
+      if (j.token) { applyAccess(j); start(); }
+    } catch(e){ faceMsg('gf-msg', e.message); }
+    btn.disabled = false; btn.textContent = 'Scan my face to sign in';
+  });
+
+  /* ---- Face ID: self-service enrolment, from inside the app ----
+     Linked to whoever is signed in — there is no username field here, the
+     descriptor is simply attached to the current session's account. */
+  async function enrolFaceId(){
+    if (!me.authMethods.face){
+      toast('Face ID is turned off for your account. Ask your administrator to enable it.');
+      return;
+    }
+    try {
+      var descriptor = await captureFaceDescriptor();
+      if (!descriptor) return;
+      await C.faceEnroll(descriptor);
+      me.faceEnrolled = true;
+      toast('Face ID is set up. You can use it next time you sign in.');
+      refreshFaceBadge();
+    } catch(e){ toast(e.message); }
+  }
+  function refreshFaceBadge(){
+    var b = document.getElementById('t-faceid');
+    if (!b) return;
+    b.style.display = me.authMethods.face ? '' : 'none';
+    b.textContent = me.faceEnrolled ? '🙂 Face ID on' : '🙂 Set up Face ID';
   }
 
   function dbState(ok, text){
@@ -16147,17 +16419,18 @@
     document.getElementById('t-user').textContent = me.user || 'Signed in';
     document.getElementById('t-role').textContent = me.role || '';
     document.getElementById('t-av').textContent = (me.user || '?').charAt(0).toUpperCase();
+    refreshFaceBadge();
 
     try {
       var p = await C.loadProfile();
       document.getElementById('t-co').textContent = p.name || 'Company not set';
-      /* Location/address is intentionally not shown in the title bar — only the
-         company name sits next to the logo there. */
+      document.getElementById('t-tag').textContent = p.address || '';
       document.getElementById('t-logo').innerHTML = p.logo
         ? '<img src="'+p.logo+'" alt="">'
         : '<div class="mark">'+esc(p.docPrefix.slice(0,2))+'</div>';
       document.title = (p.name ? p.name + ' — ' : '') + 'IDMS';
       C.setFavicon(p.logo || '');       // the tab icon follows the company logo
+      loadGateBranding(p);              // the left panel logo, in case sign-in is shown again this tab
     } catch(e){ /* the profile is decoration here, not a blocker */ }
 
     try { settings = await C.idms.settings(); dbState(true, 'Database: connected'); }
@@ -16165,28 +16438,20 @@
 
     drawThemes(settings.theme && settings.theme.name);
     drawMenu();
-    /* Land on whatever screen the URL asks for — this is what makes a menu
-       item opened via "Open Link in New Tab"/"New Window" (or a pasted link)
-       open directly on that screen once the person signs in, instead of
-       always landing on Home. */
-    var initial = (location.hash.match(/^#s=([^&]+)$/) || [])[1];
-    go(initial ? decodeURIComponent(initial) : 'home');
+    go('home');
   }
-
-  /* Keep in step if the hash is changed by hand, or via the back/forward
-     buttons — but never in response to our own go()-driven replaceState,
-     which does not fire 'hashchange'. */
-  window.addEventListener('hashchange', function(){
-    var m = (location.hash.match(/^#s=([^&]+)$/) || [])[1];
-    var s = m ? decodeURIComponent(m) : 'home';
-    if (s !== lastGo) go(s);
-  });
 
   /* ---------------- wiring ---------------- */
   document.getElementById('g-go').addEventListener('click', doSignIn);
   ['g-user','g-pass','g-code'].forEach(function(id){
     document.getElementById(id).addEventListener('keydown', function(e){
       if (e.key === 'Enter') doSignIn();
+    });
+  });
+  ['go-user','go-code'].forEach(function(id){
+    document.getElementById(id).addEventListener('keydown', function(e){
+      if (e.key === 'Enter') document.getElementById('go-code-row').style.display === 'none'
+        ? otpSend('') : document.getElementById('go-verify').click();
     });
   });
   /* Signing out has to end the session on the server, not just forget the token
@@ -16196,9 +16461,81 @@
     await C.signOut();
     location.reload();
   });
+  /* Face ID is per-account and self-service: clicking either sets it up for
+     the first time, or offers to remove it once it is already on. */
+  document.getElementById('t-faceid').addEventListener('click', function(){
+    if (me.faceEnrolled){
+      if (confirm('Face ID is set up for your account. Remove it? You can set it up again any time.')){
+        C.faceForget().then(function(){ me.faceEnrolled = false; refreshFaceBadge(); toast('Face ID removed.'); })
+          .catch(function(e){ toast(e.message); });
+      }
+    } else enrolFaceId();
+  });
   document.getElementById('p-filter').addEventListener('change', loadParts);
 
-  /* ---------------- KPI and dashboard wiring ---------------- */
+  /* ---------------- login screen branding (left panel) ----------------
+     The logo mirrors the company profile (already managed under Admin →
+     Company Profile). The welcome message and gallery images are stored on
+     the site content record (the same one the website's own admin uses) so
+     the sign-in screen — which has no session yet — can still read them,
+     and are edited from Admin → Login Screen. */
+  function loadGateBranding(p){
+    document.getElementById('g-logo').innerHTML = (p && p.logo)
+      ? '<img src="'+p.logo+'" alt="">'
+      : '<div class="mark">'+esc((p && p.docPrefix ? p.docPrefix.slice(0,2) : '··'))+'</div>';
+  }
+  /* /api/content is the one endpoint the sign-in screen can read before a
+     session exists — /api/idms requires a token for everything, including
+     settings, so the welcome text and gallery live in the site content
+     record instead, the same place the website's own branding lives. Called
+     once from the page-open bootstrap at the bottom of this script. */
+  async function loadGateContent(){
+    try {
+      var j = await C.api('/api/content');
+      var ls = (j.data && j.data.loginScreen) || {};
+      if (ls.welcomeTitle) document.getElementById('g-welcome').textContent = ls.welcomeTitle;
+      if (ls.welcomeText) document.getElementById('g-welcome-text').textContent = ls.welcomeText;
+      var gal = document.getElementById('gl-gallery');
+      gal.innerHTML = (ls.images || []).slice(0,6).map(function(u){
+        return '<img src="'+esc(u)+'" alt="">';
+      }).join('');
+    } catch(e){ /* the gate still works with the defaults if this is unreachable pre-login */ }
+  }
+
+  /* ---------------- banner, KPI and dashboard wiring ---------------- */
+  ['ab-tag','ab-strap','ab-url'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', bannerPreview);
+  });
+  document.getElementById('ab-file').addEventListener('change', async function(){
+    var f = this.files[0]; if (!f) return;
+    var msg = document.getElementById('ab-msg');
+    msg.style.display = ''; msg.className = 'note'; msg.textContent = 'Uploading…';
+    try {
+      var up = await C.uploadFile(f);
+      document.getElementById('ab-url').value = up.url;
+      bannerPreview();
+      msg.className = 'note good'; msg.textContent = 'Uploaded. Press Save banner to publish it.';
+    } catch(e){ msg.className = 'note bad'; msg.textContent = e.message; }
+  });
+  document.getElementById('ab-save').addEventListener('click', async function(){
+    var msg = document.getElementById('ab-msg');
+    settings.banner = {
+      image: document.getElementById('ab-url').value.trim(),
+      tagline: document.getElementById('ab-tag').value.trim(),
+      strap: document.getElementById('ab-strap').value.trim()
+    };
+    try {
+      await C.idms.saveSetting('banner', settings.banner);
+      msg.style.display=''; msg.className='note good'; msg.textContent='Saved — everyone sees this banner.';
+      loadHome();
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent=e.message; }
+  });
+  document.getElementById('ab-clear').addEventListener('click', function(){
+    document.getElementById('ab-url').value = '';
+    document.getElementById('ab-file').value = '';
+    bannerPreview();
+  });
+
   document.getElementById('dw-dept').addEventListener('change', dwmFillEmployees);
   document.getElementById('dw-emp').addEventListener('change', dwmPreview);
   document.getElementById('dw-open').addEventListener('click', dwmOpen);
@@ -16266,8 +16603,6 @@
   document.getElementById('cf-save').addEventListener('click', saveCft);
   document.getElementById('cf-clear').addEventListener('click', clearCftForm);
   document.getElementById('cf-print').addEventListener('click', printCft);
-  document.getElementById('cf-report-save').addEventListener('click', saveCfReport);
-  document.getElementById('cf-print-auditors').addEventListener('click', printApprovedAuditors);
 
   document.getElementById('au-fy').addEventListener('change', drawAuditList);
   document.getElementById('au-type').addEventListener('change', drawAuditList);
@@ -17216,28 +17551,18 @@
     if (C.getToken()) { try { await C.signOut(); } catch(e){ C.setToken(''); } }
     C.setToken('');
 
-    /* the company name and logo on the sign-in screen come from the same profile
-       the website uses; it is readable without signing in, which is why it can be
-       shown before anybody has */
+    /* the company logo on the sign-in screen comes from the same profile the
+       website uses; it is readable without signing in, which is why it can be
+       shown before anybody has. The company name and address are deliberately
+       not shown here any more — only the logo, the welcome message and the
+       gallery, which come from Admin → Login Screen. */
     try {
       var p = await C.loadProfile();
-      if (p.name) {
-        document.getElementById('g-co').textContent = p.name;
-        document.getElementById('g-welcome').textContent = 'Welcome to ' + p.name;
-        document.title = p.name + ' — IDMS';
-      } else {
-        document.getElementById('g-co').textContent = 'IDMS';
-        document.getElementById('g-welcome').textContent = 'Welcome';
-      }
-      document.getElementById('g-addr').textContent = p.address || '';
-      if (p.logo) document.getElementById('g-logo').innerHTML = '<img src="' + p.logo + '" alt="">';
-      else document.getElementById('g-logo').innerHTML =
-        '<div class="mark">' + esc((p.docPrefix || 'ID').slice(0,2)) + '</div>';
+      loadGateBranding(p);
+      document.title = (p.name ? p.name + ' — ' : '') + 'IDMS';
       C.setFavicon(p.logo || '');
-    } catch(e){
-      document.getElementById('g-co').textContent = 'IDMS';
-      document.getElementById('g-welcome').textContent = 'Welcome';
-    }
+    } catch(e){ /* the logo is decoration, not a blocker */ }
+    await loadGateContent();
     document.getElementById('g-user').focus();
   })();
 })();

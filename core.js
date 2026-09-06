@@ -146,6 +146,50 @@
     return j;
   }
 
+  /* Sign in with a one-time code and no password. channel is 'email',
+     'whatsapp', or left out to try whichever contacts are on file. The code
+     itself is still submitted through verifyCode() above. */
+  async function otpRequest(user, channel) {
+    return api('/api/auth', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'otpRequest', user: user, channel: channel || '' })
+    });
+  }
+
+  /* Forgot password: request a reset code (sent to email and WhatsApp), then
+     submit it with a new password. A successful reset signs the person in. */
+  async function forgotStart(user) {
+    return api('/api/auth', {
+      method: 'POST', body: JSON.stringify({ action: 'forgotStart', user: user })
+    });
+  }
+  async function forgotReset(user, code, newPass) {
+    const j = await api('/api/auth', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'forgotReset', user: user, code: code, newPass: newPass })
+    });
+    if (j.token) setToken(j.token);
+    return j;
+  }
+
+  /* Face ID. Enrolling and forgetting need an existing session; signing in
+     with a face does not — it is a 1-to-many match done on the server. */
+  async function faceLogin(descriptor) {
+    const j = await api('/api/auth', {
+      method: 'POST', body: JSON.stringify({ action: 'faceLogin', descriptor: descriptor })
+    });
+    if (j.token) setToken(j.token);
+    return j;
+  }
+  async function faceEnroll(descriptor) {
+    return api('/api/auth', {
+      method: 'POST', body: JSON.stringify({ action: 'faceEnroll', descriptor: descriptor })
+    });
+  }
+  async function faceForget() {
+    return api('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'faceForget' }) });
+  }
+
   /* ---------------- IDMS shorthands ---------------- */
   const idms = {
     docs: (kind, partId) => api('/api/idms?what=docs' +
@@ -221,23 +265,6 @@
   }
   const getProfile = () => profile || { name: '', address: '', gstin: '', logo: '', docPrefix: 'DOC' };
 
-  /* ---------------- the Hero Banner ----------------
-     Single source: Admin Panel → Website → Hero → Hero Banner (the same
-     record the public site's hero section reads). Nowhere else may hold a
-     second copy of this image or its wording — read fresh each time rather
-     than cached like the profile, so an edit published there shows up the
-     next time a page reads it, with no separate save step anywhere else. */
-  async function loadHero() {
-    let d = {};
-    try { d = (await api('/api/content')).data || {}; } catch (e) { d = {}; }
-    return {
-      image: d.heroBannerDataUrl || '',
-      eyebrow: d.heroEyebrow || '',
-      headline: d.heroHeadline || '',
-      sub: d.heroSub || ''
-    };
-  }
-
   /* A document number built from the profile and a database counter, e.g.
      ELIX-GRN-0042. No company initials appear anywhere in the code. */
   async function docNumber(kind, pad) {
@@ -250,31 +277,6 @@
   /* ---------------- printing ----------------
      One print engine for every report in both applications. The letterhead is
      the profile, so a report never carries another company's name. */
-  /* Best-effort "Page N of M" footer for the plain window.print() pipeline.
-     Browsers give no per-printed-page hook, so this estimates a page's worth
-     of content from the @page size/margins just written and drops one small
-     absolutely-positioned label at each estimated page boundary. It will not
-     be pixel-exact against every printer/driver, but it is far better than
-     nothing for a document that is explicitly meant to be filed and re-read
-     on paper. Wrapped so a bad estimate never stops the report printing. */
-  function stampPageNumbers(w, landscape) {
-    try {
-      const mm = 96 / 25.4;               // px per mm at the CSS reference DPI
-      const marginMM = 12;
-      const pageHmm = (landscape ? 210 : 297) - marginMM * 2;
-      const pagePx = pageHmm * mm;
-      const totalPx = w.document.body.scrollHeight;
-      const pages = Math.max(1, Math.round(totalPx / pagePx));
-      for (let i = 0; i < pages; i++) {
-        const d = w.document.createElement('div');
-        d.textContent = 'Page ' + (i + 1) + ' of ' + pages;
-        d.style.cssText = 'position:absolute;left:0;right:0;text-align:center;' +
-          'font-size:6.8pt;color:#93a2b8;top:' + Math.round((i + 1) * pagePx - 16) + 'px;';
-        w.document.body.appendChild(d);
-      }
-    } catch (e) { /* the report still prints without page numbers */ }
-  }
-
   function openReport(report) {
     const p = getProfile();
     const w = window.open('', '_blank');
@@ -332,33 +334,18 @@
       '.ft{margin-top:16px;border-top:.7pt solid #dbe3ee;padding-top:6px;' +
       'font-size:6.8pt;color:#93a2b8;display:flex;justify-content:space-between;}' +
       '</style></head><body>' +
-      /* titleInline: logo and title sit side by side at the top-left, for
-         reports whose title is effectively the letterhead itself (e.g. the
-         Approved Internal Auditors List). The default keeps the older
-         layout — logo/address strip, then a centred title — unchanged, so
-         nothing already using openReport shifts. */
-      (report.titleInline
-        ? '<div class="lh"><div style="display:flex;align-items:center;gap:14px;">' +
-          (p.logo ? '<img src="' + p.logo + '">' : '<div class="co">' + esc(p.name) + '</div>') +
-          '<div><h1 style="text-align:left;margin:0;">' + esc(report.title || '') + '</h1>' +
-          (report.subtitle ? '<div class="sub" style="text-align:left;margin:2px 0 0;">' +
-            esc(report.subtitle) + '</div>' : '') + '</div></div>' +
-          '<div class="rt">' + (p.logo ? '<b>' + esc(p.name) + '</b><br>' : '') +
-          esc(p.address) + (p.pin ? ' - ' + esc(p.pin) : '') +
-          (p.gstin ? '<br>GSTIN: ' + esc(p.gstin) : '') + '</div></div>'
-        : '<div class="lh">' +
-          (p.logo ? '<img src="' + p.logo + '">' : '<div class="co">' + esc(p.name) + '</div>') +
-          '<div class="rt">' + (p.logo ? '<b>' + esc(p.name) + '</b><br>' : '') +
-          esc(p.address) + (p.pin ? ' - ' + esc(p.pin) : '') +
-          (p.gstin ? '<br>GSTIN: ' + esc(p.gstin) : '') + '</div></div>' +
-          '<h1>' + esc(report.title || '') + '</h1>' +
-          '<div class="sub">' + esc(report.subtitle || '') + '</div>') +
+      '<div class="lh">' +
+      (p.logo ? '<img src="' + p.logo + '">' : '<div class="co">' + esc(p.name) + '</div>') +
+      '<div class="rt">' + (p.logo ? '<b>' + esc(p.name) + '</b><br>' : '') +
+      esc(p.address) + (p.pin ? ' - ' + esc(p.pin) : '') +
+      (p.gstin ? '<br>GSTIN: ' + esc(p.gstin) : '') + '</div></div>' +
+      '<h1>' + esc(report.title || '') + '</h1>' +
+      '<div class="sub">' + esc(report.subtitle || '') + '</div>' +
       sections +
       '<div class="ft"><span>' + esc(report.kind || 'Record') + ' — system generated</span>' +
       '<span>' + new Date().toLocaleString('en-GB') + '</span></div>' +
       '</body></html>');
     w.document.close();
-    if (report.pageNumbers) stampPageNumbers(w, !!report.landscape);
     setTimeout(() => { try { w.print(); } catch (e) { /* the user can print manually */ } }, 350);
   }
 
@@ -601,7 +588,9 @@
     newId: newId, toast: toast,
     api: api, signIn: signIn, verifyCode: verifyCode, setToken: setToken, getToken: getToken,
     checkSession: checkSession, signOut: signOut,
-    idms: idms, loadProfile: loadProfile, loadHero: loadHero, getProfile: getProfile, docNumber: docNumber,
+    otpRequest: otpRequest, forgotStart: forgotStart, forgotReset: forgotReset,
+    faceLogin: faceLogin, faceEnroll: faceEnroll, faceForget: faceForget,
+    idms: idms, loadProfile: loadProfile, getProfile: getProfile, docNumber: docNumber,
     openReport: openReport, callAI: callAI, uploadFile: uploadFile,
     parseAiJson: parseAiJson, stripMarkup: stripMarkup,
     setFavicon: setFavicon,

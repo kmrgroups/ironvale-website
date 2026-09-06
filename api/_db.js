@@ -216,12 +216,32 @@ export async function ensureTables() {
     twofa BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT now()
   )`;
+  /* Added for the User Management & Access Control rework. ADD COLUMN IF NOT
+     EXISTS so an existing users table (and the data already in it) is carried
+     forward rather than recreated. Every new column has a default that keeps
+     an existing login working exactly as it did before this shipped:
+     everyone stays active, every auth method stays on, and nobody's menu
+     narrows until an admin deliberately restricts it. */
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_methods JSONB NOT NULL DEFAULT
+    '{"password":true,"otpEmail":true,"otpWhatsapp":true,"face":true}'::jsonb`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS face_descriptor JSONB`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS face_enrolled_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS restrict_access BOOLEAN NOT NULL DEFAULT false`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB NOT NULL DEFAULT '[]'::jsonb`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pass_changed_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pass_changed_by TEXT DEFAULT ''`;
   await sql`CREATE TABLE IF NOT EXISTS login_codes (
     username TEXT PRIMARY KEY,
     code_hash TEXT NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     tries INT DEFAULT 0
   )`;
+  /* 'login' codes (2FA / OTP sign-in) and 'reset' codes (forgot password) share
+     this table but must never be interchangeable — a code texted for signing
+     in must not be usable to take over the account by resetting its password,
+     and vice versa. */
+  await sql`ALTER TABLE login_codes ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'login'`;
   await sql`CREATE TABLE IF NOT EXISTS secrets (
     name TEXT PRIMARY KEY,
     value TEXT NOT NULL,

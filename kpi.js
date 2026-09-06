@@ -560,6 +560,74 @@
     return { series: [{ name: 'On-time delivery', values: s.lines.map(function (v, i) { return pct(s.onTime[i], v); }) }] };
   };
 
+  /* ---- audits ----
+     One set of records answers three questions per audit type: was the audit
+     done when it was planned, were its findings closed when they were due, and
+     where do the open ones stand today. Building these as a factory rather than
+     fifteen near-identical functions means a change to how closure is counted
+     lands in one place. */
+  function auditsOfType(rows, type, fy) {
+    return rows.filter(function (a) {
+      var v = a.data || {};
+      return v.type === type && inFy(v.plannedOn, fy);
+    });
+  }
+  function mkAuditPlanActual(type) {
+    return async function (fy) {
+      var rows = await docs('audit');
+      var plan = zeros(), done = zeros();
+      auditsOfType(rows, type, fy).forEach(function (a) {
+        var v = a.data || {};
+        var i = mIndex(v.plannedOn); if (i >= 0) plan[i]++;
+        if (v.actualOn && inFy(v.actualOn, fy)) { var j = mIndex(v.actualOn); if (j >= 0) done[j]++; }
+      });
+      return { series: [{ name: 'Planned', values: plan }, { name: 'Carried out', values: done }] };
+    };
+  }
+  /* closure "plan" is the month a finding was due, "actual" the month it closed */
+  function mkNcPlanActual(type) {
+    return async function (fy) {
+      var rows = await docs('audit');
+      var due = zeros(), closed = zeros();
+      rows.forEach(function (a) {
+        var v = a.data || {};
+        if (type && v.type !== type) return;
+        (v.findings || []).forEach(function (f) {
+          if (f.dueOn && inFy(f.dueOn, fy)) { var i = mIndex(f.dueOn); if (i >= 0) due[i]++; }
+          if (f.closedOn && inFy(f.closedOn, fy)) { var j = mIndex(f.closedOn); if (j >= 0) closed[j]++; }
+        });
+      });
+      return { series: [{ name: 'Due to close', values: due }, { name: 'Closed', values: closed }] };
+    };
+  }
+  /* where the open ones stand today — the three buckets people actually act on */
+  function mkNcStatus(type) {
+    return async function (fy) {
+      var rows = await docs('audit');
+      var today = new Date().toISOString().slice(0, 10);
+      var closed = 0, open = 0, overdue = 0;
+      rows.forEach(function (a) {
+        var v = a.data || {};
+        if (type && v.type !== type) return;
+        (v.findings || []).forEach(function (f) {
+          var when = f.closedOn || f.dueOn || f.raisedOn;
+          if (!when || !inFy(when, fy)) return;
+          if (f.closedOn) closed++;
+          else if (f.dueOn && f.dueOn < today) overdue++;
+          else open++;
+        });
+      });
+      return { labels: ['Closed', 'Open — within date', 'Overdue'], values: [closed, open, overdue] };
+    };
+  }
+  ['Process', 'Product', 'IQA', 'Layer process', 'Layout', 'Dock', 'SQA', 'Customer', 'External', 'MRM']
+    .forEach(function (t) {
+      var k = t.replace(/\s+/g, '_');
+      D['audit_' + k] = mkAuditPlanActual(t);
+      D['nc_' + k] = mkNcPlanActual(t);
+      D['ncst_' + k] = mkNcStatus(t);
+    });
+
   /* training: both halves come from the same session records, so the plan and
      the actual cannot drift apart the way two typed numbers would */
   D.training = async function (fy) {
@@ -748,27 +816,38 @@
     { id: 'hr_mpcost_todate', dept: 'hrm', name: 'Manpower cost as of today', unit: '₹', chart: 'bars', single: true },
 
     /* ---- x. QMS & MR ---- */
-    { id: 'qms_process_audit', dept: 'qms', name: 'Process audit — plan vs actual', unit: 'count', chart: 'bars' },
-    { id: 'qms_process_nc', dept: 'qms', name: 'Process audit NC closure — plan vs actual', unit: 'count', chart: 'bars' },
-    { id: 'qms_product_audit', dept: 'qms', name: 'Product audit — plan vs actual', unit: 'count', chart: 'bars' },
-    { id: 'qms_product_nc', dept: 'qms', name: 'Product audit NC closure — plan vs actual', unit: 'count', chart: 'bars' },
-    { id: 'qms_iqa', dept: 'qms', name: 'IQA audit — plan vs actual', unit: 'count', chart: 'bars' },
-    { id: 'qms_iqa_nc', dept: 'qms', name: 'IQA NC closure — plan vs actual', unit: 'count', chart: 'bars' },
-    { id: 'qms_mrm', dept: 'qms', name: 'MRM — plan vs actual', unit: 'count', chart: 'bars' },
-    { id: 'qms_mrm_actions', dept: 'qms', name: 'MRM action plan closure', unit: 'count', chart: 'pie',
-      cats: ['Closed', 'Open — within date', 'Overdue'], single: true },
-    { id: 'qms_external_nc', dept: 'qms', name: 'External audit NC closure', unit: 'count', chart: 'pie',
-      cats: ['Closed', 'Open — within date', 'Overdue'], single: true },
-    { id: 'qms_layer', dept: 'qms', name: 'Layer process audit — plan vs actual', unit: 'count', chart: 'bars' },
-    { id: 'qms_layer_nc', dept: 'qms', name: 'Layer process audit NC closure', unit: 'count', chart: 'pie',
-      cats: ['Closed', 'Open — within date', 'Overdue'], single: true },
-    { id: 'qms_layout', dept: 'qms', name: 'Layout audit — plan vs actual', unit: 'count', chart: 'bars' },
-    { id: 'qms_dock', dept: 'qms', name: 'Dock audit — plan vs actual', unit: 'count', chart: 'bars' },
-    { id: 'qms_customer_nc', dept: 'qms', name: 'Customer audit NC closure', unit: 'count', chart: 'pie',
-      cats: ['Closed', 'Open — within date', 'Overdue'], single: true },
-    { id: 'qms_sqa', dept: 'qms', name: 'SQA audit — plan vs actual', unit: 'count', chart: 'bars' },
-    { id: 'qms_sqa_nc', dept: 'qms', name: 'SQA audit NC closure', unit: 'count', chart: 'pie',
-      cats: ['Closed', 'Open — within date', 'Overdue'], single: true },
+    { id: 'qms_process_audit', dept: 'qms', name: 'Process audit — plan vs actual', unit: 'count', chart: 'bars', derive: 'audit_Process',
+      note: 'Counted from the audit register: planned in the month it was due, carried out in the month it happened.' },
+    { id: 'qms_process_nc', dept: 'qms', name: 'Process audit NC closure — plan vs actual', unit: 'count', chart: 'bars', derive: 'nc_Process',
+      note: 'Counted from the findings on the audit register: due to close in the month, against closed in the month.' },
+    { id: 'qms_product_audit', dept: 'qms', name: 'Product audit — plan vs actual', unit: 'count', chart: 'bars', derive: 'audit_Product',
+      note: 'Counted from the audit register: planned in the month it was due, carried out in the month it happened.' },
+    { id: 'qms_product_nc', dept: 'qms', name: 'Product audit NC closure — plan vs actual', unit: 'count', chart: 'bars', derive: 'nc_Product',
+      note: 'Counted from the findings on the audit register: due to close in the month, against closed in the month.' },
+    { id: 'qms_iqa', dept: 'qms', name: 'IQA audit — plan vs actual', unit: 'count', chart: 'bars', derive: 'audit_IQA',
+      note: 'Counted from the audit register: planned in the month it was due, carried out in the month it happened.' },
+    { id: 'qms_iqa_nc', dept: 'qms', name: 'IQA NC closure — plan vs actual', unit: 'count', chart: 'bars', derive: 'nc_IQA',
+      note: 'Counted from the findings on the audit register: due to close in the month, against closed in the month.' },
+    { id: 'qms_mrm', dept: 'qms', name: 'MRM — plan vs actual', unit: 'count', chart: 'bars', derive: 'audit_MRM',
+      note: 'Counted from the audit register: planned in the month it was due, carried out in the month it happened.' },
+    { id: 'qms_mrm_actions', dept: 'qms', name: 'MRM action plan closure', unit: 'count', chart: 'pie', derive: 'ncst_MRM',
+      note: 'The findings on the audit register as they stand today.' },
+    { id: 'qms_external_nc', dept: 'qms', name: 'External audit NC closure', unit: 'count', chart: 'pie', derive: 'ncst_External',
+      note: 'The findings on the audit register as they stand today.' },
+    { id: 'qms_layer', dept: 'qms', name: 'Layer process audit — plan vs actual', unit: 'count', chart: 'bars', derive: 'audit_Layer_process',
+      note: 'Counted from the audit register: planned in the month it was due, carried out in the month it happened.' },
+    { id: 'qms_layer_nc', dept: 'qms', name: 'Layer process audit NC closure', unit: 'count', chart: 'pie', derive: 'ncst_Layer_process',
+      note: 'The findings on the audit register as they stand today.' },
+    { id: 'qms_layout', dept: 'qms', name: 'Layout audit — plan vs actual', unit: 'count', chart: 'bars', derive: 'audit_Layout',
+      note: 'Counted from the audit register: planned in the month it was due, carried out in the month it happened.' },
+    { id: 'qms_dock', dept: 'qms', name: 'Dock audit — plan vs actual', unit: 'count', chart: 'bars', derive: 'audit_Dock',
+      note: 'Counted from the audit register: planned in the month it was due, carried out in the month it happened.' },
+    { id: 'qms_customer_nc', dept: 'qms', name: 'Customer audit NC closure', unit: 'count', chart: 'pie', derive: 'ncst_Customer',
+      note: 'The findings on the audit register as they stand today.' },
+    { id: 'qms_sqa', dept: 'qms', name: 'SQA audit — plan vs actual', unit: 'count', chart: 'bars', derive: 'audit_SQA',
+      note: 'Counted from the audit register: planned in the month it was due, carried out in the month it happened.' },
+    { id: 'qms_sqa_nc', dept: 'qms', name: 'SQA audit NC closure', unit: 'count', chart: 'pie', derive: 'ncst_SQA',
+      note: 'The findings on the audit register as they stand today.' },
     { id: 'qms_nc_register', dept: 'qms', name: 'Non-conformances raised and closed', unit: 'count', chart: 'bars', derive: 'ncClosure',
       note: 'From the non-conformance register — raised in the month against closed in the month.' }
   ];
@@ -827,6 +906,12 @@
     if (k.derive && D[k.derive]) {
       try { derived = await D[k.derive](fy); }
       catch (e) { return '<div class="note bad">This figure could not be computed: ' + esc(e.message) + '</div>'; }
+    }
+
+    /* a derived pie arrives as labels and values rather than monthly series */
+    if (derived && k.chart === 'pie' && derived.labels) {
+      if (!anyValue(derived.values)) return empty(k, 'No records to compute this from yet.');
+      return chartPie(derived.labels, derived.values, k.unit);
     }
 
     /* charts that stand entirely on derived data */

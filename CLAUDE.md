@@ -792,20 +792,62 @@ maintains, so removing the only ready candidate puts the post straight back on i
 
 Records: kind `role` (one per designation), `succession` (one per position).
 
-**Declared but not built:** the screens still marked `soon` in the menu (23 at
-v109, down from 42), each showing an explanation rather than a blank page.
+## Modules added in v110 — CFT members and the audit register
 
-**Suggested order for the rest.** The QMS block is now the whole of what is left
-that matters: the four document levels, the master lists, the document format
-numbers, signatories and CFT members, and the audit calendars. It is the largest
-remaining piece and the one that would turn roughly **twenty entry-only KPIs into
-computed ones** — every "audit plan vs actual" and "NC closure" figure on the QMS
-dashboard is typed today because there is no audit record to count. Build the
-audit calendar and the NC closure first for that reason; the document levels are
-mostly filing and can follow.
+This was built before the QMS document levels for one reason: **it turns sixteen
+typed KPIs into computed ones.** Every "audit plan vs actual" and "NC closure"
+figure on the QMS dashboard was entered by hand because there was no audit record
+to count. The QMS dashboard is now **17 of 17 computed** — nothing on it is typed.
+Across the whole system that takes computed KPIs from 29 to **46 of 101**.
 
-After that: the remaining production screens (DWM, task list, machine check
-sheet, tool history), Key Process Input, P&L, and User Management.
+**CFT Members** records who represents which function and, more usefully, **what
+each is qualified to audit** and when that qualification lapses. Members must
+exist on the employee records (an auditor who cannot be found is a finding in
+itself), and a qualification with no date is refused — it cannot later be shown
+to have been current on the day of the audit.
+
+**Audit Plan & Register** holds the plan and the findings on one record, because
+an audit whose result is filed elsewhere is an audit nobody closes. Two rules are
+**enforced, not reported**:
+
+- **Nobody audits their own department.** Independence is the first thing an
+  external auditor tests, and the department is read from the employee record
+  rather than asked for.
+- **Nobody is named as auditor for a kind of audit they are not qualified for**,
+  and not if their qualification lapses before the planned date. The
+  qualification record exists, so it can be checked rather than assumed.
+
+Sequencing is enforced too: findings cannot be recorded against an audit that has
+not been carried out, and an audit cannot be recorded as carried out in the
+future. A finding needs an **owner** and a **date to be closed by** — without a
+date it can never be overdue, which is how findings sit open for a year and
+nothing on the dashboard goes red. Closing one asks for a root cause, what was
+done, and who verified it; all three are required, because a finding closed
+without a root cause comes back.
+
+The three closure derivations are built as a **factory** rather than fifteen
+near-identical functions (`mkAuditPlanActual`, `mkNcPlanActual`, `mkNcStatus`),
+so a change to how closure is counted lands in one place. Closure "plan" is the
+month a finding was **due**; "actual" is the month it **closed**. The status pie
+buckets the year's findings as closed / open within date / overdue as at today.
+
+**A KPI engine change came with it:** a derived KPI can now supply a pie chart as
+`{labels, values}`. Before this, `chart: 'pie'` only worked for entered figures.
+
+Records: kind `cft`, and kind `audit` (plan and findings on one record).
+
+**Declared but not built:** the screens still marked `soon` in the menu (22 at
+v110, down from 42), each showing an explanation rather than a blank page.
+
+**Suggested order for the rest.** The high-leverage work is done: what remains
+changes no KPI from typed to computed except the maintenance and production cost
+lines, which need a costing model that does not exist yet.
+
+By usefulness: the QMS document levels and master lists (mostly filing, but they
+are what an auditor asks for first); the remaining production screens (DWM, task
+list, machine check sheet, tool history); User Management; Key Process Input;
+document format numbers and signatories; P&L, which should wait until there is a
+costing model to build it on rather than becoming another entry screen.
 
 **One item needs a decision before it is built.** `report_inprocess_inspection`
 is still on the menu as `soon`, but **Self Inspection already is in-process
@@ -938,7 +980,9 @@ If you formalise this, keep two habits that mattered:
 2. **Test what matters, not what is easy.** Testing that a fold worked passed
    while the Save button was being folded away with it.
 
-`orgtest.mjs` (33 checks over the v109 screens: vacancies drawn from sanctioned
+`audittest.mjs` (38 checks over the v110 register: the two independence rules,
+the sequencing, the finding-closure requirements, and the QMS dashboard keeping
+one kind of audit apart from another). `orgtest.mjs` (33 checks over the v109 screens: vacancies drawn from sanctioned
 strength, the unplaceable-employee report, the role issuing gates, and readiness
 coming out ready / not ready from the competency map with the sole-incumbent
 refusal). `competencytest.mjs` (42 checks over the v108 chain: the unmatched-name report,

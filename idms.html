@@ -362,6 +362,86 @@
       <div id="ap-body"></div>
     </div>
 
+    <!-- ============ CFT members ============ -->
+    <div class="panel" data-panel="cft_master">
+      <div class="card">
+        <h4>CFT Members</h4>
+        <div class="hint" style="margin-bottom:10px;">The cross-functional team: who signs a PFMEA,
+          who audits, who sits on a review. Members come from the employee records, so a person who
+          has left cannot stay on the team by being forgotten. What each is <b>qualified to audit</b>
+          is set here, and the audit register will not let anybody be named as auditor for something
+          they are not qualified for — nor for their own department.</div>
+        <div class="row four">
+          <div><label>Person</label><input id="cf-who" list="cf-people"></div>
+          <datalist id="cf-people"></datalist>
+          <div><label>Function they represent</label><select id="cf-fn">
+            <option>Quality</option><option>Production</option><option>Engineering</option>
+            <option>Maintenance</option><option>Purchase &amp; SCM</option><option>PPC</option>
+            <option>HR</option><option>Top management</option></select></div>
+          <div><label>Qualified on</label><input type="date" id="cf-on"></div>
+          <div><label>Requalify every (months)</label><input class="num" id="cf-freq" value="36"></div>
+        </div>
+        <div class="row" style="margin-top:9px;">
+          <div><label>Qualified to audit (tick what applies)</label>
+            <div id="cf-quals" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;"></div></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="cf-save">Save the member</button>
+          <button class="btn" id="cf-clear">Clear</button>
+          <button class="btn" id="cf-print">Print</button>
+        </div>
+        <div class="note" id="cf-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>The team</h4><div id="cf-list"></div></div>
+    </div>
+
+    <!-- ============ Audit plan and register ============ -->
+    <div class="panel" data-panel="audits">
+      <div class="card">
+        <h4>Audit Plan &amp; Register</h4>
+        <div class="hint" style="margin-bottom:10px;">Every audit the year is committed to, and what
+          came out of it. This one screen is where the plan-against-actual and the non-conformance
+          closure figures on the QMS dashboard come from — <b>they are counted from these records,
+          not typed anywhere</b>. Two rules the register enforces because an auditor will check them:
+          nobody audits their own department, and nobody is named as auditor for a kind of audit they
+          are not qualified for.</div>
+        <div class="row four">
+          <div><label>Financial year</label><select id="au-fy"></select></div>
+          <div><label>Kind of audit</label><select id="au-type"></select></div>
+          <div><label>Show</label><select id="au-filter">
+            <option value="all">Everything</option>
+            <option value="due">Due but not done</option>
+            <option value="open">With an open finding</option>
+            <option value="overdue">With an overdue finding</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="au-print">Print</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Plan an audit</h4>
+        <div class="row four">
+          <div><label>Kind</label><select id="au-new-type"></select></div>
+          <div><label>What is being audited</label><input id="au-area"
+            placeholder="process, line, supplier or department"></div>
+          <div><label>Department it belongs to</label><select id="au-dept"></select></div>
+          <div><label>Planned for</label><input type="date" id="au-plan"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Auditor</label><select id="au-auditor"></select></div>
+          <div><label>Auditee</label><input id="au-auditee"></div>
+          <div><label>Standard clause or checklist</label><input id="au-ref"></div>
+          <div style="align-self:end;"><button class="btn gold" id="au-add">Add to the plan</button></div>
+        </div>
+        <div class="note" id="au-msg" style="display:none;"></div>
+      </div>
+
+      <div class="card"><h4 id="au-list-title">The plan</h4><div id="au-list"></div></div>
+      <div class="card" id="au-detail-card" style="display:none;">
+        <h4 id="au-detail-title">Audit</h4>
+        <div id="au-detail"></div>
+      </div>
+    </div>
+
     <!-- ============ Organisation chart ============ -->
     <div class="panel" data-panel="org_chart">
       <div class="card">
@@ -2148,8 +2228,9 @@
       ['qms_level1','📜','Level-1 — Policy'],['qms_level2','📄','Level-2 — Procedures'],
       ['qms_level3','📝','Level-3 — Work Instructions'],['qms_level4','🗂','Level-4 — Records'],
       ['compliance_audit_trail','📋','Compliance & Audit Trail'],
-      ['doc_format_master','📄','Document Format Numbers'],['signatories','✍','Signatories Master'],
-      ['cft_master','👥','CFT Members Master'],['doc_master_pfd','📑','Master List — PFD'],
+      ['audits','🔎','Audit Plan & Register',1],
+      ['cft_master','👥','CFT Members',1],
+      ['doc_format_master','📄','Document Format Numbers'],['signatories','✍','Signatories Master'],['doc_master_pfd','📑','Master List — PFD'],
       ['doc_master_pfmea','📑','Master List — PFMEA'],['doc_master_cp','📑','Master List — Control Plan']]],
     ['marketing','📣','Marketing','Enquiry to order',[
       ['dash_marketing','📊','Marketing Dashboard',1],
@@ -2317,6 +2398,8 @@
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
+    if (s === 'cft_master')            loadCft();
+    if (s === 'audits')                loadAudits();
     if (s === 'org_chart')             loadOrgChart();
     if (s === 'roles_resp')            loadRoles();
     if (s === 'succession_plan')       loadSuccession();
@@ -2340,6 +2423,466 @@
     if (s === 'kpi_entry')         loadKpiEntry();
     if (s === 'admin_banner')      loadBannerScreen();
     if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
+  }
+
+  /* ================= CFT MEMBERS =================
+     Who is qualified to do what. The audit register reads this, so a member
+     record is not paperwork — it is what stops somebody being named as auditor
+     for a job they are not qualified for. */
+  var cftDocs = [], cftEditing = null;
+  var AUDIT_TYPES = ['Process', 'Product', 'IQA', 'Layer process', 'Layout', 'Dock',
+                     'SQA', 'Customer', 'External', 'MRM'];
+  var QUALIFIABLE = ['Process', 'Product', 'IQA', 'Layer process', 'Layout', 'Dock', 'SQA'];
+
+  async function loadCft(){
+    await compLoad();
+    try { cftDocs = await C.idms.docs('cft'); } catch(e){ cftDocs = []; }
+    document.getElementById('cf-people').innerHTML =
+      compEmployees.map(function(e){ return '<option value="'+esc(empData(e).name||'')+'">'; }).join('');
+    document.getElementById('cf-quals').innerHTML = QUALIFIABLE.map(function(q){
+      return '<label style="font-weight:400;display:flex;align-items:center;gap:5px;">' +
+        '<input type="checkbox" class="cf-q" value="'+esc(q)+'" style="width:auto;"> ' + esc(q) + '</label>';
+    }).join('');
+    drawCft();
+  }
+  function cftQualDue(v){
+    if (!v.qualifiedOn) return null;
+    var d = new Date(v.qualifiedOn);
+    d.setMonth(d.getMonth() + (C.num(v.requalifyMonths) || 36));
+    return d;
+  }
+  function drawCft(){
+    var host = document.getElementById('cf-list');
+    if (!cftDocs.length){
+      host.innerHTML = '<div class="empty"><b>Nobody on the team yet</b>Audits cannot be planned ' +
+        'until somebody is qualified to carry them out.</div>';
+      return;
+    }
+    host.innerHTML = '<div class="scroll-x"><table class="t"><thead><tr><th>Person</th>' +
+      '<th>Function</th><th>Department</th><th>Qualified to audit</th><th>Qualified on</th>' +
+      '<th>Requalify by</th><th></th></tr></thead><tbody>' +
+      cftDocs.map(function(m){
+        var v = m.data||{}, due = cftQualDue(v);
+        var lapsed = due && due < new Date();
+        var emp = compEmployees.filter(function(e){
+          return String(empData(e).name||'').toLowerCase() === String(v.name||'').toLowerCase(); })[0];
+        var left = !emp || String(empData(emp||{data:{}}).status||'Active') === 'Left';
+        return '<tr><td><b>'+esc(v.name||'')+'</b>' +
+          (left ? '<div class="hint bad">not on the roll</div>' : '') + '</td>' +
+          '<td class="hint">'+esc(v.fn||'')+'</td>' +
+          '<td class="hint">'+esc(v.department||'—')+'</td>' +
+          '<td>'+((v.quals||[]).join(', ') || '<span class="hint">none</span>')+'</td>' +
+          '<td class="hint">'+(v.qualifiedOn?C.fmtDate(v.qualifiedOn):'—')+'</td>' +
+          '<td'+(lapsed?' class="bad"':' class="hint"')+'>'+(due?C.fmtDate(due.toISOString().slice(0,10)):'—')+
+            (lapsed?'<div class="hint">lapsed</div>':'')+'</td>' +
+          '<td><button class="btn cf-edit" data-id="'+esc(m.doc_id)+'">Edit</button></td></tr>';
+      }).join('') + '</tbody></table></div>';
+    host.querySelectorAll('.cf-edit').forEach(function(b){
+      b.addEventListener('click', function(){ editCft(b.dataset.id); });
+    });
+  }
+  function editCft(id){
+    var m = cftDocs.filter(function(x){ return x.doc_id === id; })[0];
+    if (!m) return;
+    var v = m.data||{};
+    cftEditing = id;
+    document.getElementById('cf-who').value = v.name || '';
+    document.getElementById('cf-fn').value = v.fn || 'Quality';
+    document.getElementById('cf-on').value = v.qualifiedOn || '';
+    document.getElementById('cf-freq').value = v.requalifyMonths || 36;
+    document.getElementById('cf-quals').querySelectorAll('.cf-q').forEach(function(cb){
+      cb.checked = (v.quals||[]).indexOf(cb.value) >= 0; });
+    document.getElementById('cf-save').textContent = 'Update the member';
+  }
+  function clearCftForm(){
+    cftEditing = null;
+    ['cf-who','cf-on'].forEach(function(i){ document.getElementById(i).value = ''; });
+    document.getElementById('cf-quals').querySelectorAll('.cf-q').forEach(function(cb){ cb.checked = false; });
+    document.getElementById('cf-save').textContent = 'Save the member';
+    document.getElementById('cf-msg').style.display = 'none';
+  }
+  async function saveCft(){
+    var msg = document.getElementById('cf-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var name = document.getElementById('cf-who').value.trim();
+    if (!name) return say('Name the person.');
+    var emp = compEmployees.filter(function(e){
+      return String(empData(e).name||'').toLowerCase() === name.toLowerCase(); })[0];
+    if (!emp) return say('<b>'+esc(name)+'</b> is not on the employee records. The team is made of ' +
+      'people who work here, and an auditor who cannot be found is a finding by itself.');
+    var dup = cftDocs.filter(function(m){
+      return String((m.data||{}).name||'').toLowerCase() === name.toLowerCase() &&
+             m.doc_id !== cftEditing; })[0];
+    if (dup) return say(esc(name) + ' is already on the team. Edit that record instead.');
+    var quals = [];
+    document.getElementById('cf-quals').querySelectorAll('.cf-q').forEach(function(cb){
+      if (cb.checked) quals.push(cb.value); });
+    var on = document.getElementById('cf-on').value;
+    if (quals.length && !on)
+      return say('Say when they were qualified. A qualification with no date cannot be shown to ' +
+                 'have been current when the audit was carried out.');
+    var d = empData(emp);
+    var btn = document.getElementById('cf-save'); btn.disabled = true;
+    try {
+      await C.idms.saveDoc({ docId: cftEditing || '', kind:'cft',
+        docNo: (cftEditing ? (cftDocs.filter(function(x){ return x.doc_id === cftEditing; })[0]||{}).doc_no : null)
+               || await C.docNumber('cft'), status:'Active',
+        data:{ name:name, empId:d.empId||'', department:d.department||'', designation:d.designation||'',
+               fn:document.getElementById('cf-fn').value, quals:quals, qualifiedOn:on,
+               requalifyMonths:C.num(document.getElementById('cf-freq').value) || 36 } },
+        cftEditing ? 'CFT member updated' : 'CFT member added');
+      say(cftEditing ? 'Updated.' : 'Added.', true);
+      clearCftForm();
+      await loadCft();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+  function printCft(){
+    if (!cftDocs.length) { toast('Nothing to print.'); return; }
+    C.openReport({ title:'CFT Members', landscape:true, sections:[
+      { type:'table', title:'The cross-functional team', dense:true,
+        columns:[{label:'Person'},{label:'Function'},{label:'Department'},{label:'Qualified to audit'},
+                 {label:'Qualified on'},{label:'Requalify by'}],
+        rows: cftDocs.map(function(m){
+          var v = m.data||{}, due = cftQualDue(v);
+          return [v.name, v.fn, v.department||'—', (v.quals||[]).join(', ')||'none',
+                  v.qualifiedOn?C.fmtDate(v.qualifiedOn):'—',
+                  due?C.fmtDate(due.toISOString().slice(0,10)):'—']; }) } ] });
+  }
+
+  /* ================= AUDIT PLAN AND REGISTER =================
+     The plan and the findings live on one record, because an audit whose result
+     is filed somewhere else is an audit nobody can close. Everything the QMS
+     dashboard shows about audits and non-conformance closure is counted from
+     these records — no figure on that dashboard is typed once this screen is in
+     use, which is the whole reason it was built before the document levels.
+
+     Two rules are enforced rather than reported. Nobody audits their own
+     department: independence is not a nicety, it is the first thing an external
+     auditor tests. And nobody is named as auditor for a kind of audit they are
+     not qualified for, because the qualification record exists and can be read. */
+  var auditDocs = [], auditOpen = null;
+
+  function auditFy(d){
+    d = d ? new Date(d) : new Date();
+    if (isNaN(d)) return null;
+    return d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1;
+  }
+  function fyText(y){ return y + '–' + String(y+1).slice(2); }
+
+  async function loadAudits(){
+    await compLoad();
+    try { auditDocs = await C.idms.docs('audit'); } catch(e){ auditDocs = []; }
+    try { cftDocs = await C.idms.docs('cft'); } catch(e){ cftDocs = []; }
+
+    var fySel = document.getElementById('au-fy');
+    if (!fySel.options.length){
+      var now = auditFy();
+      var out = [];
+      for (var y = now + 1; y >= now - 3; y--) out.push(y);
+      fySel.innerHTML = out.map(function(y){ return '<option value="'+y+'">'+fyText(y)+'</option>'; }).join('');
+      fySel.value = String(now);
+    }
+    ['au-type','au-new-type'].forEach(function(id, i){
+      var sel = document.getElementById(id), keep = sel.value;
+      sel.innerHTML = (i === 0 ? '<option value="">Every kind</option>' : '') +
+        AUDIT_TYPES.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join('');
+      if (keep) sel.value = keep;
+    });
+    var dsel = document.getElementById('au-dept'), dkeep = dsel.value;
+    dsel.innerHTML = '<option value="">— not a department —</option>' +
+      departments().map(function(d){ return '<option>'+esc(d)+'</option>'; }).join('');
+    if (dkeep) dsel.value = dkeep;
+    fillAuditors();
+    drawAuditList();
+    if (auditOpen) drawAuditDetail();
+  }
+
+  /* who may carry out the kind of audit currently chosen */
+  function fillAuditors(){
+    var kind = document.getElementById('au-new-type').value;
+    var sel = document.getElementById('au-auditor'), keep = sel.value;
+    var able = cftDocs.filter(function(m){
+      var v = m.data||{};
+      if (QUALIFIABLE.indexOf(kind) < 0) return true;     // customer/external/MRM: anyone on the team
+      return (v.quals||[]).indexOf(kind) >= 0;
+    });
+    sel.innerHTML = able.length
+      ? '<option value="">— choose —</option>' + able.map(function(m){
+          var v = m.data||{};
+          return '<option value="'+esc(v.name)+'">'+esc(v.name)+
+            (v.department?' · '+esc(v.department):'')+'</option>'; }).join('')
+      : '<option value="">— nobody is qualified for a ' + esc(kind || 'this') + ' audit —</option>';
+    if (keep) sel.value = keep;
+  }
+
+  function auditRows(){
+    var fy = C.num(document.getElementById('au-fy').value);
+    var type = document.getElementById('au-type').value;
+    var filter = document.getElementById('au-filter').value;
+    var today = new Date().toISOString().slice(0,10);
+    return auditDocs.filter(function(a){
+      var v = a.data||{};
+      if (auditFy(v.plannedOn) !== fy) return false;
+      if (type && v.type !== type) return false;
+      var f = v.findings || [];
+      var open = f.filter(function(x){ return !x.closedOn; });
+      var overdue = open.filter(function(x){ return x.dueOn && x.dueOn < today; });
+      if (filter === 'due') return !v.actualOn && v.plannedOn <= today;
+      if (filter === 'open') return open.length > 0;
+      if (filter === 'overdue') return overdue.length > 0;
+      return true;
+    }).sort(function(a,b){
+      return String((a.data||{}).plannedOn||'').localeCompare(String((b.data||{}).plannedOn||'')); });
+  }
+
+  function drawAuditList(){
+    var host = document.getElementById('au-list');
+    var fy = C.num(document.getElementById('au-fy').value);
+    document.getElementById('au-list-title').textContent = 'The plan for ' + fyText(fy);
+    var rows = auditRows();
+    var today = new Date().toISOString().slice(0,10);
+
+    var all = auditDocs.filter(function(a){ return auditFy((a.data||{}).plannedOn) === fy; });
+    var done = all.filter(function(a){ return (a.data||{}).actualOn; });
+    var overdueAudits = all.filter(function(a){
+      var v = a.data||{}; return !v.actualOn && v.plannedOn < today; });
+    var findings = [];
+    all.forEach(function(a){ (( a.data||{}).findings||[]).forEach(function(f){ findings.push(f); }); });
+    var openF = findings.filter(function(f){ return !f.closedOn; });
+    var overdueF = openF.filter(function(f){ return f.dueOn && f.dueOn < today; });
+
+    var stat = '<div class="stat" style="margin-bottom:12px;">' +
+      [['Planned', all.length], ['Carried out', done.length],
+       ['Past their date', overdueAudits.length],
+       ['Findings raised', findings.length], ['Still open', openF.length],
+       ['Open past their date', overdueF.length]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
+      '</div>';
+
+    host.innerHTML = stat + (rows.length
+      ? '<div class="scroll-x"><table class="t"><thead><tr><th>Kind</th><th>What</th><th>Department</th>' +
+        '<th>Auditor</th><th>Planned</th><th>Carried out</th><th class="r">Findings</th>' +
+        '<th class="c">Status</th><th></th></tr></thead><tbody>' +
+        rows.map(function(a){
+          var v = a.data||{}, f = v.findings||[];
+          var open = f.filter(function(x){ return !x.closedOn; });
+          var over = open.filter(function(x){ return x.dueOn && x.dueOn < today; });
+          var badge = !v.actualOn
+            ? (v.plannedOn < today ? '<span class="badge ab">overdue</span>'
+                                   : '<span class="badge sample">planned</span>')
+            : over.length ? '<span class="badge ab">'+over.length+' overdue</span>'
+            : open.length ? '<span class="badge sample">'+open.length+' open</span>'
+            : '<span class="badge series">closed</span>';
+          return '<tr><td><b>'+esc(v.type||'')+'</b></td><td>'+esc(v.area||'')+'</td>' +
+            '<td class="hint">'+esc(v.department||'—')+'</td>' +
+            '<td class="hint">'+esc(v.auditor||'—')+'</td>' +
+            '<td class="hint">'+(v.plannedOn?C.fmtDate(v.plannedOn):'—')+'</td>' +
+            '<td class="hint">'+(v.actualOn?C.fmtDate(v.actualOn):'—')+'</td>' +
+            '<td class="r">'+(f.length||'—')+'</td>' +
+            '<td class="c">'+badge+'</td>' +
+            '<td><button class="btn au-open" data-id="'+esc(a.doc_id)+'">Open</button></td></tr>';
+        }).join('') + '</tbody></table></div>'
+      : '<div class="empty"><b>Nothing in the plan</b>Nothing matches for ' + fyText(fy) + '.</div>');
+
+    host.querySelectorAll('.au-open').forEach(function(b){
+      b.addEventListener('click', function(){
+        auditOpen = auditDocs.filter(function(x){ return x.doc_id === b.dataset.id; })[0];
+        drawAuditDetail();
+      });
+    });
+  }
+
+  async function addAudit(){
+    var msg = document.getElementById('au-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var kind = document.getElementById('au-new-type').value;
+    var area = document.getElementById('au-area').value.trim();
+    var dept = document.getElementById('au-dept').value;
+    var plan = document.getElementById('au-plan').value;
+    var auditor = document.getElementById('au-auditor').value;
+    if (!area) return say('Say what is being audited.');
+    if (!plan) return say('Give it a planned date. An audit with no date cannot be counted as ' +
+      'planned, and the plan-against-actual figure would be short by one.');
+    if (!auditor) return say('Name the auditor.');
+
+    var m = cftDocs.filter(function(x){
+      return String((x.data||{}).name||'').toLowerCase() === auditor.toLowerCase(); })[0];
+    var mv = m ? (m.data||{}) : {};
+
+    /* independence: the first thing an external auditor tests */
+    if (dept && mv.department && mv.department === dept)
+      return say('<b>'+esc(auditor)+'</b> works in '+esc(dept)+'. Nobody audits their own department — ' +
+        'name somebody from another function, or the finding will be about the audit rather than ' +
+        'what it found.');
+    if (QUALIFIABLE.indexOf(kind) >= 0 && (mv.quals||[]).indexOf(kind) < 0)
+      return say('<b>'+esc(auditor)+'</b> is not qualified for a '+esc(kind)+' audit. Record the ' +
+        'qualification on CFT Members first — an audit carried out by somebody unqualified does not ' +
+        'count, however well it was done.');
+    var due = cftQualDue(mv);
+    if (due && plan > due.toISOString().slice(0,10))
+      return say('<b>'+esc(auditor)+'</b>\'s qualification lapses on ' +
+        C.fmtDate(due.toISOString().slice(0,10)) + ', before this audit is due. Requalify them or ' +
+        'name somebody else.');
+
+    var btn = document.getElementById('au-add'); btn.disabled = true;
+    try {
+      await C.idms.saveDoc({ kind:'audit', docNo: await C.docNumber('aud'), status:'Planned',
+        data:{ type:kind, area:area, department:dept, plannedOn:plan, auditor:auditor,
+               auditee:document.getElementById('au-auditee').value.trim(),
+               reference:document.getElementById('au-ref').value.trim(),
+               fy:auditFy(plan), findings:[] } }, 'audit planned');
+      say('Added to the plan for ' + fyText(auditFy(plan)) + '.', true);
+      ['au-area','au-auditee','au-ref'].forEach(function(i){ document.getElementById(i).value=''; });
+      await loadAudits();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+
+  function drawAuditDetail(){
+    if (!auditOpen) return;
+    var v = auditOpen.data||{}, f = v.findings||[];
+    var today = new Date().toISOString().slice(0,10);
+    document.getElementById('au-detail-card').style.display = '';
+    document.getElementById('au-detail-title').textContent =
+      (v.type||'') + ' audit — ' + (v.area||'');
+
+    var rows = f.map(function(x, i){
+      var over = !x.closedOn && x.dueOn && x.dueOn < today;
+      return '<tr><td><b>'+esc(x.severity||'')+'</b></td>' +
+        '<td>'+esc(x.description||'')+
+          (x.rootCause?'<div class="hint">root cause: '+esc(x.rootCause)+'</div>':'')+
+          (x.action?'<div class="hint">action: '+esc(x.action)+'</div>':'')+'</td>' +
+        '<td class="hint">'+esc(x.owner||'—')+'</td>' +
+        '<td'+(over?' class="bad"':' class="hint"')+'>'+(x.dueOn?C.fmtDate(x.dueOn):'—')+
+          (over?'<div class="hint">overdue</div>':'')+'</td>' +
+        '<td class="hint">'+(x.closedOn?C.fmtDate(x.closedOn)+'<div class="hint">'+
+          esc(x.verifiedBy||'')+'</div>':'—')+'</td>' +
+        '<td>'+(x.closedOn ? '<span class="badge series">closed</span>'
+          : '<button class="btn au-close" data-i="'+i+'">Close it</button>')+'</td></tr>';
+    }).join('');
+
+    document.getElementById('au-detail').innerHTML =
+      '<div class="row four"><div><label>Carried out on</label>' +
+        '<input type="date" id="au-actual" value="'+esc(v.actualOn||'')+'"></div>' +
+      '<div style="align-self:end;"><button class="btn gold" id="au-conduct">Record it as carried out</button></div>' +
+      '<div class="hint" style="align-self:end;">Planned for ' + (v.plannedOn?C.fmtDate(v.plannedOn):'—') +
+        ' · auditor ' + esc(v.auditor||'—') + '</div></div>' +
+      (v.actualOn
+        ? '<div style="margin-top:16px;"><h4>Findings</h4>' +
+          '<div class="row four" style="margin-top:8px;">' +
+          '<div><label>Severity</label><select id="au-sev">' +
+            '<option>Major</option><option>Minor</option><option>Observation</option></select></div>' +
+          '<div><label>What was found</label><input id="au-find"></div>' +
+          '<div><label>Owner</label><input id="au-owner"></div>' +
+          '<div><label>To be closed by</label><input type="date" id="au-due"></div></div>' +
+          '<div style="margin-top:9px;"><button class="btn" id="au-add-find">Add the finding</button></div>' +
+          (f.length
+            ? '<div class="scroll-x" style="margin-top:12px;"><table class="t"><thead><tr>' +
+              '<th>Severity</th><th>Finding</th><th>Owner</th><th>Due</th><th>Closed</th><th></th>' +
+              '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+            : '<div class="note good" style="margin-top:12px;">No findings recorded. If the audit ' +
+              'genuinely found nothing, that is the record; if it found something, it belongs here ' +
+              'and not in somebody\'s notebook.</div>')
+          + '</div>'
+        : '<div class="note" style="margin-top:12px;">Findings can be recorded once the audit is ' +
+          'marked as carried out. A finding against an audit that has not happened is not a finding.</div>');
+
+    document.getElementById('au-conduct').addEventListener('click', conductAudit);
+    var af = document.getElementById('au-add-find');
+    if (af) af.addEventListener('click', addFinding);
+    document.getElementById('au-detail').querySelectorAll('.au-close').forEach(function(b){
+      b.addEventListener('click', function(){ closeFinding(+b.dataset.i); });
+    });
+  }
+
+  async function writeAudit(data, status, reason){
+    await C.idms.saveDoc({ docId: auditOpen.doc_id, kind:'audit', docNo: auditOpen.doc_no,
+      status: status, data: data }, reason);
+    auditOpen.data = data; auditOpen.status = status;
+    var i = auditDocs.findIndex(function(x){ return x.doc_id === auditOpen.doc_id; });
+    if (i >= 0) auditDocs[i] = auditOpen;
+    drawAuditList(); drawAuditDetail();
+  }
+  async function conductAudit(){
+    var msg = document.getElementById('au-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var on = document.getElementById('au-actual').value;
+    if (!on) return say('Say when it was carried out.');
+    if (on > new Date().toISOString().slice(0,10))
+      return say('That date is in the future. An audit cannot be recorded as done before it happens.');
+    var v = Object.assign({}, auditOpen.data||{}, { actualOn: on });
+    try { await writeAudit(v, 'Carried out', 'audit recorded as carried out');
+          say('Recorded. Findings can go on it now.', true); }
+    catch(e){ say(esc(e.message)); }
+  }
+  async function addFinding(){
+    var msg = document.getElementById('au-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var d = document.getElementById('au-find').value.trim();
+    var due = document.getElementById('au-due').value;
+    var owner = document.getElementById('au-owner').value.trim();
+    if (!d) return say('Say what was found.');
+    if (!owner) return say('Give the finding an owner. A finding nobody owns is a finding nobody closes.');
+    if (!due) return say('Give it a date to be closed by. Without one it can never be overdue, which ' +
+      'is how findings sit open for a year and nothing on the dashboard goes red.');
+    var v = Object.assign({}, auditOpen.data||{});
+    v.findings = (v.findings||[]).slice();
+    v.findings.push({ severity:document.getElementById('au-sev').value, description:d,
+                      owner:owner, dueOn:due, raisedOn:v.actualOn, closedOn:'' });
+    try { await writeAudit(v, 'Carried out', 'audit finding raised');
+          say('Finding recorded.', true); }
+    catch(e){ say(esc(e.message)); }
+  }
+  async function closeFinding(i){
+    var v = Object.assign({}, auditOpen.data||{});
+    v.findings = (v.findings||[]).slice();
+    var f = Object.assign({}, v.findings[i]);
+    var cause = prompt('What was the root cause?\n\nA finding closed without one comes back.', f.rootCause||'');
+    if (cause === null) return;
+    if (!String(cause).trim()) { toast('A root cause is needed to close a finding.'); return; }
+    var action = prompt('What was done about it?', f.action||'');
+    if (action === null) return;
+    if (!String(action).trim()) { toast('Say what was done.'); return; }
+    var by = prompt('Who verified it was done?', '');
+    if (by === null) return;
+    if (!String(by).trim()) { toast('A closure nobody verified is not a closure.'); return; }
+    f.rootCause = String(cause).trim(); f.action = String(action).trim();
+    f.verifiedBy = String(by).trim(); f.closedOn = new Date().toISOString().slice(0,10);
+    v.findings[i] = f;
+    var allClosed = v.findings.every(function(x){ return x.closedOn; });
+    try { await writeAudit(v, allClosed ? 'Closed' : 'Carried out', 'audit finding closed'); }
+    catch(e){ toast(e.message); }
+  }
+
+  function printAudits(){
+    var fy = C.num(document.getElementById('au-fy').value);
+    var rows = auditRows();
+    if (!rows.length) { toast('Nothing to print.'); return; }
+    var today = new Date().toISOString().slice(0,10);
+    var findings = [];
+    rows.forEach(function(a){
+      var v = a.data||{};
+      (v.findings||[]).forEach(function(f){
+        findings.push([v.type, v.area, f.severity, f.description, f.owner || '—',
+                       f.dueOn?C.fmtDate(f.dueOn):'—',
+                       f.closedOn?C.fmtDate(f.closedOn):(f.dueOn && f.dueOn < today ? 'OVERDUE':'open')]); });
+    });
+    C.openReport({ title:'Audit Plan & Register — ' + fyText(fy), landscape:true, sections:[
+      { type:'table', title:'The plan', dense:true,
+        columns:[{label:'Kind'},{label:'What'},{label:'Department'},{label:'Auditor'},
+                 {label:'Planned'},{label:'Carried out'},{label:'Findings',align:'r'}],
+        rows: rows.map(function(a){
+          var v = a.data||{};
+          return [v.type, v.area, v.department||'—', v.auditor||'—',
+                  v.plannedOn?C.fmtDate(v.plannedOn):'—',
+                  v.actualOn?C.fmtDate(v.actualOn):'not yet', (v.findings||[]).length]; }) },
+      { type:'table', title:'Findings and their closure', dense:true,
+        columns:[{label:'Kind'},{label:'What'},{label:'Severity'},{label:'Finding'},{label:'Owner'},
+                 {label:'Due'},{label:'Closed'}],
+        rows: findings,
+        note:'Every plan-against-actual and closure figure on the QMS dashboard is counted from these ' +
+             'records. Nothing there is typed.' } ] });
   }
 
   /* ================= ORGANISATION CHART =================
@@ -13190,6 +13733,17 @@
     document.getElementById('ab-file').value = '';
     bannerPreview();
   });
+
+  document.getElementById('cf-save').addEventListener('click', saveCft);
+  document.getElementById('cf-clear').addEventListener('click', clearCftForm);
+  document.getElementById('cf-print').addEventListener('click', printCft);
+
+  document.getElementById('au-fy').addEventListener('change', drawAuditList);
+  document.getElementById('au-type').addEventListener('change', drawAuditList);
+  document.getElementById('au-filter').addEventListener('change', drawAuditList);
+  document.getElementById('au-new-type').addEventListener('change', fillAuditors);
+  document.getElementById('au-add').addEventListener('click', addAudit);
+  document.getElementById('au-print').addEventListener('click', printAudits);
 
   document.getElementById('oc-run').addEventListener('click', loadOrgChart);
   document.getElementById('oc-filter').addEventListener('change', drawOrgChart);

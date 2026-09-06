@@ -604,19 +604,80 @@ that do the work sat under Quality Assurance — the same thing on the menu twic
 and the NPD copy a dead end. They are listed once, under Quality, and the APQP
 programme links straight to them.
 
-**Declared but not built:** the screens still marked `soon` in the menu (36 at
-v105, down from 42), each showing an explanation rather than a blank page.
+## Modules added in v106 — the material chain, and SPC
 
-**Suggested order for the rest**, by what unblocks the most: bill of materials
-and raw material stock (both now have a master to hang off); in-process
-inspection (the `limitsOf`/`verdict` pattern already exists, so reuse it rather
-than writing a third one); control charts, which are computed from the self- and
-in-process inspection readings; capacity plan and machine loading, which are
-computable from the routing and the order book the production plan already
-reads; then the HR competency chain (TNI → training plan/actual → effectiveness →
-gap → succession), which feeds the HR dashboard KPIs that are entry-only today.
-The QMS document levels and the audit calendars are the largest remaining block
-and would turn roughly twenty entry-only KPIs into computed ones.
+**Bill of materials.** Lines point at the material master by id, never free text,
+so what a part consumes and what a receipt delivered are the same thing and can
+be netted off. **Rates are not copied into the line** — they are read from the
+master each time the bill is drawn, so revising a rate revises every bill instead
+of leaving stale copies quoting a price nobody charges. A material listed twice
+is refused (stock would be netted off twice for it), a zero quantity is refused,
+and a material with no standard rate is shown as *no rate* rather than silently
+costed at zero.
+
+**Raw material stock.** Nothing on it is typed except the opening balance:
+**balance = opening + accepted receipts − what production consumed**. Two
+decisions inside it change the number, and both are load-bearing:
+
+1. Material counts as stock when it is **accepted at inward inspection**, not
+   when the lorry arrives. An uninspected receipt gets its own column — it is on
+   site but not yours to use.
+2. Material is consumed at the **first operation of the routing only**. A part
+   booked through four operations does not eat the bar four times; getting this
+   wrong quadruples consumption and drives stock negative inside a week. The
+   `materialtest.mjs` fixture books production at three operations precisely so
+   that mistake fails the suite.
+
+Negative balances are **shown, not clamped to zero**: a negative is a record gap
+(no opening balance, an uninspected receipt, or a bill that overstates usage) and
+clamping hides it. Receipts whose description matches nothing on the master are
+listed rather than dropped, and parts with no bill are named rather than counted
+as consuming nothing.
+
+**Control charts.** Drawn from the self-inspection readings that operators
+already record — nothing is entered twice. **Each check records one piece, so the
+subgroup is one and the chart is individuals and moving range, not X̄–R.** An
+X̄–R chart from single readings would put limits on the page that mean nothing.
+Sigma is estimated as MR̄/1.128; the individuals limits are X̄ ± 2.66·MR̄. Both the
+control limits and the drawing tolerance are drawn, because they are different
+things: one describes what the process does, the other what the customer asked
+for. Two rules are checked — a point beyond the limits, and a run of seven on one
+side, which is a shift the limits alone will not catch.
+
+**Capability is withheld below 20 readings.** A Cpk from six points is unstable
+and it is exactly the number that ends up quoted at a customer. The screen says
+so and says to keep recording. Do not remove that guard.
+
+Records: kind `bom` (one per part), `rawmat.data.opening`/`openingOn` for the
+opening balance (no new kind), and control charts store nothing — they are
+computed on every open.
+
+**Declared but not built:** the screens still marked `soon` in the menu (33 at
+v106, down from 42), each showing an explanation rather than a blank page.
+
+**Suggested order for the rest**, by what unblocks the most: capacity plan and
+machine loading, both computable from the routing and the order book the
+production plan already reads; then the HR competency chain (TNI → training
+plan/actual → effectiveness → gap → succession), which feeds HR dashboard KPIs
+that are entry-only today; then the QMS document levels and audit calendars,
+the largest remaining block, which would turn roughly twenty entry-only KPIs
+into computed ones.
+
+**One item needs a decision before it is built.** `report_inprocess_inspection`
+is still on the menu as `soon`, but **Self Inspection already is in-process
+inspection** — one sheet per operation per shift, with the characteristics and
+frequency from the control plan. Building a second near-identical sheet would
+give two records of the same check that can disagree. The version worth building
+is a **QA patrol inspection**: the inspector's independent check, which
+cross-references the operator's sheet for the same operation and shift and flags
+where the two disagree — that is how a sheet filled in from memory gets caught.
+Ask before building it either way.
+
+**Two KPIs can now be moved from entered to computed** on the back of v106, and
+should be when the next KPI pass happens: *SPC plan vs actual* (count the
+characteristics with a chart drawn against those the control plan marks for SPC)
+and *total inventory cost* for the raw material and tools lines (the stock screen
+already values the balance at the master rate).
 
 ## The menu, and the KPI dashboards (v104)
 
@@ -733,7 +794,11 @@ If you formalise this, keep two habits that mattered:
 2. **Test what matters, not what is easy.** Testing that a fold worked passed
    while the Save button was being folded away with it.
 
-`moduletest.mjs` (41 checks over the v105 modules: adoption from receipts, the
+`materialtest.mjs` (29 checks over the v106 modules: the BOM refusals and scrap
+arithmetic, the stock identity with its two load-bearing decisions, and the
+control chart catching a deliberate outlier and a deliberate run of seven while
+withholding capability from six readings). `moduletest.mjs` (50 checks over the
+v105 modules: adoption from receipts, the
 duplicate and expired-certificate refusals, the derived filled/vacancy count, and
 the APQP gate refusing a sign-off that is unnamed or has work outstanding — it is
 what caught the four-records bug above). `smoketest.mjs` (IDMS: 65 checks — no auto sign-in, the gate branding, the menu

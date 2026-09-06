@@ -217,7 +217,13 @@ check('validation phase stays shut while the records are empty',
 const menuText = $('menubar').textContent;
 check('MSA is on the menu once', (menuText.match(/MSA/g) || []).length === 1, (menuText.match(/MSA[^\n]{0,18}/g)||[]).join(' | '));
 const soon = [...window.document.querySelectorAll('#menubar .drop a')].filter(a => a.querySelector('.soon'));
-check('the pending list shrank by six screens', soon.length === 36, 'soon=' + soon.length);
+check('the pending list is down to 33', soon.length === 33, 'soon=' + soon.length);
+/* named rather than counted, so this does not go red every time one is built */
+['entry_supplier','entry_rawmat','apqp','dept_master','desig_master','position_master',
+ 'bom','sheet_rawmat','report_control_charts'].forEach(id => {
+  const a = window.document.querySelector('#menubar [data-s="' + id + '"]');
+  check(id + ' is no longer marked soon', a && !a.querySelector('.soon'));
+});
 
 check('no page errors throughout', pageErrors.length === 0, pageErrors[0] || '');
 

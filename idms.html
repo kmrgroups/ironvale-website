@@ -346,6 +346,78 @@
       <div id="ap-body"></div>
     </div>
 
+    <!-- ============ Bill of materials ============ -->
+    <div class="panel" data-panel="bom">
+      <div class="card">
+        <h4>Bill of Materials</h4>
+        <div class="hint" style="margin-bottom:10px;">What one piece of this part consumes. Materials
+          come from the material master, not free text, so what is consumed here and what was
+          received on a goods receipt are the same thing and can be netted off. Rates are read from
+          the master every time this is opened — they are not copied in, so a rate revision does not
+          leave old bills quoting a price nobody charges any more.</div>
+        <div class="row four">
+          <div><label>Part</label><select id="bm-part"></select></div>
+          <div style="align-self:end;"><button class="btn" id="bm-add">Add a line</button></div>
+          <div style="align-self:end;"><button class="btn gold" id="bm-save">Save the bill</button></div>
+          <div style="align-self:end;"><button class="btn" id="bm-print">Print</button></div>
+        </div>
+        <div class="note" id="bm-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4 id="bm-title">Lines</h4>
+        <div id="bm-body"></div>
+      </div>
+    </div>
+
+    <!-- ============ Raw material stock ============ -->
+    <div class="panel" data-panel="sheet_rawmat">
+      <div class="card">
+        <h4>Raw Material Stock</h4>
+        <div class="hint" style="margin-bottom:10px;">Nothing on this screen is typed except the
+          opening balance. Stock is <b>opening + accepted receipts − what production consumed</b>,
+          worked out from the goods receipts, the inward inspections and the production bookings
+          against each part's bill of materials. Material that has been received but not yet
+          inspected is shown separately and is <b>not</b> counted as stock, because it is not yours
+          to use until it passes.</div>
+        <div class="row four">
+          <div><label>Stock as on</label><input type="date" id="st-date"></div>
+          <div><label>Show</label><select id="st-filter">
+            <option value="all">Everything</option>
+            <option value="below">Below the reorder level</option>
+            <option value="moving">Only what moved</option></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="st-run">Work it out</button></div>
+          <div style="align-self:end;"><button class="btn" id="st-print">Print</button></div>
+        </div>
+        <div class="note" id="st-msg" style="display:none;"></div>
+      </div>
+      <div id="st-body"></div>
+    </div>
+
+    <!-- ============ SPC control charts ============ -->
+    <div class="panel" data-panel="report_control_charts">
+      <div class="card">
+        <h4>Control Charts</h4>
+        <div class="hint" style="margin-bottom:10px;">Drawn from the readings the operators already
+          record on the self-inspection sheets — nothing is entered twice. Each check records one
+          piece, so the chart is an <b>individuals and moving range</b> chart; an X̄–R chart would
+          need several pieces per check and drawing one from single readings would put limits on the
+          page that mean nothing.</div>
+        <div class="row four">
+          <div><label>Part</label><select id="cc-part"></select></div>
+          <div><label>Operation</label><select id="cc-op"></select></div>
+          <div><label>Characteristic</label><select id="cc-char"></select></div>
+          <div><label>From</label><input type="date" id="cc-from"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>To</label><input type="date" id="cc-to"></div>
+          <div style="align-self:end;"><button class="btn gold" id="cc-run">Draw the chart</button></div>
+          <div style="align-self:end;"><button class="btn" id="cc-print">Print</button></div>
+        </div>
+        <div class="note" id="cc-msg" style="display:none;"></div>
+      </div>
+      <div id="cc-body"></div>
+    </div>
+
     <!-- ============ KPI dashboards: one panel, twelve departments ============ -->
     <div class="panel" data-panel="kpidash">
       <div class="card">
@@ -1811,8 +1883,8 @@
       ['sales_plan','📈','Sales Plan',1],['production_plan','🏭','Production Plan',1],
       ['emb_ppc','🗓','Production Planning (orders & capacity)',1],
       ['capacity_plan','⚙','Capacity Plan'],['machine_loading','🔩','Machine Loading Plan'],
-      ['dc','📤','Delivery Challan',1],['sheet_rawmat','🪨','Raw Material Stock'],
-      ['bom','🧾','Bill of Materials'],['form','🔑','Key Process Input']]],
+      ['dc','📤','Delivery Challan',1],['sheet_rawmat','🪨','Raw Material Stock',1],
+      ['bom','🧾','Bill of Materials',1],['form','🔑','Key Process Input']]],
     ['production','🏗','Production','Shop floor',[
       ['dash_production','📊','Production Dashboard',1],
       ['entry_prod','📝','Production Entry',1],
@@ -1827,7 +1899,7 @@
       ['report_pdi','✓','PDI Report',1],
       ['report_inprocess_inspection','⚙','In-Process Inspection Report'],
       ['report_calibration','📏','Calibration Report',1],['report_msa','🔬','MSA Study Report',1],
-      ['report_control_charts','📊','Control Charts'],
+      ['report_control_charts','📊','Control Charts',1],
       ['ncr','⚠','Non-conformance & 8D',1],['ncr_open','📌','Open Actions',1],
       ['change_4m','🔁','4M Change',1]]],
     ['maintenance','🔧','Maintenance','Machines and upkeep',[
@@ -1949,6 +2021,9 @@
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
+    if (s === 'bom')               loadBom();
+    if (s === 'sheet_rawmat')      loadStock();
+    if (s === 'report_control_charts') loadCc();
     if (s === 'entry_supplier')    loadSuppliers();
     if (s === 'entry_rawmat')      loadRawmats();
     if (s === 'dept_master')       loadOrgMaster('department');
@@ -1959,6 +2034,645 @@
     if (s === 'kpi_entry')         loadKpiEntry();
     if (s === 'admin_banner')      loadBannerScreen();
     if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
+  }
+
+  /* ================= BILL OF MATERIALS =================
+     Lines point at the material master by id. The rate is NOT copied into the
+     line: it is read from the master when the bill is drawn, so revising a rate
+     revises every bill that uses it instead of leaving a hundred stale copies. */
+  var bomDoc = null, bomLines = [], bomMats = [];
+
+  async function loadBom(){
+    await fetchParts();
+    var sel = document.getElementById('bm-part');
+    sel.innerHTML = partOptions(sel.value);
+    try { bomMats = await C.idms.docs('rawmat'); } catch(e){ bomMats = []; }
+    if (sel.value) await openBom();
+    else {
+      bomDoc = null; bomLines = [];
+      document.getElementById('bm-body').innerHTML =
+        '<div class="empty"><b>Choose a part</b>A bill of materials belongs to a part.</div>';
+    }
+  }
+  async function openBom(){
+    var pid = document.getElementById('bm-part').value;
+    document.getElementById('bm-msg').style.display = 'none';
+    if (!pid) return;
+    if (!bomMats.length){ try { bomMats = await C.idms.docs('rawmat'); } catch(e){ bomMats = []; } }
+    var all = [];
+    try { all = await C.idms.docs('bom', pid); } catch(e){ all = []; }
+    bomDoc = all[0] || null;
+    bomLines = (bomDoc && (bomDoc.data||{}).lines) ? bomDoc.data.lines.slice() : [];
+    drawBom();
+  }
+  function matById(id){ return bomMats.filter(function(m){ return m.doc_id === id; })[0] || null; }
+
+  function drawBom(){
+    var host = document.getElementById('bm-body');
+    var p = allParts.filter(function(x){ return x.part_id === document.getElementById('bm-part').value; })[0];
+    document.getElementById('bm-title').textContent = p ? (p.part_no + ' · ' + (p.part_name||'')) : 'Lines';
+
+    if (!bomMats.length){
+      host.innerHTML = '<div class="empty"><b>No materials on the master yet</b>' +
+        'A bill of materials is built from the material master. ' +
+        '<a data-goto="entry_rawmat" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">' +
+        'Add the materials first →</a></div>';
+      host.querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
+      return;
+    }
+    if (!bomLines.length){
+      host.innerHTML = '<div class="empty"><b>No lines yet</b>Use <b>Add a line</b> above.</div>';
+      return;
+    }
+
+    var noRate = 0, total = 0;
+    var rows = bomLines.map(function(l, i){
+      var m = matById(l.materialId), v = m ? (m.data||{}) : {};
+      var rate = C.num(v.rate);
+      if (!rate) noRate++;
+      var gross = C.num(l.qtyPer) * (1 + C.num(l.scrapPct)/100);
+      var cost = gross * rate;
+      total += cost;
+      return '<tr><td><select class="bm-mat" data-i="'+i+'">' +
+        bomMats.map(function(x){
+          return '<option value="'+esc(x.doc_id)+'"'+(x.doc_id===l.materialId?' selected':'')+'>'+
+            esc((x.data||{}).description||'')+'</option>'; }).join('') + '</select>' +
+        '<div class="hint">'+esc(v.code||'')+(v.spec?' · '+esc(v.spec):'')+(v.size?' · '+esc(v.size):'')+'</div></td>' +
+        '<td><input class="num bm-in" data-i="'+i+'" data-f="qtyPer" value="'+esc(l.qtyPer||'')+'"></td>' +
+        '<td class="hint">'+esc(v.uom||'')+'</td>' +
+        '<td><input class="num bm-in" data-i="'+i+'" data-f="scrapPct" value="'+esc(l.scrapPct||'')+'"></td>' +
+        '<td class="r">'+C.qty(gross)+'</td>' +
+        '<td class="r">'+(rate?C.rate(rate):'<span class="hint bad">no rate</span>')+'</td>' +
+        '<td class="r"><b>'+(rate?C.rate(cost):'—')+'</b></td>' +
+        '<td><button class="btn del bm-del" data-i="'+i+'">Remove</button></td></tr>';
+    }).join('');
+
+    host.innerHTML = '<div class="scroll-x"><table class="t"><thead><tr><th style="min-width:220px;">Material</th>' +
+      '<th>Qty per piece</th><th>Unit</th><th>Scrap %</th><th class="r">Gross per piece</th>' +
+      '<th class="r">Rate</th><th class="r">Cost per piece</th><th></th></tr></thead><tbody>' +
+      rows + '</tbody><tfoot><tr><th colspan="6" class="r">Material cost per piece</th>' +
+      '<th class="r">' + C.rate(total) + '</th><th></th></tr></tfoot></table></div>' +
+      (noRate ? '<div class="note" style="margin-top:9px;">' + noRate + ' material(s) carry no standard ' +
+        'rate on the master, so the cost above is short by whatever they are worth. It is shown as it ' +
+        'stands rather than quietly treated as free.</div>' : '');
+
+    host.querySelectorAll('.bm-mat').forEach(function(sel){
+      sel.addEventListener('change', function(){
+        bomLines[+sel.dataset.i].materialId = sel.value; drawBom(); });
+    });
+    host.querySelectorAll('.bm-in').forEach(function(inp){
+      inp.addEventListener('change', function(){
+        bomLines[+inp.dataset.i][inp.dataset.f] = C.num(inp.value); drawBom(); });
+    });
+    host.querySelectorAll('.bm-del').forEach(function(b){
+      b.addEventListener('click', function(){ bomLines.splice(+b.dataset.i, 1); drawBom(); });
+    });
+  }
+
+  function addBomLine(){
+    if (!document.getElementById('bm-part').value) { toast('Choose a part first.'); return; }
+    if (!bomMats.length) { toast('Add materials to the master first.'); return; }
+    bomLines.push({ materialId: bomMats[0].doc_id, qtyPer: 1, scrapPct: 0 });
+    drawBom();
+  }
+
+  async function saveBom(){
+    var msg = document.getElementById('bm-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var pid = document.getElementById('bm-part').value;
+    if (!pid) return say('Choose a part.');
+    if (!bomLines.length) return say('A bill with no lines is not a bill. Add at least one material.');
+
+    var bad = bomLines.filter(function(l){ return C.num(l.qtyPer) <= 0; });
+    if (bad.length) return say('Every line needs a quantity per piece above zero — a zero line ' +
+      'consumes nothing and would understate the stock this part uses.');
+    /* the same material twice would be netted off twice against stock */
+    var seen = {}, dup = null;
+    bomLines.forEach(function(l){ if (seen[l.materialId]) dup = l.materialId; seen[l.materialId] = 1; });
+    if (dup) {
+      var m = matById(dup);
+      return say('<b>' + esc(m ? (m.data||{}).description : 'That material') + '</b> is on the bill ' +
+        'twice. Add the quantities together on one line, or stock will be netted off twice for it.');
+    }
+
+    var p = allParts.filter(function(x){ return x.part_id === pid; })[0] || {};
+    var btn = document.getElementById('bm-save'); btn.disabled = true;
+    try {
+      var res = await C.idms.saveDoc({ docId: bomDoc ? bomDoc.doc_id : '', kind:'bom', partId: pid,
+        docNo: (bomDoc && bomDoc.doc_no) || await C.docNumber('bom'), status:'Active',
+        data:{ partId:pid, partNo:p.part_no||'', partName:p.part_name||'', lines:bomLines } },
+        bomDoc ? 'bill of materials updated' : 'bill of materials created');
+      if (!bomDoc) bomDoc = { doc_id: res.docId, doc_no:'', data:{} };
+      bomDoc.data = { partId:pid, lines:bomLines };
+      say('Saved. Stock will net this off against production from now on.', true);
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+
+  function printBom(){
+    if (!bomLines.length) { toast('Nothing to print.'); return; }
+    var p = allParts.filter(function(x){ return x.part_id === document.getElementById('bm-part').value; })[0] || {};
+    var total = 0;
+    var rows = bomLines.map(function(l){
+      var m = matById(l.materialId), v = m ? (m.data||{}) : {};
+      var gross = C.num(l.qtyPer) * (1 + C.num(l.scrapPct)/100), cost = gross * C.num(v.rate);
+      total += cost;
+      return [v.code||'—', v.description||'—', v.spec||'—', C.qty(l.qtyPer), v.uom||'',
+              C.num(l.scrapPct)+'%', C.qty(gross), v.rate?C.rate(v.rate):'no rate',
+              v.rate?C.rate(cost):'—'];
+    });
+    C.openReport({ title:'Bill of Materials — ' + (p.part_no||''), landscape:true, sections:[
+      { type:'pairs', title:'Part', rows:[['Part number', esc(p.part_no||'')],
+        ['Part name', esc(p.part_name||'')], ['Material cost per piece', C.rate(total)]] },
+      { type:'table', title:'Materials', dense:true,
+        columns:[{label:'Code'},{label:'Material'},{label:'Grade'},{label:'Qty per piece',align:'r'},
+                 {label:'Unit'},{label:'Scrap'},{label:'Gross',align:'r'},{label:'Rate',align:'r'},
+                 {label:'Cost',align:'r'}],
+        rows: rows, note:'Rates are the standard rates on the material master at the moment of printing.' } ] });
+  }
+
+  /* ================= RAW MATERIAL STOCK =================
+     Everything here is worked out, not typed. Two decisions inside it are worth
+     knowing because they change the number:
+
+     1. Material counts as stock when it is ACCEPTED at inward inspection, not
+        when the lorry arrives. A receipt still waiting for inspection is shown
+        in its own column — it is on site but it is not yours to use.
+     2. Material is consumed at the FIRST operation of the routing only. Booking
+        production against four operations does not consume the bar four times;
+        that mistake would quadruple consumption and show stock going negative
+        by the end of the first week. */
+  var stockRows = [], stockUnmatched = [];
+
+  async function loadStock(){
+    if (!document.getElementById('st-date').value)
+      document.getElementById('st-date').value = new Date().toISOString().slice(0,10);
+    await runStock();
+  }
+
+  async function runStock(){
+    var host = document.getElementById('st-body');
+    host.innerHTML = '<div class="card"><div class="hint">Reading receipts, inspections and ' +
+      'production…</div></div>';
+    var asOn = document.getElementById('st-date').value || new Date().toISOString().slice(0,10);
+    var upto = function(d){ return d && String(d).slice(0,10) <= asOn; };
+
+    var mats = [], grns = [], boms = [], prod = [], procs = [];
+    try { mats  = await C.idms.docs('rawmat'); } catch(e){}
+    try { grns  = await C.idms.docs('grn'); } catch(e){}
+    try { boms  = await C.idms.docs('bom'); } catch(e){}
+    try { prod  = await C.idms.docs('production'); } catch(e){}
+    try { procs = await C.idms.docs('process'); } catch(e){}
+
+    if (!mats.length){
+      host.innerHTML = '<div class="card"><div class="empty"><b>No materials on the master</b>' +
+        'Stock is kept per material, so the master comes first. ' +
+        '<a data-goto="entry_rawmat" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">' +
+        'Open the material master →</a></div></div>';
+      host.querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
+      return;
+    }
+
+    /* the first operation of each part — the only one that eats material */
+    var firstOp = {};
+    procs.forEach(function(p){
+      var v = p.data||{}, pid = p.part_id || v.partId;
+      if (!pid) return;
+      var n = C.num(v.opNo);
+      if (firstOp[pid] == null || n < firstOp[pid]) firstOp[pid] = n;
+    });
+
+    var byDesc = {};
+    mats.forEach(function(m){
+      byDesc[String((m.data||{}).description||'').trim().toLowerCase()] = m;
+    });
+
+    var rec = {}, pending = {}, cons = {}, lastIn = {};
+    stockUnmatched = [];
+    var unmatched = {};
+    grns.forEach(function(g){
+      var v = g.data || {};
+      if (!upto(v.date)) return;
+      var key = String(v.description||'').trim().toLowerCase();
+      var m = byDesc[key];
+      if (!m){ if (key) unmatched[v.description] = (unmatched[v.description]||0) + 1; return; }
+      var id = m.doc_id;
+      /* accepted at inspection is what enters stock; an uninspected receipt waits */
+      if (v.inspected || v.accepted != null){
+        var acc = v.accepted != null ? C.num(v.accepted) : C.num(v.qty);
+        rec[id] = (rec[id]||0) + acc;
+        if (!lastIn[id] || v.date > lastIn[id]) lastIn[id] = v.date;
+      } else {
+        pending[id] = (pending[id]||0) + C.num(v.qty);
+      }
+    });
+    stockUnmatched = Object.keys(unmatched).map(function(d){ return { desc:d, n:unmatched[d] }; });
+
+    var bomOf = {};
+    boms.forEach(function(b){ bomOf[b.part_id || (b.data||{}).partId] = (b.data||{}).lines || []; });
+    var noBom = {};
+    prod.forEach(function(pr){
+      var v = pr.data || {};
+      if (!upto(v.date)) return;
+      var pid = pr.part_id || v.partId;
+      if (!pid) return;
+      var lines = bomOf[pid];
+      if (!lines || !lines.length){ noBom[v.partName || pid] = 1; return; }
+      if (firstOp[pid] != null && C.num(v.opNo) !== firstOp[pid]) return;   // see note above
+      var made = C.num(v.made);
+      lines.forEach(function(l){
+        var q = made * C.num(l.qtyPer) * (1 + C.num(l.scrapPct)/100);
+        cons[l.materialId] = (cons[l.materialId]||0) + q;
+      });
+    });
+
+    stockRows = mats.map(function(m){
+      var v = m.data||{}, id = m.doc_id;
+      var open = C.num(v.opening), got = rec[id]||0, used = cons[id]||0;
+      return { id:id, code:m.doc_no||v.code||'', desc:v.description||'', spec:v.spec||'',
+               size:v.size||'', uom:v.uom||'', rate:C.num(v.rate), reorder:C.num(v.reorder),
+               opening:open, openingOn:v.openingOn||'', received:got, pending:pending[id]||0,
+               consumed:used, balance:open + got - used, lastIn:lastIn[id]||'' };
+    });
+
+    drawStock(asOn, Object.keys(noBom));
+  }
+
+  function drawStock(asOn, noBom){
+    var host = document.getElementById('st-body');
+    var filter = document.getElementById('st-filter').value;
+    var rows = stockRows.filter(function(r){
+      if (filter === 'below') return r.reorder > 0 && r.balance <= r.reorder;
+      if (filter === 'moving') return r.received || r.consumed || r.pending;
+      return true;
+    });
+
+    var value = stockRows.reduce(function(t,r){ return t + Math.max(0, r.balance) * r.rate; }, 0);
+    var below = stockRows.filter(function(r){ return r.reorder > 0 && r.balance <= r.reorder; });
+    var negative = stockRows.filter(function(r){ return r.balance < 0; });
+
+    var head = '<div class="card"><h4>Stock as on ' + C.fmtDate(asOn) + '</h4>' +
+      '<div class="stat" style="margin-top:10px;">' +
+      [['Materials', stockRows.length], ['Stock value', C.rate(value)],
+       ['At or below reorder', below.length], ['Showing negative', negative.length]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
+      '</div>' +
+      (negative.length ? '<div class="note bad" style="margin-top:10px;"><b>' + negative.length +
+        ' material(s) work out negative.</b> That is not a stock error, it is a record gap: either ' +
+        'the opening balance was never entered, a receipt was never inspected, or production was ' +
+        'booked against a bill that overstates what a piece uses. It is shown rather than clamped ' +
+        'to zero, because a clamped figure hides the gap.</div>' : '') +
+      (noBom.length ? '<div class="note" style="margin-top:10px;">Production was booked for ' +
+        noBom.length + ' part(s) with no bill of materials, so nothing was netted off for them: ' +
+        esc(noBom.slice(0,6).join(', ')) + (noBom.length>6?' and others':'') + '.</div>' : '') +
+      (stockUnmatched.length ? '<div class="note" style="margin-top:10px;"><b>' + stockUnmatched.length +
+        ' description(s) on goods receipts match nothing on the material master</b>, so those receipts ' +
+        'are not counted anywhere: ' +
+        esc(stockUnmatched.slice(0,5).map(function(u){ return u.desc; }).join(', ')) +
+        '. Adopt them on the material master.</div>' : '') +
+      '</div>';
+
+    var body = rows.length
+      ? '<div class="card"><div class="scroll-x"><table class="t"><thead><tr>' +
+        '<th>Code</th><th>Material</th><th>Unit</th><th class="r">Opening</th>' +
+        '<th class="r">Accepted in</th><th class="r">Awaiting inspection</th>' +
+        '<th class="r">Consumed</th><th class="r">Balance</th><th class="r">Reorder at</th>' +
+        '<th class="r">Value</th></tr></thead><tbody>' +
+        rows.map(function(r){
+          var low = r.reorder > 0 && r.balance <= r.reorder;
+          return '<tr><td><b>'+esc(r.code)+'</b></td>' +
+            '<td>'+esc(r.desc)+'<div class="hint">'+esc(r.spec)+(r.size?' · '+esc(r.size):'')+'</div></td>' +
+            '<td class="hint">'+esc(r.uom)+'</td>' +
+            '<td class="r"><input class="num st-open" data-id="'+esc(r.id)+'" value="'+(r.opening||'')+'" style="width:88px;"></td>' +
+            '<td class="r">'+C.qty(r.received)+'</td>' +
+            '<td class="r'+(r.pending?' ':'')+'">'+(r.pending?C.qty(r.pending):'—')+'</td>' +
+            '<td class="r">'+C.qty(r.consumed)+'</td>' +
+            '<td class="r'+(r.balance<0?' bad':(low?' bad':''))+'"><b>'+C.qty(r.balance)+'</b>' +
+              (low&&r.balance>=0?'<div class="hint">at or below reorder</div>':'')+'</td>' +
+            '<td class="r hint">'+(r.reorder?C.qty(r.reorder):'—')+'</td>' +
+            '<td class="r">'+(r.rate?C.rate(Math.max(0,r.balance)*r.rate):'—')+'</td></tr>';
+        }).join('') + '</tbody></table></div>' +
+        '<div class="hint" style="margin-top:9px;">The opening balance is the one figure entered here. ' +
+        'Change it and press Enter — everything else is recomputed from the records.</div></div>'
+      : '<div class="card"><div class="empty"><b>Nothing to show</b>Nothing matches that filter.</div></div>';
+
+    host.innerHTML = head + body;
+    host.querySelectorAll('.st-open').forEach(function(inp){
+      inp.addEventListener('change', function(){ saveOpening(inp.dataset.id, inp.value); });
+    });
+  }
+
+  async function saveOpening(matId, val){
+    var msg = document.getElementById('st-msg');
+    try {
+      var mats = await C.idms.docs('rawmat');
+      var m = mats.filter(function(x){ return x.doc_id === matId; })[0];
+      if (!m) return;
+      var v = Object.assign({}, m.data||{});
+      v.opening = C.num(val);
+      v.openingOn = document.getElementById('st-date').value;
+      await C.idms.saveDoc({ docId: matId, kind:'rawmat', docNo: m.doc_no, status: m.status||'Active',
+        data: v }, 'opening stock set for ' + (v.description||''));
+      msg.style.display=''; msg.className='note good';
+      msg.textContent = 'Opening balance saved for ' + (v.description||'') + '.';
+      await runStock();
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent = e.message; }
+  }
+
+  function printStock(){
+    if (!stockRows.length) { toast('Nothing to print.'); return; }
+    var asOn = document.getElementById('st-date').value;
+    C.openReport({ title:'Raw Material Stock', landscape:true, sections:[
+      { type:'table', title:'Stock as on ' + C.fmtDate(asOn), dense:true,
+        columns:[{label:'Code'},{label:'Material'},{label:'Unit'},{label:'Opening',align:'r'},
+                 {label:'Accepted in',align:'r'},{label:'Awaiting inspection',align:'r'},
+                 {label:'Consumed',align:'r'},{label:'Balance',align:'r'},{label:'Value',align:'r'}],
+        rows: stockRows.map(function(r){
+          return [r.code, r.desc, r.uom, C.qty(r.opening), C.qty(r.received),
+                  r.pending?C.qty(r.pending):'—', C.qty(r.consumed), C.qty(r.balance),
+                  r.rate?C.rate(Math.max(0,r.balance)*r.rate):'—'];
+        }),
+        note:'Balance = opening + accepted receipts − material consumed by production against each ' +
+             'part\'s bill of materials, counted at the first operation only. Receipts awaiting ' +
+             'inward inspection are listed but not counted as stock.' } ] });
+  }
+
+  /* ================= SPC CONTROL CHARTS =================
+     Built from the self-inspection readings. Each check is one piece, so the
+     subgroup is one and the chart is individuals and moving range. The constants
+     are the standard ones for n=2 moving ranges: d2 = 1.128, so sigma-hat =
+     MRbar/1.128, and the individuals limits are Xbar +/- 2.66*MRbar.
+
+     Capability is only shown once there are enough readings to mean anything.
+     A Cpk from six points is a number that will be quoted at a customer and it
+     will not be true. */
+  var ccProcs = [], ccSheets = [], ccResult = null;
+
+  async function loadCc(){
+    await fetchParts();
+    var sel = document.getElementById('cc-part');
+    sel.innerHTML = partOptions(sel.value);
+    if (!document.getElementById('cc-to').value){
+      var to = new Date(), from = new Date(); from.setMonth(from.getMonth() - 3);
+      document.getElementById('cc-to').value = to.toISOString().slice(0,10);
+      document.getElementById('cc-from').value = from.toISOString().slice(0,10);
+    }
+    await ccFillOps();
+  }
+  async function ccFillOps(){
+    var pid = document.getElementById('cc-part').value;
+    var op = document.getElementById('cc-op');
+    if (!pid){ op.innerHTML = '<option value="">— choose a part first —</option>';
+               document.getElementById('cc-char').innerHTML = ''; return; }
+    try { ccProcs = await C.idms.docs('process', pid); } catch(e){ ccProcs = []; }
+    ccProcs.sort(function(a,b){ return C.num((a.data||{}).opNo) - C.num((b.data||{}).opNo); });
+    op.innerHTML = '<option value="">— every operation —</option>' + ccProcs.map(function(p){
+      var v = p.data||{};
+      return '<option value="'+esc(p.doc_id)+'">Op '+esc(v.opNo)+' — '+esc(v.name||'')+'</option>';
+    }).join('');
+    await ccFillChars();
+  }
+  async function ccFillChars(){
+    var pid = document.getElementById('cc-part').value;
+    if (!pid) return;
+    try { ccSheets = await C.idms.docs('self_insp', pid); } catch(e){ ccSheets = []; }
+    var opId = document.getElementById('cc-op').value;
+    var names = {}, sel = document.getElementById('cc-char');
+    ccSheets.forEach(function(s){
+      var v = s.data||{};
+      if (opId && v.processId !== opId) return;
+      (v.chars||[]).forEach(function(c){
+        var key = (c.balloon||'') + '|' + (c.description||'');
+        names[key] = c;
+      });
+    });
+    var keys = Object.keys(names);
+    sel.innerHTML = keys.length
+      ? keys.map(function(k){
+          var c = names[k];
+          return '<option value="'+esc(k)+'">'+esc(c.balloon||'')+' '+esc(c.description||'')+'</option>';
+        }).join('')
+      : '<option value="">— no readings recorded yet —</option>';
+  }
+
+  function ccGather(){
+    var opId = document.getElementById('cc-op').value;
+    var key = document.getElementById('cc-char').value;
+    var from = document.getElementById('cc-from').value, to = document.getElementById('cc-to').value;
+    var pts = [], dim = null;
+    ccSheets.forEach(function(s){
+      var v = s.data||{};
+      if (opId && v.processId !== opId) return;
+      if (from && String(v.date||'') < from) return;
+      if (to && String(v.date||'') > to) return;
+      var idx = -1;
+      (v.chars||[]).forEach(function(c, i){
+        if (((c.balloon||'') + '|' + (c.description||'')) === key){ idx = i; dim = dim || c; }
+      });
+      if (idx < 0) return;
+      (v.rounds||[]).forEach(function(r){
+        var raw = (r.readings||[])[idx];
+        if (raw === '' || raw == null) return;
+        pts.push({ v: C.num(raw), on: v.date, at: r.at || '', shift: v.shift||'',
+                   operator: v.operator||'', machine: v.machine||'' });
+      });
+    });
+    pts.sort(function(a,b){ return (a.on + ' ' + a.at) < (b.on + ' ' + b.at) ? -1 : 1; });
+    return { pts: pts, dim: dim };
+  }
+
+  function ccChart(title, values, centre, ucl, lcl, opts){
+    opts = opts || {};
+    var W = 700, H = 220, PL = 62, PR = 14, PT = 16, PB = 30;
+    var all = values.concat([centre, ucl, lcl]).filter(function(x){ return x != null && isFinite(x); });
+    if (opts.usl != null) all.push(opts.usl);
+    if (opts.lsl != null) all.push(opts.lsl);
+    var min = Math.min.apply(null, all), max = Math.max.apply(null, all);
+    var pad = (max - min) * 0.12 || Math.abs(max || 1) * 0.05 || 1;
+    min -= pad; max += pad;
+    var X = function(i){ return PL + (W - PL - PR) * (values.length < 2 ? 0.5 : i / (values.length - 1)); };
+    var Y = function(v){ return H - PB - (H - PT - PB) * ((v - min) / (max - min || 1)); };
+    var s = '';
+    function line(v, colour, dash, label){
+      if (v == null || !isFinite(v)) return;
+      s += '<line x1="'+PL+'" y1="'+Y(v).toFixed(1)+'" x2="'+(W-PR)+'" y2="'+Y(v).toFixed(1)+
+        '" stroke="'+colour+'"'+(dash?' stroke-dasharray="'+dash+'"':'')+' stroke-width="1.3"/>' +
+        '<text x="'+(PL-6)+'" y="'+(Y(v)+3.5).toFixed(1)+'" text-anchor="end" font-size="9.5" ' +
+        'fill="'+colour+'" font-family="monospace">'+esc(label)+'</text>';
+    }
+    if (opts.usl != null) line(opts.usl, '#8A6D1F', '2 3', 'USL');
+    if (opts.lsl != null) line(opts.lsl, '#8A6D1F', '2 3', 'LSL');
+    line(ucl, '#B03A2E', '5 4', 'UCL');
+    line(lcl, '#B03A2E', '5 4', 'LCL');
+    line(centre, '#1F9D6B', '', opts.centreLabel || 'CL');
+
+    var poly = values.map(function(v,i){ return X(i).toFixed(1)+','+Y(v).toFixed(1); }).join(' ');
+    s += '<polyline points="'+poly+'" fill="none" stroke="#0B2A5B" stroke-width="1.7"/>';
+    values.forEach(function(v,i){
+      var out = (ucl != null && v > ucl) || (lcl != null && v < lcl);
+      s += '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="'+(out?4.4:3)+'" fill="'+
+        (out ? '#B03A2E' : '#1E88C7')+'"><title>'+esc('#'+(i+1)+': '+v)+'</title></circle>';
+    });
+    return '<div class="kpi-src" style="margin-bottom:2px;"><b>'+esc(title)+'</b></div>' +
+      '<svg viewBox="0 0 '+W+' '+H+'" width="100%" class="kpi-svg" xmlns="http://www.w3.org/2000/svg">'+s+'</svg>';
+  }
+
+  function runCc(){
+    var msg = document.getElementById('cc-msg'), host = document.getElementById('cc-body');
+    msg.style.display = 'none';
+    var g = ccGather(), pts = g.pts, dim = g.dim;
+
+    if (!pts.length){
+      host.innerHTML = '<div class="card"><div class="empty"><b>No readings in that range</b>' +
+        'Control charts are drawn from the self-inspection sheets. ' +
+        '<a data-goto="report_self_inspection" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">' +
+        'Open self inspection →</a></div></div>';
+      host.querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
+      ccResult = null;
+      return;
+    }
+    if (pts.length < 2){
+      host.innerHTML = '<div class="card"><div class="note bad">One reading cannot make a chart — ' +
+        'a moving range needs at least two.</div></div>';
+      ccResult = null;
+      return;
+    }
+
+    var vals = pts.map(function(p){ return p.v; });
+    var xbar = vals.reduce(function(a,b){ return a+b; }, 0) / vals.length;
+    var mrs = [];
+    for (var i = 1; i < vals.length; i++) mrs.push(Math.abs(vals[i] - vals[i-1]));
+    var mrbar = mrs.reduce(function(a,b){ return a+b; }, 0) / mrs.length;
+    var sigma = mrbar / 1.128;
+    var ucl = xbar + 2.66 * mrbar, lcl = xbar - 2.66 * mrbar;
+    var uclMr = 3.267 * mrbar;
+
+    var l = dim ? limitsOf(dim) : { hi:null, lo:null };
+    var cap = null;
+    if (sigma > 0 && (l.hi != null || l.lo != null)){
+      cap = {
+        cp: (l.hi != null && l.lo != null) ? (l.hi - l.lo) / (6 * sigma) : null,
+        cpu: l.hi != null ? (l.hi - xbar) / (3 * sigma) : null,
+        cpl: l.lo != null ? (xbar - l.lo) / (3 * sigma) : null
+      };
+      cap.cpk = Math.min.apply(null, [cap.cpu, cap.cpl].filter(function(x){ return x != null; }));
+    }
+
+    /* the two rules worth acting on: a point outside the limits, and a run on
+       one side of the centre, which is a shift the limits will not catch */
+    var beyond = [];
+    vals.forEach(function(v,i){ if (v > ucl || v < lcl) beyond.push(i+1); });
+    var runs = [], side = 0, len = 0, start = 0;
+    vals.forEach(function(v,i){
+      var s2 = v > xbar ? 1 : (v < xbar ? -1 : 0);
+      if (s2 !== 0 && s2 === side) { len++; }
+      else { if (len >= 7) runs.push([start+1, start+len]); side = s2; len = s2 === 0 ? 0 : 1; start = i; }
+      if (i === vals.length - 1 && len >= 7) runs.push([start+1, start+len]);
+    });
+    var outSpec = [];
+    vals.forEach(function(v,i){
+      if ((l.hi != null && v > l.hi) || (l.lo != null && v < l.lo)) outSpec.push(i+1);
+    });
+
+    ccResult = { pts:pts, dim:dim, xbar:xbar, mrbar:mrbar, sigma:sigma, ucl:ucl, lcl:lcl,
+                 uclMr:uclMr, cap:cap, beyond:beyond, runs:runs, outSpec:outSpec, l:l };
+
+    var name = dim ? ((dim.balloon||'') + ' ' + (dim.description||'')) : 'characteristic';
+    var stat = [['Readings', vals.length], ['Average', C.qty(Math.round(xbar*1000)/1000)],
+      ['Sigma (from MR)', C.qty(Math.round(sigma*1000)/1000)],
+      ['Beyond limits', beyond.length]];
+    if (cap) stat.push(['Cpk', vals.length >= 20 ? (Math.round(cap.cpk*100)/100) : 'needs 20+']);
+
+    var warn = '';
+    if (beyond.length) warn += '<div class="note bad"><b>' + beyond.length + ' point(s) fall outside ' +
+      'the control limits</b> (reading ' + beyond.slice(0,8).join(', ') + '). The process was not ' +
+      'behaving the same way at those points — that is a cause to find, not a figure to average away.</div>';
+    if (runs.length) warn += '<div class="note bad" style="margin-top:8px;"><b>A run of seven or more ' +
+      'readings on one side of the average</b> (' + runs.map(function(r){ return r[0]+'–'+r[1]; }).join(', ') +
+      '). The process has shifted even though no single point broke a limit.</div>';
+    if (outSpec.length) warn += '<div class="note bad" style="margin-top:8px;"><b>' + outSpec.length +
+      ' reading(s) are outside the drawing tolerance</b>, not just the control limits. Those pieces ' +
+      'were out of specification when they were measured.</div>';
+    if (!warn) warn = '<div class="note good">Nothing outside the control limits, and no run of seven ' +
+      'on one side. On this evidence the process is behaving consistently.</div>';
+
+    var capHtml = '';
+    if (!cap){
+      capHtml = '<div class="note" style="margin-top:10px;">No capability figure: this characteristic ' +
+        'carries no tolerance on the dimensions master, so there is nothing to compare the spread to.</div>';
+    } else if (vals.length < 20){
+      capHtml = '<div class="note" style="margin-top:10px;"><b>Capability is not shown.</b> There are ' +
+        vals.length + ' readings; a Cp or Cpk from fewer than 20 is unstable, and it is the number that ' +
+        'ends up quoted to a customer. Keep recording and it will appear.</div>';
+    } else {
+      capHtml = '<div class="stat" style="margin-top:12px;">' +
+        [['Cp', cap.cp != null ? Math.round(cap.cp*100)/100 : '—'],
+         ['Cpk', Math.round(cap.cpk*100)/100],
+         ['Upper tolerance', l.hi != null ? C.qty(l.hi) : '—'],
+         ['Lower tolerance', l.lo != null ? C.qty(l.lo) : '—']]
+        .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
+        '</div>' + (cap.cpk < 1.33
+          ? '<div class="note bad" style="margin-top:8px;">Cpk is below 1.33. The process fits inside ' +
+            'the tolerance with little to spare — ordinary variation will produce rejects.</div>' : '');
+    }
+
+    var mrVals = mrs;
+    host.innerHTML = '<div class="card"><h4>' + esc(name) + '</h4>' +
+      '<div class="kpi-src">' + vals.length + ' readings from the self-inspection sheets' +
+      (dim && dim.gauge ? ', measured with ' + esc(dim.gauge) : '') + '.</div>' +
+      '<div class="stat" style="margin-bottom:12px;">' +
+      stat.map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
+      '</div>' + warn + capHtml + '</div>' +
+      '<div class="card">' +
+      ccChart('Individuals (X) — every reading, in the order it was taken', vals, xbar, ucl, lcl,
+              { usl: l.hi, lsl: l.lo, centreLabel: 'X̄' }) +
+      '</div><div class="card">' +
+      ccChart('Moving range (MR) — how much each reading moved from the one before',
+              mrVals, mrbar, uclMr, 0, { centreLabel: 'MR̄' }) +
+      '</div>';
+  }
+
+  function printCc(){
+    if (!ccResult) { toast('Draw a chart first.'); return; }
+    var r = ccResult, p = allParts.filter(function(x){
+      return x.part_id === document.getElementById('cc-part').value; })[0] || {};
+    var name = r.dim ? ((r.dim.balloon||'') + ' ' + (r.dim.description||'')) : '';
+    var rows = [['Part', esc(p.part_no||'')], ['Characteristic', esc(name)],
+      ['Readings', r.pts.length], ['Average', C.qty(Math.round(r.xbar*1000)/1000)],
+      ['Average moving range', C.qty(Math.round(r.mrbar*1000)/1000)],
+      ['Sigma estimated from MR', C.qty(Math.round(r.sigma*1000)/1000)],
+      ['Upper control limit', C.qty(Math.round(r.ucl*1000)/1000)],
+      ['Lower control limit', C.qty(Math.round(r.lcl*1000)/1000)],
+      ['Points beyond the limits', r.beyond.length],
+      ['Runs of seven on one side', r.runs.length],
+      ['Readings outside tolerance', r.outSpec.length]];
+    if (r.cap && r.pts.length >= 20){
+      rows.push(['Cp', r.cap.cp != null ? Math.round(r.cap.cp*100)/100 : '—']);
+      rows.push(['Cpk', Math.round(r.cap.cpk*100)/100]);
+    } else if (r.cap){
+      rows.push(['Capability', 'not reported — fewer than 20 readings']);
+    }
+    C.openReport({ title:'Control Chart — ' + (p.part_no||'') + ' · ' + name, landscape:true, sections:[
+      { type:'pairs', title:'Summary', rows: rows },
+      { type:'html', title:'Individuals and moving range',
+        html: '<div style="width:100%;">' +
+          ccChart('Individuals (X)', r.pts.map(function(x){ return x.v; }), r.xbar, r.ucl, r.lcl,
+                  { usl:r.l.hi, lsl:r.l.lo, centreLabel:'X̄' }) + '</div>' },
+      { type:'table', title:'Readings', dense:true,
+        columns:[{label:'#',align:'r'},{label:'Date'},{label:'Time'},{label:'Shift'},
+                 {label:'Operator'},{label:'Machine'},{label:'Reading',align:'r'}],
+        rows: r.pts.map(function(x,i){
+          return [i+1, C.fmtDate(x.on), x.at||'—', x.shift||'—', x.operator||'—', x.machine||'—', x.v]; }) },
+      { type:'text', title:'How the limits were worked out',
+        body:'Each self-inspection check records one piece, so the subgroup is one and this is an ' +
+             'individuals and moving range chart. Sigma is estimated as the average moving range ' +
+             'divided by 1.128, and the individuals limits are the average plus and minus 2.66 times ' +
+             'the average moving range. Control limits describe what this process does; the drawing ' +
+             'tolerance describes what the customer asked for. They are different things and both ' +
+             'are drawn.' } ] });
   }
 
   /* ================= SUPPLIER MASTER =================
@@ -10488,6 +11202,22 @@
     document.getElementById('ab-file').value = '';
     bannerPreview();
   });
+
+  document.getElementById('bm-part').addEventListener('change', openBom);
+  document.getElementById('bm-add').addEventListener('click', addBomLine);
+  document.getElementById('bm-save').addEventListener('click', saveBom);
+  document.getElementById('bm-print').addEventListener('click', printBom);
+
+  document.getElementById('st-run').addEventListener('click', runStock);
+  document.getElementById('st-date').addEventListener('change', runStock);
+  document.getElementById('st-filter').addEventListener('change', function(){
+    drawStock(document.getElementById('st-date').value, []); });
+  document.getElementById('st-print').addEventListener('click', printStock);
+
+  document.getElementById('cc-part').addEventListener('change', ccFillOps);
+  document.getElementById('cc-op').addEventListener('change', ccFillChars);
+  document.getElementById('cc-run').addEventListener('click', runCc);
+  document.getElementById('cc-print').addEventListener('click', printCc);
 
   document.getElementById('su-save').addEventListener('click', saveSupplier);
   document.getElementById('su-clear').addEventListener('click', clearSupplierForm);

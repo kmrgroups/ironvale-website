@@ -96,6 +96,24 @@
 .gate .powered a{color:var(--sky-deep);text-decoration:none;font-weight:600;}
 .gate .powered a:hover{text-decoration:underline;}
 
+/* ---- daily work management board ---- */
+.dwm-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));}
+.dwm-col{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--white);overflow:hidden;}
+.dwm-col > header{padding:9px 12px;display:flex;align-items:center;justify-content:space-between;
+  color:#fff;background:var(--navy);}
+.dwm-col > header b{font-family:var(--disp);font-size:13px;}
+.dwm-col > header .n{font-family:var(--mono);font-size:11px;opacity:.85;}
+.dwm-col.ok > header{background:#1F6F4A;}
+.dwm-col.bad > header{background:#8A2F22;}
+.dwm-item{border-top:1px solid var(--line);padding:9px 12px;display:flex;gap:9px;
+  align-items:flex-start;justify-content:space-between;}
+.dwm-item b{font-size:12.5px;display:block;}
+.dwm-item .sub{font-size:11px;color:var(--ink-soft);margin-top:2px;line-height:1.45;}
+.dwm-item .fig{font-family:var(--mono);font-size:15px;font-weight:700;white-space:nowrap;}
+.dwm-item .fig.bad{color:#8A2F22;}
+.dwm-item .fig.ok{color:#1F6F4A;}
+.dwm-none{padding:11px 12px;font-size:11.5px;color:var(--ink-soft);}
+
 /* ---- organisation chart ---- */
 .org-co{text-align:center;margin-bottom:18px;}
 .org-co b{font-family:var(--disp);font-size:17px;}
@@ -360,6 +378,62 @@
         <div class="note" id="ap-msg" style="display:none;"></div>
       </div>
       <div id="ap-body"></div>
+    </div>
+
+    <!-- ============ Daily work management ============ -->
+    <div class="panel" data-panel="dwm">
+      <div class="card">
+        <h4>Daily Work Management</h4>
+        <div class="hint" style="margin-bottom:10px;">The morning board, in the order it is walked:
+          safety, quality, delivery, cost, people. <b>Every figure on it is read from what was already
+          recorded yesterday</b> — nobody prepares this, and nobody can prepare it differently. Where
+          something needs doing, raise an action and it goes on the task list with the reason attached.</div>
+        <div class="row four">
+          <div><label>For the day</label><input type="date" id="dw-date"></div>
+          <div style="align-self:end;"><button class="btn gold" id="dw-run">Read the day</button></div>
+          <div style="align-self:end;"><button class="btn" id="dw-tasks">Open the task list</button></div>
+          <div style="align-self:end;"><button class="btn" id="dw-print">Print the board</button></div>
+        </div>
+        <div class="note" id="dw-msg" style="display:none;"></div>
+      </div>
+      <div id="dw-body"></div>
+    </div>
+
+    <!-- ============ Task list ============ -->
+    <div class="panel" data-panel="task_list">
+      <div class="card">
+        <h4>Task List</h4>
+        <div class="hint" style="margin-bottom:10px;">Actions raised at the morning meeting and
+          anywhere else. Actions that already live on another screen — non-conformances, audit
+          findings — are <b>shown here but not copied here</b>: two records of one action get closed
+          at different times and one stays open forever.</div>
+        <div class="row four">
+          <div><label>What needs doing</label><input id="tk-title"></div>
+          <div><label>Owner</label><input id="tk-owner" list="tk-people"></div>
+          <datalist id="tk-people"></datalist>
+          <div><label>By when</label><input type="date" id="tk-due"></div>
+          <div><label>How urgent</label><select id="tk-pri">
+            <option>Normal</option><option>High</option><option>Stop the line</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Where it came from</label><input id="tk-src" placeholder="e.g. DWM 12 Sep — quality"></div>
+          <div style="align-self:end;"><button class="btn gold" id="tk-add">Raise the action</button></div>
+          <div><label>Show</label><select id="tk-filter">
+            <option value="open">Open</option>
+            <option value="overdue">Overdue</option>
+            <option value="all">Everything</option>
+            <option value="closed">Closed</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="tk-print">Print</button></div>
+        </div>
+        <div class="note" id="tk-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>Actions</h4><div id="tk-list"></div></div>
+      <div class="card">
+        <h4>Open elsewhere</h4>
+        <div class="hint" style="margin-bottom:10px;">These are not tasks on this list. They are open
+          on the screen that owns them, and they close there.</div>
+        <div id="tk-else"></div>
+      </div>
     </div>
 
     <!-- ============ User management ============ -->
@@ -2495,7 +2569,7 @@
       ['report_setup_approval','✅','Setup Approval',1],
       ['report_self_inspection','🔍','Self Inspection',1],
       ['entry_machine','⚙','Machine Addition',1],
-      ['dwm','📊','DWM — Daily Work Management'],['task_list','✅','Task List'],
+      ['dwm','📊','DWM — Daily Work Management',1],['task_list','✅','Task List',1],
       ['report_machine_checksheet','⚙','Machine Check Sheet',1],
       ['report_tool_history','🔧','Tool History Card',1]]],
     ['quality','🔬','Quality Assurance','Inspection, gauges and corrective action',[
@@ -2628,6 +2702,8 @@
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
+    if (s === 'dwm')                   loadDwm();
+    if (s === 'task_list')             loadTasks();
     if (s === 'users')                 loadUsers();
     if (s === 'report_tool_history')   loadTools();
     if (s === 'report_machine_checksheet') loadCheckSheet();
@@ -2661,6 +2737,454 @@
     if (s === 'kpi_entry')         loadKpiEntry();
     if (s === 'admin_banner')      loadBannerScreen();
     if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
+  }
+
+  /* ================= DAILY WORK MANAGEMENT =================
+     The morning board, walked in the order everybody already walks it: safety,
+     quality, delivery, cost, people. Every figure is read from what was recorded
+     yesterday — nobody prepares this board, which is the whole point. A board
+     somebody prepares is a board that shows what they want it to show, and the
+     meeting then argues about the numbers instead of the problems.
+
+     Where something needs doing, the action goes on the task list with the
+     reason attached rather than into a notebook. */
+  var dwmData = null, taskPrefill = null;
+
+  async function loadDwm(){
+    if (!document.getElementById('dw-date').value){
+      var d = new Date(); d.setDate(d.getDate() - 1);      // yesterday, the day being reviewed
+      document.getElementById('dw-date').value = d.toISOString().slice(0,10);
+    }
+    await runDwm();
+  }
+
+  async function runDwm(){
+    var host = document.getElementById('dw-body');
+    var day = document.getElementById('dw-date').value;
+    host.innerHTML = '<div class="card"><div class="hint">Reading the day…</div></div>';
+
+    var prod = [], ncrs = [], audits = [], sheets = [], tools = [], dcs = [], ords = [],
+        gauges = [], att = [];
+    try { prod   = await C.idms.docs('production'); } catch(e){}
+    try { ncrs   = await C.idms.docs('ncr'); } catch(e){}
+    try { audits = await C.idms.docs('audit'); } catch(e){}
+    try { sheets = await C.idms.docs('checksheet'); } catch(e){}
+    try { tools  = await C.idms.docs('tool'); } catch(e){}
+    try { dcs    = await C.idms.docs('dc'); } catch(e){}
+    try { ords   = await C.idms.docs('order'); } catch(e){}
+    try { gauges = await C.idms.docs('gauge'); } catch(e){}
+    try { att = (await C.api('/api/hr?what=attendance')).attendance || []; } catch(e){}
+
+    var today = new Date().toISOString().slice(0,10);
+    var onDay = function(d){ return String(d||'').slice(0,10) === day; };
+
+    /* ---- safety: the checks that failed ---- */
+    var failedChecks = [];
+    sheets.filter(function(s){ return onDay((s.data||{}).date); }).forEach(function(s){
+      var v = s.data||{};
+      (v.items||[]).forEach(function(i){
+        if (i.result === 'Not OK')
+          failedChecks.push({ machine:v.machineName||'', shift:v.shift||'', what:i.name,
+                              action:i.note||'' });
+      });
+    });
+    var unsigned = sheets.filter(function(s){
+      return onDay((s.data||{}).date) && s.status !== 'Signed off'; });
+
+    /* ---- quality ---- */
+    var made = 0, rejected = 0, downMins = 0, runMins = 0, totalMins = 0, earned = 0;
+    var byReason = {};
+    prod.filter(function(p){ return onDay((p.data||{}).date); }).forEach(function(p){
+      var v = p.data||{};
+      made += C.num(v.made); rejected += C.num(v.rejected);
+      downMins += C.num(v.downtime); totalMins += C.num(v.minutes);
+      runMins += C.num(v.runMinutes) || Math.max(0, C.num(v.minutes) - C.num(v.downtime));
+      earned += (C.num(v.made) * C.num(v.plannedCycle)) / 60;
+      if (C.num(v.rejected) > 0 && v.rejectReason)
+        byReason[v.rejectReason] = (byReason[v.rejectReason]||0) + C.num(v.rejected);
+    });
+    var openNc = ncrs.filter(function(n){ return !/closed/i.test(n.status||''); });
+    var overdueFindings = [];
+    audits.forEach(function(a){
+      var v = a.data||{};
+      (v.findings||[]).forEach(function(f){
+        if (!f.closedOn && f.dueOn && f.dueOn < today)
+          overdueFindings.push({ type:v.type, area:v.area, what:f.description, owner:f.owner||'',
+                                 due:f.dueOn });
+      });
+    });
+    var calDue = gauges.filter(function(g){
+      var v = g.data||{};
+      if (!v.lastCalibrated || !C.num(v.frequencyMonths)) return false;
+      var d = new Date(v.lastCalibrated);
+      d.setMonth(d.getMonth() + C.num(v.frequencyMonths));
+      return d.toISOString().slice(0,10) <= today;
+    });
+
+    /* ---- delivery ---- */
+    var despatched = 0, dcLines = 0;
+    dcs.filter(function(d){ return onDay((d.data||{}).date); }).forEach(function(d){
+      despatched += C.num((d.data||{}).qty); dcLines++;
+    });
+    var dueSoon = ords.filter(function(o){
+      var v = o.data||{};
+      if (!v.due) return false;
+      var days = (new Date(v.due) - new Date(today)) / 86400000;
+      return days >= 0 && days <= 7;
+    });
+    var pastDue = ords.filter(function(o){
+      var v = o.data||{};
+      return v.due && v.due < today;
+    });
+
+    /* ---- cost ---- */
+    var toolCost = 0, broken = [];
+    tools.forEach(function(t){
+      ((t.data||{}).history||[]).forEach(function(h){
+        if (!onDay(h.on)) return;
+        toolCost += C.num(h.cost);
+        if (/broken/i.test(h.event)) broken.push({ tool:t.doc_no||'', desc:(t.data||{}).description||'',
+                                                   cost:C.num(h.cost), by:h.by||'' });
+      });
+    });
+
+    /* ---- people ---- */
+    var present = 0, absent = 0;
+    att.filter(function(a){ return onDay(a.day); }).forEach(function(a){
+      if (String(a.status) === 'Absent') absent++; else present++;
+    });
+
+    dwmData = { day:day, made:made, rejected:rejected, downMins:downMins, runMins:runMins,
+      totalMins:totalMins, earned:earned, byReason:byReason, failedChecks:failedChecks,
+      unsigned:unsigned.length, openNc:openNc, overdueFindings:overdueFindings, calDue:calDue,
+      despatched:despatched, dcLines:dcLines, dueSoon:dueSoon, pastDue:pastDue,
+      toolCost:toolCost, broken:broken, present:present, absent:absent };
+
+    drawDwm();
+  }
+
+  function dwmItem(label, sub, figure, tone, action){
+    return '<div class="dwm-item"><div><b>'+esc(label)+'</b>' +
+      (sub ? '<div class="sub">'+sub+'</div>' : '') + '</div>' +
+      '<div style="text-align:right;">' +
+      (figure != null ? '<div class="fig'+(tone?' '+tone:'')+'">'+esc(String(figure))+'</div>' : '') +
+      (action ? '<button class="btn dw-act" data-t="'+esc(action)+'" style="margin-top:5px;">Raise an action</button>' : '') +
+      '</div></div>';
+  }
+  function dwmCol(title, count, tone, body){
+    return '<div class="dwm-col'+(tone?' '+tone:'')+'"><header><b>'+esc(title)+'</b>' +
+      '<span class="n">'+esc(String(count))+'</span></header>' +
+      (body || '<div class="dwm-none">Nothing to raise.</div>') + '</div>';
+  }
+
+  function drawDwm(){
+    if (!dwmData) return;
+    var d = dwmData, host = document.getElementById('dw-body');
+    var pct = function(a,b){ return b > 0 ? Math.round(a/b*1000)/10 : 0; };
+
+    /* ---- S ---- */
+    var sBody = d.failedChecks.map(function(f){
+      return dwmItem(f.machine + ' — ' + f.what,
+        'shift ' + esc(f.shift) + (f.action ? ' · ' + esc(f.action) : ' · nothing written against it'),
+        null, null, 'Machine check failed: ' + f.machine + ' — ' + f.what);
+    }).join('') +
+      (d.unsigned ? dwmItem('Check sheets not signed off', d.unsigned + ' sheet(s) left open for the day',
+        d.unsigned, 'bad', 'Machine check sheets left unsigned on ' + d.day) : '');
+    var sCount = d.failedChecks.length + d.unsigned;
+
+    /* ---- Q ---- */
+    var ppm = d.made ? Math.round(d.rejected / d.made * 1e6) : 0;
+    var topReason = Object.keys(d.byReason).sort(function(a,b){
+      return d.byReason[b] - d.byReason[a]; })[0];
+    var qBody =
+      dwmItem('Rejected yesterday',
+        d.made ? C.qty(d.rejected) + ' of ' + C.qty(d.made) + ' made' +
+          (topReason ? ' · worst: ' + esc(topReason) : '') : 'nothing booked',
+        ppm ? ppm + ' ppm' : '—', ppm > 0 ? 'bad' : 'ok',
+        ppm ? 'Rejection on ' + d.day + (topReason ? ' — ' + topReason : '') : '') +
+      (d.openNc.length ? dwmItem('Non-conformances open', 'raised and not yet closed',
+        d.openNc.length, 'bad', '') : '') +
+      d.overdueFindings.slice(0,5).map(function(f){
+        return dwmItem('Audit finding overdue — ' + f.type,
+          esc(f.what) + ' · owner ' + esc(f.owner||'nobody') + ' · was due ' + C.fmtDate(f.due),
+          null, null, 'Overdue audit finding: ' + f.what);
+      }).join('') +
+      (d.calDue.length ? dwmItem('Gauges due for calibration', 'past their date',
+        d.calDue.length, 'bad', 'Gauges past their calibration date') : '');
+    var qCount = (ppm ? 1 : 0) + (d.openNc.length ? 1 : 0) + d.overdueFindings.length +
+                 (d.calDue.length ? 1 : 0);
+
+    /* ---- D ---- */
+    var dBody =
+      dwmItem('Despatched yesterday', d.dcLines + ' challan(s)',
+        d.despatched ? C.qty(d.despatched) : '—', d.despatched ? 'ok' : null, '') +
+      (d.pastDue.length ? dwmItem('Orders past their date', 'still with a balance to make',
+        d.pastDue.length, 'bad', 'Orders past their delivery date') : '') +
+      (d.dueSoon.length ? dwmItem('Orders due within a week', 'check they are on the machines',
+        d.dueSoon.length, null, '') : '');
+    var dCount = d.pastDue.length;
+
+    /* ---- C ---- */
+    var avail = pct(d.runMins, d.totalMins), perf = pct(d.earned, d.runMins),
+        qual = pct(d.made - d.rejected, d.made);
+    var oee = Math.round(avail * perf * qual / 10000 * 10) / 10;
+    var cBody =
+      dwmItem('OEE yesterday',
+        'availability ' + avail + '% · performance ' + perf + '% · quality ' + qual + '%',
+        d.totalMins ? oee + '%' : '—', d.totalMins && oee < 60 ? 'bad' : (d.totalMins ? 'ok' : null),
+        d.totalMins && oee < 60 ? 'OEE was ' + oee + '% on ' + d.day : '') +
+      dwmItem('Downtime', d.totalMins ? 'of ' + C.qty(Math.round(d.totalMins/60*10)/10) + ' hours booked' : 'nothing booked',
+        C.qty(Math.round(d.downMins/60*10)/10) + ' h', d.downMins > 0 ? 'bad' : 'ok',
+        d.downMins > 0 ? 'Downtime of ' + Math.round(d.downMins/60*10)/10 + ' hours on ' + d.day : '') +
+      d.broken.map(function(b){
+        return dwmItem('Tool broken — ' + (b.desc || b.tool),
+          'recorded by ' + esc(b.by||'—'), C.rate(b.cost), 'bad',
+          'Tool broken: ' + (b.desc || b.tool));
+      }).join('');
+    var cCount = (d.downMins > 0 ? 1 : 0) + d.broken.length;
+
+    /* ---- P ---- */
+    var pBody = (d.present + d.absent)
+      ? dwmItem('Attendance', d.present + ' present, ' + d.absent + ' absent',
+          pct(d.present, d.present + d.absent) + '%', d.absent > 0 ? 'bad' : 'ok',
+          d.absent > 0 ? d.absent + ' absent on ' + d.day : '')
+      : '<div class="dwm-none">No attendance recorded for the day.</div>';
+
+    host.innerHTML = '<div class="dwm-grid">' +
+      dwmCol('Safety', sCount, sCount ? 'bad' : 'ok', sBody) +
+      dwmCol('Quality', qCount, qCount ? 'bad' : 'ok', qBody) +
+      dwmCol('Delivery', dCount, dCount ? 'bad' : 'ok', dBody) +
+      dwmCol('Cost', cCount, cCount ? 'bad' : 'ok', cBody) +
+      dwmCol('People', d.absent, d.absent ? 'bad' : 'ok', pBody) +
+      '</div>' +
+      '<div class="card" style="margin-top:14px;"><div class="hint">Every figure above is read from ' +
+      'the production bookings, inspections, check sheets, tool cards, challans, orders and ' +
+      'attendance for ' + C.fmtDate(d.day) + '. Nothing on this board is prepared for the meeting, ' +
+      'so there is nothing to argue about except what to do.</div></div>';
+
+    host.querySelectorAll('.dw-act').forEach(function(b){
+      b.addEventListener('click', function(){
+        taskPrefill = { title: b.dataset.t, source: 'DWM ' + C.fmtDate(d.day) };
+        go('task_list');
+      });
+    });
+
+    var msg = document.getElementById('dw-msg');
+    var total = sCount + qCount + dCount + cCount + (d.absent ? 1 : 0);
+    msg.style.display=''; msg.className = 'note' + (total ? ' bad' : ' good');
+    msg.innerHTML = total
+      ? '<b>' + total + ' thing(s) to talk about.</b> Raise an action against any of them and it goes ' +
+        'on the task list with the reason attached.'
+      : 'Nothing on the board needs an action for ' + C.fmtDate(d.day) + '.';
+  }
+
+  function printDwm(){
+    if (!dwmData) { toast('Read the day first.'); return; }
+    var d = dwmData;
+    var pct = function(a,b){ return b > 0 ? Math.round(a/b*1000)/10 : 0; };
+    C.openReport({ title:'Daily Work Management — ' + C.fmtDate(d.day), sections:[
+      { type:'pairs', title:'The day', rows:[
+        ['Made', C.qty(d.made)], ['Rejected', C.qty(d.rejected) +
+          (d.made ? ' (' + Math.round(d.rejected/d.made*1e6) + ' ppm)' : '')],
+        ['Downtime', C.qty(Math.round(d.downMins/60*10)/10) + ' hours'],
+        ['Despatched', C.qty(d.despatched) + ' on ' + d.dcLines + ' challan(s)'],
+        ['Present', d.present], ['Absent', d.absent],
+        ['Spent on tools', C.rate(d.toolCost)] ] },
+      { type:'table', title:'Failed machine checks', dense:true,
+        columns:[{label:'Machine'},{label:'Shift'},{label:'Check'},{label:'What was done'}],
+        rows: d.failedChecks.map(function(f){
+          return [f.machine, f.shift, f.what, f.action || 'nothing written']; }) },
+      { type:'table', title:'Audit findings past their date', dense:true,
+        columns:[{label:'Audit'},{label:'Area'},{label:'Finding'},{label:'Owner'},{label:'Was due'}],
+        rows: d.overdueFindings.map(function(f){
+          return [f.type, f.area, f.what, f.owner||'nobody', C.fmtDate(f.due)]; }) },
+      { type:'text', title:'Where this came from',
+        body:'Every figure is read from the production bookings, check sheets, tool cards, challans, ' +
+             'orders, non-conformances, audit findings and attendance recorded for the day. Nothing ' +
+             'on it is prepared for the meeting.' } ] });
+  }
+
+  /* ================= TASK LIST =================
+     Actions raised at the meeting and anywhere else. What it deliberately does
+     NOT do is copy in the actions that already live on another screen — a
+     non-conformance action and a task saying the same thing get closed at
+     different times, and one of them stays open forever. They are shown, with
+     where they live, and they close there. */
+  var taskDocs = [], taskElse = [];
+
+  async function loadTasks(){
+    try { taskDocs = await C.idms.docs('task'); } catch(e){ taskDocs = []; }
+    try { compEmployees = (await C.api('/api/hr?what=employees')).employees || []; }
+    catch(e){ compEmployees = compEmployees || []; }
+    document.getElementById('tk-people').innerHTML = (compEmployees||[]).map(function(e){
+      return '<option value="'+esc(empData(e).name||'')+'">'; }).join('');
+
+    if (taskPrefill){
+      document.getElementById('tk-title').value = taskPrefill.title || '';
+      document.getElementById('tk-src').value = taskPrefill.source || '';
+      var d = new Date(); d.setDate(d.getDate() + 7);
+      if (!document.getElementById('tk-due').value)
+        document.getElementById('tk-due').value = d.toISOString().slice(0,10);
+      taskPrefill = null;
+      var msg = document.getElementById('tk-msg');
+      msg.style.display=''; msg.className='note';
+      msg.textContent = 'Raised from the morning board. Give it an owner and a date.';
+    }
+    await loadTasksElsewhere();
+    drawTasks();
+  }
+
+  async function loadTasksElsewhere(){
+    var today = new Date().toISOString().slice(0,10);
+    taskElse = [];
+    try {
+      var ncrs = await C.idms.docs('ncr');
+      ncrs.filter(function(n){ return !/closed/i.test(n.status||''); }).forEach(function(n){
+        var v = n.data||{};
+        taskElse.push({ what: v.description || v.problem || n.doc_no || 'Non-conformance',
+          owner: v.owner || v.responsible || '', due: v.dueOn || '', where: 'Non-conformance & 8D',
+          screen: 'ncr', overdue: v.dueOn && v.dueOn < today });
+      });
+    } catch(e){}
+    try {
+      var auds = await C.idms.docs('audit');
+      auds.forEach(function(a){
+        var v = a.data||{};
+        (v.findings||[]).forEach(function(f){
+          if (f.closedOn) return;
+          taskElse.push({ what: f.description || '', owner: f.owner || '', due: f.dueOn || '',
+            where: (v.type||'') + ' audit — ' + (v.area||''), screen: 'audits',
+            overdue: f.dueOn && f.dueOn < today });
+        });
+      });
+    } catch(e){}
+  }
+
+  function drawTasks(){
+    var host = document.getElementById('tk-list');
+    var filter = document.getElementById('tk-filter').value;
+    var today = new Date().toISOString().slice(0,10);
+    var rows = taskDocs.filter(function(t){
+      var v = t.data||{}, closed = !!v.closedOn;
+      if (filter === 'open') return !closed;
+      if (filter === 'closed') return closed;
+      if (filter === 'overdue') return !closed && v.dueOn && v.dueOn < today;
+      return true;
+    }).sort(function(a,b){
+      return String((a.data||{}).dueOn||'9999').localeCompare(String((b.data||{}).dueOn||'9999')); });
+
+    var open = taskDocs.filter(function(t){ return !(t.data||{}).closedOn; });
+    var overdue = open.filter(function(t){
+      var v = t.data||{}; return v.dueOn && v.dueOn < today; });
+
+    host.innerHTML = '<div class="stat" style="margin-bottom:12px;">' +
+      [['Open', open.length], ['Overdue', overdue.length],
+       ['Open elsewhere', taskElse.length],
+       ['Closed', taskDocs.length - open.length]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
+      '</div>' +
+      (rows.length
+        ? '<div class="scroll-x"><table class="t"><thead><tr><th>What needs doing</th><th>Owner</th>' +
+          '<th>By when</th><th>Urgency</th><th>From</th><th class="c">Status</th><th></th>' +
+          '</tr></thead><tbody>' + rows.map(function(t){
+            var v = t.data||{}, late = !v.closedOn && v.dueOn && v.dueOn < today;
+            return '<tr><td><b>'+esc(v.title||'')+'</b>' +
+              (v.closedNote?'<div class="hint">'+esc(v.closedNote)+'</div>':'')+'</td>' +
+              '<td>'+esc(v.owner||'')+'</td>' +
+              '<td'+(late?' class="bad"':' class="hint"')+'>'+(v.dueOn?C.fmtDate(v.dueOn):'—')+
+                (late?'<div class="hint">overdue</div>':'')+'</td>' +
+              '<td class="hint'+(v.priority==='Stop the line'?' bad':'')+'">'+esc(v.priority||'')+'</td>' +
+              '<td class="hint">'+esc(v.source||'—')+'</td>' +
+              '<td class="c">'+(v.closedOn
+                ? '<span class="badge series">closed</span>'
+                : '<span class="badge sample">open</span>')+'</td>' +
+              '<td>'+(v.closedOn ? '' :
+                '<button class="btn tk-close" data-id="'+esc(t.doc_id)+'">Close it</button>')+'</td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<div class="empty"><b>Nothing to show</b>Nothing matches that filter.</div>');
+
+    host.querySelectorAll('.tk-close').forEach(function(b){
+      b.addEventListener('click', function(){ closeTask(b.dataset.id); });
+    });
+
+    var elseHost = document.getElementById('tk-else');
+    elseHost.innerHTML = taskElse.length
+      ? '<div class="scroll-x"><table class="t"><thead><tr><th>What</th><th>Owner</th><th>By when</th>' +
+        '<th>Lives on</th><th></th></tr></thead><tbody>' + taskElse.map(function(x){
+          return '<tr><td>'+esc(x.what)+'</td><td class="hint">'+esc(x.owner||'nobody')+'</td>' +
+            '<td'+(x.overdue?' class="bad"':' class="hint"')+'>'+(x.due?C.fmtDate(x.due):'—')+'</td>' +
+            '<td class="hint">'+esc(x.where)+'</td>' +
+            '<td><a data-goto="'+esc(x.screen)+'" style="cursor:pointer;color:var(--sky-deep);' +
+            'font-weight:600;">open it there →</a></td></tr>';
+        }).join('') + '</tbody></table></div>'
+      : '<div class="note good">Nothing open on another screen.</div>';
+    elseHost.querySelectorAll('[data-goto]').forEach(function(a){
+      a.addEventListener('click', function(){ go(a.dataset.goto); }); });
+  }
+
+  async function addTask(){
+    var msg = document.getElementById('tk-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var title = document.getElementById('tk-title').value.trim();
+    var owner = document.getElementById('tk-owner').value.trim();
+    var due = document.getElementById('tk-due').value;
+    if (!title) return say('Say what needs doing.');
+    if (!owner) return say('Give it an owner. An action everybody owns is an action nobody does.');
+    if (!due) return say('Give it a date. Without one it can never be overdue, and it will sit on ' +
+      'this list until somebody quietly deletes it.');
+    var btn = document.getElementById('tk-add'); btn.disabled = true;
+    try {
+      await C.idms.saveDoc({ kind:'task', docNo: await C.docNumber('task'), status:'Open',
+        data:{ title:title, owner:owner, dueOn:due,
+               priority:document.getElementById('tk-pri').value,
+               source:document.getElementById('tk-src').value.trim(),
+               raisedOn:new Date().toISOString().slice(0,10),
+               raisedBy:(me && me.user)||'' } }, 'action raised');
+      say('Raised.', true);
+      ['tk-title','tk-src'].forEach(function(i){ document.getElementById(i).value=''; });
+      taskDocs = await C.idms.docs('task');
+      drawTasks();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+
+  async function closeTask(id){
+    var t = taskDocs.filter(function(x){ return x.doc_id === id; })[0];
+    if (!t) return;
+    var note = prompt('What was actually done?\n\nAn action closed with nothing written against it ' +
+                      'teaches nobody anything and comes back.', '');
+    if (note === null) return;
+    if (!String(note).trim()){ toast('Say what was done.'); return; }
+    var v = Object.assign({}, t.data||{}, {
+      closedOn: new Date().toISOString().slice(0,10),
+      closedBy: (me && me.user)||'', closedNote: String(note).trim() });
+    try {
+      await C.idms.saveDoc({ docId:id, kind:'task', docNo:t.doc_no, status:'Closed', data:v },
+        'action closed');
+      t.data = v; t.status = 'Closed';
+      drawTasks();
+    } catch(e){ toast(e.message); }
+  }
+
+  function printTasks(){
+    var today = new Date().toISOString().slice(0,10);
+    C.openReport({ title:'Task List', landscape:true, sections:[
+      { type:'table', title:'Actions on this list', dense:true,
+        columns:[{label:'What needs doing'},{label:'Owner'},{label:'By when'},{label:'Urgency'},
+                 {label:'From'},{label:'Status'},{label:'What was done'}],
+        rows: taskDocs.map(function(t){
+          var v = t.data||{};
+          return [v.title, v.owner, v.dueOn?C.fmtDate(v.dueOn):'—', v.priority||'',
+                  v.source||'—',
+                  v.closedOn ? 'closed ' + C.fmtDate(v.closedOn)
+                    : (v.dueOn && v.dueOn < today ? 'OVERDUE' : 'open'),
+                  v.closedNote||'—']; }) },
+      { type:'table', title:'Open on another screen — not copied here', dense:true,
+        columns:[{label:'What'},{label:'Owner'},{label:'By when'},{label:'Lives on'}],
+        rows: taskElse.map(function(x){
+          return [x.what, x.owner||'nobody', x.due?C.fmtDate(x.due):'—', x.where]; }),
+        note:'These close on the screen that owns them. They are shown here so the meeting sees ' +
+             'everything that is open, not so they can be closed twice.' } ] });
   }
 
   /* ================= USER MANAGEMENT =================
@@ -15024,6 +15548,15 @@
     document.getElementById('ab-file').value = '';
     bannerPreview();
   });
+
+  document.getElementById('dw-run').addEventListener('click', runDwm);
+  document.getElementById('dw-date').addEventListener('change', runDwm);
+  document.getElementById('dw-tasks').addEventListener('click', function(){ go('task_list'); });
+  document.getElementById('dw-print').addEventListener('click', printDwm);
+
+  document.getElementById('tk-add').addEventListener('click', addTask);
+  document.getElementById('tk-filter').addEventListener('change', drawTasks);
+  document.getElementById('tk-print').addEventListener('click', printTasks);
 
   document.getElementById('us-save').addEventListener('click', saveUser);
   document.getElementById('us-clear').addEventListener('click', clearUserForm);

@@ -926,21 +926,55 @@ looks like it works.
 Records: kind `tool`, `checksheet`, and `machine.data.checks` for the per-machine
 list (no new kind).
 
-**Declared but not built:** 9 screens still marked `soon` (down from 42):
+## Modules added in v113 — the morning board and the task list
+
+**Daily Work Management** is the board walked at the morning meeting, in the
+order everybody already walks it: safety, quality, delivery, cost, people. **Every
+figure on it is read from what was recorded yesterday and nobody prepares it.**
+That is the whole point — a board somebody prepares is a board that shows what
+they want it to show, and the meeting then argues about the numbers instead of
+the problems.
+
+It reads production bookings (rejections, ppm, worst reject reason, OEE and its
+three parts, downtime), check sheets (failed checks, and sheets left unsigned),
+audit findings past their date, open non-conformances, gauges past their
+calibration date, delivery challans and orders past their date, tool cards
+(breakages and what they cost), and the attendance register. A failed check with
+**nothing written against it** says so on the board rather than showing as a
+plain failure.
+
+Anything on the board can be raised as an action, which lands on the task list
+prefilled with what it was about and which day it came from.
+
+**Task List.** Actions raised at the meeting and anywhere else. What it
+deliberately does **not** do is copy in the actions that already live on another
+screen. Open non-conformances and open audit findings are **shown, with where
+they live and a link, and are not copied** — two records of one action get closed
+at different times and one stays open forever. This is the same rule as the TNI
+screen and it should stay that way everywhere.
+
+An action needs an owner (one everybody owns is one nobody does) and a date
+(without one it can never be overdue, and it sits on the list until somebody
+quietly deletes it). Closing needs a note of what was actually done.
+
+Records: kind `task`. The board stores nothing — it is computed on every open.
+
+**Declared but not built:** 7 screens still marked `soon` (down from 42):
 `machine_process`, `pfmea_master`, `pp_spec_master`, `supplier_competency`,
-`form`, `dwm`, `task_list`, `report_inprocess_inspection`, `accounts_pl`.
+`form`, `report_inprocess_inspection`, `accounts_pl`.
 
-**Suggested order for the rest**, of the nine left:
+**Suggested order for the rest**, of the seven left:
 
-1. **DWM** and **task list** — shop-floor daily management, reading what the
-   production, NC and check-sheet screens already record. The most useful of what
-   is left, because it is the screen a supervisor would open every morning.
-2. **Machine & process**, **PFMEA master**, **PP spec master**, **supplier
-   competency** — reference screens over data that already exists.
-3. **Key Process Input** — needs a decision on what it is for; the name predates
+1. **Machine & process**, **PFMEA master**, **PP spec master**, **supplier
+   competency** — reference screens over data that already exists. Small, and
+   mostly views rather than new records.
+2. **Key Process Input** — needs a decision on what it is for; the name predates
    the process master, which may already cover it.
-4. **P&L** — should wait until there is a costing model, or it becomes another
+3. **P&L** — should wait until there is a costing model, or it becomes another
    entry screen pretending to be an account.
+
+Two of the seven are **decisions rather than work**: `report_inprocess_inspection`
+(see below) and `form`.
 
 **Still undecided: `report_inprocess_inspection`.** Self Inspection already is
 in-process inspection. Building a second near-identical sheet would give two
@@ -1079,6 +1113,9 @@ If you formalise this, keep two habits that mattered:
 2. **Test what matters, not what is easy.** Testing that a fold worked passed
    while the Save button was being folded away with it.
 
+`dwmtest.mjs` (36 checks over the v113 pair: yesterday seeded with one of
+everything the board should notice, so a board that quietly drops one fails here
+rather than in a meeting; plus the not-copied rule on the task list).
 `opstest.mjs` (36 checks over the v112 screens: the demote-the-last-developer
 refusal, a breakage with no cost, a blank check not passing as OK, and the tool
 money reaching the production dashboard). `qmstest.mjs` (38 checks over the v111 screens: the numbering refusals, the

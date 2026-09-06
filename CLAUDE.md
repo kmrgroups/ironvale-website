@@ -836,18 +836,78 @@ buckets the year's findings as closed / open within date / overdue as at today.
 
 Records: kind `cft`, and kind `audit` (plan and findings on one record).
 
-**Declared but not built:** the screens still marked `soon` in the menu (22 at
-v110, down from 42), each showing an explanation rather than a blank page.
+## Modules added in v111 — the rest of the QMS block
 
-**Suggested order for the rest.** The high-leverage work is done: what remains
-changes no KPI from typed to computed except the maintenance and production cost
-lines, which need a costing model that does not exist yet.
+**Document Format Numbers.** One numbering scheme per level and kind of document.
+The register issues the next number from it, which is the only reliable way to
+avoid two documents sharing one — and the duplicate is always the one the auditor
+picks up. Two schemes for the same kind are refused. The serial only advances
+**after the number has actually been taken**, so a refused save does not burn one.
 
-By usefulness: the QMS document levels and master lists (mostly filing, but they
-are what an auditor asks for first); the remaining production screens (DWM, task
-list, machine check sheet, tool history); User Management; Key Process Input;
-document format numbers and signatories; P&L, which should wait until there is a
-costing model to build it on rather than becoming another entry screen.
+**Signatories.** Who may prepare, review and approve each kind of document. Not a
+list for show: the register checks names against it. One refusal worth keeping —
+if the same single person is the only preparer and the only approver, the list is
+rejected, because nothing of that kind could then ever be issued.
+
+**The four document levels** share one register with four views. What makes it a
+controlled register rather than a list is what it refuses:
+
+- a **duplicate number**, and a document whose kind has no numbering format
+- issuing without a preparer, a reviewer and an approver
+- **the same person preparing and approving** — the control an auditor checks
+  first, and the only thing standing between a draft and an issued procedure
+- a signature from somebody not on the signatory list for that kind
+
+Issuing stamps a revision, the date and the user, and keeps the history.
+Documents past their review date are flagged in the register: a procedure nobody
+has looked at since it was written is the second thing an auditor asks for.
+
+**Master lists (PFD / PFMEA / Control Plan)** are entirely derived — one row per
+part, showing what exists. **The useful half is the parts that have none**, and
+the part in series production with none is called out by name. That is the half a
+hand-kept master list never contains, because the person keeping it lists what
+they have.
+
+**Compliance & Audit Trail** is a read-only window on what the system already
+wrote, with the changed fields worked out by diffing before against after. There
+is deliberately no way to edit or remove an entry from here, and none anywhere
+else either — a trail that can be tidied is not a trail.
+
+**Two bugs found by the tests, both worth remembering.** `C.idms.audit()` already
+unwraps the rows (`.then(j => j.audit || [])`); reaching for `.audit` on the
+result gave an empty trail that looked exactly like an empty database. And the
+three master lists share one screen, so a filter left on *missing* from the last
+one silently hid most of the next — **any screen shared by several menu entries
+has to reset its own filters when the entry changes.**
+
+Records: kind `docformat`, `signatory`, `qmsdoc`. The master lists and the trail
+store nothing.
+
+**Declared but not built:** 12 screens still marked `soon` (down from 42):
+`machine_process`, `pfmea_master`, `pp_spec_master`, `supplier_competency`,
+`form`, `dwm`, `task_list`, `report_machine_checksheet`, `report_tool_history`,
+`report_inprocess_inspection`, `accounts_pl`, `users`.
+
+**Suggested order for the rest**, of the twelve left:
+
+1. **User Management** — the only one with a security consequence. Roles are
+   already enforced server-side; there is no screen to manage who holds them.
+2. **Tool history card** and **machine check sheet** — both feed maintenance
+   figures that are entry-only today, and both follow the calibration pattern.
+3. **DWM** and **task list** — shop-floor daily management; they read what the
+   production and NC screens already record.
+4. **Machine & process**, **PFMEA master**, **PP spec master**, **supplier
+   competency** — reference screens over data that already exists.
+5. **Key Process Input** — needs a decision on what it is for; the name predates
+   the process master, which may already cover it.
+6. **P&L** — should wait until there is a costing model, or it becomes another
+   entry screen pretending to be an account.
+
+**Still undecided: `report_inprocess_inspection`.** Self Inspection already is
+in-process inspection. Building a second near-identical sheet would give two
+records of one check that can disagree. The version worth building is a QA patrol
+inspection that cross-references the operator's sheet for the same operation and
+shift and flags where the two differ. Do not build it as a copy.
 
 **One item needs a decision before it is built.** `report_inprocess_inspection`
 is still on the menu as `soon`, but **Self Inspection already is in-process
@@ -980,7 +1040,9 @@ If you formalise this, keep two habits that mattered:
 2. **Test what matters, not what is easy.** Testing that a fold worked passed
    while the Save button was being folded away with it.
 
-`audittest.mjs` (38 checks over the v110 register: the two independence rules,
+`qmstest.mjs` (38 checks over the v111 screens: the numbering refusals, the
+prepare-and-approve control, the unauthorised-signature refusal, the missing-PFMEA
+finding, and the trail diff). `audittest.mjs` (38 checks over the v110 register: the two independence rules,
 the sequencing, the finding-closure requirements, and the QMS dashboard keeping
 one kind of audit apart from another). `orgtest.mjs` (33 checks over the v109 screens: vacancies drawn from sanctioned
 strength, the unplaceable-employee report, the role issuing gates, and readiness

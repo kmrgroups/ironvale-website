@@ -362,6 +362,132 @@
       <div id="ap-body"></div>
     </div>
 
+    <!-- ============ Document format numbers ============ -->
+    <div class="panel" data-panel="doc_format_master">
+      <div class="card">
+        <h4>Document Format Numbers</h4>
+        <div class="hint" style="margin-bottom:10px;">How each kind of controlled document is
+          numbered. Set it here once and the register issues the next number itself — a numbering
+          scheme kept in somebody's head produces two documents with the same number, and the one an
+          auditor picks up is always the wrong one.</div>
+        <div class="row four">
+          <div><label>Level</label><select id="df-level">
+            <option value="1">Level 1 — policy and manual</option>
+            <option value="2">Level 2 — procedures</option>
+            <option value="3">Level 3 — work instructions</option>
+            <option value="4">Level 4 — formats and records</option></select></div>
+          <div><label>Kind of document</label><input id="df-type" placeholder="e.g. Procedure"></div>
+          <div><label>Prefix</label><input id="df-prefix" placeholder="e.g. TEST/QSP"></div>
+          <div><label>Digits in the serial</label><input class="num" id="df-digits" value="3"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Next serial</label><input class="num" id="df-next" value="1"></div>
+          <div style="align-self:end;"><button class="btn gold" id="df-save">Save the format</button></div>
+          <div style="align-self:end;"><button class="btn" id="df-clear">Clear</button></div>
+          <div class="hint" style="align-self:end;" id="df-example">—</div>
+        </div>
+        <div class="note" id="df-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>Formats in use</h4><div id="df-list"></div></div>
+    </div>
+
+    <!-- ============ Signatories ============ -->
+    <div class="panel" data-panel="signatories">
+      <div class="card">
+        <h4>Signatories</h4>
+        <div class="hint" style="margin-bottom:10px;">Who may prepare, review and approve each kind of
+          document. This is not a list for show: the document register <b>checks names against it</b>
+          and will not issue a document signed by somebody who is not authorised for that kind — and
+          will not let the same person prepare and approve the same document.</div>
+        <div class="row four">
+          <div><label>Level</label><select id="sg-level">
+            <option value="1">Level 1 — policy and manual</option>
+            <option value="2">Level 2 — procedures</option>
+            <option value="3">Level 3 — work instructions</option>
+            <option value="4">Level 4 — formats and records</option></select></div>
+          <div><label>Kind of document</label><input id="sg-type" list="sg-types"></div>
+          <datalist id="sg-types"></datalist>
+          <div style="align-self:end;"><button class="btn gold" id="sg-save">Save</button></div>
+          <div style="align-self:end;"><button class="btn" id="sg-print">Print</button></div>
+        </div>
+        <div class="row" style="margin-top:9px;">
+          <div><label>May prepare (one name per line)</label><textarea id="sg-prep" rows="4"></textarea></div>
+          <div><label>May review</label><textarea id="sg-rev" rows="4"></textarea></div>
+          <div><label>May approve</label><textarea id="sg-app" rows="4"></textarea></div>
+        </div>
+        <div class="note" id="sg-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>Who may sign what</h4><div id="sg-list"></div></div>
+    </div>
+
+    <!-- ============ The four document levels ============ -->
+    <div class="panel" data-panel="qmsdocs">
+      <div class="card">
+        <h4 id="qd-title">Documents</h4>
+        <div class="hint" id="qd-note" style="margin-bottom:10px;"></div>
+        <div class="row four">
+          <div><label>Kind of document</label><input id="qd-type" list="qd-types"></div>
+          <datalist id="qd-types"></datalist>
+          <div><label>Title</label><input id="qd-doctitle"></div>
+          <div><label>Owner</label><input id="qd-owner"></div>
+          <div><label>Review every (months)</label><input class="num" id="qd-review" value="36"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Prepared by</label><input id="qd-prep" list="qd-prep-list"></div>
+          <datalist id="qd-prep-list"></datalist>
+          <div><label>Reviewed by</label><input id="qd-rev" list="qd-rev-list"></div>
+          <datalist id="qd-rev-list"></datalist>
+          <div><label>Approved by</label><input id="qd-app" list="qd-app-list"></div>
+          <datalist id="qd-app-list"></datalist>
+          <div><label>Where it is kept</label><input id="qd-link" placeholder="folder, cabinet or link"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" id="qd-save">Save as a draft</button>
+          <button class="btn green" id="qd-issue">Issue it</button>
+          <button class="btn" id="qd-clear">Clear</button>
+          <button class="btn" id="qd-print">Print the register</button>
+        </div>
+        <div class="note" id="qd-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>The register</h4><div id="qd-list"></div></div>
+    </div>
+
+    <!-- ============ Master lists ============ -->
+    <div class="panel" data-panel="masterlist">
+      <div class="card">
+        <h4 id="ml2-title">Master list</h4>
+        <div class="hint" id="ml2-note" style="margin-bottom:10px;"></div>
+        <div class="row four">
+          <div><label>Show</label><select id="ml2-filter">
+            <option value="all">Every part</option>
+            <option value="missing">Parts without one</option>
+            <option value="have">Parts that have one</option></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="ml2-run">Refresh</button></div>
+          <div style="align-self:end;"><button class="btn" id="ml2-print">Print</button></div>
+        </div>
+        <div class="note" id="ml2-msg" style="display:none;"></div>
+      </div>
+      <div id="ml2-body"></div>
+    </div>
+
+    <!-- ============ Compliance and audit trail ============ -->
+    <div class="panel" data-panel="compliance_audit_trail">
+      <div class="card">
+        <h4>Compliance &amp; Audit Trail</h4>
+        <div class="hint" style="margin-bottom:10px;">Every change the system recorded: who, what,
+          when and why. It is written when the change is made and <b>nothing here can be edited or
+          removed</b> — that is what makes it worth anything. The most recent 500 entries are shown.</div>
+        <div class="row four">
+          <div><label>Search</label><input id="ct-q" placeholder="person, record, reason"></div>
+          <div><label>Kind of record</label><select id="ct-kind"></select></div>
+          <div><label>Action</label><select id="ct-action"></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="ct-run">Refresh</button></div>
+        </div>
+        <div class="note" id="ct-msg" style="display:none;"></div>
+      </div>
+      <div id="ct-body"></div>
+    </div>
+
     <!-- ============ CFT members ============ -->
     <div class="panel" data-panel="cft_master">
       <div class="card">
@@ -2225,13 +2351,15 @@
       ['agent_runs','📜','Agent Run Log',1]]],
     ['qms','📋','QMS','Quality Management System',[
       ['dash_qms','📊','QMS Dashboard',1],
-      ['qms_level1','📜','Level-1 — Policy'],['qms_level2','📄','Level-2 — Procedures'],
-      ['qms_level3','📝','Level-3 — Work Instructions'],['qms_level4','🗂','Level-4 — Records'],
-      ['compliance_audit_trail','📋','Compliance & Audit Trail'],
+      ['qms_level1','📜','Level-1 — Policy',1],['qms_level2','📄','Level-2 — Procedures',1],
+      ['qms_level3','📝','Level-3 — Work Instructions',1],['qms_level4','🗂','Level-4 — Records',1],
+      ['compliance_audit_trail','📋','Compliance & Audit Trail',1],
       ['audits','🔎','Audit Plan & Register',1],
       ['cft_master','👥','CFT Members',1],
-      ['doc_format_master','📄','Document Format Numbers'],['signatories','✍','Signatories Master'],['doc_master_pfd','📑','Master List — PFD'],
-      ['doc_master_pfmea','📑','Master List — PFMEA'],['doc_master_cp','📑','Master List — Control Plan']]],
+      ['doc_format_master','📄','Document Format Numbers',1],['signatories','✍','Signatories',1],
+      ['doc_master_pfd','📑','Master List — PFD',1],
+      ['doc_master_pfmea','📑','Master List — PFMEA',1],
+      ['doc_master_cp','📑','Master List — Control Plan',1]]],
     ['marketing','📣','Marketing','Enquiry to order',[
       ['dash_marketing','📊','Marketing Dashboard',1],
       ['emb_pipeline','📨','RFQ Pipeline',1],
@@ -2310,6 +2438,8 @@
      markup, and every screen served by the website shows in the same frame. */
   var PANEL_OF = {
     dept_master: 'orgmaster', desig_master: 'orgmaster', position_master: 'orgmaster',
+    qms_level1: 'qmsdocs', qms_level2: 'qmsdocs', qms_level3: 'qmsdocs', qms_level4: 'qmsdocs',
+    doc_master_pfd: 'masterlist', doc_master_pfmea: 'masterlist', doc_master_cp: 'masterlist',
     kpi_entry: 'kpi_entry', admin_banner: 'admin_banner',
     admin_backup: 'admin_backup', admin_sample: 'admin_sample',
     admin_site: 'embed', emb_pipeline: 'embed', emb_ppc: 'embed', emb_hr: 'embed', emb_me: 'embed'
@@ -2398,6 +2528,11 @@
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
+    if (s === 'doc_format_master')     loadFormats();
+    if (s === 'signatories')           loadSignatories();
+    if (s.indexOf('qms_level') === 0)  loadQmsDocs(C.num(s.slice(9)));
+    if (s.indexOf('doc_master_') === 0) loadMasterList(s.slice(11));
+    if (s === 'compliance_audit_trail') loadAuditTrail();
     if (s === 'cft_master')            loadCft();
     if (s === 'audits')                loadAudits();
     if (s === 'org_chart')             loadOrgChart();
@@ -2423,6 +2558,577 @@
     if (s === 'kpi_entry')         loadKpiEntry();
     if (s === 'admin_banner')      loadBannerScreen();
     if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
+  }
+
+  /* ================= DOCUMENT FORMAT NUMBERS =================
+     One numbering scheme per level and kind of document, held here rather than
+     in somebody's head. The register issues the next number from it, which is
+     the only reliable way to avoid two documents with the same number — and the
+     duplicate is always the one the auditor picks up. */
+  var docFormats = [], dfEditing = null;
+  var QMS_LEVELS = { 1:'Level 1 — policy and manual', 2:'Level 2 — procedures',
+                     3:'Level 3 — work instructions', 4:'Level 4 — formats and records' };
+
+  async function loadFormats(){
+    try { docFormats = await C.idms.docs('docformat'); } catch(e){ docFormats = []; }
+    drawFormatExample();
+    drawFormats();
+  }
+  function formatNumber(f, serial){
+    var digits = Math.max(1, C.num(f.digits) || 3);
+    return String(f.prefix||'') + '-' + String(serial).padStart(digits, '0');
+  }
+  function formatFor(level, type){
+    return docFormats.filter(function(f){
+      var v = f.data||{};
+      return C.num(v.level) === C.num(level) &&
+             String(v.type||'').toLowerCase() === String(type||'').toLowerCase(); })[0] || null;
+  }
+  function drawFormatExample(){
+    var f = { prefix: document.getElementById('df-prefix').value.trim(),
+              digits: document.getElementById('df-digits').value };
+    document.getElementById('df-example').textContent = f.prefix
+      ? 'next: ' + formatNumber(f, C.num(document.getElementById('df-next').value) || 1) : '—';
+  }
+  function drawFormats(){
+    var host = document.getElementById('df-list');
+    host.innerHTML = docFormats.length
+      ? '<table class="t"><thead><tr><th>Level</th><th>Kind</th><th>Prefix</th>' +
+        '<th class="r">Next number</th><th></th></tr></thead><tbody>' +
+        docFormats.map(function(f){
+          var v = f.data||{};
+          return '<tr><td class="hint">'+esc(QMS_LEVELS[C.num(v.level)]||'')+'</td>' +
+            '<td><b>'+esc(v.type||'')+'</b></td><td class="hint">'+esc(v.prefix||'')+'</td>' +
+            '<td class="r">'+esc(formatNumber(v, C.num(v.nextSerial)||1))+'</td>' +
+            '<td><button class="btn df-edit" data-id="'+esc(f.doc_id)+'">Edit</button></td></tr>';
+        }).join('') + '</tbody></table>'
+      : '<div class="empty"><b>No formats yet</b>Until one is set, document numbers have to be typed ' +
+        'by hand and nothing stops two documents sharing one.</div>';
+    host.querySelectorAll('.df-edit').forEach(function(b){
+      b.addEventListener('click', function(){
+        var f = docFormats.filter(function(x){ return x.doc_id === b.dataset.id; })[0];
+        if (!f) return;
+        var v = f.data||{};
+        dfEditing = f.doc_id;
+        document.getElementById('df-level').value = String(C.num(v.level));
+        document.getElementById('df-type').value = v.type||'';
+        document.getElementById('df-prefix').value = v.prefix||'';
+        document.getElementById('df-digits').value = v.digits||3;
+        document.getElementById('df-next').value = v.nextSerial||1;
+        drawFormatExample();
+      });
+    });
+  }
+  function clearFormatForm(){
+    dfEditing = null;
+    ['df-type','df-prefix'].forEach(function(i){ document.getElementById(i).value=''; });
+    document.getElementById('df-digits').value = 3;
+    document.getElementById('df-next').value = 1;
+    document.getElementById('df-msg').style.display = 'none';
+    drawFormatExample();
+  }
+  async function saveFormat(){
+    var msg = document.getElementById('df-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var level = C.num(document.getElementById('df-level').value);
+    var type = document.getElementById('df-type').value.trim();
+    var prefix = document.getElementById('df-prefix').value.trim();
+    if (!type) return say('Say what kind of document this numbers.');
+    if (!prefix) return say('A prefix is needed — it is what makes the number recognisable at a glance.');
+    var dup = formatFor(level, type);
+    if (dup && dup.doc_id !== dfEditing)
+      return say('There is already a format for <b>'+esc(type)+'</b> at that level. Two schemes for ' +
+        'one kind of document is how the same number gets issued twice.');
+    var btn = document.getElementById('df-save'); btn.disabled = true;
+    try {
+      await C.idms.saveDoc({ docId: dfEditing || '', kind:'docformat',
+        docNo: (dfEditing ? (docFormats.filter(function(x){ return x.doc_id === dfEditing; })[0]||{}).doc_no : null)
+               || await C.docNumber('fmt'), status:'Active',
+        data:{ level:level, type:type, prefix:prefix,
+               digits:C.num(document.getElementById('df-digits').value) || 3,
+               nextSerial:C.num(document.getElementById('df-next').value) || 1 } },
+        dfEditing ? 'document format changed' : 'document format set');
+      say('Saved.', true);
+      clearFormatForm();
+      await loadFormats();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+
+  /* ================= SIGNATORIES =================
+     Not a list for show. The register checks names against it, so a document
+     cannot be issued signed by somebody who is not authorised for that kind. */
+  var signDocs = [];
+
+  async function loadSignatories(){
+    try { signDocs = await C.idms.docs('signatory'); } catch(e){ signDocs = []; }
+    try { docFormats = await C.idms.docs('docformat'); } catch(e){ docFormats = []; }
+    document.getElementById('sg-types').innerHTML = docFormats.map(function(f){
+      return '<option value="'+esc((f.data||{}).type||'')+'">'; }).join('');
+    drawSignatories();
+  }
+  function signFor(level, type){
+    return signDocs.filter(function(s){
+      var v = s.data||{};
+      return C.num(v.level) === C.num(level) &&
+             String(v.type||'').toLowerCase() === String(type||'').toLowerCase(); })[0] || null;
+  }
+  function drawSignatories(){
+    var host = document.getElementById('sg-list');
+    host.innerHTML = signDocs.length
+      ? '<div class="scroll-x"><table class="t"><thead><tr><th>Level</th><th>Kind</th>' +
+        '<th>May prepare</th><th>May review</th><th>May approve</th><th></th></tr></thead><tbody>' +
+        signDocs.map(function(s){
+          var v = s.data||{};
+          return '<tr><td class="hint">'+esc(QMS_LEVELS[C.num(v.level)]||'')+'</td>' +
+            '<td><b>'+esc(v.type||'')+'</b></td>' +
+            '<td class="hint">'+esc((v.prepare||[]).join(', ')||'—')+'</td>' +
+            '<td class="hint">'+esc((v.review||[]).join(', ')||'—')+'</td>' +
+            '<td class="hint">'+esc((v.approve||[]).join(', ')||'—')+'</td>' +
+            '<td><button class="btn sg-edit" data-id="'+esc(s.doc_id)+'">Edit</button></td></tr>';
+        }).join('') + '</tbody></table></div>'
+      : '<div class="empty"><b>Nothing set</b>Without this, any name can be typed into a document ' +
+        'as its approver.</div>';
+    host.querySelectorAll('.sg-edit').forEach(function(b){
+      b.addEventListener('click', function(){
+        var s = signDocs.filter(function(x){ return x.doc_id === b.dataset.id; })[0];
+        if (!s) return;
+        var v = s.data||{};
+        document.getElementById('sg-level').value = String(C.num(v.level));
+        document.getElementById('sg-type').value = v.type||'';
+        document.getElementById('sg-prep').value = (v.prepare||[]).join('\n');
+        document.getElementById('sg-rev').value = (v.review||[]).join('\n');
+        document.getElementById('sg-app').value = (v.approve||[]).join('\n');
+      });
+    });
+  }
+  async function saveSignatory(){
+    var msg = document.getElementById('sg-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var lines = function(id){
+      return document.getElementById(id).value.split('\n')
+        .map(function(x){ return x.trim(); }).filter(Boolean); };
+    var level = C.num(document.getElementById('sg-level').value);
+    var type = document.getElementById('sg-type').value.trim();
+    if (!type) return say('Say what kind of document this applies to.');
+    var prep = lines('sg-prep'), rev = lines('sg-rev'), app = lines('sg-app');
+    if (!app.length) return say('Somebody has to be able to approve it, or nothing of this kind can ' +
+      'ever be issued.');
+    /* if one person is the only preparer and the only approver, the check the
+       register makes later can never pass */
+    if (prep.length === 1 && app.length === 1 && prep[0].toLowerCase() === app[0].toLowerCase())
+      return say('<b>'+esc(prep[0])+'</b> is the only person who may prepare and the only person who ' +
+        'may approve. Nothing of this kind could then be issued, because the same person cannot do ' +
+        'both. Name somebody else on one of the two.');
+    var existing = signFor(level, type);
+    var btn = document.getElementById('sg-save'); btn.disabled = true;
+    try {
+      await C.idms.saveDoc({ docId: existing ? existing.doc_id : '', kind:'signatory',
+        docNo: existing ? existing.doc_no : await C.docNumber('sig'), status:'Active',
+        data:{ level:level, type:type, prepare:prep, review:rev, approve:app } },
+        existing ? 'signatories changed' : 'signatories set');
+      say('Saved.', true);
+      await loadSignatories();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+
+  /* ================= THE FOUR DOCUMENT LEVELS =================
+     One register, four views. What makes it a controlled register rather than a
+     list is what it refuses: a duplicate number, an unauthorised signature, and
+     the same person preparing and approving their own document. */
+  var qmsDocs = [], qmsLevel = 1, qdEditing = null;
+
+  async function loadQmsDocs(level){
+    qmsLevel = C.num(level) || 1;
+    try { qmsDocs = await C.idms.docs('qmsdoc'); } catch(e){ qmsDocs = []; }
+    try { docFormats = await C.idms.docs('docformat'); } catch(e){ docFormats = []; }
+    try { signDocs = await C.idms.docs('signatory'); } catch(e){ signDocs = []; }
+    document.getElementById('qd-title').textContent = QMS_LEVELS[qmsLevel];
+    document.getElementById('qd-note').innerHTML =
+      { 1:'The quality policy, the manual and anything that states what the company undertakes to do.',
+        2:'Procedures — how a process is run, who owns it and what it produces.',
+        3:'Work instructions — how a job is done at the machine.',
+        4:'Formats and records — the blank forms, and where the completed ones are kept.'
+      }[qmsLevel] +
+      ' A number is issued from the format master automatically; a document cannot be issued ' +
+      'without a preparer, a reviewer and an approver, and the approver cannot be the preparer.';
+    document.getElementById('qd-types').innerHTML = docFormats
+      .filter(function(f){ return C.num((f.data||{}).level) === qmsLevel; })
+      .map(function(f){ return '<option value="'+esc((f.data||{}).type||'')+'">'; }).join('');
+    qdFillSignatories();
+    drawQmsDocs();
+  }
+  function qdFillSignatories(){
+    var s = signFor(qmsLevel, document.getElementById('qd-type').value);
+    var v = s ? (s.data||{}) : {};
+    var fill = function(id, arr){
+      document.getElementById(id).innerHTML = (arr||[]).map(function(n){
+        return '<option value="'+esc(n)+'">'; }).join(''); };
+    fill('qd-prep-list', v.prepare); fill('qd-rev-list', v.review); fill('qd-app-list', v.approve);
+  }
+  function reviewDue(v){
+    if (!v.issuedOn) return null;
+    var d = new Date(v.issuedOn);
+    d.setMonth(d.getMonth() + (C.num(v.reviewMonths) || 36));
+    return d;
+  }
+  function drawQmsDocs(){
+    var host = document.getElementById('qd-list');
+    var rows = qmsDocs.filter(function(d){ return C.num((d.data||{}).level) === qmsLevel; });
+    var today = new Date();
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>Nothing at this level yet</b>Add the first document ' +
+        'above.</div>';
+      return;
+    }
+    host.innerHTML = '<div class="scroll-x"><table class="t"><thead><tr><th>Number</th><th>Title</th>' +
+      '<th>Kind</th><th class="c">Rev</th><th>Issued</th><th>Review due</th><th>Signed</th>' +
+      '<th class="c">Status</th><th></th></tr></thead><tbody>' +
+      rows.map(function(d){
+        var v = d.data||{}, due = reviewDue(v), late = due && due < today;
+        return '<tr><td><b>'+esc(v.docNo||'—')+'</b></td>' +
+          '<td>'+esc(v.title||'')+(v.owner?'<div class="hint">owner: '+esc(v.owner)+'</div>':'')+'</td>' +
+          '<td class="hint">'+esc(v.type||'—')+'</td>' +
+          '<td class="c">'+(C.num(v.revision)||0)+'</td>' +
+          '<td class="hint">'+(v.issuedOn?C.fmtDate(v.issuedOn):'—')+'</td>' +
+          '<td'+(late?' class="bad"':' class="hint"')+'>'+
+            (due?C.fmtDate(due.toISOString().slice(0,10)):'—')+
+            (late?'<div class="hint">review overdue</div>':'')+'</td>' +
+          '<td class="hint">'+(v.approvedBy
+            ? esc(v.preparedBy||'')+' → '+esc(v.reviewedBy||'')+' → '+esc(v.approvedBy)
+            : 'not signed')+'</td>' +
+          '<td class="c">'+(d.status === 'Issued'
+            ? '<span class="badge series">issued</span>'
+            : '<span class="badge sample">draft</span>')+'</td>' +
+          '<td><button class="btn qd-edit" data-id="'+esc(d.doc_id)+'">Open</button></td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      (rows.some(function(d){ var due = reviewDue(d.data||{}); return due && due < today; })
+        ? '<div class="note bad" style="margin-top:10px;">One or more documents are past their review ' +
+          'date. A procedure nobody has looked at since it was written is the second thing an ' +
+          'auditor asks for.</div>' : '');
+    host.querySelectorAll('.qd-edit').forEach(function(b){
+      b.addEventListener('click', function(){ editQmsDoc(b.dataset.id); });
+    });
+  }
+  function editQmsDoc(id){
+    var d = qmsDocs.filter(function(x){ return x.doc_id === id; })[0];
+    if (!d) return;
+    var v = d.data||{};
+    qdEditing = id;
+    document.getElementById('qd-type').value = v.type||'';
+    document.getElementById('qd-doctitle').value = v.title||'';
+    document.getElementById('qd-owner').value = v.owner||'';
+    document.getElementById('qd-review').value = v.reviewMonths||36;
+    document.getElementById('qd-prep').value = v.preparedBy||'';
+    document.getElementById('qd-rev').value = v.reviewedBy||'';
+    document.getElementById('qd-app').value = v.approvedBy||'';
+    document.getElementById('qd-link').value = v.link||'';
+    qdFillSignatories();
+    document.getElementById('qd-msg').style.display='';
+    document.getElementById('qd-msg').className='note';
+    document.getElementById('qd-msg').innerHTML = 'Editing <b>'+esc(v.docNo||'')+'</b>' +
+      (d.status === 'Issued' ? ' — issuing again raises it to revision ' +
+        ((C.num(v.revision)||0) + 1) + '.' : '.');
+  }
+  function clearQmsForm(){
+    qdEditing = null;
+    ['qd-type','qd-doctitle','qd-owner','qd-prep','qd-rev','qd-app','qd-link']
+      .forEach(function(i){ document.getElementById(i).value=''; });
+    document.getElementById('qd-review').value = 36;
+    document.getElementById('qd-msg').style.display = 'none';
+  }
+  function authorised(list, name){
+    if (!list || !list.length) return true;           // nothing set: nothing to check against
+    return list.some(function(n){ return n.toLowerCase() === String(name||'').toLowerCase(); });
+  }
+  async function saveQmsDoc(issuing){
+    var msg = document.getElementById('qd-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var g = function(i){ return document.getElementById(i).value.trim(); };
+    var type = g('qd-type'), title = g('qd-doctitle');
+    if (!title) return say('A document needs a title.');
+    if (!type) return say('Say what kind of document it is — the number and the signatories both ' +
+      'depend on it.');
+    var prep = g('qd-prep'), rev = g('qd-rev'), app = g('qd-app');
+    var existing = qdEditing ? qmsDocs.filter(function(x){ return x.doc_id === qdEditing; })[0] : null;
+    var prev = existing ? (existing.data||{}) : {};
+
+    if (issuing){
+      if (!prep || !rev || !app)
+        return say('A controlled document cannot be issued without a preparer, a reviewer and an ' +
+          'approver. Three names, three different jobs.');
+      if (prep.toLowerCase() === app.toLowerCase())
+        return say('<b>'+esc(prep)+'</b> cannot both prepare and approve the same document. That is ' +
+          'the control an auditor checks first, and it is not a formality — it is the only thing ' +
+          'standing between a draft and an issued procedure.');
+      var s = signFor(qmsLevel, type);
+      if (s){
+        var sv = s.data||{};
+        if (!authorised(sv.prepare, prep))
+          return say('<b>'+esc(prep)+'</b> is not on the list of people who may prepare a '+esc(type)+'.');
+        if (!authorised(sv.review, rev))
+          return say('<b>'+esc(rev)+'</b> is not on the list of people who may review a '+esc(type)+'.');
+        if (!authorised(sv.approve, app))
+          return say('<b>'+esc(app)+'</b> is not on the list of people who may approve a '+esc(type)+
+            '. Either the wrong name was typed, or the signatories need changing — but not quietly ' +
+            'here.');
+      }
+    }
+
+    /* the number: issued once, from the format, and never reissued */
+    var docNo = prev.docNo || '';
+    var fmt = null;
+    if (!docNo){
+      fmt = formatFor(qmsLevel, type);
+      if (fmt){
+        var fv = fmt.data||{};
+        docNo = formatNumber(fv, C.num(fv.nextSerial) || 1);
+      } else {
+        return say('There is no numbering format for a <b>'+esc(type)+'</b> at this level, so a number ' +
+          'cannot be issued. Set one on Document Format Numbers first — numbering documents by hand ' +
+          'is how two of them end up sharing one.');
+      }
+    }
+    if (qmsDocs.some(function(d){
+      return String((d.data||{}).docNo||'') === docNo && d.doc_id !== qdEditing; }))
+      return say('<b>'+esc(docNo)+'</b> is already in the register.');
+
+    var data = Object.assign({}, prev, {
+      level:qmsLevel, type:type, title:title, docNo:docNo, owner:g('qd-owner'),
+      reviewMonths:C.num(g('qd-review')) || 36, preparedBy:prep, reviewedBy:rev,
+      approvedBy:app, link:g('qd-link') });
+    if (issuing){
+      data.revision = (C.num(prev.revision) || 0) + 1;
+      data.issuedOn = new Date().toISOString().slice(0,10);
+      data.history = (prev.history||[]).concat([{ rev:data.revision, on:data.issuedOn,
+        by:(me && me.user)||'', approvedBy:app }]);
+    }
+
+    var btn = document.getElementById(issuing ? 'qd-issue' : 'qd-save'); btn.disabled = true;
+    try {
+      await C.idms.saveDoc({ docId: qdEditing || '', kind:'qmsdoc', docNo: docNo,
+        status: issuing ? 'Issued' : 'Draft', data:data },
+        issuing ? 'controlled document issued' : 'controlled document drafted');
+      /* only move the serial on once the number has actually been taken */
+      if (fmt){
+        var fv2 = Object.assign({}, fmt.data||{});
+        fv2.nextSerial = (C.num(fv2.nextSerial) || 1) + 1;
+        await C.idms.saveDoc({ docId: fmt.doc_id, kind:'docformat', docNo: fmt.doc_no,
+          status:'Active', data:fv2 }, 'document number issued');
+      }
+      say(issuing ? 'Issued as <b>'+esc(docNo)+'</b> revision ' + data.revision + '.'
+                  : 'Saved as a draft, numbered <b>'+esc(docNo)+'</b>.', true);
+      clearQmsForm();
+      await loadQmsDocs(qmsLevel);
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+  function printQmsDocs(){
+    var rows = qmsDocs.filter(function(d){ return C.num((d.data||{}).level) === qmsLevel; });
+    if (!rows.length) { toast('Nothing to print.'); return; }
+    var today = new Date();
+    C.openReport({ title:'Document Register — ' + QMS_LEVELS[qmsLevel], landscape:true, sections:[
+      { type:'table', title:'Controlled documents', dense:true,
+        columns:[{label:'Number'},{label:'Title'},{label:'Kind'},{label:'Rev',align:'c'},
+                 {label:'Issued'},{label:'Review due'},{label:'Prepared'},{label:'Reviewed'},
+                 {label:'Approved'},{label:'Status'}],
+        rows: rows.map(function(d){
+          var v = d.data||{}, due = reviewDue(v);
+          return [v.docNo, v.title, v.type, C.num(v.revision)||0,
+                  v.issuedOn?C.fmtDate(v.issuedOn):'—',
+                  due ? C.fmtDate(due.toISOString().slice(0,10)) + (due < today ? ' (overdue)' : '') : '—',
+                  v.preparedBy||'—', v.reviewedBy||'—', v.approvedBy||'—', d.status||'Draft']; }) } ] });
+  }
+
+  /* ================= MASTER LISTS =================
+     Nothing is entered on these. A master list of PFDs is the list of PFDs that
+     exist, and the useful half of it is the parts that have NONE — that is the
+     finding, and it is the half a hand-kept list never contains. */
+  var mlKind = 'pfd', mlRows = [];
+  var ML_META = {
+    pfd:   ['Master List — Process Flow Diagram', 'process',
+            'A PFD exists for a part once its routing does — the diagram is drawn from the operations.'],
+    pfmea: ['Master List — PFMEA', 'pfmea',
+            'One PFMEA per part. A part in production without one is a finding, not an omission.'],
+    cp:    ['Master List — Control Plan', 'control_plan',
+            'One control plan per part. It is what the inspection frequencies on the shop floor come from.']
+  };
+
+  async function loadMasterList(which){
+    var switching = mlKind !== (({ pfd:'pfd', pfmea:'pfmea', cp:'cp' })[which] || 'pfd');
+    mlKind = ({ pfd:'pfd', pfmea:'pfmea', cp:'cp' })[which] || 'pfd';
+    /* the three lists share one screen, so a filter left on "missing" from the
+       last one silently hides most of the next one */
+    if (switching) document.getElementById('ml2-filter').value = 'all';
+    var m = ML_META[mlKind];
+    document.getElementById('ml2-title').textContent = m[0];
+    document.getElementById('ml2-note').textContent = m[2] +
+      ' Nothing on this screen is entered — it is the list of what exists, and what does not.';
+    await fetchParts();
+    var docsOf = [];
+    try { docsOf = await C.idms.docs(m[1]); } catch(e){ docsOf = []; }
+    var procs = [];
+    if (mlKind !== 'pfd') { try { procs = await C.idms.docs('process'); } catch(e){} }
+    else procs = docsOf;
+
+    mlRows = allParts.map(function(p){
+      var mine = (mlKind === 'pfd')
+        ? procs.filter(function(x){ return (x.part_id || (x.data||{}).partId) === p.part_id; })
+        : docsOf.filter(function(x){ return (x.part_id || (x.data||{}).partId) === p.part_id; });
+      var latest = mine.sort(function(a,b){
+        return String((b.data||{}).date || b.created_at || '')
+          .localeCompare(String((a.data||{}).date || a.created_at || '')); })[0];
+      var v = latest ? (latest.data||{}) : {};
+      return { partId:p.part_id, partNo:p.part_no, partName:p.part_name||'', lifecycle:p.lifecycle||'',
+               has: mine.length > 0,
+               count: mine.length,
+               docNo: mlKind === 'pfd' ? (mine.length ? mine.length + ' operations' : '')
+                                       : (latest ? latest.doc_no || '' : ''),
+               rev: v.revision || v.rev || '',
+               on: v.date || (latest ? latest.created_at : '') || '',
+               by: v.preparedBy || v.signedBy || '',
+               status: latest ? (latest.status || '') : '' };
+    });
+    drawMasterList();
+  }
+  function drawMasterList(){
+    var host = document.getElementById('ml2-body'), msg = document.getElementById('ml2-msg');
+    var filter = document.getElementById('ml2-filter').value;
+    if (!mlRows.length){
+      host.innerHTML = '<div class="card"><div class="empty"><b>No parts yet</b>The master list is ' +
+        'one row per part.</div></div>';
+      msg.style.display = 'none';
+      return;
+    }
+    var missing = mlRows.filter(function(r){ return !r.has; });
+    var inProduction = missing.filter(function(r){ return r.lifecycle === 'Series'; });
+    var rows = mlRows.filter(function(r){
+      if (filter === 'missing') return !r.has;
+      if (filter === 'have') return r.has;
+      return true;
+    });
+
+    host.innerHTML = '<div class="card"><div class="stat" style="margin-bottom:12px;">' +
+      [['Parts', mlRows.length], ['Have one', mlRows.length - missing.length],
+       ['Missing', missing.length], ['Missing and in series production', inProduction.length]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
+      '</div>' +
+      '<div class="scroll-x"><table class="t"><thead><tr><th>Part</th><th>Stage</th>' +
+      '<th>Document</th><th class="c">Rev</th><th>Dated</th><th class="c">Status</th>' +
+      '</tr></thead><tbody>' + rows.map(function(r){
+        return '<tr><td><b>'+esc(r.partNo)+'</b><div class="hint">'+esc(r.partName)+'</div></td>' +
+          '<td class="hint">'+esc(r.lifecycle)+'</td>' +
+          '<td'+(r.has?'':' class="bad"')+'>'+(r.has ? esc(r.docNo||'on file') : 'none on file')+'</td>' +
+          '<td class="c hint">'+esc(r.rev||'—')+'</td>' +
+          '<td class="hint">'+(r.on?C.fmtDate(String(r.on).slice(0,10)):'—')+'</td>' +
+          '<td class="c">'+(r.has
+            ? '<span class="badge series">'+esc(r.status||'on file')+'</span>'
+            : '<span class="badge ab">missing</span>')+'</td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+
+    msg.style.display=''; msg.className = 'note' + (inProduction.length ? ' bad' : (missing.length ? '' : ' good'));
+    msg.innerHTML = inProduction.length
+      ? '<b>' + inProduction.length + ' part(s) in series production have none:</b> ' +
+        esc(inProduction.slice(0,6).map(function(r){ return r.partNo; }).join(', ')) +
+        (inProduction.length>6?' and others':'') + '. That is the finding this list exists to surface.'
+      : missing.length
+        ? missing.length + ' part(s) have none, but none of them are in series production yet.'
+        : 'Every part has one.';
+  }
+  function printMasterList(){
+    if (!mlRows.length) { toast('Nothing to print.'); return; }
+    C.openReport({ title: ML_META[mlKind][0], landscape:true, sections:[
+      { type:'table', title:'One row per part', dense:true,
+        columns:[{label:'Part'},{label:'Name'},{label:'Stage'},{label:'Document'},{label:'Rev',align:'c'},
+                 {label:'Dated'},{label:'Status'}],
+        rows: mlRows.map(function(r){
+          return [r.partNo, r.partName, r.lifecycle, r.has ? (r.docNo||'on file') : 'NONE ON FILE',
+                  r.rev||'—', r.on?C.fmtDate(String(r.on).slice(0,10)):'—',
+                  r.has ? (r.status||'on file') : 'missing']; }),
+        note:'Nothing on this list is entered. It is the documents that exist against the parts that ' +
+             'exist, at the moment of printing.' } ] });
+  }
+
+  /* ================= COMPLIANCE AND AUDIT TRAIL =================
+     A read-only window on what the system already wrote. There is deliberately
+     no way to edit or delete an entry from here — a trail that can be tidied is
+     not a trail. */
+  var trailRows = [];
+
+  async function loadAuditTrail(){
+    var host = document.getElementById('ct-body');
+    host.innerHTML = '<div class="card"><div class="hint">Reading the trail…</div></div>';
+    /* C.idms.audit already unwraps the rows — reaching for .audit on the result
+       gave an empty trail that looked like an empty database */
+    try { trailRows = await C.idms.audit() || []; }
+    catch(e){ trailRows = [];
+      host.innerHTML = '<div class="card"><div class="note bad">'+esc(e.message)+'</div></div>'; return; }
+    var kinds = {}, actions = {};
+    trailRows.forEach(function(r){ if (r.kind) kinds[r.kind] = 1; if (r.action) actions[r.action] = 1; });
+    var fill = function(id, obj, label){
+      var sel = document.getElementById(id), keep = sel.value;
+      sel.innerHTML = '<option value="">'+label+'</option>' +
+        Object.keys(obj).sort().map(function(k){ return '<option>'+esc(k)+'</option>'; }).join('');
+      if (keep) sel.value = keep;
+    };
+    fill('ct-kind', kinds, 'Every kind'); fill('ct-action', actions, 'Every action');
+    drawAuditTrail();
+  }
+  function drawAuditTrail(){
+    var host = document.getElementById('ct-body'), msg = document.getElementById('ct-msg');
+    var q = document.getElementById('ct-q').value.trim().toLowerCase();
+    var kind = document.getElementById('ct-kind').value;
+    var action = document.getElementById('ct-action').value;
+    var rows = trailRows.filter(function(r){
+      if (kind && r.kind !== kind) return false;
+      if (action && r.action !== action) return false;
+      if (q){
+        var hay = [r.who, r.kind, r.ref, r.action, r.reason].join(' ').toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+
+    var people = {};
+    trailRows.forEach(function(r){ if (r.who) people[r.who] = (people[r.who]||0) + 1; });
+    var oldest = trailRows.length ? trailRows[trailRows.length-1].at : null;
+
+    host.innerHTML = '<div class="card"><div class="stat" style="margin-bottom:12px;">' +
+      [['Entries held', trailRows.length], ['Shown', rows.length],
+       ['People', Object.keys(people).length],
+       ['Oldest shown', oldest ? C.fmtDate(String(oldest).slice(0,10)) : '—']]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
+      '</div>' +
+      (rows.length
+        ? '<div class="scroll-x"><table class="t"><thead><tr><th>When</th><th>Who</th><th>Kind</th>' +
+          '<th>Record</th><th>What happened</th><th>Why</th></tr></thead><tbody>' +
+          rows.map(function(r){
+            var changed = '';
+            if (r.before_val && r.after_val){
+              var keys = [];
+              try {
+                var b = typeof r.before_val === 'string' ? JSON.parse(r.before_val) : r.before_val;
+                var a = typeof r.after_val === 'string' ? JSON.parse(r.after_val) : r.after_val;
+                Object.keys(a||{}).forEach(function(k){
+                  if (JSON.stringify((b||{})[k]) !== JSON.stringify(a[k])) keys.push(k); });
+              } catch(e){}
+              if (keys.length) changed = '<div class="hint">changed: ' + esc(keys.slice(0,6).join(', ')) + '</div>';
+            }
+            return '<tr><td class="hint">'+esc(String(r.at||'').slice(0,16).replace('T',' '))+'</td>' +
+              '<td><b>'+esc(r.who||'')+'</b></td>' +
+              '<td class="hint">'+esc(r.kind||'')+'</td>' +
+              '<td class="hint">'+esc(r.ref||'')+'</td>' +
+              '<td>'+esc(r.action||'')+changed+'</td>' +
+              '<td class="hint">'+esc(r.reason||'')+'</td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<div class="empty"><b>Nothing matches</b>Nothing in the trail matches that.</div>') +
+      '</div>';
+
+    msg.style.display=''; msg.className='note';
+    msg.innerHTML = 'The trail is written by the system when a change is made. Nothing on this screen ' +
+      'can edit or remove an entry, and there is no screen anywhere that can — that is the whole ' +
+      'point of it.';
   }
 
   /* ================= CFT MEMBERS =================
@@ -13733,6 +14439,37 @@
     document.getElementById('ab-file').value = '';
     bannerPreview();
   });
+
+  ['df-prefix','df-digits','df-next'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', drawFormatExample); });
+  document.getElementById('df-save').addEventListener('click', saveFormat);
+  document.getElementById('df-clear').addEventListener('click', clearFormatForm);
+
+  document.getElementById('sg-save').addEventListener('click', saveSignatory);
+  document.getElementById('sg-print').addEventListener('click', function(){
+    C.openReport({ title:'Signatories', landscape:true, sections:[{ type:'table',
+      title:'Who may sign what', dense:true,
+      columns:[{label:'Level'},{label:'Kind'},{label:'May prepare'},{label:'May review'},{label:'May approve'}],
+      rows: signDocs.map(function(s){
+        var v = s.data||{};
+        return [QMS_LEVELS[C.num(v.level)]||'', v.type, (v.prepare||[]).join(', ')||'—',
+                (v.review||[]).join(', ')||'—', (v.approve||[]).join(', ')||'—']; }) }] });
+  });
+
+  document.getElementById('qd-type').addEventListener('change', qdFillSignatories);
+  document.getElementById('qd-save').addEventListener('click', function(){ saveQmsDoc(false); });
+  document.getElementById('qd-issue').addEventListener('click', function(){ saveQmsDoc(true); });
+  document.getElementById('qd-clear').addEventListener('click', clearQmsForm);
+  document.getElementById('qd-print').addEventListener('click', printQmsDocs);
+
+  document.getElementById('ml2-run').addEventListener('click', function(){ loadMasterList(mlKind); });
+  document.getElementById('ml2-filter').addEventListener('change', drawMasterList);
+  document.getElementById('ml2-print').addEventListener('click', printMasterList);
+
+  document.getElementById('ct-run').addEventListener('click', loadAuditTrail);
+  document.getElementById('ct-q').addEventListener('input', drawAuditTrail);
+  document.getElementById('ct-kind').addEventListener('change', drawAuditTrail);
+  document.getElementById('ct-action').addEventListener('change', drawAuditTrail);
 
   document.getElementById('cf-save').addEventListener('click', saveCft);
   document.getElementById('cf-clear').addEventListener('click', clearCftForm);

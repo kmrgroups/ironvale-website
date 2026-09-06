@@ -1,8 +1,9 @@
-/* v113 tests. Yesterday is seeded with one of everything the board is supposed
-   to notice — a failed check with no action, rejections, an overdue audit
-   finding, a broken tool, downtime, an absence, a despatch and an overdue order
-   — so a board that quietly drops one of them fails here rather than in a
-   meeting. */
+/* v114 tests — the DWM board and the organisation chart, rebuilt.
+
+   The DWM fixture puts today inside the month under test so the marking rules
+   (only the month in progress, only days that have happened) can be exercised
+   at all; and it checks the freeze — that changing an activity's frequency
+   after a month has been marked cannot rewrite that month's adherence. */
 import fs from 'fs';
 import { JSDOM, VirtualConsole } from 'jsdom';
 
@@ -12,56 +13,23 @@ const kpi = fs.readFileSync('kpi.js', 'utf8');
 
 let docs = [], parts = [], idSeq = 1, serial = 0;
 const settings = {};
-const iso = d => d.toISOString().slice(0, 10);
-const ago = n => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
-const ahead = n => ago(-n);
-const YDAY = ago(1);
+const now = new Date();
+const YEAR = now.getFullYear(), MONTH = now.getMonth() + 1;
+const TODAY = now.getDate();
+const MONTH_NAMES = ['January','February','March','April','May','June',
+  'July','August','September','October','November','December'];
 
 const employees = [
   { data: { empId: 'E1', name: 'R Kumar', designation: 'CNC Operator', department: 'Machining', status: 'Active' } },
-  { data: { empId: 'E2', name: 'S Babu', designation: 'CNC Operator', department: 'Machining', status: 'Active' } }
+  { data: { empId: 'E2', name: 'S Babu', designation: 'Shift Supervisor', department: 'Machining', status: 'Active' } },
+  { data: { empId: 'E3', name: 'M Iyer', designation: 'Quality Engineer', department: 'Quality', status: 'Active' } },
+  { data: { empId: 'E4', name: 'P Left', designation: 'CNC Operator', department: 'Machining', status: 'Left' } },
+  { data: { empId: 'E5', name: 'K Nair', designation: 'Storekeeper', department: 'Machining', status: 'Active' } }
 ];
-const attendance = [
-  { day: YDAY, empId: 'E1', status: 'Present' },
-  { day: YDAY, empId: 'E2', status: 'Absent' }
-];
 
-parts.push({ part_id: 'P1', part_no: 'PART-1', part_name: 'Housing', lifecycle: 'Series', data: {} });
-
-// production yesterday: 500 made, 20 rejected, 60 min downtime
-docs.push({ doc_id: 'pd1', kind: 'production', part_id: 'P1', doc_no: 'PR-1',
-  data: { partId: 'P1', date: YDAY, made: 500, rejected: 20, minutes: 480, runMinutes: 420,
-    downtime: 60, plannedCycle: 48, machine: 'LATHE-1', operator: 'R Kumar',
-    rejectReason: 'Burr not removed', downtimeReason: 'Machine breakdown' } });
-
-// a check sheet with a failed item and nothing written against it
-docs.push({ doc_id: 'cs1', kind: 'checksheet', doc_no: 'MCS-1', status: 'Signed off',
-  data: { machineName: 'LATHE-1', date: YDAY, shift: 'A', checkedBy: 'R Kumar',
-    items: [{ name: 'Coolant level and condition', result: 'Not OK', note: '' },
-            { name: 'Air pressure', result: 'OK', note: '' }] } });
-// and one left open
-docs.push({ doc_id: 'cs2', kind: 'checksheet', doc_no: 'MCS-2', status: 'Open',
-  data: { machineName: 'GRINDER-1', date: YDAY, shift: 'B', items: [] } });
-
-// an overdue audit finding
-docs.push({ doc_id: 'au1', kind: 'audit', doc_no: 'AUD-1', status: 'Carried out',
-  data: { type: 'Process', area: 'OP10 Turning', plannedOn: ago(30), actualOn: ago(28),
-    findings: [{ severity: 'Major', description: 'Setup approval not signed', owner: 'M Iyer',
-      dueOn: ago(5), closedOn: '' }] } });
-
-// an open non-conformance
-docs.push({ doc_id: 'nc1', kind: 'ncr', doc_no: 'NCR-1', status: 'Open',
-  data: { description: 'Oversize bore on 3 pieces', owner: 'S Rao', dueOn: ahead(4), raisedOn: ago(6) } });
-
-// a tool broken yesterday
-docs.push({ doc_id: 'tl1', kind: 'tool', doc_no: 'TOOL-1',
-  data: { description: 'CNMG insert', expectedLife: 400, lifeUnit: 'pieces',
-    history: [{ on: YDAY, event: 'Broken', qty: 120, cost: 450, by: 'R Kumar' }] } });
-
-// a despatch yesterday and an order past its date
-docs.push({ doc_id: 'dc1', kind: 'dc', doc_no: 'DC-1', data: { date: YDAY, qty: 300, po: 'PO-A' } });
-docs.push({ doc_id: 'so1', kind: 'order', doc_no: 'SO-1',
-  data: { po: 'PO-A', partId: 'P1', qty: 1000, due: ago(3), customerName: 'Alpha' } });
+docs.push({ doc_id: 'om1', kind: 'orgmaster', doc_no: 'OM-1', data: { type: 'department', name: 'Machining' } });
+docs.push({ doc_id: 'om2', kind: 'orgmaster', doc_no: 'OM-2', data: { type: 'department', name: 'Quality' } });
+docs.push({ doc_id: 'om3', kind: 'orgmaster', doc_no: 'OM-3', data: { type: 'designation', name: 'CNC Operator', department: 'Machining' } });
 
 const vc = new VirtualConsole();
 const pageErrors = [];
@@ -72,8 +40,6 @@ const { window } = dom;
 window.Element.prototype.scrollIntoView = function () {};
 if (!window.CSS) window.CSS = {};
 if (!window.CSS.escape) window.CSS.escape = s => String(s).replace(/["\\]/g, '\\$&');
-const prompts = [];
-window.prompt = () => (prompts.length ? prompts.shift() : null);
 let signedIn = false;
 
 window.fetch = async (path, opts = {}) => {
@@ -87,7 +53,6 @@ window.fetch = async (path, opts = {}) => {
   }
   if (url.startsWith('/api/content')) return ok({ data: { company: { legalName: 'Test Mfg', docPrefix: 'TEST' } } });
   if (url.startsWith('/api/hr?what=employees')) return ok({ employees });
-  if (url.startsWith('/api/hr?what=attendance')) return ok({ attendance });
   if (url.startsWith('/api/hr')) return ok({});
   if (url.startsWith('/api/rfqs')) return ok({ rfqs: [] });
   if (url.startsWith('/api/idms')) {
@@ -125,108 +90,267 @@ const click = el => el.dispatchEvent(new window.MouseEvent('click', { bubbles: t
 const change = el => el.dispatchEvent(new window.Event('change', { bubbles: true }));
 const nav = id => click(window.document.querySelector('#menubar [data-s="' + id + '"]'));
 const txt = el => el.textContent.replace(/\s+/g, ' ');
-const col = title => [...$('dw-body').querySelectorAll('.dwm-col')]
-  .find(c => c.querySelector('header b').textContent === title);
 
 await wait(120);
 $('g-user').value = 'tester'; $('g-pass').value = 'x';
 $('g-go').dispatchEvent(new window.Event('click'));
 await wait(250);
 
-// ================= the board =================
-nav('dwm'); await wait(1100);
-check('the board defaults to yesterday', $('dw-date').value === YDAY, $('dw-date').value);
-check('all five columns are drawn',
-  $('dw-body').querySelectorAll('.dwm-col').length === 5,
-  'cols=' + $('dw-body').querySelectorAll('.dwm-col').length);
+// ================= DWM: choosing whose board =================
+nav('dwm'); await wait(700);
+check('the board asks whose it is before anything else',
+  $('dw-pick').style.display !== 'none' && $('dw-board').style.display === 'none');
 
-const S = txt(col('Safety')), Q = txt(col('Quality')), D = txt(col('Delivery')),
-      Cc = txt(col('Cost')), P = txt(col('People'));
+click($('dw-open')); await wait(200);
+check('a board with no name is refused', /whose board/i.test(txt($('dw-pickmsg'))), txt($('dw-pickmsg')));
 
-check('the failed check is on the safety column', /Coolant level/.test(S), S.slice(0, 200));
-check('a failed check with no action says so',
-  /nothing written against it/.test(S), S.slice(0, 250));
-check('the unsigned sheet is counted', /not signed off/i.test(S), S.slice(0, 300));
+$('dw-dept').value = 'Machining'; change($('dw-dept')); await wait(300);
+const names = [...$('dw-emp').options].map(o => o.value);
+check('the employee list is filtered to the department',
+  names.includes('R Kumar') && !names.includes('M Iyer'), names.join(','));
+check('somebody who has left is not offered a board', !names.includes('P Left'), names.join(','));
 
-check('rejections are worked out as ppm', /40000|40,000/.test(Q.replace(/\s/g, '')), Q.slice(0, 200));
-check('the worst reject reason is named', /Burr not removed/.test(Q), Q.slice(0, 250));
-check('the open non-conformance is counted', /Non-conformances open/.test(Q), Q.slice(0, 300));
-check('the overdue audit finding is on the board',
-  /Setup approval not signed/.test(Q), Q.slice(0, 400));
+$('dw-emp').value = 'R Kumar'; change($('dw-emp')); await wait(400);
+click($('dw-open')); await wait(500);
+check('the board opens for that person',
+  $('dw-board').style.display !== 'none' && /R Kumar/.test(txt($('dw-who'))), txt($('dw-who')));
+check('and shows their department', /Machining/.test(txt($('dw-who'))), txt($('dw-who')));
+check('an empty board says what to do',
+  /Nothing on this board yet/.test(txt($('dw-body'))), txt($('dw-body')).slice(0, 120));
 
-check('the despatch is shown', /Despatched yesterday/.test(D) && /300/.test(D), D.slice(0, 200));
-check('the order past its date is counted', /past their date/i.test(D), D.slice(0, 250));
+// ================= adding activities =================
+$('dw-month').value = String(MONTH); change($('dw-month'));
+$('dw-year').value = String(YEAR); change($('dw-year'));
+await wait(300);
 
-check('OEE is worked out from the bookings', /OEE yesterday/.test(Cc), Cc.slice(0, 200));
-check('downtime is shown in hours', /1/.test(Cc) && /Downtime/.test(Cc), Cc.slice(0, 250));
-check('the broken tool and what it cost are shown',
-  /Tool broken/.test(Cc) && /450/.test(Cc), Cc.slice(0, 350));
+click($('dw-add')); await wait(200);
+$('dw-a-name').value = ''; click($('dw-a-save')); await wait(200);
+check('an activity with no description is refused',
+  /what is done/i.test(txt($('dw-a-msg'))), txt($('dw-a-msg')));
 
-check('attendance is read from the register', /1 present, 1 absent/.test(P), P);
+$('dw-a-name').value = 'Line 5S check';
+$('dw-a-freq').value = 'Daily'; change($('dw-a-freq'));
+click($('dw-a-save')); await wait(500);
+check('a daily activity is added',
+  docs.filter(d => d.kind === 'dwm').length === 1, txt($('dw-a-msg')));
 
-check('the summary counts what needs talking about',
-  /thing\(s\) to talk about/.test(txt($('dw-msg'))), txt($('dw-msg')));
+click($('dw-add')); await wait(100);
+$('dw-a-name').value = 'Line 5S check';
+click($('dw-a-save')); await wait(300);
+check('the same activity cannot be added twice',
+  /already on this board/i.test(txt($('dw-a-msg'))), txt($('dw-a-msg')));
 
-// a day with nothing recorded must say so rather than show yesterday's figures
-$('dw-date').value = ago(40); change($('dw-date')); await wait(900);
-check('a day with nothing booked shows nothing rather than the last one',
-  !/Burr not removed/.test(txt($('dw-body'))), txt($('dw-body')).slice(0, 200));
-check('but findings still overdue today stay on the board',
-  /Setup approval not signed/.test(txt($('dw-body'))), txt($('dw-body')).slice(0, 300));
+$('dw-a-name').value = 'Layered process audit';
+$('dw-a-freq').value = 'Monthly'; change($('dw-a-freq'));
+await wait(100);
+check('a monthly activity is forced onto the annual calendar',
+  $('dw-a-cat').value === 'Annual' && $('dw-a-cat').disabled);
+click($('dw-a-save')); await wait(300);
+check('an annual activity with no months chosen is refused',
+  /never comes due/i.test(txt($('dw-a-msg'))), txt($('dw-a-msg')));
 
-// ================= raising an action =================
-$('dw-date').value = YDAY; change($('dw-date')); await wait(900);
-const act = [...$('dw-body').querySelectorAll('.dw-act')]
-  .find(b => /Coolant/.test(b.dataset.t));
-check('a failed check can be raised as an action', !!act);
-click(act); await wait(600);
-check('raising it opens the task list',
-  window.document.querySelector('[data-panel="task_list"]').classList.contains('on'));
-check('the action is prefilled with what it was about',
-  /Coolant/.test($('tk-title').value), $('tk-title').value);
-check('and with where it came from', /DWM/.test($('tk-src').value), $('tk-src').value);
+[...window.document.querySelectorAll('.dw-mo')]
+  .filter(c => c.value === MONTH_NAMES[MONTH - 1]).forEach(c => { c.checked = true; });
+click($('dw-a-save')); await wait(500);
+const dwmDocRec = docs.find(d => d.kind === 'dwm');
+check('with months chosen it is added', (dwmDocRec.data.activities || []).length === 2);
 
-// ================= the task list =================
-$('tk-owner').value = ''; $('tk-due').value = '';
-click($('tk-add')); await wait(250);
-check('an action with no owner is refused', /owner/i.test(txt($('tk-msg'))), txt($('tk-msg')));
+// ================= the grid =================
+const grid = () => $('dw-body').querySelector('.dwm-grid');
+check('the grid is drawn', !!grid());
+const daysInMonth = new Date(YEAR, MONTH, 0).getDate();
+check('there is a column for every day of the month',
+  grid() && grid().querySelectorAll('thead th').length === daysInMonth + 2,
+  'cols=' + (grid() ? grid().querySelectorAll('thead th').length : 0));
+check('the categories are shown as bands',
+  /DEPARTMENT ACTIVITIES/i.test(txt(grid())) && /ANNUAL CALENDAR/i.test(txt(grid())),
+  txt(grid()).slice(0, 160));
 
-$('tk-owner').value = 'R Kumar'; $('tk-due').value = '';
-click($('tk-add')); await wait(250);
-check('an action with no date is refused', /never be overdue/i.test(txt($('tk-msg'))), txt($('tk-msg')));
+const sundays = Array.from({ length: daysInMonth }, (_, i) => i + 1)
+  .filter(d => new Date(YEAR, MONTH - 1, d).getDay() === 0);
+const marked = [...grid().querySelectorAll('.dwm-cell.plan, .dwm-cell.done, .dwm-cell.conc')];
+check('Sundays are not planned for a daily activity',
+  sundays.every(sd => !marked.some(c => Number(c.dataset.d) === sd)),
+  'sundays=' + sundays.join(','));
 
-$('tk-due').value = ahead(3);
-click($('tk-add')); await wait(500);
-check('the action is raised', docs.filter(d => d.kind === 'task').length === 1, txt($('tk-msg')));
-check('it carries the source it came from',
-  /DWM/.test((docs.find(d => d.kind === 'task') || { data: {} }).data.source || ''));
+// ================= marking =================
+const cellFor = day => [...grid().querySelectorAll('.dwm-cell[data-d="' + day + '"]')][0];
+/* today may be a Sunday or a day nothing is planned on, so mark whatever the
+   board itself says is markable rather than assuming a date */
+const markable = [...grid().querySelectorAll('.dwm-cell[data-a]')];
+const markDay = markable.length ? Number(markable[markable.length - 1].dataset.d) : 0;
+let cell = markDay ? cellFor(markDay) : null;
+if (cell && cell.dataset.a) {
+  click(cell); await wait(450);
+  check('a click marks the day done', txt(cellFor(markDay)) === '✔', txt(cellFor(markDay)));
+  click(cellFor(markDay)); await wait(450);
+  check('a second click marks it a concession', txt(cellFor(markDay)) === 'C', txt(cellFor(markDay)));
+  click(cellFor(markDay)); await wait(450);
+  check('a third click clears it back to planned', txt(cellFor(markDay)) === 'O', txt(cellFor(markDay)));
+  click(cellFor(markDay)); await wait(450);
+} else {
+  check('a click marks the day done', false, 'no clickable cell for day ' + markDay);
+  check('a second click marks it a concession', false, 'skipped');
+  check('a third click clears it back to planned', false, 'skipped');
+}
 
-// actions that live elsewhere are shown but not copied
-const els = txt($('tk-else'));
-check('open non-conformances are shown as living elsewhere', /Oversize bore/.test(els), els.slice(0, 250));
-check('open audit findings are shown too', /Setup approval/.test(els), els.slice(0, 300));
-check('they are not copied onto the task list',
-  docs.filter(d => d.kind === 'task').length === 1,
-  'tasks=' + docs.filter(d => d.kind === 'task').length);
-check('and each says where it lives', /audit/i.test(els) && /Non-conformance/.test(els));
+if (TODAY < daysInMonth) {
+  const future = [...grid().querySelectorAll('.dwm-cell')]
+    .filter(c => Number(c.dataset.d) > TODAY && c.dataset.a);
+  check('a day that has not happened cannot be marked', future.length === 0,
+    'clickable future cells=' + future.length);
+} else {
+  check('a day that has not happened cannot be marked', true, 'month ends today');
+}
 
-// closing needs a note
-prompts.push('');
-click($('tk-list').querySelector('.tk-close')); await wait(300);
-check('an action cannot be closed with nothing written against it',
-  !(docs.find(d => d.kind === 'task') || { data: {} }).data.closedOn);
+// a finished month is the record
+$('dw-month').value = String(MONTH === 1 ? 12 : MONTH - 1);
+if (MONTH === 1) $('dw-year').value = String(YEAR - 1);
+change($('dw-month')); await wait(450);
+check('a month that is not in progress says it cannot be marked',
+  /cannot be marked/i.test(txt($('dw-body'))), txt($('dw-body')).slice(0, 200));
+check('and has no clickable cells',
+  $('dw-body').querySelectorAll('.dwm-cell[data-a]').length === 0);
 
-prompts.push('Coolant topped up and concentration checked; added to the weekly round');
-click($('tk-list').querySelector('.tk-close')); await wait(450);
-const task = docs.find(d => d.kind === 'task');
-check('with a note it closes', !!task.data.closedOn, JSON.stringify(task.data).slice(0, 120));
-check('what was done is kept', /Coolant topped up/.test(task.data.closedNote || ''));
-check('and who closed it', task.data.closedBy === 'tester');
+$('dw-month').value = String(MONTH); $('dw-year').value = String(YEAR);
+change($('dw-month')); await wait(450);
 
-$('tk-filter').value = 'open'; change($('tk-filter')); await wait(200);
-check('the closed action leaves the open list',
-  !/Coolant/.test(txt($('tk-list'))) || /Nothing to show/.test(txt($('tk-list'))),
-  txt($('tk-list')).slice(0, 150));
+// ================= adherence =================
+check('adherence is shown against the 98% target',
+  /target 98%/.test(txt($('dw-body'))), txt($('dw-body')).slice(0, 200));
+check('the three lists are scored separately',
+  /Department/.test(txt($('dw-body'))) && /General/.test(txt($('dw-body'))) &&
+  /Annual calendar/.test(txt($('dw-body'))));
+
+// ================= the freeze =================
+const dwmRec = docs.find(d => d.kind === 'dwm');
+const monthKey = YEAR + '-' + String(MONTH).padStart(2, '0');
+check('marking a month freezes its plan',
+  !!(dwmRec.data.months && dwmRec.data.months[monthKey] &&
+     Object.values(dwmRec.data.months[monthKey]).some(c => Array.isArray(c.plan))),
+  JSON.stringify(dwmRec.data.months || {}).slice(0, 120));
+
+const daily = dwmRec.data.activities.find(a => a.name === 'Line 5S check');
+const frozen = ((dwmRec.data.months[monthKey] || {})[daily.id] || {}).plan;
+if (frozen) {
+  daily.freq = 'Weekly'; daily.day = 'Friday';   // somebody edits the frequency later
+  change($('dw-month')); await wait(450);
+  check('changing the frequency later cannot rewrite a month already marked',
+    ((dwmRec.data.months[monthKey] || {})[daily.id] || {}).plan.length === frozen.length,
+    'was ' + frozen.length);
+} else {
+  check('changing the frequency later cannot rewrite a month already marked', false, 'never froze');
+}
+
+const rmLink = [...$('dw-body').querySelectorAll('.dw-rm')].find(a => a.dataset.id === daily.id);
+if (rmLink) {
+  click(rmLink); await wait(450);
+  check('an activity with days marked against it cannot be removed',
+    dwmRec.data.activities.some(a => a.id === daily.id) && /adherence/i.test(txt($('dw-msg'))),
+    txt($('dw-msg')).slice(0, 140));
+} else {
+  check('an activity with days marked against it cannot be removed', false, 'no remove link');
+}
+
+click($('dw-back')); await wait(450);
+check('you can go back and pick somebody else',
+  $('dw-pick').style.display !== 'none' && $('dw-board').style.display === 'none');
+
+// ================= ORGANISATION CHART =================
+nav('org_chart'); await wait(800);
+check('an empty chart says to start at the top',
+  /No chart yet/.test(txt($('oc-body'))), txt($('oc-body')).slice(0, 120));
+check('the levels are shown as a legend',
+  /Top management/.test(txt($('oc-legend'))) && /Contract labour/.test(txt($('oc-legend'))),
+  txt($('oc-legend')).slice(0, 160));
+
+click($('oc-add')); await wait(200);
+$('oc-title').value = ''; click($('oc-save')); await wait(200);
+check('a box with no post is refused', /Name the post/i.test(txt($('oc-fmsg'))), txt($('oc-fmsg')));
+
+$('oc-title').value = 'Works Manager';
+$('oc-ndept').value = 'Machining';
+$('oc-who').value = 'S Babu';
+$('oc-level').value = 'top';
+$('oc-parent').value = '';
+click($('oc-save')); await wait(700);
+check('the top box is added', docs.filter(d => d.kind === 'orgnode').length === 1);
+
+click($('oc-add')); await wait(200);
+$('oc-title').value = 'Second Boss';
+$('oc-parent').value = '';
+click($('oc-save')); await wait(300);
+check('a second box at the top is refused',
+  /already a box at the top/i.test(txt($('oc-fmsg'))), txt($('oc-fmsg')));
+
+const topId = docs.find(d => d.kind === 'orgnode').doc_id;
+$('oc-title').value = 'CNC Operator';
+$('oc-ndept').value = 'Machining';
+$('oc-who').value = 'R Kumar';
+$('oc-level').value = 'shopfloor';
+$('oc-parent').value = topId;
+click($('oc-save')); await wait(700);
+check('a box below the top is added', docs.filter(d => d.kind === 'orgnode').length === 2);
+check('the chart is drawn as a tree',
+  $('oc-body').querySelectorAll('.oc-node').length === 2,
+  'nodes=' + $('oc-body').querySelectorAll('.oc-node').length);
+
+click($('oc-add')); await wait(200);
+$('oc-title').value = 'Maintenance Fitter';
+$('oc-ndept').value = 'Machining';
+$('oc-who').value = 'Somebody Else';
+$('oc-level').value = 'shopfloor';
+$('oc-parent').value = topId;
+click($('oc-save')); await wait(700);
+check('a name that is not on the employee records is flagged',
+  /not on the employee records/i.test(txt($('oc-body'))), txt($('oc-body')).slice(0, 300));
+
+click($('oc-add')); await wait(200);
+$('oc-title').value = 'Quality Engineer';
+$('oc-ndept').value = 'Machining';
+$('oc-who').value = 'M Iyer';
+$('oc-level').value = 'staff';
+$('oc-parent').value = topId;
+click($('oc-save')); await wait(700);
+check('a person whose record puts them elsewhere is flagged',
+  /record says Quality/i.test(txt($('oc-body'))), txt($('oc-body')).slice(0, 400));
+
+click($('oc-add')); await wait(200);
+$('oc-title').value = 'Shift In-charge';
+$('oc-ndept').value = 'Machining';
+$('oc-who').value = '';
+$('oc-level').value = 'middle';
+$('oc-parent').value = topId;
+click($('oc-save')); await wait(700);
+check('a box with nobody in it is shown as vacant',
+  /vacant/i.test(txt($('oc-body'))), txt($('oc-body')).slice(0, 300));
+
+const kidId = docs.filter(d => d.kind === 'orgnode')
+  .find(d => d.data.title === 'CNC Operator').doc_id;
+const edLinks = [...$('oc-body').querySelectorAll('.oc-ed')];
+const topEd = edLinks.find(a => a.dataset.id === topId);
+if (topEd) {
+  click(topEd); await wait(350);
+  $('oc-parent').value = kidId;
+  click($('oc-save')); await wait(400);
+  check('a reporting line that closes a loop is refused',
+    /circle/i.test(txt($('oc-fmsg'))), txt($('oc-fmsg')));
+  click($('oc-cancel')); await wait(200);
+} else {
+  check('a reporting line that closes a loop is refused', false, 'no edit link for the top box');
+}
+
+const rmTop = [...$('oc-body').querySelectorAll('.oc-rm')].find(a => a.dataset.id === topId);
+if (rmTop) {
+  click(rmTop); await wait(450);
+  check('a box that others report to cannot be removed',
+    /reporting to nobody/i.test(txt($('oc-msg'))), txt($('oc-msg')).slice(0, 160));
+} else {
+  check('a box that others report to cannot be removed', false, 'no remove link for the top box');
+}
+
+check('everybody on the payroll but on no box is listed',
+  /On the payroll, on no box/i.test(txt($('oc-body'))), txt($('oc-body')).slice(0, 200));
 
 check('no page errors throughout', pageErrors.length === 0, pageErrors[0] || '');
 

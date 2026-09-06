@@ -97,6 +97,35 @@
 .gate .powered a:hover{text-decoration:underline;}
 
 /* ---- daily work management board ---- */
+.dwm-pick{max-width:720px;margin:0 auto;}
+.dwm-adh{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;}
+.dwm-adh .b{flex:1;min-width:120px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--white);padding:11px 14px;text-align:center;}
+.dwm-adh .b b{display:block;font-family:var(--mono);font-size:22px;font-weight:800;line-height:1.1;}
+.dwm-adh .b span{font-size:11px;color:var(--ink-soft);}
+.dwm-adh .b.tot{background:var(--navy);border-color:var(--navy);}
+.dwm-adh .b.tot b, .dwm-adh .b.tot span{color:#fff;}
+.dwm-adh .b.miss b{color:#8A2F22;}
+.dwm-adh .b.met b{color:#1F6F4A;}
+.dwm-grid{border-collapse:collapse;font-size:11px;white-space:nowrap;}
+.dwm-grid th, .dwm-grid td{border:1px solid var(--line);padding:0;}
+.dwm-grid th{background:var(--paper);font-weight:600;font-size:10px;padding:3px 4px;}
+.dwm-grid th.sun{background:#F3E3E0;color:#8A2F22;}
+.dwm-grid td.act{padding:5px 9px;white-space:normal;min-width:210px;max-width:260px;font-size:12px;}
+.dwm-grid td.act .sub{font-size:10px;color:var(--ink-soft);}
+.dwm-grid td.pct{padding:5px 8px;text-align:center;font-family:var(--mono);font-weight:700;}
+.dwm-grid tr.cat td{background:var(--navy);color:#fff;font-weight:700;font-size:11px;
+  padding:5px 9px;letter-spacing:.04em;text-transform:uppercase;}
+.dwm-cell{width:22px;height:24px;line-height:24px;text-align:center;font-weight:800;
+  font-family:var(--mono);cursor:default;user-select:none;}
+.dwm-cell.plan{background:#E4ECF6;color:#1B3A6B;cursor:pointer;}
+.dwm-cell.done{background:#DCEBE1;color:#1F6F4A;cursor:pointer;}
+.dwm-cell.conc{background:#F6E1DE;color:#8A2F22;cursor:pointer;}
+.dwm-cell.off{background:var(--paper);}
+.dwm-key{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--ink-soft);}
+.dwm-key i{display:inline-block;width:20px;height:18px;line-height:18px;text-align:center;
+  font-style:normal;font-weight:800;font-family:var(--mono);border-radius:3px;margin-right:4px;}
+
 .dwm-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));}
 .dwm-col{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--white);overflow:hidden;}
 .dwm-col > header{padding:9px 12px;display:flex;align-items:center;justify-content:space-between;
@@ -115,6 +144,30 @@
 .dwm-none{padding:11px 12px;font-size:11.5px;color:var(--ink-soft);}
 
 /* ---- organisation chart ---- */
+.oc-tree{padding:10px 4px;}
+.oc-tree ul{list-style:none;margin:0;padding-left:26px;position:relative;}
+.oc-tree ul::before{content:"";position:absolute;left:10px;top:0;bottom:14px;
+  border-left:1px solid var(--line);}
+.oc-tree li{position:relative;padding:5px 0 0 18px;}
+.oc-tree li::before{content:"";position:absolute;left:-16px;top:21px;width:16px;
+  border-top:1px solid var(--line);}
+.oc-tree > ul{padding-left:0;}
+.oc-tree > ul::before{display:none;}
+.oc-tree > ul > li{padding-left:0;}
+.oc-tree > ul > li::before{display:none;}
+.oc-node{display:inline-flex;flex-direction:column;gap:1px;border:1px solid var(--line);
+  border-left-width:4px;border-radius:var(--radius-sm);background:var(--white);
+  padding:7px 12px;min-width:210px;}
+.oc-node b{font-size:12.5px;}
+.oc-node .who{font-size:12px;color:var(--ink);}
+.oc-node .meta{font-size:10.5px;color:var(--ink-soft);}
+.oc-node .warn{font-size:10.5px;color:#8A2F22;}
+.oc-node .acts{margin-top:4px;display:flex;gap:8px;}
+.oc-node .acts a{font-size:10.5px;color:var(--sky-deep);cursor:pointer;}
+.oc-lvl{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;
+  font-weight:700;color:#fff;letter-spacing:.03em;}
+.oc-legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
 .org-co{text-align:center;margin-bottom:18px;}
 .org-co b{font-family:var(--disp);font-size:17px;}
 .org-depts{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
@@ -382,21 +435,76 @@
 
     <!-- ============ Daily work management ============ -->
     <div class="panel" data-panel="dwm">
-      <div class="card">
+      <!-- ---- who the board is for ---- -->
+      <div class="card" id="dw-pick">
         <h4>Daily Work Management</h4>
-        <div class="hint" style="margin-bottom:10px;">The morning board, in the order it is walked:
-          safety, quality, delivery, cost, people. <b>Every figure on it is read from what was already
-          recorded yesterday</b> — nobody prepares this, and nobody can prepare it differently. Where
-          something needs doing, raise an action and it goes on the task list with the reason attached.</div>
-        <div class="row four">
-          <div><label>For the day</label><input type="date" id="dw-date"></div>
-          <div style="align-self:end;"><button class="btn gold" id="dw-run">Read the day</button></div>
-          <div style="align-self:end;"><button class="btn" id="dw-tasks">Open the task list</button></div>
-          <div style="align-self:end;"><button class="btn" id="dw-print">Print the board</button></div>
+        <div class="hint" style="margin-bottom:12px;">A DWM belongs to a person, not to a
+          department. Pick whose board this is; their activities, their month, their adherence.</div>
+        <div class="dwm-pick">
+          <div class="row">
+            <div><label>Department</label><select id="dw-dept"></select></div>
+            <div><label>Employee</label><select id="dw-emp"></select></div>
+          </div>
+          <div id="dw-preview" style="display:none;margin-top:14px;"></div>
+          <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn gold" id="dw-open">Open the board</button>
+          </div>
+          <div class="note" id="dw-pickmsg" style="display:none;margin-top:12px;"></div>
         </div>
-        <div class="note" id="dw-msg" style="display:none;"></div>
       </div>
-      <div id="dw-body"></div>
+
+      <!-- ---- the board ---- -->
+      <div id="dw-board" style="display:none;">
+        <div class="card">
+          <div style="display:flex;gap:10px;align-items:baseline;justify-content:space-between;flex-wrap:wrap;">
+            <h4 style="margin:0;">DWM — <span id="dw-who"></span></h4>
+            <button class="btn" id="dw-back">← Someone else</button>
+          </div>
+          <div class="row four" style="margin-top:10px;">
+            <div><label>Month</label><select id="dw-month"></select></div>
+            <div><label>Year</label><select id="dw-year"></select></div>
+            <div style="align-self:end;"><button class="btn gold" id="dw-add">Add an activity</button></div>
+            <div style="align-self:end;"><button class="btn" id="dw-print">Print the board</button></div>
+          </div>
+          <div class="dwm-key" style="margin-top:10px;">
+            <span><i class="dwm-cell plan">O</i>planned</span>
+            <span><i class="dwm-cell done">✔</i>done</span>
+            <span><i class="dwm-cell conc">C</i>concession</span>
+            <span class="hint">Click a cell to move it on. Only the month in progress can be marked.</span>
+          </div>
+          <div class="note" id="dw-msg" style="display:none;margin-top:10px;"></div>
+        </div>
+
+        <div class="card" id="dw-addform" style="display:none;">
+          <h4>Add an activity</h4>
+          <div class="row four">
+            <div><label>What is done</label><input id="dw-a-name" placeholder="e.g. 5S check of the line"></div>
+            <div><label>How often</label><select id="dw-a-freq">
+              <option>Daily</option><option>Weekly</option><option>Monthly</option><option>As needed</option>
+            </select></div>
+            <div id="dw-a-daywrap" style="display:none;"><label>Which day</label><select id="dw-a-day">
+              <option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option>
+              <option>Friday</option><option>Saturday</option><option>Sunday</option></select></div>
+            <div id="dw-a-datewrap" style="display:none;"><label>Which date</label><select id="dw-a-date"></select></div>
+            <div id="dw-a-catwrap"><label>Which list</label><select id="dw-a-cat">
+              <option value="Dept">Department activity</option>
+              <option value="General">General activity</option>
+              <option value="Annual">Annual calendar</option></select></div>
+          </div>
+          <div id="dw-a-monthswrap" style="display:none;margin-top:10px;">
+            <label>Which months</label>
+            <div id="dw-a-months" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+              gap:6px;margin-top:6px;"></div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;">
+            <button class="btn gold" id="dw-a-save">Add it</button>
+            <button class="btn" id="dw-a-cancel">Cancel</button>
+          </div>
+          <div class="note" id="dw-a-msg" style="display:none;margin-top:10px;"></div>
+        </div>
+
+        <div id="dw-body"></div>
+      </div>
     </div>
 
     <!-- ============ Task list ============ -->
@@ -746,19 +854,42 @@
     <div class="panel" data-panel="org_chart">
       <div class="card">
         <h4>Organisation Chart</h4>
-        <div class="hint" style="margin-bottom:10px;">Drawn, not drawn up. Departments, designations
-          and sanctioned posts come from the organisation masters; who holds each one comes from the
-          employee records. Nothing is arranged by hand here, so the chart cannot quietly disagree
-          with the payroll — if somebody is in the wrong box, their record says the wrong thing.</div>
+        <div class="hint" style="margin-bottom:12px;">Who reports to whom is a decision, so it is
+          made here. Everything else is not: departments and designations come from the organisation
+          masters, and who holds each post comes from the employee records. Put a name in a box and
+          the chart checks it against the payroll — if it disagrees, one of the two is wrong, and
+          that is worth knowing.</div>
+        <div class="oc-legend" id="oc-legend" style="margin-bottom:12px;"></div>
         <div class="row four">
           <div><label>Show</label><select id="oc-filter">
-            <option value="all">Every department</option>
-            <option value="vacant">Departments with a vacancy</option></select></div>
-          <div style="align-self:end;"><button class="btn gold" id="oc-run">Redraw</button></div>
+            <option value="all">The whole organisation</option>
+            <option value="dept">One department</option></select></div>
+          <div id="oc-deptwrap" style="display:none;"><label>Department</label>
+            <select id="oc-dept"></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="oc-add">Add a box</button></div>
           <div style="align-self:end;"><button class="btn" id="oc-print">Print</button></div>
         </div>
-        <div class="note" id="oc-msg" style="display:none;"></div>
+        <div class="note" id="oc-msg" style="display:none;margin-top:10px;"></div>
       </div>
+
+      <div class="card" id="oc-form" style="display:none;">
+        <h4 id="oc-formtitle">Add a box</h4>
+        <div class="row four">
+          <div><label>Post</label><input id="oc-title" placeholder="e.g. Works Manager"></div>
+          <div><label>Department</label><select id="oc-ndept"></select></div>
+          <div><label>Who holds it</label><input id="oc-who" list="oc-people"
+            placeholder="leave blank if vacant"></div>
+          <datalist id="oc-people"></datalist>
+          <div><label>Level</label><select id="oc-level"></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Reports to</label><select id="oc-parent"></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="oc-save">Save the box</button></div>
+          <div style="align-self:end;"><button class="btn" id="oc-cancel">Cancel</button></div>
+        </div>
+        <div class="note" id="oc-fmsg" style="display:none;margin-top:10px;"></div>
+      </div>
+
       <div id="oc-body"></div>
     </div>
 
@@ -2740,268 +2871,385 @@
   }
 
   /* ================= DAILY WORK MANAGEMENT =================
-     The morning board, walked in the order everybody already walks it: safety,
-     quality, delivery, cost, people. Every figure is read from what was recorded
-     yesterday — nobody prepares this board, which is the whole point. A board
-     somebody prepares is a board that shows what they want it to show, and the
-     meeting then argues about the numbers instead of the problems.
+     A DWM belongs to a person. Their activities, their month, their adherence.
 
-     Where something needs doing, the action goes on the task list with the
-     reason attached rather than into a notebook. */
-  var dwmData = null, taskPrefill = null;
+     The plan is not typed: it falls out of how often the activity is done. A
+     daily activity is planned every working day, a weekly one on its day, an
+     annual one in the months chosen. What IS typed is what actually happened —
+     done, or done under concession.
+
+     One rule matters more than the rest: **the plan for a month is frozen the
+     first time anything is marked in it.** Otherwise changing "weekly on
+     Tuesday" to "weekly on Friday" in November silently rewrites every month
+     back to January, and last year's adherence changes overnight. A record that
+     can be rewritten by editing a dropdown is not a record. */
+  var dwmDoc = null, dwmEmp = '', dwmDept = '';
+  var DWM_MONTHS = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'];
+  var DWM_DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var DWM_TARGET = 98;
+
+  function dwmKey(y, m){ return y + '-' + String(m).padStart(2,'0'); }
+  function dwmDaysIn(y, m){ return new Date(y, m, 0).getDate(); }
+  function dwmDayName(y, m, d){ return DWM_DAYS[new Date(y, m-1, d).getDay()]; }
 
   async function loadDwm(){
-    if (!document.getElementById('dw-date').value){
-      var d = new Date(); d.setDate(d.getDate() - 1);      // yesterday, the day being reviewed
-      document.getElementById('dw-date').value = d.toISOString().slice(0,10);
+    /* the department list comes from the organisation masters, so those have to
+       be loaded before the dropdown is filled — otherwise the filter silently
+       has nothing to filter on and every employee is offered */
+    await compLoad();
+
+    var dsel = document.getElementById('dw-dept'), keepD = dsel.value;
+    var depts = departments();
+    dsel.innerHTML = '<option value="">— choose —</option>' +
+      depts.map(function(d){ return '<option>'+esc(d)+'</option>'; }).join('');
+    if (keepD && depts.indexOf(keepD) >= 0) dsel.value = keepD;
+    dwmFillEmployees();
+
+    var msel = document.getElementById('dw-month');
+    if (!msel.options.length){
+      msel.innerHTML = DWM_MONTHS.map(function(n,i){
+        return '<option value="'+(i+1)+'">'+n+'</option>'; }).join('');
+      var ysel = document.getElementById('dw-year'), now = new Date().getFullYear();
+      var years = ''; for (var y = now-2; y <= now+1; y++) years += '<option>'+y+'</option>';
+      ysel.innerHTML = years;
+      msel.value = String(new Date().getMonth()+1);
+      ysel.value = String(now);
+      document.getElementById('dw-a-months').innerHTML = DWM_MONTHS.map(function(n){
+        return '<label style="font-size:12px;display:flex;gap:6px;align-items:center;">' +
+          '<input type="checkbox" class="dw-mo" value="'+n+'"> '+n+'</label>'; }).join('');
     }
-    await runDwm();
   }
 
-  async function runDwm(){
-    var host = document.getElementById('dw-body');
-    var day = document.getElementById('dw-date').value;
-    host.innerHTML = '<div class="card"><div class="hint">Reading the day…</div></div>';
+  function dwmFillEmployees(){
+    var dept = document.getElementById('dw-dept').value;
+    var sel = document.getElementById('dw-emp'), keep = sel.value;
+    var names = (compEmployees||[]).map(empData)
+      .filter(function(d){ return String(d.status||'Active') !== 'Left'; })
+      .filter(function(d){ return !dept || d.department === dept; })
+      .map(function(d){ return d.name; })
+      .filter(function(n, i, a){ return n && a.indexOf(n) === i; }).sort();
+    sel.innerHTML = names.length
+      ? '<option value="">— choose —</option>' +
+        names.map(function(n){ return '<option>'+esc(n)+'</option>'; }).join('')
+      : '<option value="">— nobody on record for that department —</option>';
+    if (keep && names.indexOf(keep) >= 0) sel.value = keep;
+    dwmPreview();
+  }
 
-    var prod = [], ncrs = [], audits = [], sheets = [], tools = [], dcs = [], ords = [],
-        gauges = [], att = [];
-    try { prod   = await C.idms.docs('production'); } catch(e){}
-    try { ncrs   = await C.idms.docs('ncr'); } catch(e){}
-    try { audits = await C.idms.docs('audit'); } catch(e){}
-    try { sheets = await C.idms.docs('checksheet'); } catch(e){}
-    try { tools  = await C.idms.docs('tool'); } catch(e){}
-    try { dcs    = await C.idms.docs('dc'); } catch(e){}
-    try { ords   = await C.idms.docs('order'); } catch(e){}
-    try { gauges = await C.idms.docs('gauge'); } catch(e){}
-    try { att = (await C.api('/api/hr?what=attendance')).attendance || []; } catch(e){}
+  async function dwmPreview(){
+    var host = document.getElementById('dw-preview');
+    var name = document.getElementById('dw-emp').value;
+    if (!name){ host.style.display = 'none'; return; }
+    var doc = await dwmFetch(name);
+    var now = new Date();
+    var s = doc ? dwmScore(doc, now.getFullYear(), now.getMonth()+1) : null;
+    host.style.display = '';
+    if (!s || !s.total.plan){
+      host.innerHTML = '<div class="note">No activities on this board yet for ' +
+        esc(DWM_MONTHS[now.getMonth()]) + '. Open it and add what they do.</div>';
+      return;
+    }
+    host.innerHTML = '<div class="hint">' + esc(DWM_MONTHS[now.getMonth()]) + ' so far</div>' +
+      dwmScoreCards(s);
+  }
 
-    var today = new Date().toISOString().slice(0,10);
-    var onDay = function(d){ return String(d||'').slice(0,10) === day; };
+  function dwmScoreCards(s){
+    var box = function(label, o, cls){
+      var pct = o.plan ? Math.round(o.done / o.plan * 100) : null;
+      return '<div class="b'+(cls||'')+'"><b>'+(pct === null ? '—' : pct + '%')+'</b>' +
+        '<span>'+esc(label)+'</span>' +
+        '<span class="hint">'+(o.plan ? o.done + ' of ' + o.plan : 'nothing planned')+'</span></div>';
+    };
+    var tp = s.total.plan ? Math.round(s.total.done / s.total.plan * 100) : null;
+    return '<div class="dwm-adh">' +
+      box('Department', s.Dept) + box('General', s.General) + box('Annual calendar', s.Annual) +
+      '<div class="b tot"><b>' + (tp === null ? '—' : tp + '%') + '</b>' +
+      '<span>Overall</span><span>target ' + DWM_TARGET + '%</span></div>' +
+      '</div>';
+  }
 
-    /* ---- safety: the checks that failed ---- */
-    var failedChecks = [];
-    sheets.filter(function(s){ return onDay((s.data||{}).date); }).forEach(function(s){
-      var v = s.data||{};
-      (v.items||[]).forEach(function(i){
-        if (i.result === 'Not OK')
-          failedChecks.push({ machine:v.machineName||'', shift:v.shift||'', what:i.name,
-                              action:i.note||'' });
-      });
-    });
-    var unsigned = sheets.filter(function(s){
-      return onDay((s.data||{}).date) && s.status !== 'Signed off'; });
+  async function dwmFetch(name){
+    var all = [];
+    try { all = await C.idms.docs('dwm'); } catch(e){ return null; }
+    return all.filter(function(d){ return (d.data||{}).employee === name; })[0] || null;
+  }
 
-    /* ---- quality ---- */
-    var made = 0, rejected = 0, downMins = 0, runMins = 0, totalMins = 0, earned = 0;
-    var byReason = {};
-    prod.filter(function(p){ return onDay((p.data||{}).date); }).forEach(function(p){
-      var v = p.data||{};
-      made += C.num(v.made); rejected += C.num(v.rejected);
-      downMins += C.num(v.downtime); totalMins += C.num(v.minutes);
-      runMins += C.num(v.runMinutes) || Math.max(0, C.num(v.minutes) - C.num(v.downtime));
-      earned += (C.num(v.made) * C.num(v.plannedCycle)) / 60;
-      if (C.num(v.rejected) > 0 && v.rejectReason)
-        byReason[v.rejectReason] = (byReason[v.rejectReason]||0) + C.num(v.rejected);
-    });
-    var openNc = ncrs.filter(function(n){ return !/closed/i.test(n.status||''); });
-    var overdueFindings = [];
-    audits.forEach(function(a){
-      var v = a.data||{};
-      (v.findings||[]).forEach(function(f){
-        if (!f.closedOn && f.dueOn && f.dueOn < today)
-          overdueFindings.push({ type:v.type, area:v.area, what:f.description, owner:f.owner||'',
-                                 due:f.dueOn });
-      });
-    });
-    var calDue = gauges.filter(function(g){
-      var v = g.data||{};
-      if (!v.lastCalibrated || !C.num(v.frequencyMonths)) return false;
-      var d = new Date(v.lastCalibrated);
-      d.setMonth(d.getMonth() + C.num(v.frequencyMonths));
-      return d.toISOString().slice(0,10) <= today;
-    });
+  /* ---- the plan falls out of the frequency ---- */
+  function dwmPlannedDays(act, y, m){
+    var days = dwmDaysIn(y, m), out = [];
+    if (act.freq === 'Daily'){
+      for (var d = 1; d <= days; d++)
+        if (dwmDayName(y, m, d) !== 'Sunday') out.push(d);
+    } else if (act.freq === 'Weekly'){
+      for (var d2 = 1; d2 <= days; d2++)
+        if (dwmDayName(y, m, d2) === act.day) out.push(d2);
+    } else if (act.freq === 'Monthly'){
+      if ((act.months||[]).indexOf(DWM_MONTHS[m-1]) >= 0) out.push(1);
+    } else if (act.freq === 'As needed'){
+      if (C.num(act.date) >= 1 && C.num(act.date) <= days) out.push(C.num(act.date));
+    }
+    return out;
+  }
 
-    /* ---- delivery ---- */
-    var despatched = 0, dcLines = 0;
-    dcs.filter(function(d){ return onDay((d.data||{}).date); }).forEach(function(d){
-      despatched += C.num((d.data||{}).qty); dcLines++;
-    });
-    var dueSoon = ords.filter(function(o){
-      var v = o.data||{};
-      if (!v.due) return false;
-      var days = (new Date(v.due) - new Date(today)) / 86400000;
-      return days >= 0 && days <= 7;
-    });
-    var pastDue = ords.filter(function(o){
-      var v = o.data||{};
-      return v.due && v.due < today;
-    });
+  /* Frozen plan wins over the derived one. A month is frozen the first time it
+     is marked, so history cannot be rewritten by editing a frequency. */
+  function dwmPlanFor(doc, act, y, m){
+    var mk = (((doc.data||{}).months)||{})[dwmKey(y,m)] || {};
+    var frozen = (mk[act.id]||{}).plan;
+    return frozen ? frozen.slice() : dwmPlannedDays(act, y, m);
+  }
+  function dwmActual(doc, act, y, m){
+    var mk = (((doc.data||{}).months)||{})[dwmKey(y,m)] || {};
+    return (mk[act.id]||{}).actual || {};
+  }
 
-    /* ---- cost ---- */
-    var toolCost = 0, broken = [];
-    tools.forEach(function(t){
-      ((t.data||{}).history||[]).forEach(function(h){
-        if (!onDay(h.on)) return;
-        toolCost += C.num(h.cost);
-        if (/broken/i.test(h.event)) broken.push({ tool:t.doc_no||'', desc:(t.data||{}).description||'',
-                                                   cost:C.num(h.cost), by:h.by||'' });
-      });
+  function dwmScore(doc, y, m){
+    var out = { Dept:{plan:0,done:0}, General:{plan:0,done:0}, Annual:{plan:0,done:0},
+                total:{plan:0,done:0}, per:{} };
+    ((doc.data||{}).activities||[]).forEach(function(a){
+      var plan = dwmPlanFor(doc, a, y, m), actual = dwmActual(doc, a, y, m);
+      var done = plan.filter(function(d){ return actual[d] === 'done'; }).length;
+      var cat = out[a.cat] ? a.cat : 'Dept';
+      out[cat].plan += plan.length; out[cat].done += done;
+      out.total.plan += plan.length; out.total.done += done;
+      out.per[a.id] = { plan:plan.length, done:done };
     });
+    return out;
+  }
 
-    /* ---- people ---- */
-    var present = 0, absent = 0;
-    att.filter(function(a){ return onDay(a.day); }).forEach(function(a){
-      if (String(a.status) === 'Absent') absent++; else present++;
-    });
-
-    dwmData = { day:day, made:made, rejected:rejected, downMins:downMins, runMins:runMins,
-      totalMins:totalMins, earned:earned, byReason:byReason, failedChecks:failedChecks,
-      unsigned:unsigned.length, openNc:openNc, overdueFindings:overdueFindings, calDue:calDue,
-      despatched:despatched, dcLines:dcLines, dueSoon:dueSoon, pastDue:pastDue,
-      toolCost:toolCost, broken:broken, present:present, absent:absent };
-
+  async function dwmOpen(){
+    var msg = document.getElementById('dw-pickmsg');
+    var say = function(t){ msg.style.display=''; msg.className='note bad'; msg.innerHTML=t; };
+    var name = document.getElementById('dw-emp').value;
+    if (!name) return say('Choose whose board this is.');
+    msg.style.display = 'none';
+    dwmEmp = name;
+    dwmDept = (compEmployees||[]).map(empData)
+      .filter(function(d){ return d.name === name; }).map(function(d){ return d.department; })[0] || '';
+    dwmDoc = await dwmFetch(name);
+    if (!dwmDoc){
+      dwmDoc = { doc_id:'', doc_no:'', data:{ employee:name, department:dwmDept, activities:[], months:{} } };
+    }
+    document.getElementById('dw-who').innerHTML =
+      esc(name) + (dwmDept ? ' <span class="hint">· ' + esc(dwmDept) + '</span>' : '');
+    document.getElementById('dw-pick').style.display = 'none';
+    document.getElementById('dw-board').style.display = '';
     drawDwm();
   }
 
-  function dwmItem(label, sub, figure, tone, action){
-    return '<div class="dwm-item"><div><b>'+esc(label)+'</b>' +
-      (sub ? '<div class="sub">'+sub+'</div>' : '') + '</div>' +
-      '<div style="text-align:right;">' +
-      (figure != null ? '<div class="fig'+(tone?' '+tone:'')+'">'+esc(String(figure))+'</div>' : '') +
-      (action ? '<button class="btn dw-act" data-t="'+esc(action)+'" style="margin-top:5px;">Raise an action</button>' : '') +
-      '</div></div>';
+  function dwmBack(){
+    document.getElementById('dw-board').style.display = 'none';
+    document.getElementById('dw-pick').style.display = '';
+    document.getElementById('dw-addform').style.display = 'none';
+    dwmPreview();
   }
-  function dwmCol(title, count, tone, body){
-    return '<div class="dwm-col'+(tone?' '+tone:'')+'"><header><b>'+esc(title)+'</b>' +
-      '<span class="n">'+esc(String(count))+'</span></header>' +
-      (body || '<div class="dwm-none">Nothing to raise.</div>') + '</div>';
+
+  function dwmFreqChanged(){
+    var f = document.getElementById('dw-a-freq').value;
+    document.getElementById('dw-a-daywrap').style.display   = f === 'Weekly'    ? '' : 'none';
+    document.getElementById('dw-a-monthswrap').style.display = f === 'Monthly'   ? '' : 'none';
+    document.getElementById('dw-a-datewrap').style.display  = f === 'As needed' ? '' : 'none';
+    var cat = document.getElementById('dw-a-cat');
+    /* the annual calendar is by definition the monthly list; anything else on it
+       would be an annual activity that happens weekly, which is not a thing */
+    if (f === 'Monthly'){ cat.value = 'Annual'; cat.disabled = true; }
+    else { if (cat.value === 'Annual') cat.value = 'Dept'; cat.disabled = false; }
+    if (f === 'As needed'){
+      var y = C.num(document.getElementById('dw-year').value);
+      var m = C.num(document.getElementById('dw-month').value);
+      var days = dwmDaysIn(y, m), sel = document.getElementById('dw-a-date'), keep = sel.value;
+      var o = ''; for (var d = 1; d <= days; d++) o += '<option>'+d+'</option>';
+      sel.innerHTML = o;
+      if (keep && C.num(keep) <= days) sel.value = keep;
+    }
+  }
+
+  async function dwmAddActivity(){
+    var msg = document.getElementById('dw-a-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var name = document.getElementById('dw-a-name').value.trim();
+    var freq = document.getElementById('dw-a-freq').value;
+    if (!name) return say('Say what is done.');
+    var months = [].slice.call(document.querySelectorAll('.dw-mo:checked')).map(function(c){ return c.value; });
+    if (freq === 'Monthly' && !months.length)
+      return say('Choose the months. An annual activity with no month never comes due, so it would ' +
+                 'sit on the board looking done forever.');
+    var acts = dwmDoc.data.activities || (dwmDoc.data.activities = []);
+    if (acts.filter(function(a){
+      return String(a.name||'').toLowerCase() === name.toLowerCase(); }).length)
+      return say('That activity is already on this board.');
+
+    acts.push({ id:'a' + Date.now(), name:name, freq:freq,
+      day: freq === 'Weekly' ? document.getElementById('dw-a-day').value : '',
+      months: freq === 'Monthly' ? months : [],
+      date: freq === 'As needed' ? C.num(document.getElementById('dw-a-date').value) : 0,
+      cat: document.getElementById('dw-a-cat').value,
+      addedOn: new Date().toISOString().slice(0,10) });
+    try {
+      await dwmSave('activity added');
+      document.getElementById('dw-a-name').value = '';
+      document.getElementById('dw-addform').style.display = 'none';
+      drawDwm();
+    } catch(e){ acts.pop(); say(esc(e.message)); }
+  }
+
+  async function dwmRemoveActivity(id){
+    var act = (dwmDoc.data.activities||[]).filter(function(a){ return a.id === id; })[0];
+    if (!act) return;
+    /* an activity with marked days is part of the record; taking it off the board
+       would take the adherence it was measured against with it */
+    var marked = Object.keys(((dwmDoc.data.months)||{})).some(function(k){
+      return Object.keys((((dwmDoc.data.months[k])||{})[id]||{}).actual || {}).length; });
+    if (marked){
+      var msg = document.getElementById('dw-msg');
+      msg.style.display=''; msg.className='note bad';
+      msg.innerHTML = 'That activity has days marked against it. Removing it now would take the ' +
+        'adherence it was measured against with it, so the months already recorded would change. ' +
+        'Leave it on the board.';
+      return;
+    }
+    dwmDoc.data.activities = (dwmDoc.data.activities||[]).filter(function(a){ return a.id !== id; });
+    try { await dwmSave('activity removed'); drawDwm(); }
+    catch(e){ toast(e.message); }
+  }
+
+  async function dwmSave(why){
+    var res = await C.idms.saveDoc({ docId: dwmDoc.doc_id || '', kind:'dwm',
+      docNo: dwmDoc.doc_no || await C.docNumber('dwm'), status:'Open',
+      data: dwmDoc.data }, why);
+    if (res && res.docId) dwmDoc.doc_id = res.docId;
+    return res;
+  }
+
+  async function dwmMark(actId, day){
+    var y = C.num(document.getElementById('dw-year').value);
+    var m = C.num(document.getElementById('dw-month').value);
+    var now = new Date();
+    var msg = document.getElementById('dw-msg');
+    var say = function(t){ msg.style.display=''; msg.className='note bad'; msg.innerHTML=t; };
+
+    if (y !== now.getFullYear() || m !== now.getMonth()+1)
+      return say('Only the month in progress can be marked. A finished month is the record, and a ' +
+                 'month that has not started has nothing to record.');
+    if (new Date(y, m-1, day) > now)
+      return say('That day has not happened yet.');
+    msg.style.display = 'none';
+
+    var act = (dwmDoc.data.activities||[]).filter(function(a){ return a.id === actId; })[0];
+    if (!act) return;
+    var months = dwmDoc.data.months || (dwmDoc.data.months = {});
+    var mk = months[dwmKey(y,m)] || (months[dwmKey(y,m)] = {});
+    var cell = mk[actId] || (mk[actId] = {});
+    /* freeze this month's plan the first time it is touched */
+    if (!cell.plan) cell.plan = dwmPlannedDays(act, y, m);
+    cell.actual = cell.actual || {};
+
+    var cur = cell.actual[day];
+    if (!cur) cell.actual[day] = 'done';
+    else if (cur === 'done') cell.actual[day] = 'concession';
+    else delete cell.actual[day];
+
+    try { await dwmSave('DWM marked'); drawDwm(); }
+    catch(e){ toast(e.message); }
   }
 
   function drawDwm(){
-    if (!dwmData) return;
-    var d = dwmData, host = document.getElementById('dw-body');
-    var pct = function(a,b){ return b > 0 ? Math.round(a/b*1000)/10 : 0; };
+    var host = document.getElementById('dw-body');
+    var y = C.num(document.getElementById('dw-year').value);
+    var m = C.num(document.getElementById('dw-month').value);
+    var acts = (dwmDoc.data.activities||[]);
+    if (!acts.length){
+      host.innerHTML = '<div class="card"><div class="empty"><b>Nothing on this board yet</b>' +
+        'Add what this person actually does — daily checks, weekly reviews, the annual calendar.</div></div>';
+      return;
+    }
+    var days = dwmDaysIn(y, m), now = new Date();
+    var live = (y === now.getFullYear() && m === now.getMonth()+1);
+    var s = dwmScore(dwmDoc, y, m);
 
-    /* ---- S ---- */
-    var sBody = d.failedChecks.map(function(f){
-      return dwmItem(f.machine + ' — ' + f.what,
-        'shift ' + esc(f.shift) + (f.action ? ' · ' + esc(f.action) : ' · nothing written against it'),
-        null, null, 'Machine check failed: ' + f.machine + ' — ' + f.what);
-    }).join('') +
-      (d.unsigned ? dwmItem('Check sheets not signed off', d.unsigned + ' sheet(s) left open for the day',
-        d.unsigned, 'bad', 'Machine check sheets left unsigned on ' + d.day) : '');
-    var sCount = d.failedChecks.length + d.unsigned;
+    var head = '<tr><th style="text-align:left;">Activity</th>';
+    for (var d = 1; d <= days; d++){
+      var sun = dwmDayName(y, m, d) === 'Sunday';
+      head += '<th class="'+(sun?'sun':'')+'">'+d+'<div style="font-weight:400;">' +
+        dwmDayName(y, m, d).slice(0,2) + '</div></th>';
+    }
+    head += '<th>%</th></tr>';
 
-    /* ---- Q ---- */
-    var ppm = d.made ? Math.round(d.rejected / d.made * 1e6) : 0;
-    var topReason = Object.keys(d.byReason).sort(function(a,b){
-      return d.byReason[b] - d.byReason[a]; })[0];
-    var qBody =
-      dwmItem('Rejected yesterday',
-        d.made ? C.qty(d.rejected) + ' of ' + C.qty(d.made) + ' made' +
-          (topReason ? ' · worst: ' + esc(topReason) : '') : 'nothing booked',
-        ppm ? ppm + ' ppm' : '—', ppm > 0 ? 'bad' : 'ok',
-        ppm ? 'Rejection on ' + d.day + (topReason ? ' — ' + topReason : '') : '') +
-      (d.openNc.length ? dwmItem('Non-conformances open', 'raised and not yet closed',
-        d.openNc.length, 'bad', '') : '') +
-      d.overdueFindings.slice(0,5).map(function(f){
-        return dwmItem('Audit finding overdue — ' + f.type,
-          esc(f.what) + ' · owner ' + esc(f.owner||'nobody') + ' · was due ' + C.fmtDate(f.due),
-          null, null, 'Overdue audit finding: ' + f.what);
-      }).join('') +
-      (d.calDue.length ? dwmItem('Gauges due for calibration', 'past their date',
-        d.calDue.length, 'bad', 'Gauges past their calibration date') : '');
-    var qCount = (ppm ? 1 : 0) + (d.openNc.length ? 1 : 0) + d.overdueFindings.length +
-                 (d.calDue.length ? 1 : 0);
-
-    /* ---- D ---- */
-    var dBody =
-      dwmItem('Despatched yesterday', d.dcLines + ' challan(s)',
-        d.despatched ? C.qty(d.despatched) : '—', d.despatched ? 'ok' : null, '') +
-      (d.pastDue.length ? dwmItem('Orders past their date', 'still with a balance to make',
-        d.pastDue.length, 'bad', 'Orders past their delivery date') : '') +
-      (d.dueSoon.length ? dwmItem('Orders due within a week', 'check they are on the machines',
-        d.dueSoon.length, null, '') : '');
-    var dCount = d.pastDue.length;
-
-    /* ---- C ---- */
-    var avail = pct(d.runMins, d.totalMins), perf = pct(d.earned, d.runMins),
-        qual = pct(d.made - d.rejected, d.made);
-    var oee = Math.round(avail * perf * qual / 10000 * 10) / 10;
-    var cBody =
-      dwmItem('OEE yesterday',
-        'availability ' + avail + '% · performance ' + perf + '% · quality ' + qual + '%',
-        d.totalMins ? oee + '%' : '—', d.totalMins && oee < 60 ? 'bad' : (d.totalMins ? 'ok' : null),
-        d.totalMins && oee < 60 ? 'OEE was ' + oee + '% on ' + d.day : '') +
-      dwmItem('Downtime', d.totalMins ? 'of ' + C.qty(Math.round(d.totalMins/60*10)/10) + ' hours booked' : 'nothing booked',
-        C.qty(Math.round(d.downMins/60*10)/10) + ' h', d.downMins > 0 ? 'bad' : 'ok',
-        d.downMins > 0 ? 'Downtime of ' + Math.round(d.downMins/60*10)/10 + ' hours on ' + d.day : '') +
-      d.broken.map(function(b){
-        return dwmItem('Tool broken — ' + (b.desc || b.tool),
-          'recorded by ' + esc(b.by||'—'), C.rate(b.cost), 'bad',
-          'Tool broken: ' + (b.desc || b.tool));
-      }).join('');
-    var cCount = (d.downMins > 0 ? 1 : 0) + d.broken.length;
-
-    /* ---- P ---- */
-    var pBody = (d.present + d.absent)
-      ? dwmItem('Attendance', d.present + ' present, ' + d.absent + ' absent',
-          pct(d.present, d.present + d.absent) + '%', d.absent > 0 ? 'bad' : 'ok',
-          d.absent > 0 ? d.absent + ' absent on ' + d.day : '')
-      : '<div class="dwm-none">No attendance recorded for the day.</div>';
-
-    host.innerHTML = '<div class="dwm-grid">' +
-      dwmCol('Safety', sCount, sCount ? 'bad' : 'ok', sBody) +
-      dwmCol('Quality', qCount, qCount ? 'bad' : 'ok', qBody) +
-      dwmCol('Delivery', dCount, dCount ? 'bad' : 'ok', dBody) +
-      dwmCol('Cost', cCount, cCount ? 'bad' : 'ok', cBody) +
-      dwmCol('People', d.absent, d.absent ? 'bad' : 'ok', pBody) +
-      '</div>' +
-      '<div class="card" style="margin-top:14px;"><div class="hint">Every figure above is read from ' +
-      'the production bookings, inspections, check sheets, tool cards, challans, orders and ' +
-      'attendance for ' + C.fmtDate(d.day) + '. Nothing on this board is prepared for the meeting, ' +
-      'so there is nothing to argue about except what to do.</div></div>';
-
-    host.querySelectorAll('.dw-act').forEach(function(b){
-      b.addEventListener('click', function(){
-        taskPrefill = { title: b.dataset.t, source: 'DWM ' + C.fmtDate(d.day) };
-        go('task_list');
+    var rows = '';
+    [['Dept','Department activities'],['General','General activities'],
+     ['Annual','Annual calendar']].forEach(function(g){
+      var inCat = acts.filter(function(a){ return (a.cat||'Dept') === g[0]; });
+      if (!inCat.length) return;
+      var cs = s[g[0]];
+      rows += '<tr class="cat"><td colspan="'+(days+2)+'">' + esc(g[1]) +
+        ' — ' + (cs.plan ? Math.round(cs.done/cs.plan*100) + '% (' + cs.done + ' of ' + cs.plan + ')'
+                         : 'nothing planned this month') + '</td></tr>';
+      inCat.forEach(function(a){
+        var plan = dwmPlanFor(dwmDoc, a, y, m), actual = dwmActual(dwmDoc, a, y, m);
+        var sub = a.freq + (a.day ? ' · ' + a.day : '') +
+          (a.freq === 'Monthly' && (a.months||[]).length ? ' · ' + a.months.length + ' month(s)' : '') +
+          (a.freq === 'As needed' && a.date ? ' · ' + a.date : '');
+        rows += '<tr><td class="act"><b>'+esc(a.name)+'</b><div class="sub">'+esc(sub) +
+          ' <a class="dw-rm" data-id="'+esc(a.id)+'" style="cursor:pointer;color:var(--sky-deep);">remove</a>' +
+          '</div></td>';
+        for (var d2 = 1; d2 <= days; d2++){
+          var planned = plan.indexOf(d2) >= 0, act2 = actual[d2];
+          var cls = act2 === 'done' ? 'done' : act2 === 'concession' ? 'conc'
+                  : planned ? 'plan' : 'off';
+          var txt = act2 === 'done' ? '✔' : act2 === 'concession' ? 'C' : planned ? 'O' : '';
+          var live2 = live && (planned || act2) && new Date(y, m-1, d2) <= now;
+          rows += '<td><div class="dwm-cell '+cls+'"' +
+            (live2 ? ' data-a="'+esc(a.id)+'" data-d="'+d2+'"' : '') + '>'+txt+'</div></td>';
+        }
+        var p = s.per[a.id] || {plan:0,done:0};
+        var pct = p.plan ? Math.round(p.done/p.plan*100) : null;
+        rows += '<td class="pct" style="color:'+(pct === null ? 'var(--ink-soft)'
+          : pct >= DWM_TARGET ? '#1F6F4A' : '#8A2F22')+';">' +
+          (pct === null ? '—' : pct+'%') + '</td></tr>';
       });
     });
 
-    var msg = document.getElementById('dw-msg');
-    var total = sCount + qCount + dCount + cCount + (d.absent ? 1 : 0);
-    msg.style.display=''; msg.className = 'note' + (total ? ' bad' : ' good');
-    msg.innerHTML = total
-      ? '<b>' + total + ' thing(s) to talk about.</b> Raise an action against any of them and it goes ' +
-        'on the task list with the reason attached.'
-      : 'Nothing on the board needs an action for ' + C.fmtDate(d.day) + '.';
+    host.innerHTML = '<div class="card">' + dwmScoreCards(s) + '</div>' +
+      '<div class="card"><div class="scroll-x"><table class="dwm-grid"><thead>' + head +
+      '</thead><tbody>' + rows + '</tbody></table></div>' +
+      (live ? '' : '<div class="hint" style="margin-top:10px;">This month is not the one in ' +
+        'progress, so it is shown as it stands and cannot be marked.</div>') + '</div>';
+
+    host.querySelectorAll('.dwm-cell[data-a]').forEach(function(c){
+      c.addEventListener('click', function(){ dwmMark(c.dataset.a, C.num(c.dataset.d)); });
+    });
+    host.querySelectorAll('.dw-rm').forEach(function(a){
+      a.addEventListener('click', function(){ dwmRemoveActivity(a.dataset.id); });
+    });
   }
 
   function printDwm(){
-    if (!dwmData) { toast('Read the day first.'); return; }
-    var d = dwmData;
-    var pct = function(a,b){ return b > 0 ? Math.round(a/b*1000)/10 : 0; };
-    C.openReport({ title:'Daily Work Management — ' + C.fmtDate(d.day), sections:[
-      { type:'pairs', title:'The day', rows:[
-        ['Made', C.qty(d.made)], ['Rejected', C.qty(d.rejected) +
-          (d.made ? ' (' + Math.round(d.rejected/d.made*1e6) + ' ppm)' : '')],
-        ['Downtime', C.qty(Math.round(d.downMins/60*10)/10) + ' hours'],
-        ['Despatched', C.qty(d.despatched) + ' on ' + d.dcLines + ' challan(s)'],
-        ['Present', d.present], ['Absent', d.absent],
-        ['Spent on tools', C.rate(d.toolCost)] ] },
-      { type:'table', title:'Failed machine checks', dense:true,
-        columns:[{label:'Machine'},{label:'Shift'},{label:'Check'},{label:'What was done'}],
-        rows: d.failedChecks.map(function(f){
-          return [f.machine, f.shift, f.what, f.action || 'nothing written']; }) },
-      { type:'table', title:'Audit findings past their date', dense:true,
-        columns:[{label:'Audit'},{label:'Area'},{label:'Finding'},{label:'Owner'},{label:'Was due'}],
-        rows: d.overdueFindings.map(function(f){
-          return [f.type, f.area, f.what, f.owner||'nobody', C.fmtDate(f.due)]; }) },
-      { type:'text', title:'Where this came from',
-        body:'Every figure is read from the production bookings, check sheets, tool cards, challans, ' +
-             'orders, non-conformances, audit findings and attendance recorded for the day. Nothing ' +
-             'on it is prepared for the meeting.' } ] });
+    if (!dwmDoc) { toast('Open a board first.'); return; }
+    var y = C.num(document.getElementById('dw-year').value);
+    var m = C.num(document.getElementById('dw-month').value);
+    var s = dwmScore(dwmDoc, y, m);
+    var pct = function(o){ return o.plan ? Math.round(o.done/o.plan*100) + '% (' + o.done +
+      ' of ' + o.plan + ')' : '—'; };
+    C.openReport({ title:'Daily Work Management — ' + dwmEmp, landscape:true, sections:[
+      { type:'pairs', title:'Board', rows:[
+        ['Employee', dwmEmp], ['Department', dwmDept],
+        ['Month', DWM_MONTHS[m-1] + ' ' + y],
+        ['Department activities', pct(s.Dept)],
+        ['General activities', pct(s.General)],
+        ['Annual calendar', pct(s.Annual)],
+        ['Overall', pct(s.total) + '  (target ' + DWM_TARGET + '%)'] ] },
+      { type:'table', title:'Activities', dense:true,
+        columns:[{label:'Activity'},{label:'List'},{label:'How often'},{label:'Planned'},
+                 {label:'Done'},{label:'Adherence'}],
+        rows: (dwmDoc.data.activities||[]).map(function(a){
+          var p = s.per[a.id] || {plan:0,done:0};
+          return [a.name, a.cat, a.freq + (a.day ? ' (' + a.day + ')' : ''), p.plan, p.done,
+                  p.plan ? Math.round(p.done/p.plan*100) + '%' : '—']; }) },
+      { type:'text', title:'How the plan is set',
+        body:'The plan is not typed: it follows from how often each activity is done. The plan for a ' +
+             'month is frozen the first time anything in that month is marked, so changing an ' +
+             'activity later cannot rewrite adherence already recorded.' } ] });
   }
 
   /* ================= TASK LIST =================
@@ -4698,17 +4946,20 @@
   }
 
   /* ================= ORGANISATION CHART =================
-     Drawn from the masters and the employee records, never arranged by hand.
-     A chart somebody positions boxes on is a chart that disagrees with the
-     payroll within a month; this one cannot, because it has no positions of its
-     own to disagree with. If a person is in the wrong box, their record is
-     wrong — which is the useful thing to find out. */
-  async function loadOrgChart(){
-    await compLoad();
-    drawOrgChart();
-  }
+     Who reports to whom is a decision, so it is made here and stored. Nothing
+     else is: the department list, the designations and the people all come from
+     records that already exist, and the chart checks itself against them every
+     time it is drawn.
+
+     That check is the point. A chart kept by hand agrees with the payroll on the
+     day it is drawn and never again. This one names the disagreements: a box
+     with a person who is not on the employee records, a person whose record puts
+     them in another department, and everybody on the payroll who is on no box at
+     all. */
+  /* shared: who actually holds a designation right now. Succession planning
+     reads this too, so it lives here rather than inside the chart. */
   function holdersOf(desig, dept){
-    return compEmployees.filter(function(e){
+    return (compEmployees||[]).filter(function(e){
       var d = empData(e);
       if (String(d.status||'Active') === 'Left') return false;
       if (String(d.designation||'') !== desig) return false;
@@ -4716,111 +4967,277 @@
       return true;
     }).map(function(e){ return empData(e); });
   }
-  function orgStructure(){
-    var depts = compOrg.filter(function(r){ return (r.data||{}).type === 'department'; });
-    var desigs = compOrg.filter(function(r){ return (r.data||{}).type === 'designation'; });
-    var posns = compOrg.filter(function(r){ return (r.data||{}).type === 'position'; });
-    return depts.map(function(d){
-      var dv = d.data||{};
-      var roles = desigs.filter(function(g){ return (g.data||{}).department === dv.name; })
-        .map(function(g){
-          var gv = g.data||{};
-          var people = holdersOf(gv.name, dv.name);
-          var sanctioned = posns.filter(function(p){
-            var pv = p.data||{};
-            return pv.designation === gv.name && (!pv.department || pv.department === dv.name);
-          }).reduce(function(t,p){ return t + C.num((p.data||{}).sanctioned); }, 0);
-          return { name:gv.name, grade:gv.code||'', people:people, sanctioned:sanctioned,
-                   vacant: Math.max(0, sanctioned - people.length) };
-        });
-      return { name:dv.name, code:dv.code||'', head:dv.reportsTo||'', roles:roles,
-               vacant: roles.reduce(function(t,r){ return t + r.vacant; }, 0),
-               headcount: roles.reduce(function(t,r){ return t + r.people.length; }, 0) };
-    });
+
+  var ocNodes = [], ocEditing = '';
+  var OC_LEVELS = [
+    ['top',      'Top management',   '#1B3A6B'],
+    ['hod',      'Head of department','#1F6F4A'],
+    ['middle',   'Middle management','#5B3FA6'],
+    ['staff',    'Staff',            '#0E6E82'],
+    ['shopfloor','Shopfloor',        '#8A6A1F'],
+    ['trainee',  'Trainee',          '#7A6A55'],
+    ['contract', 'Contract labour',  '#8A2F22']
+  ];
+  function ocLevel(k){
+    return OC_LEVELS.filter(function(l){ return l[0] === k; })[0] || OC_LEVELS[3];
   }
+
+  async function loadOrgChart(){
+    await compLoad();
+    try { ocNodes = await C.idms.docs('orgnode'); } catch(e){ ocNodes = []; }
+    ocNodes = ocNodes.filter(function(n){ return !(n.data||{}).removed; });
+
+    document.getElementById('oc-legend').innerHTML =
+      '<span class="hint">Levels:</span>' + OC_LEVELS.map(function(l){
+        return '<span class="oc-lvl" style="background:'+l[2]+';">'+esc(l[1])+'</span>'; }).join('');
+
+    var lvl = document.getElementById('oc-level');
+    if (!lvl.options.length)
+      lvl.innerHTML = OC_LEVELS.map(function(l){
+        return '<option value="'+l[0]+'">'+esc(l[1])+'</option>'; }).join('');
+
+    var deps = departments();
+    ['oc-dept','oc-ndept'].forEach(function(id){
+      var sel = document.getElementById(id), keep = sel.value;
+      sel.innerHTML = (id === 'oc-dept' ? '' : '<option value="">— none —</option>') +
+        deps.map(function(d){ return '<option>'+esc(d)+'</option>'; }).join('');
+      if (keep && deps.indexOf(keep) >= 0) sel.value = keep;
+    });
+    document.getElementById('oc-people').innerHTML = (compEmployees||[]).map(empData)
+      .filter(function(d){ return String(d.status||'Active') !== 'Left'; })
+      .map(function(d){ return '<option value="'+esc(d.name||'')+'">'; }).join('');
+    ocFillParents();
+    drawOrgChart();
+  }
+
+  function ocFillParents(){
+    var sel = document.getElementById('oc-parent'), keep = sel.value;
+    sel.innerHTML = '<option value="">— nobody, this is the top —</option>' +
+      ocNodes.filter(function(n){ return n.doc_id !== ocEditing; })
+        .map(function(n){
+          var v = n.data||{};
+          return '<option value="'+esc(n.doc_id)+'">'+esc(v.title||'') +
+            (v.who ? ' — ' + esc(v.who) : '') + '</option>'; }).join('');
+    if (keep) sel.value = keep;
+  }
+
+  /* Does making `parent` the boss of `node` close a loop? Walk up from the
+     proposed boss; if we meet the node again, the chart would have no top and
+     the drawing would never finish. */
+  function ocWouldLoop(nodeId, parentId){
+    var seen = {}, cur = parentId;
+    while (cur){
+      if (cur === nodeId) return true;
+      if (seen[cur]) return true;
+      seen[cur] = 1;
+      var p = ocNodes.filter(function(n){ return n.doc_id === cur; })[0];
+      cur = p ? (p.data||{}).parent : '';
+    }
+    return false;
+  }
+
+  function ocCheck(v){
+    var out = [];
+    if (v.who){
+      var rec = (compEmployees||[]).map(empData)
+        .filter(function(d){ return d.name === v.who; })[0];
+      if (!rec) out.push('not on the employee records');
+      else if (v.department && rec.department && rec.department !== v.department)
+        out.push('their record says ' + rec.department);
+      else if (rec && String(rec.status||'Active') === 'Left')
+        out.push('their record says they have left');
+    }
+    return out;
+  }
+
   function drawOrgChart(){
-    var host = document.getElementById('oc-body'), msg = document.getElementById('oc-msg');
-    var all = orgStructure();
-    if (!all.length){
-      host.innerHTML = '<div class="card"><div class="empty"><b>No departments yet</b>' +
-        'The chart is drawn from the organisation masters. ' +
-        '<a data-goto="dept_master" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">' +
-        'Add them →</a></div></div>';
-      host.querySelectorAll('[data-goto]').forEach(function(a){
-        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
-      msg.style.display = 'none';
+    var host = document.getElementById('oc-body');
+    var mode = document.getElementById('oc-filter').value;
+    var only = mode === 'dept' ? document.getElementById('oc-dept').value : '';
+
+    if (!ocNodes.length){
+      host.innerHTML = '<div class="card"><div class="empty"><b>No chart yet</b>' +
+        'Add the top box first — usually the person everyone else reports to — then hang the ' +
+        'rest off it.</div></div>';
       return;
     }
-    var rows = document.getElementById('oc-filter').value === 'vacant'
-      ? all.filter(function(d){ return d.vacant > 0; }) : all;
 
-    var p = C.getProfile() || {};
-    var unplaced = compEmployees.filter(function(e){
-      var d = empData(e);
-      if (String(d.status||'Active') === 'Left') return false;
-      return !all.some(function(dep){
-        return dep.name === d.department &&
-               dep.roles.some(function(r){ return r.name === d.designation; }); });
-    }).map(function(e){ return empData(e); });
+    var shown = ocNodes.filter(function(n){
+      return !only || (n.data||{}).department === only; });
+    var ids = {}; shown.forEach(function(n){ ids[n.doc_id] = 1; });
 
-    host.innerHTML = '<div class="card">' +
-      '<div class="org-co"><b>' + esc(p.name || 'The company') + '</b>' +
-      '<div class="hint">' + all.length + ' departments · ' +
-      all.reduce(function(t,d){ return t + d.headcount; }, 0) + ' people on the roll · ' +
-      all.reduce(function(t,d){ return t + d.vacant; }, 0) + ' sanctioned posts unfilled</div></div>' +
-      '<div class="org-depts">' + rows.map(function(d){
-        return '<div class="org-dept"><header><b>' + esc(d.name) + '</b>' +
-          '<span>' + (d.head ? esc(d.head) : 'no head recorded') + ' · ' + d.headcount + ' people</span></header>' +
-          (d.roles.length ? d.roles.map(function(r){
-            return '<div class="org-role"><b>' + esc(r.name) + '</b>' +
-              (r.grade ? ' <span class="hint">' + esc(r.grade) + '</span>' : '') +
-              (r.sanctioned ? '<span class="hint"> · ' + r.people.length + ' of ' + r.sanctioned +
-                ' sanctioned</span>' : '') +
-              '<div class="who">' +
-              r.people.map(function(x){ return '<span>' + esc(x.name||'') + '</span>'; }).join('') +
-              (r.vacant ? Array(r.vacant + 1).join('|').split('|').slice(1)
-                .map(function(){ return '<span class="vac">vacant</span>'; }).join('') : '') +
-              (!r.people.length && !r.vacant ? '<span class="hint">nobody in post</span>' : '') +
-              '</div></div>';
-          }).join('') : '<div class="org-empty-dept">No designations on this department yet.</div>') +
-          '</div>';
-      }).join('') + '</div></div>' +
-      (unplaced.length
-        ? '<div class="card"><h4>People the chart could not place</h4>' +
-          '<div class="hint" style="margin-bottom:9px;">Their record names a department or ' +
-          'designation that is not on the masters, so there is no box to put them in. That is a ' +
-          'record to correct, not a box to invent.</div>' +
-          '<table class="t"><thead><tr><th>Person</th><th>Department on their record</th>' +
-          '<th>Designation on their record</th></tr></thead><tbody>' +
-          unplaced.map(function(x){
-            return '<tr><td><b>'+esc(x.name||'')+'</b></td><td>'+esc(x.department||'—')+'</td>' +
-              '<td>'+esc(x.designation||'—')+'</td></tr>'; }).join('') +
-          '</tbody></table></div>'
+    var kids = {};
+    shown.forEach(function(n){
+      var p = (n.data||{}).parent;
+      var key = (p && ids[p]) ? p : '';   /* a box whose boss is filtered out becomes a root */
+      (kids[key] = kids[key] || []).push(n);
+    });
+
+    var seen = {};
+    function branch(parentId, depth){
+      var list = (kids[parentId]||[]).sort(function(a,b){
+        var ai = OC_LEVELS.map(function(l){ return l[0]; }).indexOf((a.data||{}).level);
+        var bi = OC_LEVELS.map(function(l){ return l[0]; }).indexOf((b.data||{}).level);
+        if (ai !== bi) return ai - bi;
+        return String((a.data||{}).title||'').localeCompare(String((b.data||{}).title||''));
+      });
+      if (!list.length || depth > 12) return '';
+      return '<ul>' + list.map(function(n){
+        if (seen[n.doc_id]) return '';
+        seen[n.doc_id] = 1;
+        var v = n.data||{}, l = ocLevel(v.level), problems = ocCheck(v);
+        return '<li><div class="oc-node" style="border-left-color:'+l[2]+';">' +
+          '<b>'+esc(v.title||'')+'</b>' +
+          '<div class="who">' + (v.who ? esc(v.who)
+            : '<span style="color:#8A2F22;">vacant</span>') + '</div>' +
+          '<div class="meta"><span class="oc-lvl" style="background:'+l[2]+';">'+esc(l[1])+'</span>' +
+          (v.department ? ' ' + esc(v.department) : '') + '</div>' +
+          (problems.length ? '<div class="warn">⚠ ' + esc(problems.join('; ')) + '</div>' : '') +
+          '<div class="acts"><a class="oc-ed" data-id="'+esc(n.doc_id)+'">edit</a>' +
+          '<a class="oc-rm" data-id="'+esc(n.doc_id)+'">remove</a></div>' +
+          '</div>' + branch(n.doc_id, depth+1) + '</li>';
+      }).join('') + '</ul>';
+    }
+
+    var tree = branch('', 0);
+
+    /* everybody on the payroll who is on no box */
+    var onChart = {};
+    ocNodes.forEach(function(n){ if ((n.data||{}).who) onChart[(n.data||{}).who] = 1; });
+    var off = (compEmployees||[]).map(empData)
+      .filter(function(d){ return String(d.status||'Active') !== 'Left'; })
+      .filter(function(d){ return d.name && !onChart[d.name]; })
+      .filter(function(d){ return !only || d.department === only; });
+
+    var vacancies = shown.filter(function(n){ return !(n.data||{}).who; }).length;
+
+    host.innerHTML =
+      '<div class="card"><div class="stat">' +
+      [['Boxes', shown.length], ['Vacant', vacancies],
+       ['On no box', off.length],
+       ['Flagged', shown.filter(function(n){ return ocCheck(n.data||{}).length; }).length]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
+      '</div></div>' +
+      '<div class="card"><div class="scroll-x"><div class="oc-tree">' + tree + '</div></div></div>' +
+      (off.length
+        ? '<div class="card"><h4>On the payroll, on no box</h4>' +
+          '<div class="hint" style="margin-bottom:10px;">Not an error in itself — a chart is usually ' +
+          'drawn down to a level and no further. It is here so that nobody goes missing by accident.</div>' +
+          '<div class="scroll-x"><table class="t"><thead><tr><th>Name</th><th>Designation</th>' +
+          '<th>Department</th></tr></thead><tbody>' + off.map(function(d){
+            return '<tr><td>'+esc(d.name||'')+'</td><td class="hint">'+esc(d.designation||'')+'</td>' +
+              '<td class="hint">'+esc(d.department||'')+'</td></tr>'; }).join('') +
+          '</tbody></table></div></div>'
         : '');
 
-    msg.style.display=''; msg.className = 'note' + (unplaced.length ? '' : ' good');
-    msg.innerHTML = unplaced.length
-      ? '<b>' + unplaced.length + ' person/people could not be placed</b> — their department or ' +
-        'designation does not match the masters. They are listed under the chart.'
-      : 'Every person on the roll sits in a box on this chart.';
+    host.querySelectorAll('.oc-ed').forEach(function(a){
+      a.addEventListener('click', function(){ ocEdit(a.dataset.id); }); });
+    host.querySelectorAll('.oc-rm').forEach(function(a){
+      a.addEventListener('click', function(){ ocRemove(a.dataset.id); }); });
   }
+
+  function ocEdit(id){
+    var n = ocNodes.filter(function(x){ return x.doc_id === id; })[0];
+    if (!n) return;
+    var v = n.data||{};
+    ocEditing = id;
+    document.getElementById('oc-formtitle').textContent = 'Edit the box';
+    document.getElementById('oc-title').value = v.title || '';
+    document.getElementById('oc-who').value = v.who || '';
+    document.getElementById('oc-level').value = v.level || 'staff';
+    ocFillParents();
+    document.getElementById('oc-ndept').value = v.department || '';
+    document.getElementById('oc-parent').value = v.parent || '';
+    document.getElementById('oc-form').style.display = '';
+    document.getElementById('oc-form').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  async function ocSave(){
+    var msg = document.getElementById('oc-fmsg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var title = document.getElementById('oc-title').value.trim();
+    var parent = document.getElementById('oc-parent').value;
+    if (!title) return say('Name the post.');
+
+    if (ocEditing && ocWouldLoop(ocEditing, parent))
+      return say('That would make the chart report round in a circle, so it would have no top and ' +
+                 'could not be drawn. Pick a different boss.');
+    if (!parent && ocNodes.filter(function(n){
+      return !(n.data||{}).parent && n.doc_id !== ocEditing; }).length)
+      return say('There is already a box at the top. An organisation with two tops is two ' +
+                 'organisations — hang this one off the existing top instead.');
+
+    var btn = document.getElementById('oc-save'); btn.disabled = true;
+    try {
+      var cur = ocNodes.filter(function(x){ return x.doc_id === ocEditing; })[0];
+      await C.idms.saveDoc({ docId: ocEditing || '', kind:'orgnode',
+        docNo: cur ? cur.doc_no : await C.docNumber('org'), status:'Active',
+        data:{ title:title,
+               department:document.getElementById('oc-ndept').value,
+               who:document.getElementById('oc-who').value.trim(),
+               level:document.getElementById('oc-level').value,
+               parent:parent } },
+        ocEditing ? 'organisation chart box changed' : 'organisation chart box added');
+      ocEditing = '';
+      document.getElementById('oc-form').style.display = 'none';
+      document.getElementById('oc-title').value = '';
+      document.getElementById('oc-who').value = '';
+      await loadOrgChart();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+
+  async function ocRemove(id){
+    var msg = document.getElementById('oc-msg');
+    var kids = ocNodes.filter(function(n){ return (n.data||{}).parent === id; });
+    if (kids.length){
+      msg.style.display=''; msg.className='note bad';
+      msg.innerHTML = 'Boxes report to that one. Removing it would leave ' + kids.length +
+        ' post(s) reporting to nobody, so move them first.';
+      return;
+    }
+    var n = ocNodes.filter(function(x){ return x.doc_id === id; })[0];
+    if (!n) return;
+    try {
+      await C.idms.saveDoc({ docId:id, kind:'orgnode', docNo:n.doc_no, status:'Removed',
+        data: Object.assign({}, n.data||{}, { removed:true }) }, 'organisation chart box removed');
+      msg.style.display = 'none';
+      await loadOrgChart();
+    } catch(e){ toast(e.message); }
+  }
+
   function printOrgChart(){
-    var all = orgStructure();
-    if (!all.length) { toast('Nothing to print.'); return; }
-    var secs = all.map(function(d){
-      return { type:'table', dense:true,
-        title: d.name + (d.head ? ' — headed by ' + d.head : ''),
-        columns:[{label:'Designation'},{label:'Grade'},{label:'In post',align:'r'},
-                 {label:'Sanctioned',align:'r'},{label:'Vacant',align:'r'},{label:'Who'}],
-        rows: d.roles.map(function(r){
-          return [r.name, r.grade||'—', r.people.length, r.sanctioned||'—', r.vacant||'—',
-                  r.people.map(function(x){ return x.name; }).join(', ') || 'nobody in post']; }) };
-    });
-    secs.push({ type:'text', title:'How this was drawn',
-      body:'Departments, designations and sanctioned strength come from the organisation masters; ' +
-           'who is in post comes from the employee records. No part of this chart is positioned by ' +
-           'hand, so it cannot disagree with the records it is drawn from.' });
-    C.openReport({ title:'Organisation Chart', landscape:true, sections:secs });
+    var rows = [], seen = {};
+    function walk(parentId, depth){
+      ocNodes.filter(function(n){ return ((n.data||{}).parent || '') === parentId; })
+        .forEach(function(n){
+          if (seen[n.doc_id] || depth > 12) return;
+          seen[n.doc_id] = 1;
+          var v = n.data||{}, problems = ocCheck(v);
+          rows.push([ new Array(depth+1).join('    ') + (v.title||''),
+                      v.who || 'VACANT', v.department || '', ocLevel(v.level)[1],
+                      problems.length ? problems.join('; ') : '' ]);
+          walk(n.doc_id, depth+1);
+        });
+    }
+    walk('', 0);
+    var onChart = {};
+    ocNodes.forEach(function(n){ if ((n.data||{}).who) onChart[(n.data||{}).who] = 1; });
+    var off = (compEmployees||[]).map(empData)
+      .filter(function(d){ return String(d.status||'Active') !== 'Left' && d.name && !onChart[d.name]; });
+
+    C.openReport({ title:'Organisation Chart', landscape:true, sections:[
+      { type:'table', title:'Reporting lines', dense:true,
+        columns:[{label:'Post'},{label:'Who holds it'},{label:'Department'},{label:'Level'},
+                 {label:'Flagged'}],
+        rows: rows },
+      { type:'table', title:'On the payroll, on no box', dense:true,
+        columns:[{label:'Name'},{label:'Designation'},{label:'Department'}],
+        rows: off.map(function(d){ return [d.name, d.designation||'', d.department||'']; }) },
+      { type:'text', title:'How this chart is kept',
+        body:'Reporting lines are decided and stored. Departments, designations and people are read ' +
+             'from the organisation masters and the employee records, and every box is checked ' +
+             'against them each time the chart is drawn.' } ] });
   }
 
   /* ================= ROLES AND RESPONSIBILITIES =================
@@ -15549,10 +15966,22 @@
     bannerPreview();
   });
 
-  document.getElementById('dw-run').addEventListener('click', runDwm);
-  document.getElementById('dw-date').addEventListener('change', runDwm);
-  document.getElementById('dw-tasks').addEventListener('click', function(){ go('task_list'); });
+  document.getElementById('dw-dept').addEventListener('change', dwmFillEmployees);
+  document.getElementById('dw-emp').addEventListener('change', dwmPreview);
+  document.getElementById('dw-open').addEventListener('click', dwmOpen);
+  document.getElementById('dw-back').addEventListener('click', dwmBack);
+  document.getElementById('dw-month').addEventListener('change', function(){ dwmFreqChanged(); drawDwm(); });
+  document.getElementById('dw-year').addEventListener('change', function(){ dwmFreqChanged(); drawDwm(); });
   document.getElementById('dw-print').addEventListener('click', printDwm);
+  document.getElementById('dw-add').addEventListener('click', function(){
+    var f = document.getElementById('dw-addform');
+    f.style.display = f.style.display === 'none' ? '' : 'none';
+    dwmFreqChanged();
+  });
+  document.getElementById('dw-a-freq').addEventListener('change', dwmFreqChanged);
+  document.getElementById('dw-a-save').addEventListener('click', dwmAddActivity);
+  document.getElementById('dw-a-cancel').addEventListener('click', function(){
+    document.getElementById('dw-addform').style.display = 'none'; });
 
   document.getElementById('tk-add').addEventListener('click', addTask);
   document.getElementById('tk-filter').addEventListener('change', drawTasks);
@@ -15612,9 +16041,25 @@
   document.getElementById('au-add').addEventListener('click', addAudit);
   document.getElementById('au-print').addEventListener('click', printAudits);
 
-  document.getElementById('oc-run').addEventListener('click', loadOrgChart);
-  document.getElementById('oc-filter').addEventListener('change', drawOrgChart);
+  document.getElementById('oc-filter').addEventListener('change', function(){
+    document.getElementById('oc-deptwrap').style.display =
+      document.getElementById('oc-filter').value === 'dept' ? '' : 'none';
+    drawOrgChart();
+  });
+  document.getElementById('oc-dept').addEventListener('change', drawOrgChart);
   document.getElementById('oc-print').addEventListener('click', printOrgChart);
+  document.getElementById('oc-add').addEventListener('click', function(){
+    ocEditing = '';
+    document.getElementById('oc-formtitle').textContent = 'Add a box';
+    document.getElementById('oc-title').value = '';
+    document.getElementById('oc-who').value = '';
+    ocFillParents();
+    document.getElementById('oc-form').style.display = '';
+  });
+  document.getElementById('oc-save').addEventListener('click', ocSave);
+  document.getElementById('oc-cancel').addEventListener('click', function(){
+    ocEditing = '';
+    document.getElementById('oc-form').style.display = 'none'; });
 
   document.getElementById('rr-desig').addEventListener('change', openRole);
   document.getElementById('rr-save').addEventListener('click', function(){ saveRole(false); });

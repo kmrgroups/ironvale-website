@@ -117,26 +117,8 @@ $('g-user').value = 'tester'; $('g-pass').value = 'x';
 $('g-go').dispatchEvent(new window.Event('click'));
 await wait(250);
 
-// ================= organisation chart =================
-nav('org_chart'); await wait(700);
-const oc = txt($('oc-body'));
-check('the chart draws from the masters', $('oc-body').querySelectorAll('.org-dept').length === 1, oc.slice(0, 80));
-check('the department head is shown', /V Menon/.test(oc), oc.slice(0, 200));
-check('both designations appear', /CNC Operator/.test(oc) && /Shift Supervisor/.test(oc));
-check('people in post are shown by name', /R Kumar/.test(oc) && /M Iyer/.test(oc));
-check('sanctioned strength is compared with who is in post',
-  /3 of 5 sanctioned/.test(oc), oc.slice(0, 400));
-check('unfilled posts are drawn as vacancies',
-  $('oc-body').querySelectorAll('.vac').length === 2,
-  'vacancies=' + $('oc-body').querySelectorAll('.vac').length);
-check('somebody whose department is not on the masters is reported',
-  /K Das/.test(oc) && /could not place/i.test(oc), oc.slice(-300));
-check('the summary says how many could not be placed',
-  /1 person/.test(txt($('oc-msg'))), txt($('oc-msg')));
-
-$('oc-filter').value = 'vacant'; change($('oc-filter')); await wait(200);
-check('the vacancy filter keeps the department with vacancies',
-  $('oc-body').querySelectorAll('.org-dept').length === 1);
+/* The organisation chart moved to a decided-and-checked model in v114 and is
+   covered by dwmtest.mjs; what remains here is the rest of the org thread. */
 
 // ================= roles and responsibilities =================
 nav('roles_resp'); await wait(600);

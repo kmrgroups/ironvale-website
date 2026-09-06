@@ -926,6 +926,80 @@ looks like it works.
 Records: kind `tool`, `checksheet`, and `machine.data.checks` for the per-machine
 list (no new kind).
 
+## v114 — DWM and the Organisation Chart rebuilt from the v74 reference
+
+The user supplied `Key_Process_v74_Production_Entry.html`, an earlier single-file
+build with much richer HR screens, and asked for the HR thread to be redone
+against it. **That file is the reference for the remaining HR screens — read it
+before building them** (it is large and mostly base64 images; grep for
+`panel-<name>` to find a screen and for `function render<Name>` to find its
+logic).
+
+What the reference does that the previous IDMS screens did not: per-screen
+signatory blocks (prepared / reviewed / approved with dates and a doc number),
+department and status filters, Excel export alongside PDF, skill levels 0–4 as
+coloured badges, and — most importantly — a **per-employee** rather than
+per-designation model.
+
+What was deliberately *not* copied: `prompt()` chains for data entry,
+`masterData` in localStorage, and the absence of validation. The structure and
+the functions came across; the record-keeping did not.
+
+**DWM is now a per-employee monthly activity board**, not the SQDCP works board
+built in v113. Pick a department and a person, then their activities are laid
+out against the days of the month: `O` planned, `✔` done, `C` concession.
+Adherence is scored per list — department activities, general activities, annual
+calendar — and overall against a 98% target.
+
+The plan is **not typed**: it falls out of how often the activity is done (daily
+= every non-Sunday, weekly = its day, monthly = the months chosen, as-needed =
+its date). What is typed is what happened.
+
+[DECISION] **A month's plan is frozen the first time anything in it is marked.**
+Otherwise changing "weekly on Tuesday" to "weekly on Friday" in November
+silently rewrites every month back to January and last year's adherence changes
+overnight. A record that can be rewritten by editing a dropdown is not a record.
+The same reasoning blocks removing an activity that has days marked against it.
+
+Only the month in progress can be marked, and only days that have already
+happened. Records: kind `dwm`, one document per employee, holding the activity
+list and a frozen plan plus actuals per month key (`YYYY-MM`).
+
+**Organisation Chart** is now decided *and* checked, rather than purely derived.
+Reporting lines are a decision, so they are stored (kind `orgnode`: post,
+department, who holds it, level, parent). Everything else is read: departments
+from the org masters, people from the employee records. Seven hierarchy levels
+with colours, drawn as a tree.
+
+The check is the point. Every box is re-checked against the payroll on every
+draw and disagreements are named: a person not on the employee records, a person
+whose record puts them in another department, a person whose record says they
+have left. Vacant boxes show as vacant, and everybody on the payroll who is on
+no box is listed underneath — not an error, but nobody goes missing by accident.
+
+Refuses: a second box at the top (an organisation with two tops is two
+organisations); a reporting line that closes a loop (the chart would have no top
+and could not be drawn); removing a box others report to.
+
+[CODE] `holdersOf()` is shared with succession planning — it was briefly deleted
+with the old chart code and had to be restored. **Check for shared helpers before
+replacing a screen wholesale.**
+
+[CODE] `loadDwm()` must `await compLoad()` before filling the department
+dropdown; without it `departments()` is empty, the department option does not
+exist, setting `select.value` fails silently and the filter appears to do
+nothing. This is the same select-value trap noted at v105.
+
+**Still to redo against the reference:** Competency Mapping, TNI, Training Plan
+vs Actual, Skill Matrix, Gap Analysis, Training Effectiveness, Succession
+Planning. The competency chain is currently per-designation with derived gaps;
+the reference is per-employee with typed actual levels. Reconcile rather than
+copy — typing an actual level that the skill matrix already records would create
+two sources of truth for the same fact.
+
+**Key Process Input (`form`) is on hold at the user's request** until the rest is
+done.
+
 ## Modules added in v113 — the morning board and the task list
 
 **Daily Work Management** is the board walked at the morning meeting, in the
@@ -1113,7 +1187,11 @@ If you formalise this, keep two habits that mattered:
 2. **Test what matters, not what is easy.** Testing that a fold worked passed
    while the Save button was being folded away with it.
 
-`dwmtest.mjs` (36 checks over the v113 pair: yesterday seeded with one of
+`dwmtest.mjs` (43 checks over the v114 DWM board and organisation chart: the
+fixture puts today inside the month under test so the marking rules can be
+exercised at all, marks whatever the board itself says is markable rather than
+assuming today is a working day, and checks the freeze by editing an activity's
+frequency after a month has been marked. The old v113 pair: yesterday seeded with one of
 everything the board should notice, so a board that quietly drops one fails here
 rather than in a meeting; plus the not-copied rule on the task list).
 `opstest.mjs` (36 checks over the v112 screens: the demote-the-last-developer

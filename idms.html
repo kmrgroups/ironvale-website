@@ -346,6 +346,62 @@
       <div id="ap-body"></div>
     </div>
 
+    <!-- ============ Capacity plan ============ -->
+    <div class="panel" data-panel="capacity_plan">
+      <div class="card">
+        <h4>Capacity Plan</h4>
+        <div class="hint" style="margin-bottom:10px;">Hours needed against hours available,
+          <b>machine by machine and month by month</b>. The production plan answers whether there is
+          enough capacity overall; this answers <i>when</i> it runs out, which is the question that
+          decides whether you buy a machine or work a third shift. Demand comes from the open orders
+          and the routing cycle times; nothing is estimated.</div>
+        <div class="row four">
+          <div><label>Months ahead</label><select id="cp-horizon">
+            <option>3</option><option selected>6</option><option>12</option></select></div>
+          <div><label>Show</label><select id="cp-filter">
+            <option value="loaded">Machines with work</option>
+            <option value="all">Every machine</option>
+            <option value="over">Overloaded months only</option></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="cp-run">Work it out</button></div>
+          <div style="align-self:end;"><button class="btn" id="cp-print">Print</button></div>
+        </div>
+        <div class="note" id="cp-msg" style="display:none;"></div>
+      </div>
+      <div id="cp-body"></div>
+      <div class="card">
+        <h4>What each machine can do</h4>
+        <div class="hint" style="margin-bottom:10px;">Shifts, hours and working days are per machine,
+          because they are not the same for every machine in a real works. Availability is what is
+          left after planned maintenance, setting and the rest — set it from the actual figure on the
+          production dashboard rather than from 100%, or this plan will promise hours that do not
+          exist. Changes save as you make them.</div>
+        <div id="cp-caps"></div>
+      </div>
+    </div>
+
+    <!-- ============ Machine loading ============ -->
+    <div class="panel" data-panel="machine_loading">
+      <div class="card">
+        <h4>Machine Loading Plan</h4>
+        <div class="hint" style="margin-bottom:10px;">The open orders put onto the machines in date
+          order, one after another, until each machine's day is full — so an order that cannot be
+          started until the machine ahead of it is clear shows the date it will actually finish, not
+          the date somebody hoped for. Two assumptions worth knowing: <b>an operation finishes before
+          the next one on the same order starts</b> (no overlapping batches), and <b>earliest due
+          date is loaded first</b>. It is a projection from today's order book, not a commitment.</div>
+        <div class="row four">
+          <div><label>Load from</label><input type="date" id="ml-from"></div>
+          <div><label>Show</label><select id="ml-filter">
+            <option value="all">Every order</option>
+            <option value="late">Orders that will miss the date</option></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="ml-run">Load the machines</button></div>
+          <div style="align-self:end;"><button class="btn" id="ml-print">Print</button></div>
+        </div>
+        <div class="note" id="ml-msg" style="display:none;"></div>
+      </div>
+      <div id="ml-body"></div>
+    </div>
+
     <!-- ============ Bill of materials ============ -->
     <div class="panel" data-panel="bom">
       <div class="card">
@@ -1882,7 +1938,7 @@
       ['dash_ppc','📊','PPC & MMD Dashboard',1],
       ['sales_plan','📈','Sales Plan',1],['production_plan','🏭','Production Plan',1],
       ['emb_ppc','🗓','Production Planning (orders & capacity)',1],
-      ['capacity_plan','⚙','Capacity Plan'],['machine_loading','🔩','Machine Loading Plan'],
+      ['capacity_plan','⚙','Capacity Plan',1],['machine_loading','🔩','Machine Loading Plan',1],
       ['dc','📤','Delivery Challan',1],['sheet_rawmat','🪨','Raw Material Stock',1],
       ['bom','🧾','Bill of Materials',1],['form','🔑','Key Process Input']]],
     ['production','🏗','Production','Shop floor',[
@@ -2021,6 +2077,8 @@
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
+    if (s === 'capacity_plan')     loadCapacity();
+    if (s === 'machine_loading')   loadLoading();
     if (s === 'bom')               loadBom();
     if (s === 'sheet_rawmat')      loadStock();
     if (s === 'report_control_charts') loadCc();
@@ -2034,6 +2092,457 @@
     if (s === 'kpi_entry')         loadKpiEntry();
     if (s === 'admin_banner')      loadBannerScreen();
     if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
+  }
+
+  /* ================= CAPACITY AND LOADING =================
+     Both screens read the same three things — the open orders, the routing, and
+     what each machine can do — so the loading is shared and only the question
+     differs. Capacity asks "which month runs out"; loading asks "when will this
+     order actually finish".
+
+     Capacity per machine lives on the machine record rather than in a global
+     shift box, because one grinder on a single shift and a cell running three is
+     the ordinary case, and a blended average hides exactly the machine that is
+     the constraint. */
+  var capMachines = [], capOrders = [], capRows = [], capMonths = [], capUnknown = [];
+
+  var DEFAULT_CAP = { shiftsPerDay: 2, hoursPerShift: 8, workDaysPerWeek: 6, availabilityPct: 85 };
+  function capOf(m){
+    var v = (m && m.data) || {};
+    return {
+      shifts: v.shiftsPerDay == null ? DEFAULT_CAP.shiftsPerDay : C.num(v.shiftsPerDay),
+      hours:  v.hoursPerShift == null ? DEFAULT_CAP.hoursPerShift : C.num(v.hoursPerShift),
+      days:   v.workDaysPerWeek == null ? DEFAULT_CAP.workDaysPerWeek : C.num(v.workDaysPerWeek),
+      avail:  v.availabilityPct == null ? DEFAULT_CAP.availabilityPct : C.num(v.availabilityPct),
+      stated: v.shiftsPerDay != null
+    };
+  }
+  function hoursPerWorkingDay(c){ return c.shifts * c.hours * (c.avail / 100); }
+  function workingDaysIn(year, month, perWeek){
+    var days = new Date(year, month + 1, 0).getDate();
+    return Math.round(days * (perWeek / 7));
+  }
+
+  /* the common load: read orders, routing, machines and production once */
+  async function capLoadData(){
+    await fetchParts();
+    try { capOrders = await C.idms.docs('order'); } catch(e){ capOrders = []; }
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    try { prodDocs  = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    try { capMachines = await C.idms.docs('machine'); } catch(e){ capMachines = []; }
+    orders = capOrders;
+    allocateProduction();
+
+    /* a machine named on a routing that is not on the machine master has no
+       capacity, so its work would silently vanish from both screens */
+    var known = capMachines.map(function(m){ return String((m.data||{}).name||'').toLowerCase(); });
+    var used = {};
+    processes.forEach(function(p){
+      var n = String((p.data||{}).machine||'').trim();
+      if (n) used[n] = 1;
+    });
+    capUnknown = Object.keys(used).filter(function(n){ return known.indexOf(n.toLowerCase()) < 0; });
+  }
+  function machineByName(n){
+    var k = String(n||'').trim().toLowerCase();
+    return capMachines.filter(function(m){
+      return String((m.data||{}).name||'').trim().toLowerCase() === k; })[0] || null;
+  }
+
+  /* ---------------- capacity plan ---------------- */
+  async function loadCapacity(){ await capLoadData(); runCapacity(); }
+
+  function runCapacity(){
+    var months = C.num(document.getElementById('cp-horizon').value) || 6;
+    var now = new Date(), start = new Date(now.getFullYear(), now.getMonth(), 1);
+    capMonths = [];
+    for (var i = 0; i < months; i++){
+      var d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+      capMonths.push({ y:d.getFullYear(), m:d.getMonth(),
+        label: d.toLocaleString('en-GB', { month:'short' }) + ' ' + String(d.getFullYear()).slice(2),
+        key: d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') });
+    }
+
+    var need = {}, noRouting = [];
+    capOrders.forEach(function(o){
+      var v = o.data||{}, pr = orderProgress(o);
+      if (pr.balance <= 0) return;
+      var ops = opsFor(v.partId);
+      if (!ops.length){ noRouting.push(v.po || o.doc_no); return; }
+      /* an order is put in the month it is due; anything already past its date is
+         put in the current month, because that is when the hours are needed */
+      var due = v.due ? new Date(v.due) : null;
+      var idx = 0;
+      if (due && !isNaN(due)){
+        idx = capMonths.findIndex(function(x){ return x.y === due.getFullYear() && x.m === due.getMonth(); });
+        if (idx < 0) idx = due < now ? 0 : -1;          // -1 = beyond the horizon
+      }
+      if (idx < 0) return;
+      ops.forEach(function(x){
+        var d = x.data||{}, mc = (d.machine||'not stated').trim();
+        var h = C.num(d.cycleSec) * pr.balance / 3600;
+        need[mc] = need[mc] || {};
+        need[mc][idx] = (need[mc][idx] || 0) + h;
+      });
+    });
+
+    capRows = Object.keys(need).map(function(name){
+      var m = machineByName(name), c = capOf(m), perDay = hoursPerWorkingDay(c);
+      var cells = capMonths.map(function(mo, i){
+        var avail = Math.round(workingDaysIn(mo.y, mo.m, c.days) * perDay * 10) / 10;
+        var req = Math.round((need[name][i] || 0) * 10) / 10;
+        return { need:req, avail:avail, pct: avail ? Math.round(1000 * req / avail) / 10 : null };
+      });
+      return { name:name, onMaster:!!m, stated:c.stated, cap:c, perDay:Math.round(perDay*10)/10,
+               cells:cells,
+               totalNeed: Math.round(cells.reduce(function(t,x){ return t + x.need; }, 0) * 10) / 10,
+               over: cells.filter(function(x){ return x.pct !== null && x.pct > 100; }).length };
+    }).sort(function(a,b){ return b.over - a.over || b.totalNeed - a.totalNeed; });
+
+    drawCapacity(noRouting);
+  }
+
+  function drawCapacity(noRouting){
+    var host = document.getElementById('cp-body');
+    var filter = document.getElementById('cp-filter').value;
+    var msg = document.getElementById('cp-msg');
+
+    if (!capRows.length){
+      host.innerHTML = '<div class="card"><div class="empty"><b>Nothing to plan</b>' +
+        'Capacity is worked out from the open orders and the routing. Either every order is made, ' +
+        'or the parts on them carry no routing.</div></div>';
+      drawCapSettings();
+      msg.style.display = 'none';
+      return;
+    }
+
+    var rows = capRows.filter(function(r){
+      if (filter === 'over') return r.over > 0;
+      if (filter === 'loaded') return r.totalNeed > 0;
+      return true;
+    });
+
+    /* the works as a whole, month by month — the shape people actually look at */
+    var totalNeed = capMonths.map(function(_, i){
+      return Math.round(capRows.reduce(function(t,r){ return t + r.cells[i].need; }, 0) * 10) / 10; });
+    var totalAvail = capMonths.map(function(_, i){
+      return Math.round(capRows.reduce(function(t,r){ return t + r.cells[i].avail; }, 0) * 10) / 10; });
+
+    var chart = window.KPIX
+      ? window.KPIX.charts.bars(capMonths.map(function(m){ return m.label; }),
+          [{ name:'Hours available', values: totalAvail }, { name:'Hours needed', values: totalNeed }],
+          'hours')
+      : '';
+
+    var overMonths = capMonths.filter(function(_, i){ return totalNeed[i] > totalAvail[i]; })
+      .map(function(m){ return m.label; });
+
+    var head = '<div class="card"><h4>The works, month by month</h4>' +
+      '<div class="kpi-src">Available hours are shifts × hours × working days × availability, per ' +
+      'machine, added up. Needed hours are the balance still to make on each open order times the ' +
+      'routing cycle times, put in the month the order is due.</div>' + chart +
+      (overMonths.length
+        ? '<div class="note bad" style="margin-top:10px;"><b>The works is short of hours in ' +
+          esc(overMonths.join(', ')) + '.</b> Look down the table for which machines: the total ' +
+          'being short means at least one machine is, but a total that balances can still hide a ' +
+          'machine that does not.</div>'
+        : '<div class="note good" style="margin-top:10px;">No month is short of hours overall.</div>') +
+      (noRouting.length ? '<div class="note" style="margin-top:9px;">' + noRouting.length +
+        ' open order(s) have no routing, so none of their hours are in this plan: ' +
+        esc(noRouting.slice(0,5).join(', ')) + '. The plan is short by however long they take.</div>' : '') +
+      (capUnknown.length ? '<div class="note" style="margin-top:9px;"><b>' + capUnknown.length +
+        ' machine name(s) on the routings are not on the machine master</b> (' +
+        esc(capUnknown.slice(0,5).join(', ')) + '), so they are planned on the default shift pattern ' +
+        'rather than their own. <a data-goto="entry_machine" style="cursor:pointer;color:var(--sky-deep);' +
+        'font-weight:600;">Add them →</a></div>' : '') +
+      '</div>';
+
+    var table = '<div class="card"><h4>Machine by machine</h4><div class="scroll-x">' +
+      '<table class="t"><thead><tr><th style="min-width:150px;">Machine</th><th class="r">Hours/day</th>' +
+      capMonths.map(function(m){ return '<th class="r">'+esc(m.label)+'</th>'; }).join('') +
+      '</tr></thead><tbody>' +
+      rows.map(function(r){
+        return '<tr><td><b>'+esc(r.name)+'</b>' +
+          (r.onMaster ? (r.stated ? '' : '<div class="hint">default shift pattern</div>')
+                      : '<div class="hint bad">not on the machine master</div>') + '</td>' +
+          '<td class="r hint">'+C.qty(r.perDay)+'</td>' +
+          r.cells.map(function(c){
+            if (!c.need) return '<td class="r hint">—</td>';
+            var over = c.pct !== null && c.pct > 100;
+            return '<td class="r'+(over?' bad':'')+'"><b>'+(c.pct===null?'—':c.pct+'%')+'</b>' +
+              '<div class="hint">'+C.qty(c.need)+' of '+C.qty(c.avail)+' h</div></td>';
+          }).join('') + '</tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<div class="hint" style="margin-top:9px;">Each cell is hours needed as a percentage of hours ' +
+      'available in that month. Over 100% means the work will not fit — it does not disappear, it ' +
+      'moves into the next month and pushes what was already there.</div></div>';
+
+    host.innerHTML = head + table;
+    host.querySelectorAll('[data-goto]').forEach(function(a){
+      a.addEventListener('click', function(){ go(a.dataset.goto); }); });
+
+    var over = capRows.reduce(function(t,r){ return t + r.over; }, 0);
+    msg.style.display=''; msg.className = 'note' + (over ? ' bad' : ' good');
+    msg.innerHTML = over
+      ? '<b>' + over + ' machine-month(s) are over capacity.</b> They are marked in the table.'
+      : 'No machine is over capacity in any month of this horizon.';
+
+    drawCapSettings();
+  }
+
+  function drawCapSettings(){
+    var host = document.getElementById('cp-caps');
+    if (!capMachines.length){
+      host.innerHTML = '<div class="empty"><b>No machines on the master</b>' +
+        '<a data-goto="entry_machine" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">' +
+        'Add them →</a></div>';
+      host.querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
+      return;
+    }
+    host.innerHTML = '<div class="scroll-x"><table class="t"><thead><tr><th>Machine</th>' +
+      '<th class="r">Shifts/day</th><th class="r">Hours/shift</th><th class="r">Working days/week</th>' +
+      '<th class="r">Availability %</th><th class="r">Hours/day</th></tr></thead><tbody>' +
+      capMachines.map(function(m){
+        var v = m.data||{}, c = capOf(m);
+        function cell(f, val){
+          return '<td class="r"><input class="num cp-cap" data-id="'+esc(m.doc_id)+'" data-f="'+f+
+            '" value="'+val+'" style="width:74px;"></td>';
+        }
+        return '<tr><td><b>'+esc(v.name||'—')+'</b>' +
+          (c.stated ? '' : '<div class="hint">using the default pattern</div>') + '</td>' +
+          cell('shiftsPerDay', c.shifts) + cell('hoursPerShift', c.hours) +
+          cell('workDaysPerWeek', c.days) + cell('availabilityPct', c.avail) +
+          '<td class="r"><b>'+C.qty(Math.round(hoursPerWorkingDay(c)*10)/10)+'</b></td></tr>';
+      }).join('') + '</tbody></table></div>';
+    host.querySelectorAll('.cp-cap').forEach(function(inp){
+      inp.addEventListener('change', function(){ saveCap(inp.dataset.id, inp.dataset.f, inp.value); });
+    });
+  }
+
+  async function saveCap(id, field, val){
+    var m = capMachines.filter(function(x){ return x.doc_id === id; })[0];
+    if (!m) return;
+    var n = C.num(val);
+    var msg = document.getElementById('cp-msg');
+    if (field === 'availabilityPct' && (n <= 0 || n > 100)){
+      msg.style.display=''; msg.className='note bad';
+      msg.textContent = 'Availability is a percentage between 1 and 100. A machine cannot be available ' +
+        'more than all of the time.';
+      drawCapSettings(); return;
+    }
+    if (field !== 'availabilityPct' && n <= 0){
+      msg.style.display=''; msg.className='note bad';
+      msg.textContent = 'Shifts, hours and working days all have to be above zero, or the machine has ' +
+        'no capacity at all and everything loaded on it would show as impossible.';
+      drawCapSettings(); return;
+    }
+    var v = Object.assign({}, m.data||{});
+    v[field] = n;
+    try {
+      await C.idms.saveDoc({ docId:id, kind:'machine', docNo:m.doc_no, status:m.status||'Active',
+        data:v }, 'machine capacity set');
+      m.data = v;
+      runCapacity();
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent = e.message; }
+  }
+
+  function printCapacity(){
+    if (!capRows.length) { toast('Work the plan out first.'); return; }
+    C.openReport({ title:'Capacity Plan', landscape:true, sections:[
+      { type:'table', title:'Hours needed as a percentage of hours available', dense:true,
+        columns:[{label:'Machine'},{label:'Hours/day',align:'r'}].concat(
+          capMonths.map(function(m){ return { label:m.label, align:'r' }; })),
+        rows: capRows.map(function(r){
+          return [r.name, C.qty(r.perDay)].concat(r.cells.map(function(c){
+            return c.need ? (c.pct === null ? '—' : c.pct + '%') : '—'; }));
+        }) },
+      { type:'table', title:'Hours needed', dense:true,
+        columns:[{label:'Machine'}].concat(capMonths.map(function(m){ return { label:m.label, align:'r' }; })),
+        rows: capRows.map(function(r){
+          return [r.name].concat(r.cells.map(function(c){ return c.need ? C.qty(c.need) : '—'; })); }),
+        note:'Demand is the balance still to make on each open order times the routing cycle times, ' +
+             'placed in the month the order is due. Availability is per machine: shifts x hours x ' +
+             'working days x availability percentage.' } ] });
+  }
+
+  /* ---------------- machine loading ----------------
+     A finite forward schedule. Orders go on in due-date order; each operation
+     waits for both the machine ahead of it and the previous operation on its own
+     order. What comes out is the date each order will actually finish if nothing
+     changes — which is the only version of that date worth telling a customer. */
+  var mlOrders = [], mlQueues = [], mlFrom = null;
+
+  async function loadLoading(){
+    if (!document.getElementById('ml-from').value)
+      document.getElementById('ml-from').value = new Date().toISOString().slice(0,10);
+    await capLoadData();
+    runLoading();
+  }
+
+  function addWorkingDays(from, workDays, perWeek){
+    /* working days converted to calendar days at the machine's own week length,
+       so a six-day machine and a five-day machine do not finish on the same date */
+    var cal = Math.ceil(workDays * (7 / (perWeek || 6)));
+    var d = new Date(from.getTime());
+    d.setDate(d.getDate() + cal);
+    return d;
+  }
+
+  function runLoading(){
+    var msg = document.getElementById('ml-msg');
+    mlFrom = new Date(document.getElementById('ml-from').value || Date.now());
+    if (isNaN(mlFrom)) mlFrom = new Date();
+
+    var open = capOrders.filter(function(o){ return orderProgress(o).balance > 0; })
+      .sort(function(a,b){
+        return String((a.data||{}).due||'9999').localeCompare(String((b.data||{}).due||'9999')); });
+
+    var free = {};                                   // machine -> date it is next clear
+    mlOrders = []; mlQueues = [];
+    var queue = {};
+
+    open.forEach(function(o){
+      var v = o.data||{}, pr = orderProgress(o), ops = opsFor(v.partId);
+      if (!ops.length){
+        mlOrders.push({ po:v.po||o.doc_no, customer:v.customerName||'', partNo:v.partNo||'',
+          balance:pr.balance, due:v.due, noRouting:true });
+        return;
+      }
+      var cursor = new Date(mlFrom.getTime()), steps = [], totalHours = 0;
+      ops.forEach(function(x){
+        var d = x.data||{}, name = (d.machine||'not stated').trim();
+        var m = machineByName(name), c = capOf(m), perDay = hoursPerWorkingDay(c);
+        var hours = C.num(d.cycleSec) * pr.balance / 3600;
+        totalHours += hours;
+        var machineFree = free[name] ? new Date(free[name].getTime()) : new Date(mlFrom.getTime());
+        var start = machineFree > cursor ? machineFree : cursor;   // wait for both
+        var days = perDay > 0 ? hours / perDay : 0;
+        var finish = perDay > 0 ? addWorkingDays(start, days, c.days) : new Date(start.getTime());
+        free[name] = finish;
+        cursor = finish;
+        steps.push({ machine:name, opNo:C.num(d.opNo), opName:d.name||'', hours:hours,
+                     start:start, finish:finish, noCapacity: perDay <= 0 });
+        (queue[name] = queue[name] || []).push({
+          po:v.po||o.doc_no, partNo:v.partNo||'', opNo:C.num(d.opNo), opName:d.name||'',
+          hours:hours, start:start, finish:finish, due:v.due });
+      });
+      var dueDate = v.due ? new Date(v.due) : null;
+      var lateBy = dueDate && !isNaN(dueDate)
+        ? Math.ceil((cursor.getTime() - dueDate.getTime()) / 86400000) : null;
+      mlOrders.push({ po:v.po||o.doc_no, customer:v.customerName||'', partNo:v.partNo||'',
+        balance:pr.balance, due:v.due, finish:cursor, lateBy:lateBy,
+        hours: Math.round(totalHours*10)/10, steps:steps, noRouting:false });
+    });
+
+    mlQueues = Object.keys(queue).map(function(name){
+      var m = machineByName(name), c = capOf(m);
+      return { machine:name, onMaster:!!m, perDay:Math.round(hoursPerWorkingDay(c)*10)/10,
+               jobs:queue[name],
+               hours: Math.round(queue[name].reduce(function(t,j){ return t + j.hours; }, 0)*10)/10,
+               clearBy: queue[name].reduce(function(d,j){ return j.finish > d ? j.finish : d; }, mlFrom) };
+    }).sort(function(a,b){ return b.clearBy - a.clearBy; });
+
+    var late = mlOrders.filter(function(r){ return r.lateBy !== null && r.lateBy > 0; });
+    msg.style.display=''; msg.className = 'note' + (late.length ? ' bad' : ' good');
+    msg.innerHTML = !mlOrders.length ? 'No open orders to load.'
+      : late.length
+        ? '<b>' + late.length + ' of ' + mlOrders.length + ' open order(s) will miss the date</b> if ' +
+          'the machines are loaded in this sequence. Moving one earlier moves another later — the ' +
+          'hours do not change, only who waits.'
+        : 'Every open order finishes on or before its date on this sequence.';
+    drawLoading();
+  }
+
+  function drawLoading(){
+    var host = document.getElementById('ml-body');
+    var filter = document.getElementById('ml-filter').value;
+    if (!mlOrders.length){
+      host.innerHTML = '<div class="card"><div class="empty"><b>Nothing to load</b>' +
+        'Every order has been made, or there are no orders yet.</div></div>';
+      return;
+    }
+    var rows = mlOrders.filter(function(r){
+      return filter === 'late' ? (r.lateBy !== null && r.lateBy > 0) : true; });
+
+    var orderTable = '<div class="card"><h4>Orders, in the sequence they would be loaded</h4>' +
+      '<div class="scroll-x"><table class="t"><thead><tr><th>Order</th><th>Customer</th><th>Part</th>' +
+      '<th class="r">To make</th><th class="r">Hours</th><th>Due</th><th>Finishes</th>' +
+      '<th class="c">Verdict</th></tr></thead><tbody>' +
+      (rows.length ? rows.map(function(r){
+        if (r.noRouting)
+          return '<tr><td><b>'+esc(r.po)+'</b></td><td>'+esc(r.customer)+'</td><td>'+esc(r.partNo)+'</td>' +
+            '<td class="r">'+C.qty(r.balance)+'</td><td class="r hint">—</td>' +
+            '<td class="hint">'+C.fmtDate(r.due)+'</td><td class="hint">—</td>' +
+            '<td class="c"><span class="badge sample">no routing</span></td></tr>';
+        var v = r.lateBy === null ? '<span class="badge sample">no due date</span>'
+          : r.lateBy > 0 ? '<span class="badge ab">'+r.lateBy+' day(s) late</span>'
+          : '<span class="badge series">on time</span>';
+        return '<tr><td><b>'+esc(r.po)+'</b></td><td>'+esc(r.customer)+'</td><td>'+esc(r.partNo)+'</td>' +
+          '<td class="r">'+C.qty(r.balance)+'</td><td class="r">'+C.qty(r.hours)+'</td>' +
+          '<td class="hint">'+C.fmtDate(r.due)+'</td>' +
+          '<td'+(r.lateBy>0?' class="bad"':'')+'>'+C.fmtDate(r.finish.toISOString().slice(0,10))+'</td>' +
+          '<td class="c">'+v+'</td></tr>';
+      }).join('')
+      : '<tr><td colspan="8" class="hint">Nothing matches that filter.</td></tr>') +
+      '</tbody></table></div></div>';
+
+    var queueTable = '<div class="card"><h4>What each machine is committed to</h4>' +
+      mlQueues.map(function(q){
+        return '<div style="margin-bottom:16px;"><b>'+esc(q.machine)+'</b> · ' + C.qty(q.hours) +
+          ' hours queued at ' + C.qty(q.perDay) + ' h/day · clear by <b>' +
+          C.fmtDate(q.clearBy.toISOString().slice(0,10)) + '</b>' +
+          (q.onMaster ? '' : '<span class="hint bad"> — not on the machine master, planned on the ' +
+            'default shift pattern</span>') +
+          '<div class="scroll-x" style="margin-top:6px;"><table class="t"><thead><tr><th>Order</th>' +
+          '<th>Part</th><th>Operation</th><th class="r">Hours</th><th>Starts</th><th>Finishes</th>' +
+          '<th>Order due</th></tr></thead><tbody>' +
+          q.jobs.map(function(j){
+            var lateHere = j.due && j.finish > new Date(j.due);
+            return '<tr><td><b>'+esc(j.po)+'</b></td><td>'+esc(j.partNo)+'</td>' +
+              '<td class="hint">Op '+j.opNo+' — '+esc(j.opName)+'</td>' +
+              '<td class="r">'+C.qty(Math.round(j.hours*10)/10)+'</td>' +
+              '<td class="hint">'+C.fmtDate(j.start.toISOString().slice(0,10))+'</td>' +
+              '<td'+(lateHere?' class="bad"':' class="hint"')+'>'+
+                C.fmtDate(j.finish.toISOString().slice(0,10))+'</td>' +
+              '<td class="hint">'+C.fmtDate(j.due)+'</td></tr>';
+          }).join('') + '</tbody></table></div></div>';
+      }).join('') + '</div>';
+
+    host.innerHTML = orderTable + queueTable;
+  }
+
+  function printLoading(){
+    if (!mlOrders.length) { toast('Load the machines first.'); return; }
+    var secs = [{ type:'table', title:'Orders in loading sequence', dense:true,
+      columns:[{label:'Order'},{label:'Customer'},{label:'Part'},{label:'To make',align:'r'},
+               {label:'Hours',align:'r'},{label:'Due'},{label:'Finishes'},{label:'Verdict'}],
+      rows: mlOrders.map(function(r){
+        return [r.po, r.customer, r.partNo, C.qty(r.balance),
+                r.noRouting ? '—' : C.qty(r.hours), C.fmtDate(r.due),
+                r.noRouting ? '—' : C.fmtDate(r.finish.toISOString().slice(0,10)),
+                r.noRouting ? 'no routing'
+                  : r.lateBy === null ? 'no due date'
+                  : r.lateBy > 0 ? r.lateBy + ' day(s) late' : 'on time'];
+      }) }];
+    mlQueues.forEach(function(q){
+      secs.push({ type:'table', dense:true,
+        title: q.machine + ' — ' + C.qty(q.hours) + ' hours queued, clear by ' +
+               C.fmtDate(q.clearBy.toISOString().slice(0,10)),
+        columns:[{label:'Order'},{label:'Part'},{label:'Operation'},{label:'Hours',align:'r'},
+                 {label:'Starts'},{label:'Finishes'}],
+        rows: q.jobs.map(function(j){
+          return [j.po, j.partNo, 'Op ' + j.opNo + ' — ' + j.opName, C.qty(Math.round(j.hours*10)/10),
+                  C.fmtDate(j.start.toISOString().slice(0,10)),
+                  C.fmtDate(j.finish.toISOString().slice(0,10))]; }) });
+    });
+    secs.push({ type:'text', title:'How this was worked out',
+      body:'Open orders are loaded earliest due date first. Each operation waits for both the machine ' +
+           'ahead of it and the previous operation on its own order, and no batch overlaps another. ' +
+           'Hours come from the routing cycle times and the balance still to make; a machine\'s day is ' +
+           'its shifts times hours times its availability percentage. It is a projection from the ' +
+           'order book as it stands today, not a commitment.' });
+    C.openReport({ title:'Machine Loading Plan', landscape:true, sections:secs });
   }
 
   /* ================= BILL OF MATERIALS =================
@@ -11202,6 +11711,16 @@
     document.getElementById('ab-file').value = '';
     bannerPreview();
   });
+
+  document.getElementById('cp-run').addEventListener('click', loadCapacity);
+  document.getElementById('cp-horizon').addEventListener('change', runCapacity);
+  document.getElementById('cp-filter').addEventListener('change', function(){ drawCapacity([]); });
+  document.getElementById('cp-print').addEventListener('click', printCapacity);
+
+  document.getElementById('ml-run').addEventListener('click', loadLoading);
+  document.getElementById('ml-from').addEventListener('change', runLoading);
+  document.getElementById('ml-filter').addEventListener('change', drawLoading);
+  document.getElementById('ml-print').addEventListener('click', printLoading);
 
   document.getElementById('bm-part').addEventListener('change', openBom);
   document.getElementById('bm-add').addEventListener('click', addBomLine);

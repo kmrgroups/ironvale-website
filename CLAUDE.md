@@ -652,12 +652,48 @@ Records: kind `bom` (one per part), `rawmat.data.opening`/`openingOn` for the
 opening balance (no new kind), and control charts store nothing — they are
 computed on every open.
 
-**Declared but not built:** the screens still marked `soon` in the menu (33 at
-v106, down from 42), each showing an explanation rather than a blank page.
+## Modules added in v107 — capacity and loading
 
-**Suggested order for the rest**, by what unblocks the most: capacity plan and
-machine loading, both computable from the routing and the order book the
-production plan already reads; then the HR competency chain (TNI → training
+These two sit next to the machine-loading section the **Production Plan** already
+has, and it is worth being clear why all three exist. The production plan asks
+*is there enough capacity overall* and answers it in one blended bucket. The two
+new screens ask the questions that bucket cannot answer.
+
+**Capacity Plan** — hours needed against hours available, **machine by machine
+and month by month**, over a 3, 6 or 12 month horizon. That is the view that
+decides whether you buy a machine or work a third shift, and a blended total
+cannot give it: a works whose total balances can still have one machine that
+does not, which is why the screen says so in as many words.
+
+Capacity is stored **per machine, on the machine record** (`shiftsPerDay`,
+`hoursPerShift`, `workDaysPerWeek`, `availabilityPct` — no new kind), because one
+grinder on a single shift beside a cell running three is the ordinary case and
+averaging them hides the constraint. Availability is refused above 100% and
+shifts/hours/days are refused at zero. Demand is the balance still to make on
+each open order times the routing cycle times, **placed in the month the order is
+due**; anything already past its date goes in the current month, because that is
+when the hours are needed. A machine named on a routing but missing from the
+machine master is planned on the default pattern **and flagged** — otherwise its
+work would quietly vanish from both screens.
+
+**Machine Loading Plan** — a finite forward schedule, not a load percentage.
+Orders go on earliest due date first; each operation waits for **both** the
+machine ahead of it and the previous operation on its own order. What comes out
+is the date each order will actually finish, which is the only version of that
+date worth telling a customer. Two assumptions are stated on the screen rather
+than buried: no batch overlaps another, and earliest due date wins. Hours convert
+to calendar days at each machine's own week length, so a six-day machine and a
+five-day machine do not finish on the same date.
+
+Both screens share `capLoadData()` and reuse `orderProgress`/`opsFor`/
+`allocateProduction` from the production plan — **do not fork that allocation**;
+it is the code that stopped 300 pieces satisfying a 200-piece order and a
+1000-piece order at the same time.
+
+**Declared but not built:** the screens still marked `soon` in the menu (31 at
+v107, down from 42), each showing an explanation rather than a blank page.
+
+**Suggested order for the rest**, by what unblocks the most: the HR competency chain (TNI → training
 plan/actual → effectiveness → gap → succession), which feeds HR dashboard KPIs
 that are entry-only today; then the QMS document levels and audit calendars,
 the largest remaining block, which would turn roughly twenty entry-only KPIs
@@ -794,6 +830,10 @@ If you formalise this, keep two habits that mattered:
 2. **Test what matters, not what is easy.** Testing that a fold worked passed
    while the Save button was being folded away with it.
 
+`planningtest.mjs` (24 checks over the v107 modules: two machines with
+deliberately different shift patterns so a blended average fails, demand landing
+in the month it is due, the capacity validations, and an order that the queue
+ahead of it pushes past its date being called late rather than on time).
 `materialtest.mjs` (29 checks over the v106 modules: the BOM refusals and scrap
 arithmetic, the stock identity with its two load-bearing decisions, and the
 control chart catching a deliberate outlier and a deliberate run of seven while

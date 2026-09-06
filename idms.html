@@ -73,12 +73,6 @@
      down proportionally on smaller screens, never cropped or stretched. */
   aspect-ratio:var(--banner-ar,auto);}
 .banner img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
-.banner .veil{position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.88));}
-.banner .in{position:relative;}
-.banner h1{font-family:var(--disp);font-size:clamp(20px,3.2vw,34px);color:var(--navy);line-height:1.2;}
-.banner .sub{font-family:var(--disp);font-size:clamp(14px,1.8vw,19px);color:var(--sky-deep);margin-top:6px;}
-.banner .strap{font-size:12.5px;color:var(--ink-mid);margin-top:10px;}
 .banner .edit{position:absolute;top:12px;right:12px;z-index:3;}
 
 .qa-head{display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px;gap:10px;}
@@ -277,12 +271,6 @@
            screen it appears on. -->
       <div class="banner">
         <img class="bg" id="bn-img" style="display:none;" alt="">
-        <div class="veil" id="bn-veil" style="display:none;"></div>
-        <div class="in">
-          <h1 id="bn-title">—</h1>
-          <div class="sub" id="bn-sub"></div>
-          <div class="strap" id="bn-strap">Intelligent Digital Manufacturing System</div>
-        </div>
       </div>
       <div class="stat" id="home-stats"></div>
       <div class="card" style="margin-top:18px;">
@@ -8500,19 +8488,15 @@
   async function loadHome(){
     var p = C.getProfile();
     var bannerEl = document.querySelector('.panel[data-panel="home"] .banner');
-    var img = document.getElementById('bn-img'), veil = document.getElementById('bn-veil');
+    var img = document.getElementById('bn-img');
 
-    /* The Hero Banner (image, eyebrow, headline, sub) is read fresh from
-       Website Content → Website → Hero → Hero Banner every time this screen
-       is opened, so a change made there — added, replaced or removed — shows
-       up here without anything else to save or sync. */
+    /* The Hero Banner image is read fresh from Website Content → Website →
+       Hero → Hero Banner every time this screen is opened, so a change made
+       there — added or replaced — shows up here without anything else to
+       save or sync. Shown here as the plain image only, at full clarity —
+       no overlay veil and no headline/eyebrow/sub text on top of it. */
     var hero = {};
     try { hero = await C.loadHero(); } catch(e){ hero = {}; }
-
-    document.getElementById('bn-title').textContent = hero.headline || p.name || 'Your company';
-    document.getElementById('bn-sub').textContent = hero.sub || '';
-    document.getElementById('bn-strap').textContent =
-      hero.eyebrow || 'Intelligent Digital Manufacturing System';
 
     if (hero.image) {
       img.onload = function(){
@@ -8523,9 +8507,9 @@
           bannerEl.style.setProperty('--banner-ar', img.naturalWidth + ' / ' + img.naturalHeight);
         }
       };
-      img.src = hero.image; img.style.display = ''; veil.style.display = '';
+      img.src = hero.image; img.style.display = '';
     } else {
-      img.removeAttribute('src'); img.style.display = 'none'; veil.style.display = 'none';
+      img.removeAttribute('src'); img.style.display = 'none';
       if (bannerEl) bannerEl.style.removeProperty('--banner-ar');
     }
 

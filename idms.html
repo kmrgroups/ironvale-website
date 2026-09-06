@@ -2743,6 +2743,11 @@
   MENU.forEach(function(g){ g[4].forEach(function(it){
     LABEL[it[0]] = it[2]; ICON[it[0]] = it[1]; if (it[3]) LIVE[it[0]] = 1;
   });});
+  /* 'home' isn't listed inside any MENU group — it's the standalone button
+     drawn before them — so the loop above never marks it live, and go('home')
+     was falling through to the "later phase" placeholder instead of showing
+     the real Home panel (and its Hero Banner). Mark it live explicitly. */
+  LIVE.home = 1; LABEL.home = 'Home'; ICON.home = '🏠';
 
   /* Every main menu and sub-menu entry is a real <a href="#s=..."> so the
      browser's own right-click menu (Open Link in New Tab / New Window, Copy
@@ -2769,8 +2774,16 @@
     var minW = Math.max(drop.offsetWidth || 268, 268);
     var left = Math.min(r.left, window.innerWidth - minW - 8);
     left = Math.max(8, left);
-    drop.style.top = (r.bottom + 4) + 'px';
+    var top = r.bottom + 4;
+    drop.style.top = top + 'px';
     drop.style.left = left + 'px';
+    /* Clamp to the space actually left below the button — the CSS default
+       (calc(100vh - 24px)) assumes the drop starts at the top of the screen,
+       so a menu opened lower down (or a taskbar eating into the viewport)
+       could run off the bottom of the screen. The list scrolls internally
+       once it doesn't fit, instead of extending past the visible area. */
+    var available = window.innerHeight - top - 10;
+    drop.style.maxHeight = Math.max(120, available) + 'px';
   }
 
   function drawMenu(){

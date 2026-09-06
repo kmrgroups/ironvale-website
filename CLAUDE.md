@@ -690,14 +690,71 @@ Both screens share `capLoadData()` and reuse `orderProgress`/`opsFor`/
 it is the code that stopped 300 pieces satisfying a 200-piece order and a
 1000-piece order at the same time.
 
-**Declared but not built:** the screens still marked `soon` in the menu (31 at
-v107, down from 42), each showing an explanation rather than a blank page.
+## Modules added in v108 — the competency chain
 
-**Suggested order for the rest**, by what unblocks the most: the HR competency chain (TNI → training
-plan/actual → effectiveness → gap → succession), which feeds HR dashboard KPIs
-that are entry-only today; then the QMS document levels and audit calendars,
-the largest remaining block, which would turn roughly twenty entry-only KPIs
-into computed ones.
+Five screens, one thread, and **only one of them takes an opinion**:
+
+| Screen | What it does | Where the number comes from |
+|---|---|---|
+| Competency Mapping | the level each **role** must reach on each machine | decided here — the only judgement in the chain |
+| Skill Gap Analysis | required minus assessed | worked out |
+| Training Need Identification | every gap, plus needs from elsewhere | mostly worked out |
+| Training Plan vs Actual | sessions planned, then held | recorded |
+| Training Effectiveness | level on the day against level now | worked out |
+
+**Requirements are set per designation, never per person.** Set them per person
+and the standard moves every time somebody leaves, which is how a skill matrix
+ends up describing the people instead of the job.
+
+**The name-matching problem is surfaced, not hidden.** The skill matrix keys on
+the operator name as it appears on production bookings; employee records key on
+their own name. Where the two do not match, the person is listed as unmatched
+with the reason — an empty gap list caused by a spelling is the worst possible
+answer this screen could give. Somebody never assessed reads **"never"**, not
+level 0, for the same reason.
+
+**A gap is already a need.** Gaps arrive on the TNI screen on their own and
+cannot be typed or ticked off there; they close when the person is reassessed on
+the matrix, which is the only thing that actually closes them. Trying to record a
+need the gap analysis already found is refused with the numbers, because two
+records of one need get closed at different times and one stays open forever.
+
+**Training rules.** A session cannot be marked held without a date and at least
+one attendee (a training record with no attendees is the one an auditor asks
+about), cannot be held in the future, and the same person cannot be added twice.
+
+**Effectiveness cannot be judged the same week.** A session only appears for
+review **30 days** after it was held, because the question is whether it stuck on
+the shop floor, not whether it was enjoyed. The level each attendee held on the
+day is read from their assessment history as it stood then; the level now is read
+from the same record — so "improved" is something the records show, not something
+the trainer says. If nobody has reassessed them since, the movement is **blank
+rather than zero**, because nobody has looked. A verdict of *Effective* with no
+evidence is refused, and a partial review (verdicts against some attendees only)
+is refused.
+
+**One KPI moved from entered to computed:** *Training — plan vs actual* on the HR
+dashboard now counts sessions planned in the month they were due against sessions
+held in the month they happened. Both halves come from the same records, so they
+cannot drift.
+
+Records: kind `competency`, `tni`, `training` (effectiveness is stored on the
+training record as `data.effectiveness`, keyed by attendee name).
+
+**A bug worth remembering.** `select.value = previousChoice` when the option no
+longer exists leaves the select **blank**, and the screen then complains that
+nothing was chosen while an option is plainly visible. Restore a remembered
+choice only after checking it is still in the list.
+
+**Declared but not built:** the screens still marked `soon` in the menu (26 at
+v108, down from 42), each showing an explanation rather than a blank page.
+
+**Suggested order for the rest**: succession planning and the organisation chart,
+both of which now have everything they need (org masters, employees, the
+competency map and the gap analysis) and are small; roles and responsibilities,
+which hangs off the same masters; then the QMS document levels and audit
+calendars — the largest remaining block, and the one that would turn roughly
+twenty entry-only KPIs into computed ones.
 
 **One item needs a decision before it is built.** `report_inprocess_inspection`
 is still on the menu as `soon`, but **Self Inspection already is in-process
@@ -830,6 +887,9 @@ If you formalise this, keep two habits that mattered:
 2. **Test what matters, not what is easy.** Testing that a fold worked passed
    while the Save button was being folded away with it.
 
+`competencytest.mjs` (42 checks over the v108 chain: the unmatched-name report,
+"never" rather than zero, the duplicate-need refusal, the training rules, and the
+30-day wait with level-on-the-day read out of the assessment history).
 `planningtest.mjs` (24 checks over the v107 modules: two machines with
 deliberately different shift patterns so a blended average fails, demand landing
 in the month it is due, the capacity validations, and an order that the queue

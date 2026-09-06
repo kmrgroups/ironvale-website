@@ -346,6 +346,142 @@
       <div id="ap-body"></div>
     </div>
 
+    <!-- ============ Competency map ============ -->
+    <div class="panel" data-panel="competency_map">
+      <div class="card">
+        <h4>Competency Mapping</h4>
+        <div class="hint" style="margin-bottom:10px;">What level a <b>designation</b> has to reach on
+          each machine or operation. This is the only screen in the chain where a requirement is
+          decided; everything after it — the gap, the training need, whether the training worked — is
+          worked out by comparing this against the skill matrix. Set it once per role, not per person,
+          or the standard moves every time somebody leaves.</div>
+        <div class="row four">
+          <div><label>Designation</label><select id="cm-desig"></select></div>
+          <div><label>Machine or operation</label><input id="cm-thing" list="cm-things"></div>
+          <datalist id="cm-things"></datalist>
+          <div><label>Level required</label><select id="cm-level">
+            <option value="1">1 — under instruction</option>
+            <option value="2">2 — can run, supervised</option>
+            <option value="3" selected>3 — can run alone</option>
+            <option value="4">4 — can train others</option></select></div>
+          <div><label>Why it matters</label><select id="cm-crit">
+            <option>Ordinary</option>
+            <option>Affects product quality</option>
+            <option>Safety or statutory</option>
+            <option>Customer requirement</option></select></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="cm-save">Set the requirement</button>
+          <button class="btn" id="cm-print">Print</button>
+        </div>
+        <div class="note" id="cm-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>Requirements</h4><div id="cm-list"></div></div>
+    </div>
+
+    <!-- ============ Gap analysis ============ -->
+    <div class="panel" data-panel="gap_analysis">
+      <div class="card">
+        <h4>Skill Gap Analysis</h4>
+        <div class="hint" style="margin-bottom:10px;">Nothing on this screen is typed. Each person's
+          designation gives the level their role requires; the skill matrix gives the level they have
+          been assessed at. Where the second is short of the first, that is a gap — and a gap on a
+          machine somebody is already booked on is the one to look at first.</div>
+        <div class="row four">
+          <div><label>Show</label><select id="ga-filter">
+            <option value="gaps">Gaps only</option>
+            <option value="all">Everyone, every requirement</option>
+            <option value="critical">Safety, statutory and quality gaps</option></select></div>
+          <div><label>Department</label><select id="ga-dept"></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="ga-run">Work it out</button></div>
+          <div style="align-self:end;"><button class="btn" id="ga-print">Print</button></div>
+        </div>
+        <div class="note" id="ga-msg" style="display:none;"></div>
+      </div>
+      <div id="ga-body"></div>
+    </div>
+
+    <!-- ============ Training need identification ============ -->
+    <div class="panel" data-panel="tni">
+      <div class="card">
+        <h4>Training Need Identification</h4>
+        <div class="hint" style="margin-bottom:10px;">Two kinds of need reach this screen. The ones
+          <b>found by the gap analysis</b> arrive on their own and cannot be typed or deleted — they
+          go when the skill is assessed, not when somebody ticks them. The ones that come from
+          somewhere else — a new machine, a statutory refresher, a customer requirement, a
+          non-conformance — are added below.</div>
+        <div class="row four">
+          <div><label>Person</label><input id="tn-who" list="tn-people"></div>
+          <datalist id="tn-people"></datalist>
+          <div><label>Topic</label><input id="tn-topic"></div>
+          <div><label>Where it came from</label><select id="tn-src">
+            <option>New machine or process</option><option>Statutory or safety refresher</option>
+            <option>Customer requirement</option><option>Raised by a non-conformance</option>
+            <option>Appraisal or review</option><option>New joiner induction</option></select></div>
+          <div><label>Needed by</label><input type="date" id="tn-by"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="tn-save">Record the need</button>
+          <button class="btn" id="tn-print">Print</button>
+        </div>
+        <div class="note" id="tn-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>Needs found by the gap analysis</h4><div id="tn-derived"></div></div>
+      <div class="card"><h4>Needs recorded by hand</h4><div id="tn-list"></div></div>
+    </div>
+
+    <!-- ============ Training plan vs actual ============ -->
+    <div class="panel" data-panel="training_plan_actual">
+      <div class="card">
+        <h4>Training Plan vs Actual</h4>
+        <div class="hint" style="margin-bottom:10px;">One record per session, planned first and
+          completed afterwards. A session cannot be marked done without a date and somebody who
+          attended — a training record with no attendees is the one an auditor asks about. The
+          plan-against-actual figure on the HR dashboard is counted from these records, so nothing
+          has to be typed there.</div>
+        <div class="row four">
+          <div><label>Topic</label><input id="tp-topic"></div>
+          <div><label>Type</label><select id="tp-type">
+            <option>In-house</option><option>External</option><option>On the job</option></select></div>
+          <div><label>Trainer</label><input id="tp-trainer"></div>
+          <div><label>Planned for</label><input type="date" id="tp-plan"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Machine or operation it covers</label><input id="tp-thing" list="tp-things"></div>
+          <datalist id="tp-things"></datalist>
+          <div><label>Hours</label><input class="num" id="tp-hours" value="4"></div>
+          <div><label>Cost</label><input class="num" id="tp-cost"></div>
+          <div style="align-self:end;"><button class="btn gold" id="tp-save">Save the session</button></div>
+        </div>
+        <div class="note" id="tp-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4 id="tp-open-title">Sessions</h4><div id="tp-list"></div></div>
+      <div class="card" id="tp-detail-card" style="display:none;">
+        <h4 id="tp-detail-title">Session</h4>
+        <div id="tp-detail"></div>
+      </div>
+    </div>
+
+    <!-- ============ Training effectiveness ============ -->
+    <div class="panel" data-panel="training_effectiveness">
+      <div class="card">
+        <h4>Training Effectiveness</h4>
+        <div class="hint" style="margin-bottom:10px;">Whether the training changed anything on the
+          shop floor. The level each attendee held on the day is read from the skill matrix history,
+          and the level they hold now is read from the same place — so "improved" is something the
+          records show, not something the trainer says. Effectiveness cannot be judged the same week:
+          a session is only offered here once <b>30 days</b> have passed, because the question is
+          whether it stuck, not whether it was enjoyed.</div>
+        <div class="row four">
+          <div><label>Session</label><select id="te-session"></select></div>
+          <div style="align-self:end;"><button class="btn gold" id="te-load">Open it</button></div>
+          <div style="align-self:end;"><button class="btn" id="te-print">Print</button></div>
+        </div>
+        <div class="note" id="te-msg" style="display:none;"></div>
+      </div>
+      <div id="te-body"></div>
+    </div>
+
     <!-- ============ Capacity plan ============ -->
     <div class="panel" data-panel="capacity_plan">
       <div class="card">
@@ -1968,9 +2104,10 @@
       ['emb_me','🪪','My Attendance',1],
       ['skill_matrix','📊','Skill Matrix',1],
       ['org_chart','🏗','Organisation Chart'],['roles_resp','📋','Roles & Responsibilities'],
-      ['competency_map','🎯','Competency Mapping'],['tni','📚','Training Need Identification'],
-      ['training_plan_actual','📅','Training Plan vs Actual'],['gap_analysis','📈','Skill Gap Analysis'],
-      ['training_effectiveness','✅','Training Effectiveness'],['succession_plan','🎖','Succession Planning']]],
+      ['competency_map','🎯','Competency Mapping',1],['gap_analysis','📈','Skill Gap Analysis',1],
+      ['tni','📚','Training Need Identification',1],
+      ['training_plan_actual','📅','Training Plan vs Actual',1],
+      ['training_effectiveness','✅','Training Effectiveness',1],['succession_plan','🎖','Succession Planning']]],
     ['accounts','💹','Accounts','Budget and cost',[
       ['dash_accounts','📊','Accounts Dashboard',1],
       ['accounts_pl','💹','P&L']]],
@@ -2077,6 +2214,11 @@
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
+    if (s === 'competency_map')        loadCompetency();
+    if (s === 'gap_analysis')          loadGapAnalysis();
+    if (s === 'tni')                   loadTni();
+    if (s === 'training_plan_actual')  loadTraining();
+    if (s === 'training_effectiveness')loadEffectiveness();
     if (s === 'capacity_plan')     loadCapacity();
     if (s === 'machine_loading')   loadLoading();
     if (s === 'bom')               loadBom();
@@ -2092,6 +2234,702 @@
     if (s === 'kpi_entry')         loadKpiEntry();
     if (s === 'admin_banner')      loadBannerScreen();
     if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
+  }
+
+  /* ================= THE COMPETENCY CHAIN =================
+     Five screens, one thread, and only ONE of them takes an opinion:
+
+       Competency map   the level each ROLE must reach          <- decided here
+       Gap analysis     required minus assessed                 <- worked out
+       TNI              every gap, plus needs from elsewhere     <- mostly worked out
+       Training plan    sessions planned, then completed         <- recorded
+       Effectiveness    level on the day vs level now            <- worked out
+
+     Requirements are set per designation, never per person: set them per person
+     and the standard moves every time somebody leaves, which is how a skill
+     matrix ends up describing the people instead of the job.
+
+     The skill matrix keys on the operator NAME as it appears on production
+     bookings. Employee records key on their own name. Where the two do not
+     match, the person is listed as unmatched rather than quietly given no gaps —
+     an empty gap list because of a spelling is the worst possible answer here. */
+  var comps = [], compEmployees = [], compSkills = [], compOrg = [], trainings = [], tniRows = [];
+  var LEVEL_NAME = { 1:'under instruction', 2:'can run, supervised', 3:'can run alone', 4:'can train others' };
+
+  async function compLoad(){
+    try { comps = await C.idms.docs('competency'); } catch(e){ comps = []; }
+    try { compSkills = await C.idms.docs('skill'); } catch(e){ compSkills = []; }
+    try { compOrg = await C.idms.docs('orgmaster'); } catch(e){ compOrg = []; }
+    try { trainings = await C.idms.docs('training'); } catch(e){ trainings = []; }
+    try { tniRows = await C.idms.docs('tni'); } catch(e){ tniRows = []; }
+    try { machines = await C.idms.docs('machine'); } catch(e){ machines = []; }
+    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    try { compEmployees = (await C.api('/api/hr?what=employees')).employees || []; }
+    catch(e){ compEmployees = []; }
+  }
+  function empData(e){ return e.data || e; }
+  function designations(){
+    return compOrg.filter(function(r){ return (r.data||{}).type === 'designation'; })
+      .map(function(r){ return (r.data||{}).name; }).filter(Boolean);
+  }
+  function departments(){
+    return compOrg.filter(function(r){ return (r.data||{}).type === 'department'; })
+      .map(function(r){ return (r.data||{}).name; }).filter(Boolean);
+  }
+  /* machines and operations that exist, so nothing is typed from memory */
+  function compThings(){
+    var s = {};
+    machines.forEach(function(m){ var n = String((m.data||{}).name||'').trim(); if (n) s[n] = 1; });
+    prodDocs.forEach(function(r){ var n = String((r.data||{}).machine||'').trim(); if (n) s[n] = 1; });
+    compSkills.forEach(function(r){ var n = String((r.data||{}).thing||'').trim(); if (n) s[n] = 1; });
+    comps.forEach(function(r){ var n = String((r.data||{}).thing||'').trim(); if (n) s[n] = 1; });
+    return Object.keys(s).sort();
+  }
+  function levelOf(person, thing){
+    var r = compSkills.filter(function(x){
+      var v = x.data||{};
+      return String(v.person||'').toLowerCase() === String(person||'').toLowerCase() &&
+             String(v.thing||'').toLowerCase() === String(thing||'').toLowerCase(); })[0];
+    return r ? { level: C.num((r.data||{}).level), on: (r.data||{}).assessedOn,
+                 history: (r.data||{}).history || [] } : null;
+  }
+
+  /* ---------------- competency map ---------------- */
+  async function loadCompetency(){
+    await compLoad();
+    var sel = document.getElementById('cm-desig'), keep = sel.value;
+    var ds = designations();
+    sel.innerHTML = ds.length
+      ? ds.map(function(d){ return '<option>'+esc(d)+'</option>'; }).join('')
+      : '<option value="">— no designations on the master —</option>';
+    /* only restore the previous choice if it still exists; setting a select to a
+       value it does not have leaves it blank, and the screen then complains that
+       no designation was chosen when one is plainly on screen */
+    if (keep && ds.indexOf(keep) >= 0) sel.value = keep;
+    document.getElementById('cm-things').innerHTML =
+      compThings().map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
+    drawCompetency();
+  }
+  function drawCompetency(){
+    var host = document.getElementById('cm-list');
+    if (!designations().length){
+      host.innerHTML = '<div class="empty"><b>No designations yet</b>Requirements are set against a ' +
+        'designation. <a data-goto="desig_master" style="cursor:pointer;color:var(--sky-deep);' +
+        'font-weight:600;">Add them first →</a></div>';
+      host.querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
+      return;
+    }
+    if (!comps.length){
+      host.innerHTML = '<div class="empty"><b>Nothing required yet</b>Until a requirement is set, ' +
+        'the gap analysis has nothing to compare the skill matrix against.</div>';
+      return;
+    }
+    var byD = {};
+    comps.forEach(function(c){ var v = c.data||{}; (byD[v.designation] = byD[v.designation]||[]).push(c); });
+    host.innerHTML = Object.keys(byD).sort().map(function(d){
+      return '<div style="margin-bottom:14px;"><b>'+esc(d)+'</b>' +
+        '<table class="t" style="margin-top:6px;"><thead><tr><th>Machine or operation</th>' +
+        '<th class="c">Level required</th><th>Why</th><th></th></tr></thead><tbody>' +
+        byD[d].map(function(c){
+          var v = c.data||{};
+          return '<tr><td>'+esc(v.thing||'')+'</td>' +
+            '<td class="c"><b>'+C.num(v.level)+'</b><div class="hint">'+esc(LEVEL_NAME[C.num(v.level)]||'')+'</div></td>' +
+            '<td class="hint">'+esc(v.criticality||'Ordinary')+'</td>' +
+            '<td><button class="btn del cm-del" data-id="'+esc(c.doc_id)+'">Remove</button></td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }).join('');
+    host.querySelectorAll('.cm-del').forEach(function(b){
+      b.addEventListener('click', function(){ removeCompetency(b.dataset.id); });
+    });
+  }
+  async function saveCompetency(){
+    var msg = document.getElementById('cm-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var d = document.getElementById('cm-desig').value;
+    var thing = document.getElementById('cm-thing').value.trim();
+    if (!d) return say('Choose a designation. A requirement with no role attached cannot be compared ' +
+                       'against anybody.');
+    if (!thing) return say('Name the machine or operation.');
+    var dup = comps.filter(function(c){
+      var v = c.data||{};
+      return v.designation === d && String(v.thing||'').toLowerCase() === thing.toLowerCase(); })[0];
+    var btn = document.getElementById('cm-save'); btn.disabled = true;
+    try {
+      await C.idms.saveDoc({ docId: dup ? dup.doc_id : '', kind:'competency',
+        docNo: dup ? dup.doc_no : await C.docNumber('comp'), status:'Active',
+        data:{ designation:d, thing:thing,
+               level:C.num(document.getElementById('cm-level').value),
+               criticality:document.getElementById('cm-crit').value } },
+        dup ? 'competency requirement changed' : 'competency requirement set');
+      say(dup ? 'The requirement for that role was already set; it has been changed.' : 'Set.', true);
+      document.getElementById('cm-thing').value = '';
+      await loadCompetency();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+  async function removeCompetency(id){
+    var c = comps.filter(function(x){ return x.doc_id === id; })[0];
+    if (!c) return;
+    try {
+      await C.idms.saveDoc({ docId:id, kind:'competency', docNo:c.doc_no, status:'Withdrawn',
+        data: Object.assign({}, c.data||{}, { withdrawn:true }) }, 'competency requirement withdrawn');
+      await loadCompetency();
+    } catch(e){ toast(e.message); }
+  }
+
+  /* ---------------- gap analysis ----------------
+     Required level (from the role) minus assessed level (from the matrix). No
+     third source, so there is nothing to keep in step. */
+  var gapRows = [], gapUnmatched = [];
+
+  async function loadGapAnalysis(){
+    await compLoad();
+    var sel = document.getElementById('ga-dept'), keep = sel.value;
+    sel.innerHTML = '<option value="">Every department</option>' +
+      departments().map(function(d){ return '<option>'+esc(d)+'</option>'; }).join('');
+    sel.value = keep;
+    runGapAnalysis();
+  }
+
+  function computeGaps(){
+    var live = comps.filter(function(c){ return !(c.data||{}).withdrawn; });
+    var byDesig = {};
+    live.forEach(function(c){ var v = c.data||{}; (byDesig[v.designation] = byDesig[v.designation]||[]).push(v); });
+
+    var rows = [];
+    compEmployees.forEach(function(e){
+      var d = empData(e);
+      if (String(d.status||'Active') === 'Left') return;
+      var reqs = byDesig[d.designation] || [];
+      reqs.forEach(function(r){
+        var have = levelOf(d.name, r.thing);
+        rows.push({ name:d.name||'', empId:d.empId||'', designation:d.designation||'',
+                    department:d.department||'', thing:r.thing,
+                    required:C.num(r.level), actual: have ? have.level : 0,
+                    assessedOn: have ? have.on : '',
+                    gap: Math.max(0, C.num(r.level) - (have ? have.level : 0)),
+                    criticality: r.criticality || 'Ordinary' });
+      });
+    });
+
+    /* names on the shop floor that are not on an employee record — their gaps
+       cannot be worked out, so they are named rather than passed over */
+    var empNames = compEmployees.map(function(e){ return String(empData(e).name||'').toLowerCase(); });
+    var seen = {};
+    compSkills.forEach(function(s){
+      var n = String((s.data||{}).person||'').trim();
+      if (n && empNames.indexOf(n.toLowerCase()) < 0) seen[n] = 1;
+    });
+    gapUnmatched = Object.keys(seen);
+    return rows;
+  }
+
+  function runGapAnalysis(){
+    gapRows = computeGaps();
+    drawGapAnalysis();
+  }
+
+  function drawGapAnalysis(){
+    var host = document.getElementById('ga-body'), msg = document.getElementById('ga-msg');
+    var filter = document.getElementById('ga-filter').value;
+    var dept = document.getElementById('ga-dept').value;
+
+    if (!compEmployees.length || !comps.filter(function(c){ return !(c.data||{}).withdrawn; }).length){
+      host.innerHTML = '<div class="card"><div class="empty"><b>Not enough to compare</b>' +
+        'A gap needs two things: employee records with a designation, and a requirement set against ' +
+        'that designation on the competency map.</div></div>';
+      msg.style.display = 'none';
+      return;
+    }
+
+    var rows = gapRows.filter(function(r){
+      if (dept && r.department !== dept) return false;
+      if (filter === 'gaps') return r.gap > 0;
+      if (filter === 'critical') return r.gap > 0 && r.criticality !== 'Ordinary';
+      return true;
+    });
+
+    var allGaps = gapRows.filter(function(r){ return r.gap > 0; });
+    var crit = allGaps.filter(function(r){ return r.criticality !== 'Ordinary'; });
+    var never = allGaps.filter(function(r){ return r.actual === 0; });
+
+    var head = '<div class="card"><div class="stat">' +
+      [['People assessed against a role', new Set(gapRows.map(function(r){ return r.name; })).size],
+       ['Requirements checked', gapRows.length], ['Gaps', allGaps.length],
+       ['Of those, safety or quality', crit.length],
+       ['Never assessed at all', never.length]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
+      '</div>' +
+      (gapUnmatched.length ? '<div class="note" style="margin-top:10px;"><b>' + gapUnmatched.length +
+        ' name(s) on the skill matrix match no employee record</b> (' +
+        esc(gapUnmatched.slice(0,5).join(', ')) + '), so no gap could be worked out for them. Either ' +
+        'they have left, or the name on the bookings is spelled differently from the name on the ' +
+        'record — and a spelling is not a reason to show somebody as having no gaps.</div>' : '') +
+      '</div>';
+
+    var table = rows.length
+      ? '<div class="card"><div class="scroll-x"><table class="t"><thead><tr><th>Person</th>' +
+        '<th>Designation</th><th>Department</th><th>Machine or operation</th>' +
+        '<th class="c">Required</th><th class="c">Assessed</th><th class="c">Gap</th>' +
+        '<th>Last assessed</th><th>Why it matters</th></tr></thead><tbody>' +
+        rows.map(function(r){
+          return '<tr><td><b>'+esc(r.name)+'</b>'+(r.empId?'<div class="hint">'+esc(r.empId)+'</div>':'')+'</td>' +
+            '<td class="hint">'+esc(r.designation)+'</td><td class="hint">'+esc(r.department)+'</td>' +
+            '<td>'+esc(r.thing)+'</td><td class="c">'+r.required+'</td>' +
+            '<td class="c'+(r.actual===0?' bad':'')+'">'+(r.actual||'never')+'</td>' +
+            '<td class="c'+(r.gap?' bad':'')+'"><b>'+(r.gap||'—')+'</b></td>' +
+            '<td class="hint">'+(r.assessedOn?C.fmtDate(r.assessedOn):'—')+'</td>' +
+            '<td class="hint'+(r.criticality!=='Ordinary'?' bad':'')+'">'+esc(r.criticality)+'</td></tr>';
+        }).join('') + '</tbody></table></div></div>'
+      : '<div class="card"><div class="empty"><b>Nothing matches</b>No rows for that filter.</div></div>';
+
+    host.innerHTML = head + table;
+    msg.style.display=''; msg.className = 'note' + (allGaps.length ? ' bad' : ' good');
+    msg.innerHTML = allGaps.length
+      ? '<b>' + allGaps.length + ' gap(s)</b>' + (crit.length ? ', ' + crit.length +
+        ' of them on something that affects safety, statute or product quality' : '') +
+        '. Every one of them is already a training need — nothing has to be retyped.'
+      : 'Everybody meets the level their role requires.';
+  }
+
+  function printGapAnalysis(){
+    if (!gapRows.length) { toast('Work it out first.'); return; }
+    C.openReport({ title:'Skill Gap Analysis', landscape:true, sections:[
+      { type:'table', title:'Required against assessed', dense:true,
+        columns:[{label:'Person'},{label:'Designation'},{label:'Department'},{label:'Machine/operation'},
+                 {label:'Required',align:'c'},{label:'Assessed',align:'c'},{label:'Gap',align:'c'},
+                 {label:'Last assessed'},{label:'Why it matters'}],
+        rows: gapRows.map(function(r){
+          return [r.name, r.designation, r.department, r.thing, r.required,
+                  r.actual || 'never', r.gap || '—',
+                  r.assessedOn ? C.fmtDate(r.assessedOn) : '—', r.criticality]; }),
+        note:'Required comes from the competency map against each person\'s designation; assessed ' +
+             'comes from the skill matrix. Neither figure is entered on this screen.' } ] });
+  }
+
+  /* ---------------- training need identification ---------------- */
+  async function loadTni(){
+    await compLoad();
+    gapRows = computeGaps();
+    document.getElementById('tn-people').innerHTML =
+      compEmployees.map(function(e){ return '<option value="'+esc(empData(e).name||'')+'">'; }).join('');
+    drawTni();
+  }
+  function drawTni(){
+    var derived = gapRows.filter(function(r){ return r.gap > 0; })
+      .sort(function(a,b){
+        if ((a.criticality!=='Ordinary') !== (b.criticality!=='Ordinary'))
+          return a.criticality!=='Ordinary' ? -1 : 1;
+        return b.gap - a.gap; });
+
+    var host = document.getElementById('tn-derived');
+    host.innerHTML = derived.length
+      ? '<div class="scroll-x"><table class="t"><thead><tr><th>Person</th><th>Needs training on</th>' +
+        '<th class="c">Has</th><th class="c">Needs</th><th>Why it matters</th><th>Planned</th>' +
+        '</tr></thead><tbody>' + derived.map(function(r){
+          var planned = trainings.filter(function(t){
+            var v = t.data||{};
+            return String(v.thing||'').toLowerCase() === String(r.thing).toLowerCase() &&
+                   (v.attendees||[]).some(function(a){
+                     return String(a.name||'').toLowerCase() === String(r.name).toLowerCase(); }); })[0];
+          return '<tr><td><b>'+esc(r.name)+'</b><div class="hint">'+esc(r.designation)+'</div></td>' +
+            '<td>'+esc(r.thing)+'</td><td class="c">'+(r.actual||'never')+'</td>' +
+            '<td class="c">'+r.required+'</td>' +
+            '<td class="hint'+(r.criticality!=='Ordinary'?' bad':'')+'">'+esc(r.criticality)+'</td>' +
+            '<td>'+(planned
+              ? '<span class="badge series">'+esc((planned.data||{}).topic||'planned')+'</span>'
+              : '<span class="badge ab">nothing planned</span>')+'</td></tr>';
+        }).join('') + '</tbody></table></div>' +
+        '<div class="hint" style="margin-top:9px;">These are not stored as separate records and ' +
+        'cannot be ticked off here. A need disappears when the person is reassessed on the skill ' +
+        'matrix at the level their role requires — which is the only thing that actually closes it.</div>'
+      : '<div class="note good">No gaps, so no needs from that source.</div>';
+
+    var list = document.getElementById('tn-list');
+    var manual = tniRows.filter(function(t){ return !(t.data||{}).closed; });
+    list.innerHTML = manual.length
+      ? '<table class="t"><thead><tr><th>Person</th><th>Topic</th><th>Where it came from</th>' +
+        '<th>Needed by</th><th></th></tr></thead><tbody>' + manual.map(function(t){
+          var v = t.data||{}, late = v.neededBy && new Date(v.neededBy) < new Date();
+          return '<tr><td><b>'+esc(v.person||'')+'</b></td><td>'+esc(v.topic||'')+'</td>' +
+            '<td class="hint">'+esc(v.source||'')+'</td>' +
+            '<td'+(late?' class="bad"':' class="hint"')+'>'+(v.neededBy?C.fmtDate(v.neededBy):'—')+
+              (late?'<div class="hint">past its date</div>':'')+'</td>' +
+            '<td><button class="btn tn-close" data-id="'+esc(t.doc_id)+'">Close</button></td></tr>';
+        }).join('') + '</tbody></table>'
+      : '<div class="empty"><b>Nothing recorded by hand</b>Needs that do not come from a skill gap ' +
+        'go here.</div>';
+    list.querySelectorAll('.tn-close').forEach(function(b){
+      b.addEventListener('click', function(){ closeTni(b.dataset.id); });
+    });
+  }
+  async function saveTni(){
+    var msg = document.getElementById('tn-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var who = document.getElementById('tn-who').value.trim();
+    var topic = document.getElementById('tn-topic').value.trim();
+    if (!who || !topic) return say('A need is a person and a topic. Both are needed.');
+    /* a gap is already a need; recording it again gives two records of one thing
+       that will be closed at different times */
+    var already = gapRows.filter(function(r){
+      return r.gap > 0 && String(r.name).toLowerCase() === who.toLowerCase() &&
+             String(r.thing).toLowerCase() === topic.toLowerCase(); })[0];
+    if (already)
+      return say('The gap analysis already shows <b>'+esc(who)+'</b> needs '+esc(topic)+
+                 ' (has ' + (already.actual||'none') + ', needs ' + already.required + '). It is on ' +
+                 'the list above and closes itself when they are reassessed — recording it twice ' +
+                 'would leave one copy open forever.');
+    var btn = document.getElementById('tn-save'); btn.disabled = true;
+    try {
+      await C.idms.saveDoc({ kind:'tni', docNo: await C.docNumber('tni'), status:'Open',
+        data:{ person:who, topic:topic, source:document.getElementById('tn-src').value,
+               neededBy:document.getElementById('tn-by').value } }, 'training need recorded');
+      say('Recorded.', true);
+      document.getElementById('tn-topic').value = '';
+      await loadTni();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+  async function closeTni(id){
+    var t = tniRows.filter(function(x){ return x.doc_id === id; })[0];
+    if (!t) return;
+    try {
+      await C.idms.saveDoc({ docId:id, kind:'tni', docNo:t.doc_no, status:'Closed',
+        data: Object.assign({}, t.data||{}, { closed:true, closedOn:new Date().toISOString().slice(0,10) }) },
+        'training need closed');
+      await loadTni();
+    } catch(e){ toast(e.message); }
+  }
+  function printTni(){
+    var derived = gapRows.filter(function(r){ return r.gap > 0; });
+    var manual = tniRows.filter(function(t){ return !(t.data||{}).closed; });
+    C.openReport({ title:'Training Need Identification', landscape:true, sections:[
+      { type:'table', title:'Needs found by the gap analysis', dense:true,
+        columns:[{label:'Person'},{label:'Designation'},{label:'Machine/operation'},
+                 {label:'Has',align:'c'},{label:'Needs',align:'c'},{label:'Why it matters'}],
+        rows: derived.map(function(r){
+          return [r.name, r.designation, r.thing, r.actual||'never', r.required, r.criticality]; }) },
+      { type:'table', title:'Needs recorded by hand', dense:true,
+        columns:[{label:'Person'},{label:'Topic'},{label:'Source'},{label:'Needed by'}],
+        rows: manual.map(function(t){
+          var v = t.data||{};
+          return [v.person, v.topic, v.source, v.neededBy ? C.fmtDate(v.neededBy) : '—']; }) } ] });
+  }
+
+  /* ---------------- training plan vs actual ---------------- */
+  var trainOpen = null;
+
+  async function loadTraining(){
+    await compLoad();
+    document.getElementById('tp-things').innerHTML =
+      compThings().map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
+    drawTrainingList();
+    if (trainOpen) drawTrainingDetail();
+  }
+  function drawTrainingList(){
+    var host = document.getElementById('tp-list');
+    if (!trainings.length){
+      host.innerHTML = '<div class="empty"><b>No sessions yet</b>Plan one above. The HR dashboard ' +
+        'counts plan against actual from these records.</div>';
+      return;
+    }
+    var sorted = trainings.slice().sort(function(a,b){
+      return String((b.data||{}).plannedOn||'').localeCompare(String((a.data||{}).plannedOn||'')); });
+    host.innerHTML = '<div class="scroll-x"><table class="t"><thead><tr><th>Topic</th><th>Type</th>' +
+      '<th>Covers</th><th>Planned</th><th>Held</th><th class="r">Attended</th><th class="c">Status</th>' +
+      '<th></th></tr></thead><tbody>' + sorted.map(function(t){
+        var v = t.data||{}, n = (v.attendees||[]).length;
+        var late = !v.actualOn && v.plannedOn && new Date(v.plannedOn) < new Date();
+        return '<tr><td><b>'+esc(v.topic||'')+'</b>'+(v.trainer?'<div class="hint">'+esc(v.trainer)+'</div>':'')+'</td>' +
+          '<td class="hint">'+esc(v.type||'')+'</td><td class="hint">'+esc(v.thing||'—')+'</td>' +
+          '<td class="hint">'+(v.plannedOn?C.fmtDate(v.plannedOn):'—')+'</td>' +
+          '<td class="hint">'+(v.actualOn?C.fmtDate(v.actualOn):'—')+'</td>' +
+          '<td class="r">'+(n||'—')+'</td>' +
+          '<td class="c">'+(v.actualOn
+            ? '<span class="badge series">held</span>'
+            : late ? '<span class="badge ab">overdue</span>'
+                   : '<span class="badge sample">planned</span>')+'</td>' +
+          '<td><button class="btn tp-open" data-id="'+esc(t.doc_id)+'">Open</button></td></tr>';
+      }).join('') + '</tbody></table></div>';
+    host.querySelectorAll('.tp-open').forEach(function(b){
+      b.addEventListener('click', function(){
+        trainOpen = trainings.filter(function(x){ return x.doc_id === b.dataset.id; })[0];
+        drawTrainingDetail();
+      });
+    });
+  }
+  function drawTrainingDetail(){
+    if (!trainOpen) return;
+    var v = trainOpen.data||{}, att = v.attendees || [];
+    document.getElementById('tp-detail-card').style.display = '';
+    document.getElementById('tp-detail-title').textContent = v.topic || 'Session';
+    document.getElementById('tp-detail').innerHTML =
+      '<div class="row four"><div><label>Held on</label><input type="date" id="tp-actual" value="'+
+        esc(v.actualOn||'')+'"></div>' +
+      '<div><label>Add somebody who attended</label><input id="tp-att" list="tn-people2"></div>' +
+      '<datalist id="tn-people2">' + compEmployees.map(function(e){
+        return '<option value="'+esc(empData(e).name||'')+'">'; }).join('') + '</datalist>' +
+      '<div style="align-self:end;"><button class="btn" id="tp-add-att">Add</button></div>' +
+      '<div style="align-self:end;"><button class="btn gold" id="tp-complete">Mark it held</button></div></div>' +
+      (att.length
+        ? '<table class="t" style="margin-top:12px;"><thead><tr><th>Attended</th><th></th></tr></thead><tbody>' +
+          att.map(function(a, i){
+            return '<tr><td>'+esc(a.name)+'</td><td><button class="btn del tp-rm" data-i="'+i+
+              '">Remove</button></td></tr>'; }).join('') + '</tbody></table>'
+        : '<div class="note" style="margin-top:12px;">Nobody recorded as attending yet. A session ' +
+          'cannot be marked held without at least one.</div>');
+
+    document.getElementById('tp-add-att').addEventListener('click', addAttendee);
+    document.getElementById('tp-complete').addEventListener('click', completeTraining);
+    document.getElementById('tp-detail').querySelectorAll('.tp-rm').forEach(function(b){
+      b.addEventListener('click', function(){ removeAttendee(+b.dataset.i); });
+    });
+  }
+  async function saveTraining(){
+    var msg = document.getElementById('tp-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var topic = document.getElementById('tp-topic').value.trim();
+    if (!topic) return say('A session needs a topic.');
+    if (!document.getElementById('tp-plan').value)
+      return say('Give it a planned date. A session with no date cannot be counted as planned, and ' +
+                 'the plan-against-actual figure on the dashboard would be short by one.');
+    var btn = document.getElementById('tp-save'); btn.disabled = true;
+    try {
+      await C.idms.saveDoc({ kind:'training', docNo: await C.docNumber('trg'), status:'Planned',
+        data:{ topic:topic, type:document.getElementById('tp-type').value,
+               trainer:document.getElementById('tp-trainer').value.trim(),
+               thing:document.getElementById('tp-thing').value.trim(),
+               plannedOn:document.getElementById('tp-plan').value,
+               hours:C.num(document.getElementById('tp-hours').value),
+               cost:C.num(document.getElementById('tp-cost').value),
+               attendees:[] } }, 'training session planned');
+      say('Planned.', true);
+      ['tp-topic','tp-trainer','tp-thing'].forEach(function(i){ document.getElementById(i).value=''; });
+      await loadTraining();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false;
+  }
+  async function writeTraining(data, status, reason){
+    await C.idms.saveDoc({ docId: trainOpen.doc_id, kind:'training', docNo: trainOpen.doc_no,
+      status: status, data: data }, reason);
+    trainOpen.data = data; trainOpen.status = status;
+    var idx = trainings.findIndex(function(x){ return x.doc_id === trainOpen.doc_id; });
+    if (idx >= 0) trainings[idx] = trainOpen;
+    drawTrainingList(); drawTrainingDetail();
+  }
+  async function addAttendee(){
+    var msg = document.getElementById('tp-msg');
+    var name = document.getElementById('tp-att').value.trim();
+    if (!name) return;
+    var v = Object.assign({}, trainOpen.data||{});
+    v.attendees = (v.attendees||[]).slice();
+    if (v.attendees.some(function(a){ return String(a.name||'').toLowerCase() === name.toLowerCase(); })){
+      msg.style.display=''; msg.className='note bad';
+      msg.textContent = name + ' is already on the list for this session.';
+      return;
+    }
+    var emp = compEmployees.filter(function(e){
+      return String(empData(e).name||'').toLowerCase() === name.toLowerCase(); })[0];
+    v.attendees.push({ name:name, empId: emp ? (empData(emp).empId||'') : '' });
+    try { await writeTraining(v, trainOpen.status||'Planned', 'attendee added to training');
+          document.getElementById('tp-att').value = '';
+          msg.style.display='none'; }
+    catch(e){ toast(e.message); }
+  }
+  async function removeAttendee(i){
+    var v = Object.assign({}, trainOpen.data||{});
+    v.attendees = (v.attendees||[]).slice();
+    v.attendees.splice(i, 1);
+    try { await writeTraining(v, trainOpen.status||'Planned', 'attendee removed from training'); }
+    catch(e){ toast(e.message); }
+  }
+  async function completeTraining(){
+    var msg = document.getElementById('tp-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var on = document.getElementById('tp-actual').value;
+    var v = Object.assign({}, trainOpen.data||{});
+    if (!on) return say('Say when it was held.');
+    if (!(v.attendees||[]).length)
+      return say('Nobody is recorded as having attended. A training record with no attendees is the ' +
+                 'one an auditor asks about, so it cannot be marked held.');
+    if (new Date(on) > new Date())
+      return say('That date is in the future. A session cannot be recorded as held before it happens.');
+    v.actualOn = on;
+    try { await writeTraining(v, 'Held', 'training session marked held');
+          say('Recorded as held. It becomes available for an effectiveness review 30 days after ' +
+              C.fmtDate(on) + '.', true); }
+    catch(e){ say(esc(e.message)); }
+  }
+
+  /* ---------------- training effectiveness ----------------
+     "Did it work" is answered by the skill matrix, not by the trainer. The level
+     each attendee held on the day of the session is read out of their assessment
+     history; the level they hold now is read from the same record. */
+  var effOpen = null;
+
+  async function loadEffectiveness(){
+    await compLoad();
+    var sel = document.getElementById('te-session');
+    var ready = trainings.filter(function(t){
+      var v = t.data||{};
+      if (!v.actualOn) return false;
+      return (Date.now() - new Date(v.actualOn).getTime()) / 86400000 >= 30;
+    });
+    var waiting = trainings.filter(function(t){
+      var v = t.data||{};
+      return v.actualOn && (Date.now() - new Date(v.actualOn).getTime()) / 86400000 < 30;
+    });
+    sel.innerHTML = ready.length
+      ? ready.map(function(t){
+          var v = t.data||{};
+          return '<option value="'+esc(t.doc_id)+'">'+esc(v.topic||'')+' — '+C.fmtDate(v.actualOn)+'</option>';
+        }).join('')
+      : '<option value="">— nothing ready to review —</option>';
+    var msg = document.getElementById('te-msg');
+    if (!ready.length){
+      msg.style.display=''; msg.className='note';
+      msg.innerHTML = waiting.length
+        ? '<b>' + waiting.length + ' session(s) have been held but are less than 30 days old.</b> ' +
+          'They will appear here once the people have had time to use what they were taught — ' +
+          'reviewing sooner measures the classroom, not the shop floor.'
+        : 'No session has been marked held yet.';
+      document.getElementById('te-body').innerHTML = '';
+      effOpen = null;
+      return;
+    }
+    msg.style.display = 'none';
+    openEffectiveness();
+  }
+
+  function levelOnDate(person, thing, date){
+    var r = compSkills.filter(function(x){
+      var v = x.data||{};
+      return String(v.person||'').toLowerCase() === String(person||'').toLowerCase() &&
+             String(v.thing||'').toLowerCase() === String(thing||'').toLowerCase(); })[0];
+    if (!r) return null;
+    var hist = ((r.data||{}).history || []).slice().sort(function(a,b){
+      return String(a.on||'').localeCompare(String(b.on||'')); });
+    var lvl = null;
+    hist.forEach(function(h){ if (!h.on || h.on <= date) lvl = C.num(h.level); });
+    return lvl;
+  }
+
+  function openEffectiveness(){
+    var id = document.getElementById('te-session').value;
+    effOpen = trainings.filter(function(t){ return t.doc_id === id; })[0] || null;
+    if (!effOpen){ document.getElementById('te-body').innerHTML = ''; return; }
+    drawEffectiveness();
+  }
+
+  function drawEffectiveness(){
+    var v = effOpen.data||{}, att = v.attendees || [], eff = v.effectiveness || {};
+    var thing = v.thing || '';
+    var host = document.getElementById('te-body');
+
+    if (!thing){
+      host.innerHTML = '<div class="card"><div class="note">This session does not say which machine ' +
+        'or operation it covered, so the skill matrix cannot be compared before and after. Set it on ' +
+        'the training plan screen and the comparison appears by itself. The verdicts below can still ' +
+        'be recorded.</div></div>';
+    }
+
+    var rows = att.map(function(a){
+      var before = thing ? levelOnDate(a.name, thing, v.actualOn) : null;
+      var now = thing ? levelOf(a.name, thing) : null;
+      var after = now ? now.level : null;
+      var moved = (before != null && after != null) ? after - before : null;
+      var e = eff[a.name] || {};
+      return '<tr><td><b>'+esc(a.name)+'</b>'+(a.empId?'<div class="hint">'+esc(a.empId)+'</div>':'')+'</td>' +
+        '<td class="c">'+(before == null ? '<span class="hint">not assessed</span>' : before)+'</td>' +
+        '<td class="c">'+(after == null ? '<span class="hint">not assessed</span>' : after)+'</td>' +
+        '<td class="c'+(moved != null && moved > 0 ? '' : ' bad')+'"><b>'+
+          (moved == null ? '—' : (moved > 0 ? '+'+moved : moved))+'</b></td>' +
+        '<td><select class="te-v" data-n="'+esc(a.name)+'">' +
+          ['','Effective — working at the required level','Partly effective — improved but not yet there',
+           'Not effective — retrain','Too early to tell'].map(function(o){
+            return '<option'+(e.verdict===o?' selected':'')+'>'+esc(o)+'</option>'; }).join('') +
+          '</select></td>' +
+        '<td><input class="te-e" data-n="'+esc(a.name)+'" placeholder="what they were seen doing" value="'+
+          esc(e.evidence||'')+'"></td></tr>';
+    }).join('');
+
+    host.innerHTML += '<div class="card"><h4>' + esc(v.topic||'') + '</h4>' +
+      '<div class="kpi-src">Held ' + C.fmtDate(v.actualOn) +
+      (thing ? ' · covering ' + esc(thing) : '') + ' · ' + att.length + ' attended</div>' +
+      (att.length
+        ? '<div class="scroll-x"><table class="t"><thead><tr><th>Person</th>' +
+          '<th class="c">Level on the day</th><th class="c">Level now</th><th class="c">Moved</th>' +
+          '<th>Verdict</th><th>Evidence</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+          '<div class="row four" style="margin-top:12px;">' +
+          '<div><label>Reviewed by</label><input id="te-by" value="'+esc(v.effectivenessBy||'')+'"></div>' +
+          '<div style="align-self:end;"><button class="btn gold" id="te-save">Record the review</button></div>' +
+          '</div><div class="hint" style="margin-top:8px;">The two level columns are read from the ' +
+          'skill matrix — the first from the assessment history as it stood on the day, the second ' +
+          'from where it stands now. If somebody has not been reassessed since, the movement is ' +
+          'blank rather than zero, because nobody has looked.</div>'
+        : '<div class="empty"><b>Nobody attended</b>This session has no attendees recorded.</div>') +
+      '</div>';
+
+    var save = document.getElementById('te-save');
+    if (save) save.addEventListener('click', saveEffectiveness);
+  }
+
+  async function saveEffectiveness(){
+    var msg = document.getElementById('te-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var by = document.getElementById('te-by').value.trim();
+    if (!by) return say('Say who reviewed it. An effectiveness review with nobody behind it is not a review.');
+    var eff = {}, blank = 0;
+    document.getElementById('te-body').querySelectorAll('.te-v').forEach(function(sel){
+      var n = sel.dataset.n;
+      var ev = document.getElementById('te-body')
+        .querySelector('.te-e[data-n="'+CSS.escape(n)+'"]');
+      if (!sel.value) blank++;
+      eff[n] = { verdict: sel.value, evidence: ev ? ev.value.trim() : '' };
+    });
+    if (blank) return say(blank + ' attendee(s) have no verdict against them. Reviewing some of the ' +
+      'people who sat in the room is not reviewing the session.');
+    var notEff = Object.keys(eff).filter(function(n){ return /Not effective/.test(eff[n].verdict); });
+    var noEvidence = Object.keys(eff).filter(function(n){
+      return /^Effective/.test(eff[n].verdict) && !eff[n].evidence; });
+    if (noEvidence.length)
+      return say('Say what ' + esc(noEvidence.join(', ')) + ' was seen doing. "Effective" on its own ' +
+                 'is the line an auditor picks on first.');
+
+    var v = Object.assign({}, effOpen.data||{});
+    v.effectiveness = eff; v.effectivenessBy = by;
+    v.effectivenessOn = new Date().toISOString().slice(0,10);
+    try {
+      await C.idms.saveDoc({ docId: effOpen.doc_id, kind:'training', docNo: effOpen.doc_no,
+        status:'Reviewed', data:v }, 'training effectiveness reviewed');
+      effOpen.data = v;
+      say('Review recorded.' + (notEff.length ? ' <b>' + notEff.length + ' person/people need retraining' +
+        '</b> — that is a training need and it will not go away on its own.' : ''), !notEff.length);
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  function printEffectiveness(){
+    if (!effOpen) { toast('Open a session first.'); return; }
+    var v = effOpen.data||{}, eff = v.effectiveness||{}, thing = v.thing||'';
+    C.openReport({ title:'Training Effectiveness — ' + (v.topic||''), sections:[
+      { type:'pairs', title:'Session', rows:[['Topic', esc(v.topic||'')], ['Type', esc(v.type||'')],
+        ['Trainer', esc(v.trainer||'—')], ['Held on', v.actualOn ? C.fmtDate(v.actualOn) : '—'],
+        ['Covering', esc(thing||'—')],
+        ['Reviewed by', esc(v.effectivenessBy||'not yet reviewed')],
+        ['Reviewed on', v.effectivenessOn ? C.fmtDate(v.effectivenessOn) : '—']] },
+      { type:'table', title:'Attendees', dense:true,
+        columns:[{label:'Person'},{label:'Level on the day',align:'c'},{label:'Level now',align:'c'},
+                 {label:'Verdict'},{label:'Evidence'}],
+        rows: (v.attendees||[]).map(function(a){
+          var b = thing ? levelOnDate(a.name, thing, v.actualOn) : null;
+          var n = thing ? levelOf(a.name, thing) : null;
+          var e = eff[a.name] || {};
+          return [a.name, b == null ? 'not assessed' : b,
+                  n ? n.level : 'not assessed', e.verdict || '—', e.evidence || '—']; }),
+        note:'The two level columns are read from the skill matrix, not entered here: the first from ' +
+             'the assessment history as it stood on the day of the session, the second from where it ' +
+             'stands now.' } ] });
   }
 
   /* ================= CAPACITY AND LOADING =================
@@ -11711,6 +12549,29 @@
     document.getElementById('ab-file').value = '';
     bannerPreview();
   });
+
+  document.getElementById('cm-save').addEventListener('click', saveCompetency);
+  document.getElementById('cm-print').addEventListener('click', function(){
+    C.openReport({ title:'Competency Map', sections:[{ type:'table', title:'Level required by role',
+      dense:true, columns:[{label:'Designation'},{label:'Machine/operation'},
+        {label:'Level',align:'c'},{label:'Why it matters'}],
+      rows: comps.filter(function(c){ return !(c.data||{}).withdrawn; }).map(function(c){
+        var v = c.data||{}; return [v.designation, v.thing, C.num(v.level), v.criticality||'Ordinary']; }) }] });
+  });
+
+  document.getElementById('ga-run').addEventListener('click', loadGapAnalysis);
+  document.getElementById('ga-filter').addEventListener('change', drawGapAnalysis);
+  document.getElementById('ga-dept').addEventListener('change', drawGapAnalysis);
+  document.getElementById('ga-print').addEventListener('click', printGapAnalysis);
+
+  document.getElementById('tn-save').addEventListener('click', saveTni);
+  document.getElementById('tn-print').addEventListener('click', printTni);
+
+  document.getElementById('tp-save').addEventListener('click', saveTraining);
+
+  document.getElementById('te-load').addEventListener('click', openEffectiveness);
+  document.getElementById('te-session').addEventListener('change', openEffectiveness);
+  document.getElementById('te-print').addEventListener('click', printEffectiveness);
 
   document.getElementById('cp-run').addEventListener('click', loadCapacity);
   document.getElementById('cp-horizon').addEventListener('change', runCapacity);

@@ -217,10 +217,11 @@ check('validation phase stays shut while the records are empty',
 const menuText = $('menubar').textContent;
 check('MSA is on the menu once', (menuText.match(/MSA/g) || []).length === 1, (menuText.match(/MSA[^\n]{0,18}/g)||[]).join(' | '));
 const soon = [...window.document.querySelectorAll('#menubar .drop a')].filter(a => a.querySelector('.soon'));
-check('the pending list is down to 31', soon.length === 31, 'soon=' + soon.length);
+check('the pending list is down to 26', soon.length === 26, 'soon=' + soon.length);
 /* named rather than counted, so this does not go red every time one is built */
 ['entry_supplier','entry_rawmat','apqp','dept_master','desig_master','position_master',
- 'bom','sheet_rawmat','report_control_charts','capacity_plan','machine_loading'].forEach(id => {
+ 'bom','sheet_rawmat','report_control_charts','capacity_plan','machine_loading',
+ 'competency_map','gap_analysis','tni','training_plan_actual','training_effectiveness'].forEach(id => {
   const a = window.document.querySelector('#menubar [data-s="' + id + '"]');
   check(id + ' is no longer marked soon', a && !a.querySelector('.soon'));
 });

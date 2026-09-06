@@ -560,6 +560,18 @@
     return { series: [{ name: 'On-time delivery', values: s.lines.map(function (v, i) { return pct(s.onTime[i], v); }) }] };
   };
 
+  /* training: both halves come from the same session records, so the plan and
+     the actual cannot drift apart the way two typed numbers would */
+  D.training = async function (fy) {
+    var rows = await docs('training'), plan = zeros(), done = zeros();
+    rows.forEach(function (r) {
+      var v = r.data || {};
+      if (v.plannedOn && inFy(v.plannedOn, fy)) { var i = mIndex(v.plannedOn); if (i >= 0) plan[i]++; }
+      if (v.actualOn && inFy(v.actualOn, fy)) { var j = mIndex(v.actualOn); if (j >= 0) done[j]++; }
+    });
+    return { series: [{ name: 'Planned', values: plan }, { name: 'Held', values: done }] };
+  };
+
   /* people */
   D.manpower = async function (fy) {
     var emps = await hr('employees', 'employees'), out = zeros();
@@ -722,7 +734,8 @@
       note: 'Actual counted from the employee records on roll at each month end.' },
     { id: 'hr_mpcost', dept: 'hrm', name: 'Manpower cost — plan vs actual', unit: '₹', chart: 'bars' },
     { id: 'hr_ot', dept: 'hrm', name: 'Overtime cost', unit: '₹', chart: 'bars', single: true },
-    { id: 'hr_training', dept: 'hrm', name: 'Training — plan vs actual', unit: 'count', chart: 'bars' },
+    { id: 'hr_training', dept: 'hrm', name: 'Training — plan vs actual', unit: 'count', chart: 'bars', derive: 'training',
+      note: 'Counted from the training sessions: planned in the month they were due, held in the month they happened.' },
     { id: 'hr_legal', dept: 'hrm', name: 'Legal compliance calendar — plan vs actual', unit: 'count', chart: 'bars' },
     { id: 'hr_absent', dept: 'hrm', name: 'Absenteeism rate', unit: '%', chart: 'line', derive: 'absenteeism',
       note: 'Days marked absent over days recorded, from the attendance register.' },

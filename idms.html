@@ -353,8 +353,9 @@
 
         <div class="g-pane" data-pane="face">
           <p class="hint" style="margin-bottom:14px;">Face ID does not need a password or a code —
-            just look at the camera. You must have set up Face ID from inside the system first.</p>
-          <button type="button" class="btn gold" id="gf-go" style="width:100%;">Scan my face to sign in</button>
+            just look at the camera and hold still; it signs you in on its own. You must have set
+            up Face ID from inside the system first.</p>
+          <button type="button" class="btn gold" id="gf-go" style="width:100%;">Sign in with Face ID</button>
           <div class="note" id="gf-msg" style="display:none;"></div>
         </div>
 
@@ -16426,42 +16427,11 @@
     btn.disabled = false;
   });
 
-  /* ---- Face ID: shared model loader ----
-     face-api.js and its three model files are fetched from a CDN only when
-     somebody actually opens the Face ID tab or the enrolment screen — nobody
-     pays for a face-recognition model on a page load that never uses it. */
-  var faceApiReady = null;
-  function loadFaceApi(){
-    if (faceApiReady) return faceApiReady;
-    faceApiReady = new Promise(function(resolve, reject){
-      if (window.faceapi) return resolve(window.faceapi);
-      var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js';
-      s.onload = function(){
-        var base = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-        Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(base),
-          faceapi.nets.faceLandmark68Net.loadFromUri(base),
-          faceapi.nets.faceRecognitionNet.loadFromUri(base)
-        ]).then(function(){ resolve(window.faceapi); }).catch(reject);
-      };
-      s.onerror = function(){ reject(new Error('Could not load the Face ID component. Check your internet connection.')); };
-      document.head.appendChild(s);
-    });
-    return faceApiReady;
-  }
-  /* Takes a photo with capturePhoto(), then runs it through the model to get
-     a 128-number descriptor — the same shape whether enrolling or signing in. */
-  async function captureFaceDescriptor(){
-    var dataUrl = await C.capturePhoto();
-    if (!dataUrl) return null;
-    var faceapi = await loadFaceApi();
-    var img = await faceapi.fetchImage(dataUrl);
-    var det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-      .withFaceLandmarks().withFaceDescriptor();
-    if (!det) throw new Error('No face was found in that photo. Try again in good, even light, facing the camera directly.');
-    return Array.from(det.descriptor);
-  }
+  /* ---- Face ID: live scan, wired to the sign-in and enrolment actions ----
+     The camera-opening, guide-ring, hold-still, auto-capture behaviour all
+     lives in C.scanFace() (core.js) so it is identical whether someone is
+     signing in or setting Face ID up for the first time — only what happens
+     with the resulting descriptor differs, via the processFn below. */
   function faceMsg(id, t, good){
     var el = document.getElementById(id);
     el.className = good ? 'note' : 'note bad';
@@ -16469,16 +16439,16 @@
     el.textContent = t || '';
   }
   document.getElementById('gf-go').addEventListener('click', async function(){
-    var btn = this; btn.disabled = true; btn.textContent = 'Loading Face ID…';
     faceMsg('gf-msg', '');
-    try {
-      var descriptor = await captureFaceDescriptor();
-      if (!descriptor) { btn.disabled = false; btn.textContent = 'Scan my face to sign in'; return; }
-      btn.textContent = 'Checking…';
-      var j = await C.faceLogin(descriptor);
-      if (j.token) { applyAccess(j); start(); }
-    } catch(e){ faceMsg('gf-msg', e.message); }
-    btn.disabled = false; btn.textContent = 'Scan my face to sign in';
+    var outcome = await C.scanFace(async function(descriptor){
+      try {
+        var j = await C.faceLogin(descriptor);
+        return { ok: true, message: 'Welcome back, ' + (j.user || '') + '.', data: j };
+      } catch(e){ return { ok: false, message: e.message }; }
+    }, { title: 'Sign in with Face ID' });
+    if (outcome && outcome.ok && outcome.data && outcome.data.token) {
+      applyAccess(outcome.data); start();
+    }
   });
 
   /* ---- Face ID: self-service enrolment, from inside the app ----
@@ -16489,14 +16459,15 @@
       toast('Face ID is turned off for your account. Ask your administrator to enable it.');
       return;
     }
-    try {
-      var descriptor = await captureFaceDescriptor();
-      if (!descriptor) return;
-      await C.faceEnroll(descriptor);
+    var outcome = await C.scanFace(async function(descriptor){
+      try { await C.faceEnroll(descriptor); return { ok: true, message: 'Face ID is set up.' }; }
+      catch(e){ return { ok: false, message: e.message }; }
+    }, { title: 'Set up Face ID' });
+    if (outcome && outcome.ok){
       me.faceEnrolled = true;
       toast('Face ID is set up. You can use it next time you sign in.');
       refreshFaceBadge();
-    } catch(e){ toast(e.message); }
+    }
   }
   function refreshFaceBadge(){
     var b = document.getElementById('t-faceid');

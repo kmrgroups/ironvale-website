@@ -590,6 +590,217 @@
     });
   }
 
+  /* ---------------- Face ID: live, automatic scan ----------------
+     Modelled on how Face ID behaves on a phone: the camera opens on its own,
+     a ring shows where to put your face, the ring fills in as you hold
+     still, and the scan fires by itself — nobody presses a shutter button.
+     Model loading, live detection, steadiness, capture and result feedback
+     all live in this one function so sign-in and enrolment behave the same. */
+  let faceApiReady = null;
+  function loadFaceApi() {
+    if (faceApiReady) return faceApiReady;
+    faceApiReady = new Promise((resolve, reject) => {
+      if (window.faceapi) return resolve(window.faceapi);
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js';
+      s.onload = () => {
+        const base = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+        Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(base),
+          faceapi.nets.faceLandmark68Net.loadFromUri(base),
+          faceapi.nets.faceRecognitionNet.loadFromUri(base)
+        ]).then(() => resolve(window.faceapi)).catch(reject);
+      };
+      s.onerror = () => reject(new Error('Could not load the Face ID component. Check your internet connection.'));
+      document.head.appendChild(s);
+    });
+    return faceApiReady;
+  }
+  function averageDescriptors(list) {
+    const len = list[0].length, out = new Array(len).fill(0);
+    list.forEach(d => { for (let i = 0; i < len; i++) out[i] += d[i]; });
+    for (let i = 0; i < len; i++) out[i] /= list.length;
+    return out;
+  }
+  const FACEID_STEADY_TARGET = 9;    // ~9 well-framed frames in a row before it captures
+  const FACEID_MAX_RETRIES = 5;      // after this many misses, say so instead of just looping forever
+
+  /* processFn(descriptor) runs once a steady, well-framed face has been
+     captured, and must return (or resolve to) {ok:true, message} on success
+     or {ok:false, message} on failure — throwing works too. On failure the
+     scan just starts looking again on its own, the way Face ID quietly
+     retries rather than making you tap a button after a missed read.
+     Resolves with processFn's return value once ok, or null on cancel. */
+  function scanFace(processFn, opts) {
+    opts = opts || {};
+    return new Promise(resolve => {
+      const wrap = document.createElement('div');
+      wrap.className = 'faceid-modal';
+      wrap.innerHTML =
+        '<div class="faceid-box">' +
+          '<h4>' + esc(opts.title || 'Face ID') + '</h4>' +
+          '<div class="faceid-stage">' +
+            '<video class="faceid-v" autoplay playsinline muted></video>' +
+            '<svg class="faceid-ring" viewBox="0 0 200 200">' +
+              '<ellipse class="ring-bg" cx="100" cy="100" rx="76" ry="92"></ellipse>' +
+              '<ellipse class="ring-prog" cx="100" cy="100" rx="76" ry="92"></ellipse>' +
+            '</svg>' +
+            '<div class="faceid-result">' +
+              '<svg class="ico-ok" viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M14 27l8 8 16-16"/></svg>' +
+              '<svg class="ico-bad" viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M18 18l16 16M34 18L18 34"/></svg>' +
+            '</div>' +
+          '</div>' +
+          '<div class="faceid-status">Starting camera…</div>' +
+          '<button type="button" class="btn faceid-cancel">Cancel</button>' +
+        '</div>';
+      document.body.appendChild(wrap);
+
+      const v = wrap.querySelector('.faceid-v');
+      const ringProg = wrap.querySelector('.ring-prog');
+      const stage = wrap.querySelector('.faceid-stage');
+      const status = wrap.querySelector('.faceid-status');
+      const bCancel = wrap.querySelector('.faceid-cancel');
+
+      // Approximate perimeter of the guide ellipse (rx=76, ry=92) — exact
+      // to the eye is all a progress ring needs.
+      const RING_LEN = Math.PI * (3 * (76 + 92) - Math.sqrt((3 * 76 + 92) * (76 + 3 * 92)));
+      ringProg.style.strokeDasharray = String(RING_LEN);
+      ringProg.style.strokeDashoffset = String(RING_LEN);
+
+      let stream = null, loopTimer = null, done = false;
+      let steady = 0, lastBox = null, busy = false, retries = 0;
+
+      const setStatus = (t, isErr) => { status.textContent = t; status.classList.toggle('err', !!isErr); };
+      const setRing = (frac, cls) => {
+        ringProg.style.strokeDashoffset = String(RING_LEN * (1 - Math.max(0, Math.min(1, frac))));
+        ringProg.classList.toggle('ok', cls === 'ok');
+        ringProg.classList.toggle('warn', cls === 'warn');
+      };
+      const stop = () => {
+        if (loopTimer) clearTimeout(loopTimer);
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+      };
+      const close = result => { if (done) return; done = true; stop(); wrap.remove(); resolve(result || null); };
+
+      bCancel.addEventListener('click', () => close(null));
+      wrap.addEventListener('click', e => { if (e.target === wrap) close(null); });
+
+      const secure = location.protocol === 'https:' ||
+        location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      if (!secure) { setStatus('Face ID needs a secure (https) connection.', true); bCancel.textContent = 'Close'; return; }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setStatus('This browser cannot open a camera.', true); bCancel.textContent = 'Close'; return;
+      }
+
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 640 } }, audio: false
+      }).then(async st => {
+        if (done) { st.getTracks().forEach(t => t.stop()); return; }
+        stream = st; v.srcObject = st;
+        try { await v.play(); } catch (e) {}
+        setStatus('Loading Face ID…');
+        await loadFaceApi();
+        if (done) return;
+        setStatus('Position your face in the frame');
+        tick();
+      }).catch(e => {
+        setStatus('Camera access was blocked: ' + (e.message || e.name) + '. Allow camera access and try again.', true);
+        bCancel.textContent = 'Close';
+      });
+
+      function schedule() { loopTimer = setTimeout(tick, 90); }
+
+      async function tick() {
+        if (done) return;
+        if (busy || !v.videoWidth) return schedule();
+        let det = null;
+        try {
+          det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }));
+        } catch (e) { det = null; }
+        if (done) return;
+
+        if (!det) {
+          steady = 0; lastBox = null; setRing(0);
+          setStatus('Position your face in the frame');
+          return schedule();
+        }
+
+        const vw = v.videoWidth, vh = v.videoHeight;
+        // Video is shown mirrored (CSS scaleX(-1)); flip x so "centred"
+        // matches what the person actually sees on screen.
+        const cx = 1 - (det.box.x + det.box.width / 2) / vw;
+        const cy = (det.box.y + det.box.height / 2) / vh;
+        const areaFrac = (det.box.width * det.box.height) / (vw * vh);
+
+        let msg = null;
+        if (areaFrac < 0.10) msg = 'Move a little closer';
+        else if (areaFrac > 0.55) msg = 'Move back a little';
+        else if (cx < 0.32 || cx > 0.68 || cy < 0.16 || cy > 0.84) msg = 'Center your face in the frame';
+
+        if (msg) {
+          steady = Math.max(0, steady - 1); lastBox = det.box;
+          setRing(steady / FACEID_STEADY_TARGET, 'warn');
+          setStatus(msg);
+          return schedule();
+        }
+
+        // Well framed — now confirm it's actually steady, not just a face
+        // passing through the frame.
+        const moved = lastBox ? Math.hypot(det.box.x - lastBox.x, det.box.y - lastBox.y) / vw : 1;
+        lastBox = det.box;
+        steady = moved > 0.05 ? Math.max(0, steady - 1) : steady + 1;
+        setRing(steady / FACEID_STEADY_TARGET);
+        setStatus(steady < FACEID_STEADY_TARGET ? 'Hold still…' : 'Scanning…');
+
+        if (steady >= FACEID_STEADY_TARGET) { busy = true; await capture(); busy = false; }
+        schedule();
+      }
+
+      async function capture() {
+        setRing(1, 'ok'); setStatus('Scanning…');
+        const shots = [];
+        for (let i = 0; i < 3 && !done; i++) {
+          try {
+            const d = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+              .withFaceLandmarks().withFaceDescriptor();
+            if (d) shots.push(Array.from(d.descriptor));
+          } catch (e) {}
+          if (!done) await new Promise(r => setTimeout(r, 110));
+        }
+        if (done) return;
+        if (shots.length < 2) {
+          steady = 0; setRing(0);
+          setStatus('That was too quick — hold still a moment.');
+          return;
+        }
+        const descriptor = averageDescriptors(shots);
+        setStatus('Checking…');
+        let outcome;
+        try { outcome = await processFn(descriptor); }
+        catch (e) { outcome = { ok: false, message: e.message }; }
+        if (done) return;
+
+        if (outcome && outcome.ok) {
+          stage.classList.add('show-ok');
+          setStatus(outcome.message || 'Done');
+          setTimeout(() => close(outcome), 700);
+        } else {
+          stage.classList.add('show-bad');
+          setStatus((outcome && outcome.message) || 'Face not recognised.', true);
+          retries++;
+          setTimeout(() => {
+            if (done) return;
+            stage.classList.remove('show-bad');
+            steady = 0; setRing(0);
+            setStatus(retries >= FACEID_MAX_RETRIES
+              ? 'Still no match. Try again, or use another sign-in method.'
+              : 'Position your face in the frame');
+          }, 1100);
+        }
+      }
+    });
+  }
+
   root.Core = {
     esc: esc, num: num, inr: inr, qty: qty, rate: rate, money: money,
     fmtDate: fmtDate, dayKey: dayKey,
@@ -602,6 +813,6 @@
     openReport: openReport, callAI: callAI, uploadFile: uploadFile,
     parseAiJson: parseAiJson, stripMarkup: stripMarkup,
     setFavicon: setFavicon,
-    capturePhoto: capturePhoto
+    capturePhoto: capturePhoto, scanFace: scanFace
   };
 })(window);

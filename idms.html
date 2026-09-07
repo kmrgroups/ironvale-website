@@ -16619,8 +16619,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     document.getElementById('t-av').textContent = (me.user || '?').charAt(0).toUpperCase();
     refreshFaceBadge();
 
-    try {
-      var p = await C.loadProfile();
+    /* These two used to run one after another; they touch different data
+       (company profile vs. IDMS settings) so there is no reason to wait for
+       the first before starting the second — running them together cuts
+       this part of sign-in roughly in half. */
+    var profileP = C.loadProfile().then(function(p){
       document.getElementById('t-co').textContent = p.name || 'Company not set';
       /* The location/address used to be shown here as a line under the company
          name. It has been removed from the title bar by request — the company
@@ -16631,10 +16634,13 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       document.title = (p.name ? p.name + ' — ' : '') + 'IDMS';
       C.setFavicon(p.logo || '');       // the tab icon follows the company logo
       loadGateBranding(p);              // the left panel logo, in case sign-in is shown again this tab
-    } catch(e){ /* the profile is decoration here, not a blocker */ }
+    }).catch(function(e){ /* the profile is decoration here, not a blocker */ });
 
-    try { settings = await C.idms.settings(); dbState(true, 'Database: connected'); }
-    catch(e){ dbState(false, 'Database: ' + e.message); }
+    var settingsP = C.idms.settings().then(function(s){
+      settings = s; dbState(true, 'Database: connected');
+    }).catch(function(e){ dbState(false, 'Database: ' + e.message); });
+
+    await Promise.all([profileP, settingsP]);
 
     drawThemes(settings.theme && settings.theme.name);
     drawMenu();
@@ -17757,21 +17763,34 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      in a frame read the same token — but it does not survive re-opening the
      page, which is exactly what was asked for. */
   (async function(){
-    if (C.getToken()) { try { await C.signOut(); } catch(e){ C.setToken(''); } }
-    C.setToken('');
+    /* Revoking a leftover token still matters (a shared works PC must not
+       leave a live session sitting around), but it does not need to block
+       the sign-in screen from appearing — nothing below depends on it having
+       finished. Firing it without awaiting removes one full API round trip
+       from the critical path of every page open. */
+    if (C.getToken()) { C.signOut().catch(function(){}); C.setToken(''); }
+    else C.setToken('');
 
-    /* the company logo on the sign-in screen comes from the same profile the
-       website uses; it is readable without signing in, which is why it can be
-       shown before anybody has. The company name and address are deliberately
-       not shown here any more — only the logo, the welcome message and the
-       gallery, which come from Admin → Login Screen. */
-    try {
-      var p = await C.loadProfile();
+    /* loadProfile() (branding) and loadGateContent() used to run one after
+       another; they don't depend on each other, so run them together —
+       this halves the wait before the sign-in screen is ready. */
+    var brandingP = C.loadProfile().then(function(p){
       loadGateBranding(p);
       document.title = (p.name ? p.name + ' — ' : '') + 'IDMS';
       C.setFavicon(p.logo || '');
-    } catch(e){ /* the logo is decoration, not a blocker */ }
-    await loadGateContent();
+    }).catch(function(e){ /* the logo is decoration, not a blocker */ });
+    var contentP = loadGateContent();
+
+    /* Face ID's camera-model download used to only start once someone
+       clicked "Face ID" — meaning the delay was live, on the sign-in
+       attempt itself. Warming it here, in the background while the person
+       is still looking at (or typing into) the sign-in screen, means it is
+       usually already loaded by the time they click. Errors are swallowed:
+       if it fails to preload, scanFace() will just load it on demand as
+       before. */
+    C.preloadFaceApi && C.preloadFaceApi().catch(function(){});
+
+    await Promise.all([brandingP, contentP]);
     document.getElementById('g-user').focus();
   })();
 })();

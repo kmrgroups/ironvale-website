@@ -10080,6 +10080,7 @@ Reply with ONLY this JSON, no commentary or code fences:
         ${costingHtml(r,i)}
         <div class="rfq-actions">
           <button class="mini-btn ai" data-act="gen" data-i="${i}">${r.quote?'Regenerate quote':'AI draft quote'}</button>
+          <button class="mini-btn" data-act="waforward" data-i="${i}">WhatsApp this to my phone</button>
         </div>
         ${r.quote?`<div class="quote-editor"><textarea class="quote-text" data-i="${i}">${esc(r.quote)}</textarea></div>`:''}
         ${(()=>{const q=r.quoteDoc; if(!q) return '';
@@ -10295,6 +10296,17 @@ Reply with ONLY this JSON, no commentary or code fences:
       const q=r.quoteDoc||{};
       return (r.quote||'')+`\n\nReference: ${r.ref}${q.number?'\nQuotation No: '+q.number:''}\n— ${data.quoteSender||''}\n${CO().legalName||data.brandName}`;
     };
+    // Summarizes the enquiry itself (not the quote) for the "WhatsApp this to
+    // my phone" action, so staff on the move can see a new RFQ's essentials
+    // without opening the admin panel.
+    const rfqSummaryText=r=>{
+      return `New RFQ ${r.ref} — ${r.name||''}${r.company?' ('+r.company+')':''}\n`+
+        `Status: ${r.status||'Received'}\n`+
+        (r.email?`Email: ${r.email}\n`:'')+
+        (r.phone?`Phone: ${r.phone}\n`:'')+
+        `Date: ${r.date||''}\n\n`+
+        (r.message||'—');
+    };
     host.querySelectorAll('[data-act="mailquote"]').forEach(b=>b.addEventListener('click',async()=>{
       const r=rfqs[+b.dataset.i];
       if(!r.email){ toast('No customer email on this RFQ'); return; }
@@ -10318,6 +10330,17 @@ Reply with ONLY this JSON, no commentary or code fences:
       // No automatic WhatsApp set up — fall back to one-tap send, which needs no setup at all.
       toast('Opening WhatsApp — press send');
       window.open(waLink(r.phone,body),'_blank','noopener');
+    }));
+    host.querySelectorAll('[data-act="waforward"]').forEach(b=>b.addEventListener('click',async()=>{
+      const r=rfqs[+b.dataset.i];
+      const text=rfqSummaryText(r);
+      b.textContent='Sending…'; b.disabled=true;
+      // blank number: the server uses the WhatsApp number saved on the Setup screen
+      const res=await sendMessage_({whatsapp:(data.notifyWhatsapp||'').replace(/\D/g,''),text,useOwner:true});
+      const st=readResults(res);
+      b.textContent='WhatsApp this to my phone'; b.disabled=false;
+      if(st.waOk){ toast('Sent to your WhatsApp'); return; }
+      toast(st.wa||'Could not send');
     }));
     host.querySelectorAll('[data-act="costpdf"]').forEach(b=>b.addEventListener('click',()=>{
       openCostSheetPdf(rfqs[+b.dataset.i]);

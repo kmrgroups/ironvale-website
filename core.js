@@ -813,6 +813,12 @@
     openReport: openReport, callAI: callAI, uploadFile: uploadFile,
     parseAiJson: parseAiJson, stripMarkup: stripMarkup,
     setFavicon: setFavicon,
-    capturePhoto: capturePhoto, scanFace: scanFace
+    capturePhoto: capturePhoto, scanFace: scanFace,
+    /* Lets a page start downloading the face-recognition model in the
+       background (e.g. while the sign-in screen is idle) instead of only
+       starting once someone actually clicks Face ID. loadFaceApi() already
+       memoizes on faceApiReady, so calling it here just means scanFace()
+       finds the model already loaded (or loading) instead of starting cold. */
+    preloadFaceApi: loadFaceApi
   };
 })(window);

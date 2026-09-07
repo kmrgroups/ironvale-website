@@ -109,18 +109,26 @@
 .gate-left::before{content:'';position:absolute;inset:0;
   background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1px);
   background-size:26px 26px;opacity:.5;pointer-events:none;}
-.gl-logo-wrap{position:relative;z-index:1;margin-bottom:22px;}
-.gl-logo{height:112px;width:112px;border-radius:24px;background:#fff;display:flex;align-items:center;
-  justify-content:center;overflow:hidden;position:relative;
-  animation:glow-pulse 3.2s ease-in-out infinite;}
-.gl-logo img{height:100%;width:100%;object-fit:contain;padding:10px;}
-.gl-logo .mark{font-family:var(--disp);font-weight:800;font-size:34px;color:var(--gold-deep);}
+.gl-logo-wrap{position:relative;z-index:1;margin-bottom:26px;perspective:1000px;}
+.gl-logo{height:156px;width:156px;border-radius:32px;background:#fff;display:flex;align-items:center;
+  justify-content:center;overflow:hidden;position:relative;transform-style:preserve-3d;
+  animation:glow-pulse 3.2s ease-in-out infinite, logo-spin-y 7s linear infinite;}
+.gl-logo img{height:100%;width:100%;object-fit:contain;padding:12px;}
+.gl-logo .mark{font-family:var(--disp);font-weight:800;font-size:46px;color:var(--gold-deep);}
 @keyframes glow-pulse{
   0%,100%{box-shadow:0 0 0 0 rgba(224,180,78,.55),0 0 30px 6px rgba(63,169,224,.35);}
   50%{box-shadow:0 0 0 10px rgba(224,180,78,0),0 0 46px 14px rgba(63,169,224,.55);}
 }
-.gl-title{position:relative;z-index:1;font-family:var(--disp);font-size:clamp(22px,2.6vw,32px);
-  font-weight:800;line-height:1.25;max-width:32ch;margin-bottom:12px;}
+@keyframes logo-spin-y{
+  from{transform:rotateY(0deg);}
+  to{transform:rotateY(360deg);}
+}
+@media (prefers-reduced-motion:reduce){
+  .gl-logo{animation:glow-pulse 3.2s ease-in-out infinite;}
+}
+.gate-left .gl-title{position:relative;z-index:1;font-family:var(--disp);font-size:clamp(22px,2.6vw,32px);
+  font-weight:800;line-height:1.25;max-width:32ch;margin-bottom:12px;color:#fff;
+  text-shadow:0 2px 10px rgba(0,0,0,.35);}
 .gl-sub{position:relative;z-index:1;font-size:13.5px;color:rgba(255,255,255,.78);max-width:44ch;
   line-height:1.6;margin-bottom:28px;}
 .gl-gallery{position:relative;z-index:1;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;
@@ -162,7 +170,7 @@
 @media (max-width:860px){
   .gate-shell{flex-direction:column;}
   .gate-left{flex:0 0 auto;padding:32px 24px;}
-  .gl-logo{height:84px;width:84px;}
+  .gl-logo{height:112px;width:112px;}
   .gl-gallery{display:none;}
   .gate-right{padding:26px 18px 44px;}
 }

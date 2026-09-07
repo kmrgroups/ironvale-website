@@ -41,7 +41,16 @@ async function issueCode(user, purpose, channel) {
     to: sendEmail ? user.email : '', whatsapp: sendWa ? user.whatsapp : '',
     subject: (purpose === 'reset' ? 'Password reset code: ' : 'Sign-in code: ') + code, text
   });
-  const sentTo = [sendEmail ? 'email' : null, sendWa ? 'WhatsApp' : null].filter(Boolean);
+  /* sentTo used to be built from "did we try" (does the user have an email/WhatsApp
+     number) rather than "did it work" — so the sign-in screen said "a code has been
+     sent" even when Resend or the WhatsApp API had actually failed (bad API key,
+     unverified sender domain, wrong phone ID, etc). That is why Forgot Password could
+     appear to work while the 2FA and OTP-only screens looked broken: all three call
+     this same function and are equally exposed to a delivery failure, but only this
+     return value decides whether the person is told the truth about it. */
+  const emailOk = sendEmail && results.some(r => r.startsWith('EMAIL SENT'));
+  const waOk = sendWa && results.some(r => r.startsWith('WHATSAPP SENT') || r.startsWith('WHATSAPP TEMPLATE'));
+  const sentTo = [emailOk ? 'email' : null, waOk ? 'WhatsApp' : null].filter(Boolean);
   return { results, sentTo };
 }
 
@@ -92,7 +101,12 @@ export default async function handler(req, res) {
       }
 
       if (u.twofa && (u.email || u.whatsapp)) {
-        const { sentTo } = await issueCode(u, 'login');
+        const { sentTo, results } = await issueCode(u, 'login');
+        if (!sentTo.length) {
+          console.error('2FA code delivery failed for', u.username, results);
+          return res.status(502).json({ ok: false,
+            error: 'A sign-in code could not be delivered. Ask your administrator to check the email/WhatsApp setup in Admin → Setup, or sign in with One-Time Code / Face ID instead.' });
+        }
         return res.status(200).json({ ok: true, needCode: true, user: u.username,
           sentTo, note: 'A 6-digit code has been sent to your ' + sentTo.join(' and ') + '.' });
       }
@@ -133,9 +147,12 @@ export default async function handler(req, res) {
         return res.status(400).json({ ok: false, error: 'WhatsApp OTP is not available for this account.' });
       if (!channel && !((methods.otpEmail && u.email) || (methods.otpWhatsapp && u.whatsapp)))
         return res.status(400).json({ ok: false, error: 'No OTP method is set up for this account. Ask your administrator to add an email or WhatsApp number.' });
-      const { sentTo } = await issueCode(u, 'login', channel);
-      if (!sentTo.length)
-        return res.status(400).json({ ok: false, error: 'No OTP method is set up for this account.' });
+      const { sentTo, results } = await issueCode(u, 'login', channel);
+      if (!sentTo.length) {
+        console.error('OTP delivery failed for', u.username, channel || '(any)', results);
+        return res.status(502).json({ ok: false,
+          error: 'A code could not be delivered. Ask your administrator to check the email/WhatsApp setup in Admin → Setup.' });
+      }
       return res.status(200).json({ ok: true, user: u.username, sentTo,
         note: 'A 6-digit code has been sent to your ' + sentTo.join(' and ') + '.' });
     }

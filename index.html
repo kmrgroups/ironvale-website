@@ -2607,16 +2607,21 @@ I would recommend this company as a place to work</textarea></div></div>
   },LAYOUT_DEFAULTS);
 
   let data=JSON.parse(JSON.stringify(DEFAULTS));
-  /* The IDMS and this page are the same origin in the same tab, so they share
-     one sessionStorage entry and therefore one server-side session. That is what
-     lets the IDMS open a staff screen from here without a second sign-in. It is
-     the session token, not a credential, and it dies with the tab. */
+  /* The IDMS and this page are the same origin, so they share one token entry
+     and therefore one server-side session — that is what lets the IDMS open a
+     staff screen from here without a second sign-in. It is kept in
+     localStorage, not sessionStorage, so that relationship also holds when
+     the IDMS is opened in a new tab or window (e.g. right-click → Open Link
+     in New Tab on a menu item) rather than only within one tab's frame — a
+     fresh top-level browsing context does not inherit sessionStorage the way
+     it inherits localStorage. It is the session token, not a credential, and
+     the server can still end it at any time regardless of where it is kept. */
   const TOKEN_KEY='app_token';
   let token=null, currentUser='', rfqs=[], dirty=false, cloudOK=false, expandedRfq=null;
-  try{ token=sessionStorage.getItem(TOKEN_KEY)||null; }catch(e){ token=null; }
+  try{ token=localStorage.getItem(TOKEN_KEY)||null; }catch(e){ token=null; }
   function keepToken(t){
     token=t||null;
-    try{ t?sessionStorage.setItem(TOKEN_KEY,t):sessionStorage.removeItem(TOKEN_KEY); }catch(e){}
+    try{ t?localStorage.setItem(TOKEN_KEY,t):localStorage.removeItem(TOKEN_KEY); }catch(e){}
   }
   let poOrders=[], expandedOrder=null;
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

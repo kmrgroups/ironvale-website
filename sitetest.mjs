@@ -18,7 +18,7 @@ async function boot(url, token) {
   const dom = new JSDOM(html.replace('<script src="/drawing-convert.js"></script>', ''),
     { runScripts: 'outside-only', url, virtualConsole: vc });
   const { window } = dom;
-  if (token) window.sessionStorage.setItem('app_token', token);
+  if (token) window.localStorage.setItem('app_token', token);
   window.fetch = async (path, opts = {}) => {
     const body = opts.body ? JSON.parse(opts.body) : {};
     const ok = j => ({ ok: true, status: 200, json: async () => Object.assign({ ok: true }, j) });

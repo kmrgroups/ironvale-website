@@ -58,7 +58,7 @@ window.fetch = async (path, opts = {}) => {
     if (body.action === 'whoami') return ok({ user: { username: 'tester', role: 'developer' } });
     return ok({});
   }
-  if (url.startsWith('/api/content')) return ok({ data: { company: { legalName: 'Test Manufacturing Pvt Ltd', addressLine: 'Mysuru', docPrefix: 'TEST' } } });
+  if (url.startsWith('/api/content')) return ok({ data: { company: { legalName: 'Test Manufacturing Pvt Ltd', addressLine: 'Mysuru', docPrefix: 'TEST' }, heroBannerDataUrl: 'https://example.test/hero-test.jpg', heroHeadline: 'Test headline' } });
   if (url.startsWith('/api/hr?what=employees')) return ok({ employees: [{ data: { empId: 'E1', doj: isoDaysAgo(400) } }] });
   if (url.startsWith('/api/hr?what=attendance')) return ok({ attendance: [{ day: isoDaysAgo(20), status: 'Present' }, { day: isoDaysAgo(21), status: 'Absent' }] });
   if (url.startsWith('/api/rfqs')) return ok({ rfqs: [{ ref: 'RFQ-1', date: isoDaysAgo(15), status: 'Won' }, { ref: 'RFQ-2', date: isoDaysAgo(16), status: 'New' }] });
@@ -120,7 +120,7 @@ check('powered-by links to KMR Groups',
   /kmr-groups\.com/.test(window.document.querySelector('.gate .powered a').href));
 check('password field is not autofilled by the browser',
   $('g-pass').getAttribute('autocomplete') === 'new-password');
-check('no session token stored before sign-in', !window.sessionStorage.getItem('app_token'));
+check('no session token stored before sign-in', !window.localStorage.getItem('app_token'));
 
 // ---- 2. sign in ----
 $('g-user').value = 'tester'; $('g-pass').value = 'secret123';
@@ -214,7 +214,8 @@ nav('emb_me');
 await wait(120);
 check('My Attendance opens in the IDMS', /embed=me/.test($('em-frame').src), $('em-frame').src);
 
-// ---- 10. banner is set from Admin ----
+// ---- 10. the old Home Banner admin screen still saves (its settings survive;
+//      its image is deliberately no longer shown on Home — see #11) ----
 nav('admin_banner');
 await wait(150);
 $('ab-url').value = 'https://example.test/banner.jpg';
@@ -224,9 +225,18 @@ $('ab-save').dispatchEvent(new window.Event('click'));
 await wait(250);
 check('banner saved from admin', settings.banner && settings.banner.image === 'https://example.test/banner.jpg',
   JSON.stringify(settings.banner || {}));
+
+// ---- 11. Home shows the website's own Hero Banner, and only that ----
+check('no legacy Home Banner element on the home screen', !$('bn-img'));
 nav('home');
 await wait(200);
-check('home shows the saved banner', $('bn-img').style.display === '' && /banner\.jpg/.test($('bn-img').src));
+check('the hero banner on Home reads from the website\'s own content record',
+  $('hb-img').src.includes('hero-test.jpg'), $('hb-img').src);
+
+// ---- 12. the session token now survives a fresh top-level context, not just this tab ----
+check('token is kept in localStorage (survives Open Link in New Tab/Window)',
+  window.localStorage.getItem('app_token') === 'TOK', window.localStorage.getItem('app_token'));
+check('token is not left in sessionStorage', !window.sessionStorage.getItem('app_token'));
 
 // ---- diagnostics ----
 console.log('\nWhat each dashboard drew:');

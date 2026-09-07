@@ -301,7 +301,7 @@
     <div class="gate-right">
       <div class="gate-card">
         <h1>AI-Agentic Intelligent Digital Manufacturing System</h1>
-        <p>Please sign in to continue — you will be asked every time this page is opened.</p>
+        <p>Please sign in to continue — you'll stay signed in on this device and browser until you sign out.</p>
 
         <div class="g-tabs" id="g-tabs">
           <button type="button" class="g-tab on" data-tab="password">Password</button>
@@ -424,21 +424,15 @@
            image the public site's hero section uses), so it stays a single
            source of truth and needs no separate upload here. It is shown at
            its native quality — no crop, no filter, no overlay — and simply
-           scales with the available width. -->
+           scales with the available width. This is now the only banner on
+           Home; the older, separate Admin → Home Banner image used to be
+           shown underneath it, faded behind a white veil, which just read as
+           a second, blurrier copy of the same kind of image — so it has been
+           taken off this screen. (The admin screen and its saved settings
+           still exist, in case that text-only tagline/strap is wanted again
+           somewhere, but nothing on Home reads them any more.) -->
       <div class="hero-banner" id="hero-banner" style="display:none;">
         <img id="hb-img" alt="">
-      </div>
-      <!-- The banner below is set in Admin → Home Banner, like every other
-           piece of branding, so it is the same for everyone and not editable
-           from the screen it appears on. -->
-      <div class="banner">
-        <img class="bg" id="bn-img" style="display:none;" alt="">
-        <div class="veil" id="bn-veil" style="display:none;"></div>
-        <div class="in">
-          <h1 id="bn-title">—</h1>
-          <div class="sub" id="bn-sub"></div>
-          <div class="strap" id="bn-strap">Intelligent Digital Manufacturing System</div>
-        </div>
       </div>
       <div class="stat" id="home-stats"></div>
       <div class="card" style="margin-top:18px;">
@@ -1506,9 +1500,10 @@
     <div class="panel" data-panel="admin_banner">
       <div class="card">
         <h4>Home Banner</h4>
-        <div class="hint" style="margin-bottom:10px;">The picture and wording across the top of the
-          home screen. Saved once, for everyone — the home screen itself has no edit button, because
-          branding is an admin decision and not a per-user one.</div>
+        <div class="hint" style="margin-bottom:10px;">This is kept for its saved tagline/strapline
+          text, but the image is no longer shown on the IDMS home screen — that screen now shows the
+          Hero Banner from the website's own Admin Panel → Website → Hero instead, so the two didn't
+          appear stacked one over the other.</div>
         <div class="row">
           <div><label>Banner image</label><input type="file" id="ab-file" accept="image/*">
             <div class="hint">Stored with the other site images and served by link, so the settings
@@ -8899,15 +8894,10 @@
   }
   async function loadHome(){
     loadHeroBanner();
-    var p = C.getProfile();
-    document.getElementById('bn-title').textContent = p.name || 'Your company';
-    document.getElementById('bn-sub').textContent = (settings.banner && settings.banner.tagline) || '';
-    document.getElementById('bn-strap').textContent =
-      (settings.banner && settings.banner.strap) || 'Intelligent Digital Manufacturing System';
-    var img = document.getElementById('bn-img'), veil = document.getElementById('bn-veil');
-    if (settings.banner && settings.banner.image) {
-      img.src = settings.banner.image; img.style.display = ''; veil.style.display = '';
-    } else { img.style.display = 'none'; veil.style.display = 'none'; }
+    /* The old bn-title/bn-sub/bn-strap/bn-img/bn-veil banner that used to sit
+       here — driven by Admin → Home Banner — has been removed from this
+       screen (see the comment above the hero-banner markup): it was reading
+       as a second, faded copy of the Hero Banner right above it. */
 
     try {
       var parts = await C.idms.parts(), by = {};

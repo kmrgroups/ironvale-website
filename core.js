@@ -64,14 +64,22 @@
     toast._t = setTimeout(() => el.classList.remove('on'), 3200);
   }
 
-  /* ---------------- session ---------------- */
+  /* ---------------- session ----------------
+     localStorage rather than sessionStorage: the token has to survive opening
+     a menu link in a new tab or window (right-click → Open Link in New Tab),
+     which sessionStorage does not reliably carry over to — a fresh top-level
+     browsing context started that way gets its own sessionStorage, empty,
+     even though it is the same person in the same browser. checkSession()
+     still asks the server whether the token is still good, so a revoked or
+     expired session is still caught; this only changes where the token lives
+     between page loads, not whether it is trusted blindly. */
   const TOKEN_KEY = 'app_token';
   let token = '';
-  try { token = sessionStorage.getItem(TOKEN_KEY) || ''; } catch (e) { token = ''; }
+  try { token = localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { token = ''; }
 
   function setToken(t) {
     token = t || '';
-    try { t ? sessionStorage.setItem(TOKEN_KEY, t) : sessionStorage.removeItem(TOKEN_KEY); }
+    try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); }
     catch (e) { /* private browsing — the token simply lives for this page only */ }
   }
   const getToken = () => token;

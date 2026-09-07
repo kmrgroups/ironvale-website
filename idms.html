@@ -288,42 +288,35 @@
 .embed-frame{width:100%;height:calc(100vh - 190px);min-height:520px;border:1px solid var(--line);
   border-radius:var(--radius-sm);background:var(--white);}
 
-/* ---- RFQ Pipeline working screen: the top bar + menu auto-hide ----
-   .chrome wraps .top and .menubar together so both can slide as one unit.
-   Only body.pipeline-focus (set while the RFQ Pipeline embed is open) turns
-   this on; every other screen keeps the ordinary static header. The content
-   area's top padding is driven by --chrome-pad, which JS sets to the
-   chrome's own height when shown and 0 when hidden, so the working screen
-   is given back exactly the space the chrome was using rather than the
-   chrome simply floating on top of it. */
-:root{--chrome-pad:0px;}
-body.pipeline-focus .chrome{position:fixed;top:0;left:0;right:0;z-index:900;
-  transform:translateY(-100%);transition:transform .32s cubic-bezier(.4,0,.2,1);
-  box-shadow:0 10px 28px rgba(15,30,60,.22);}
-body.pipeline-focus .chrome.chrome-show{transform:translateY(0);}
-body.pipeline-focus .app-body{padding-top:var(--chrome-pad);transition:padding-top .32s cubic-bezier(.4,0,.2,1);
-  max-width:100%;padding-left:0;padding-right:0;padding-bottom:0;}
-.chrome-hover-zone{display:none;}
-body.pipeline-focus .chrome-hover-zone{display:block;position:fixed;top:0;left:0;right:0;height:16px;z-index:850;}
-
-/* The pipeline embed itself: no card stacked above the iframe, and the
-   iframe fills essentially the whole viewport. Reload / open-in-new-tab move
-   into a small floating bar over the top-right corner of the frame instead
-   of pushing it down. */
-.embed-wrap{position:relative;}
-body.pipeline-focus [data-panel="embed"]{padding:0;}
-body.pipeline-focus #em-card{display:none;}
-body.pipeline-focus .embed-wrap{margin:0;}
-body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius:0;
-  height:calc(100vh - var(--chrome-pad));min-height:400px;transition:height .32s cubic-bezier(.4,0,.2,1);}
-.embed-float-bar{display:none;position:absolute;top:10px;right:10px;z-index:20;gap:6px;
-  background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:100px;
-  padding:5px;box-shadow:var(--shadow-md);}
-.embed-float-bar.show{display:flex;}
-.embed-float-bar button,.embed-float-bar a{height:32px;width:32px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;border:1px solid var(--line);
-  background:var(--white);color:var(--navy);font-size:14px;cursor:pointer;text-decoration:none;}
-.embed-float-bar button:hover,.embed-float-bar a:hover{border-color:var(--gold);color:var(--gold-deep);}
+/* ---- RFQ Pipeline (and any other embed): a screen, not a card holding a
+   screen ----
+   While the embed panel is showing the "pipeline" screen specifically,
+   #app carries .pipeline-mode: the surrounding page padding is cancelled so
+   the iframe runs edge-to-edge directly under the menu bar, the toolbar
+   above it becomes a slim strip rather than a bordered card, and the menu
+   bar is free to slide out of the way (see setPipelineMode()/
+   setChromeHeight() in the script) with --chrome-h always reflecting
+   exactly how much height is actually taken up above it, so the screen
+   fills the rest of the window whether the menu bar is showing or not. */
+#app.pipeline-mode .panel[data-panel="embed"]{
+  margin-top:-20px; margin-bottom:-70px; padding:0; max-width:none;
+  /* break out of .app-body's centred, max-width:1500px column to run the
+     full width of the viewport, however wide the window is */
+  width:100vw; margin-left:calc(50% - 50vw); margin-right:calc(50% - 50vw);
+}
+#app.pipeline-mode .panel[data-panel="embed"] .card{
+  border-radius:0; border-left:0; border-right:0; border-top:0; box-shadow:none;
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 14px;
+  padding:9px 22px; margin:0;
+}
+#app.pipeline-mode .panel[data-panel="embed"] .card h4{margin:0;}
+#app.pipeline-mode .panel[data-panel="embed"] .card #em-note{display:none;}
+#app.pipeline-mode .embed-frame{
+  border:0; border-radius:0; display:block; width:100%; min-height:0;
+  height:calc(100vh - var(--chrome-h, 148px));
+}
+.menubar{transition:margin-top .22s ease, opacity .18s ease;}
+.menubar.auto-hidden{margin-top:-58px; opacity:0; pointer-events:none;}
 
 .stat{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:6px;}
 .stat .b{background:var(--white);border:1px solid var(--line);border-radius:11px;padding:13px;}
@@ -439,8 +432,6 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
 <div id="app" style="display:none;">
 
-  <div class="chrome-hover-zone" id="chrome-hover-zone"></div>
-  <div class="chrome" id="chrome">
   <div class="top">
     <div class="id">
       <div id="t-logo"></div>
@@ -463,7 +454,6 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   </div>
 
   <div class="menubar" id="menubar"></div>
-  </div>
 
   <div class="app-body">
 
@@ -1533,7 +1523,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
          the session used there — no second sign-in, and no way in from the
          public site. -->
     <div class="panel" data-panel="embed">
-      <div class="card" id="em-card">
+      <div class="card">
         <h4 id="em-title">Screen</h4>
         <div class="hint" id="em-note" style="margin-bottom:10px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -1542,13 +1532,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
              style="text-decoration:none;line-height:1.9;">Open in a new tab</a>
         </div>
       </div>
-      <div class="embed-wrap" id="em-wrap">
-        <div class="embed-float-bar" id="em-float-bar">
-          <button id="em-reload2" title="Reload">⟳</button>
-          <a id="em-open2" href="#" target="_blank" rel="noopener" title="Open in a new tab">↗</a>
-        </div>
-        <iframe class="embed-frame" id="em-frame" title="Screen"></iframe>
-      </div>
+      <iframe class="embed-frame" id="em-frame" title="Screen"></iframe>
     </div>
 
     <!-- ============ Admin: home banner ============ -->
@@ -3129,14 +3113,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       toast('You do not have access to that screen. Ask your administrator.');
       s = 'home';
     }
-    // The pipeline's auto-hiding menu only applies to the RFQ Pipeline working
-    // screen itself — leaving it for any other screen restores the ordinary
-    // static header before that screen's own content loads.
-    if (s !== 'emb_pipeline') exitPipelineFocus();
     var want = LIVE[s] ? (PANEL_OF[s] || s) : 'placeholder';
     document.querySelectorAll('.panel').forEach(function(p){
       p.classList.toggle('on', p.dataset.panel === want);
     });
+    if (want !== 'embed') setPipelineMode(false);
     if (want === 'placeholder') {
       document.getElementById('ph-name').textContent = (ICON[s]||'') + ' ' + (LABEL[s]||s);
       document.getElementById('ph-note').textContent =
@@ -8883,85 +8864,71 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var url = '/?embed=' + e[1];
     document.getElementById('em-frame').src = url;
     document.getElementById('em-open').href = url;
-    document.getElementById('em-open2').href = url;
-    document.getElementById('em-float-bar').classList.toggle('show', id === 'emb_pipeline');
-    if (id === 'emb_pipeline') enterPipelineFocus(); else exitPipelineFocus();
+    setPipelineMode(e[1] === 'pipeline');
   }
 
-  /* ---------------- RFQ Pipeline working screen: auto-hide menu ----------------
-     The top bar + menubar (wrapped together as #chrome) slide out of the way
-     while the pipeline embed is open, so the working screen gets the full
-     viewport. Moving the mouse to the very top of the window (or touching it,
-     on a touch device) brings the chrome back with a smooth slide, and the
-     content area's top padding tracks it so the page is pushed down rather
-     than covered. */
-  var pipelineFocusActive = false, chromeHideTimer = null;
-  function chromeEls(){
-    return { chrome: document.getElementById('chrome'), body: document.querySelector('.app-body') };
+  /* ---- RFQ Pipeline: full-screen screen, auto-hiding menu bar ----
+     Turning pipeline-mode on switches the embed panel from "a card holding
+     a screen" to the screen itself (see the CSS above), and arms a menu
+     bar that quietly gets out of the way a moment after the screen opens.
+     Moving the mouse back up to the title bar — or tapping it, on a
+     touchscreen — brings the menu straight back; moving away lets it hide
+     again. The listeners on .top are attached once, ever, and simply do
+     nothing while pipeline-mode is off, so opening and closing the pipeline
+     repeatedly in one session never stacks up duplicate behaviour. */
+  var pmMenubar = null, pmTop = null, pmHideTimer = null;
+  function pmSetChromeHeight(){
+    var app = document.getElementById('app'); if (!app) return;
+    var toolbar = document.querySelector('.panel[data-panel="embed"] .card');
+    var h = (pmTop ? pmTop.offsetHeight : 0) + (toolbar ? toolbar.offsetHeight : 0);
+    if (pmMenubar && !pmMenubar.classList.contains('auto-hidden')) h += pmMenubar.offsetHeight;
+    app.style.setProperty('--chrome-h', h + 'px');
   }
-  function syncChromePad(){
-    var els = chromeEls();
-    if (!els.chrome) return;
-    var pad = (pipelineFocusActive && els.chrome.classList.contains('chrome-show')) ? els.chrome.offsetHeight : 0;
-    document.documentElement.style.setProperty('--chrome-pad', pad + 'px');
+  function pmShowMenu(){
+    if (!pmMenubar) return;
+    pmMenubar.classList.remove('auto-hidden');
+    pmSetChromeHeight();
   }
-  function showChrome(){
-    var els = chromeEls(); if (!els.chrome) return;
-    clearTimeout(chromeHideTimer);
-    if (!els.chrome.classList.contains('chrome-show')){
-      els.chrome.classList.add('chrome-show');
-      syncChromePad();
+  function pmHideMenu(){
+    if (!pmMenubar) return;
+    pmMenubar.classList.add('auto-hidden');
+    pmSetChromeHeight();
+  }
+  function pmArmHide(delay){
+    clearTimeout(pmHideTimer);
+    pmHideTimer = setTimeout(function(){
+      if (document.getElementById('app').classList.contains('pipeline-mode')) pmHideMenu();
+    }, delay || 1100);
+  }
+  function setPipelineMode(on){
+    var app = document.getElementById('app');
+    if (!pmMenubar) pmMenubar = document.getElementById('menubar');
+    if (!pmTop) {
+      pmTop = document.querySelector('.top');
+      if (pmTop) {
+        pmTop.addEventListener('mouseenter', function(){
+          if (!document.getElementById('app').classList.contains('pipeline-mode')) return;
+          clearTimeout(pmHideTimer); pmShowMenu();
+        });
+        pmTop.addEventListener('mouseleave', function(){
+          if (!document.getElementById('app').classList.contains('pipeline-mode')) return;
+          pmArmHide();
+        });
+        pmTop.addEventListener('click', function(){
+          if (!document.getElementById('app').classList.contains('pipeline-mode')) return;
+          clearTimeout(pmHideTimer); pmShowMenu(); pmArmHide(1600);
+        });
+        window.addEventListener('resize', function(){
+          if (document.getElementById('app').classList.contains('pipeline-mode')) pmSetChromeHeight();
+        });
+      }
     }
+    app.classList.toggle('pipeline-mode', !!on);
+    clearTimeout(pmHideTimer);
+    if (!on) { pmShowMenu(); return; }
+    pmShowMenu();
+    pmArmHide(1300);
   }
-  function hideChromeSoon(){
-    clearTimeout(chromeHideTimer);
-    chromeHideTimer = setTimeout(function(){
-      var els = chromeEls(); if (!els.chrome) return;
-      els.chrome.classList.remove('chrome-show');
-      syncChromePad();
-    }, 380);
-  }
-  function onPipelineMouseMove(ev){
-    if (!pipelineFocusActive) return;
-    if (ev.clientY <= 56) { showChrome(); return; }
-    var els = chromeEls();
-    if (ev.clientY > 170 && !(els.chrome && els.chrome.matches(':hover'))) hideChromeSoon();
-  }
-  function onPipelineTouchStart(ev){
-    if (!pipelineFocusActive) return;
-    var y = ev.touches && ev.touches[0] ? ev.touches[0].clientY : 0;
-    if (y <= 56) { showChrome(); return; }
-    var els = chromeEls();
-    if (y > 170 && !(els.chrome && els.chrome.contains(ev.target))) hideChromeSoon();
-  }
-  function enterPipelineFocus(){
-    if (pipelineFocusActive) return;
-    pipelineFocusActive = true;
-    document.body.classList.add('pipeline-focus');
-    var els = chromeEls();
-    if (els.chrome) els.chrome.classList.remove('chrome-show');
-    syncChromePad();
-    window.addEventListener('mousemove', onPipelineMouseMove);
-    window.addEventListener('touchstart', onPipelineTouchStart, { passive: true });
-    if (els.chrome){
-      els.chrome.addEventListener('mouseenter', showChrome);
-      els.chrome.addEventListener('mouseleave', function(){ if (pipelineFocusActive) hideChromeSoon(); });
-    }
-  }
-  function exitPipelineFocus(){
-    if (!pipelineFocusActive) return;
-    pipelineFocusActive = false;
-    clearTimeout(chromeHideTimer);
-    document.body.classList.remove('pipeline-focus');
-    var els = chromeEls();
-    if (els.chrome) els.chrome.classList.remove('chrome-show');
-    document.documentElement.style.setProperty('--chrome-pad', '0px');
-    window.removeEventListener('mousemove', onPipelineMouseMove);
-    window.removeEventListener('touchstart', onPipelineTouchStart);
-  }
-  document.getElementById('chrome-hover-zone').addEventListener('mouseenter', function(){
-    if (pipelineFocusActive) showChrome();
-  });
 
   /* ---------------- the home banner ---------------- */
   function bannerPreview(){
@@ -16619,11 +16586,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     document.getElementById('t-av').textContent = (me.user || '?').charAt(0).toUpperCase();
     refreshFaceBadge();
 
-    /* These two used to run one after another; they touch different data
-       (company profile vs. IDMS settings) so there is no reason to wait for
-       the first before starting the second — running them together cuts
-       this part of sign-in roughly in half. */
-    var profileP = C.loadProfile().then(function(p){
+    try {
+      var p = await C.loadProfile();
       document.getElementById('t-co').textContent = p.name || 'Company not set';
       /* The location/address used to be shown here as a line under the company
          name. It has been removed from the title bar by request — the company
@@ -16634,13 +16598,10 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       document.title = (p.name ? p.name + ' — ' : '') + 'IDMS';
       C.setFavicon(p.logo || '');       // the tab icon follows the company logo
       loadGateBranding(p);              // the left panel logo, in case sign-in is shown again this tab
-    }).catch(function(e){ /* the profile is decoration here, not a blocker */ });
+    } catch(e){ /* the profile is decoration here, not a blocker */ }
 
-    var settingsP = C.idms.settings().then(function(s){
-      settings = s; dbState(true, 'Database: connected');
-    }).catch(function(e){ dbState(false, 'Database: ' + e.message); });
-
-    await Promise.all([profileP, settingsP]);
+    try { settings = await C.idms.settings(); dbState(true, 'Database: connected'); }
+    catch(e){ dbState(false, 'Database: ' + e.message); }
 
     drawThemes(settings.theme && settings.theme.name);
     drawMenu();
@@ -16946,10 +16907,6 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   });
 
   document.getElementById('em-reload').addEventListener('click', function(){
-    var f = document.getElementById('em-frame');
-    f.src = f.src;                              // eslint-disable-line no-self-assign
-  });
-  document.getElementById('em-reload2').addEventListener('click', function(){
     var f = document.getElementById('em-frame');
     f.src = f.src;                              // eslint-disable-line no-self-assign
   });
@@ -17763,34 +17720,21 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      in a frame read the same token — but it does not survive re-opening the
      page, which is exactly what was asked for. */
   (async function(){
-    /* Revoking a leftover token still matters (a shared works PC must not
-       leave a live session sitting around), but it does not need to block
-       the sign-in screen from appearing — nothing below depends on it having
-       finished. Firing it without awaiting removes one full API round trip
-       from the critical path of every page open. */
-    if (C.getToken()) { C.signOut().catch(function(){}); C.setToken(''); }
-    else C.setToken('');
+    if (C.getToken()) { try { await C.signOut(); } catch(e){ C.setToken(''); } }
+    C.setToken('');
 
-    /* loadProfile() (branding) and loadGateContent() used to run one after
-       another; they don't depend on each other, so run them together —
-       this halves the wait before the sign-in screen is ready. */
-    var brandingP = C.loadProfile().then(function(p){
+    /* the company logo on the sign-in screen comes from the same profile the
+       website uses; it is readable without signing in, which is why it can be
+       shown before anybody has. The company name and address are deliberately
+       not shown here any more — only the logo, the welcome message and the
+       gallery, which come from Admin → Login Screen. */
+    try {
+      var p = await C.loadProfile();
       loadGateBranding(p);
       document.title = (p.name ? p.name + ' — ' : '') + 'IDMS';
       C.setFavicon(p.logo || '');
-    }).catch(function(e){ /* the logo is decoration, not a blocker */ });
-    var contentP = loadGateContent();
-
-    /* Face ID's camera-model download used to only start once someone
-       clicked "Face ID" — meaning the delay was live, on the sign-in
-       attempt itself. Warming it here, in the background while the person
-       is still looking at (or typing into) the sign-in screen, means it is
-       usually already loaded by the time they click. Errors are swallowed:
-       if it fails to preload, scanFace() will just load it on demand as
-       before. */
-    C.preloadFaceApi && C.preloadFaceApi().catch(function(){});
-
-    await Promise.all([brandingP, contentP]);
+    } catch(e){ /* the logo is decoration, not a blocker */ }
+    await loadGateContent();
     document.getElementById('g-user').focus();
   })();
 })();

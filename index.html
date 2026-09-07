@@ -454,28 +454,6 @@
   .rfq-summary-right{display:flex;align-items:center;gap:12px;}
   .rfq-chevron{font-size:14px;color:var(--ink-soft);width:16px;text-align:center;}
   .rfq-card.open .rfq-chevron{color:var(--gold-deep);}
-  /* ---- Tower Light: a status colour visible without opening the RFQ ---- */
-  .tower-light{display:inline-block;width:11px;height:11px;border-radius:50%;flex:0 0 auto;
-    box-shadow:0 0 0 3px rgba(255,255,255,.55),0 0 6px rgba(0,0,0,.18);}
-  /* ---- compact RFQ list row (click opens the full-screen detail view —
-     nothing here expands or pushes other rows down) ---- */
-  .rfq-row{display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;user-select:none;}
-  .rfq-row:hover{background:var(--paper);}
-  .rfq-row .rfq-row-main{flex:1;min-width:0;}
-  .rfq-row .rfq-row-arrow{font-size:15px;color:var(--ink-soft);}
-  /* ---- the full-screen RFQ working view ---- */
-  .rfq-detail-screen{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);
-    box-shadow:var(--shadow-sm);overflow:hidden;}
-  .rfq-detail-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;
-    justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;}
-  .rfq-detail-body{padding:0 22px 22px;}
-  .rfq-detail-body>*:first-child{margin-top:18px;}
-  .rfq-back-btn{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;
-    background:transparent;border:0;color:var(--sky-deep);cursor:pointer;padding:4px 0;font-weight:600;}
-  .rfq-back-btn:hover{text-decoration:underline;}
-  .rfq-action-bar{display:flex;gap:8px;flex-wrap:wrap;padding:16px 22px;background:var(--sky-wash);
-    border-bottom:1px solid var(--line);}
-  .rfq-action-bar .mini-btn{font-size:11.5px;padding:10px 16px;}
   .part-card{border:1px solid var(--line);border-left:4px solid var(--sky);border-radius:var(--radius);margin-bottom:10px;background:var(--white);overflow:hidden;}
   .part-card.open{border-left-color:var(--gold);}
   .part-summary{padding:14px 18px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;}
@@ -501,6 +479,36 @@
   .rfq-detail{font-size:var(--fs-body);color:var(--ink-mid);line-height:1.75;margin:12px 0;}
   .rfq-detail b{color:var(--navy);font-weight:600;}
   .rfq-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+
+  /* ---- RFQ Pipeline: compact list + full-screen working view -----------
+     Scoped to .rfq-card.pl / #rfq-list so the many other accordion lists
+     built on .rfq-card/.rfq-body elsewhere (orders, HR, policies…) are
+     untouched. In list mode every RFQ is one compact row, grouped into a
+     single bordered block instead of a stack of individually-boxed cards.
+     Clicking a row never expands it in place — it opens the matching RFQ
+     as a dedicated full-screen view (#rfq-list.pl-detail-mode). */
+  #rfq-list.pl-list-mode{border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;box-shadow:var(--shadow-sm);background:var(--line);}
+  #rfq-list.pl-list-mode .rfq-card.pl{margin-bottom:1px;border-radius:0;border-left-width:3px;box-shadow:none;}
+  #rfq-list.pl-list-mode .rfq-card.pl:last-child{margin-bottom:0;}
+  #rfq-list.pl-list-mode .rfq-card.pl .rfq-summary{padding:11px 18px;}
+  #rfq-list.pl-list-mode .rfq-card.pl .rfq-ref{font-size:calc(var(--fs-body)*.96);}
+  #rfq-list.pl-list-mode .rfq-card.pl .rfq-when{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #rfq-list.pl-detail-mode{background:none;}
+  #rfq-list.pl-detail-mode .rfq-card.pl:not(.open):not(.pl-error){display:none;}
+  #rfq-list.pl-detail-mode .rfq-card.pl.open{margin:0;border:0;box-shadow:none;background:transparent;border-radius:0;}
+  #rfq-list.pl-detail-mode .rfq-card.pl.open .rfq-summary{padding:14px 2px;cursor:default;}
+  #rfq-list.pl-detail-mode .rfq-card.pl.open .rfq-body{border-top:1px solid var(--line);padding:0 2px 40px;}
+  .pl-back-bar{margin:16px 0 6px;}
+  .pl-back-btn{display:inline-flex;align-items:center;gap:6px;background:var(--white);
+    border:1px solid var(--line-strong);border-radius:100px;padding:9px 20px;
+    font-family:var(--body);font-weight:600;font-size:var(--fs-body);color:var(--navy);
+    cursor:pointer;box-shadow:var(--shadow-sm);transition:.15s;}
+  .pl-back-btn:hover{border-color:var(--gold);color:var(--gold-deep);transform:translateX(-2px);}
+  /* the working view fills the screen: the KPI strip and triage agent
+     card are hidden while it is open (toggled in JS), and the side gutter
+     is trimmed to give the working screen the most room possible. */
+  #staff-page.detail-open .staff-body{padding-left:calc(var(--gutter)*.4);padding-right:calc(var(--gutter)*.4);}
   .mini-btn{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;padding:9px 15px;border-radius:100px;border:1px solid var(--line-strong);background:var(--white);color:var(--navy);}
   .mini-btn:hover{border-color:var(--sky-deep);color:var(--sky-deep);}
   .mini-btn.gold{background:linear-gradient(180deg,var(--gold-light),var(--gold));color:var(--navy-deep);border-color:transparent;font-weight:600;}
@@ -576,17 +584,7 @@
     color:var(--ink-soft);padding:5px 6px;border-bottom:1px solid var(--line);font-weight:500;}
   .dx-t td{padding:6px;border-bottom:1px solid rgba(11,42,91,.06);vertical-align:top;color:var(--ink-mid);}
   .dx-cat{font-weight:600;color:var(--navy);white-space:nowrap;}
-  .dx-num{font-family:var(--mono);color:var(--chat-b);font-weight:700;text-align:center;width:22px;}
   .dx-src{font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);}
-  .dx-balloon{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);}
-  .dx-balloon-img{max-width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);
-    display:block;margin-bottom:10px;background:#fff;}
-  .stage-doc{border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px;margin-top:12px;background:#fff;}
-  .stage-doc-head{font-family:var(--disp);font-size:13.5px;color:var(--navy);margin-bottom:10px;font-weight:700;}
-  .stage-doc-grid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(260px,1.2fr);gap:18px;}
-  @media (max-width:760px){.stage-doc-grid{grid-template-columns:1fr;}}
-  .stage-doc-svg{width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff;display:block;}
-  .stage-doc-sub{font-weight:700;font-size:11.5px;color:var(--navy);margin-bottom:6px;}
   .cf{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:100px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;}
   .cf-hi{background:#E6F7F0;color:var(--ok);} .cf-md{background:#FFF6E0;color:var(--gold-deep);} .cf-lo{background:#FDECEA;color:#B03A2E;}
   .dx-crit{margin-top:12px;font-size:var(--fs-micro);color:var(--navy);}
@@ -1107,7 +1105,7 @@
   </div>
   <div class="staff-body">
     <div id="ai-status"></div>
-    <div class="qb" id="rfq-triage-box" style="margin-bottom:18px;">
+    <div class="qb" id="pl-triage-card" style="margin-bottom:18px;">
       <h4>🤖 RFQ Triage Agent</h4>
       <div class="field-hint" style="margin-bottom:10px;">Reads every open enquiry and says which to
         act on and what is stopping each one. The checks are fixed rules over the enquiries
@@ -2404,23 +2402,6 @@ I would recommend this company as a place to work</textarea></div></div>
   const slug=s=>'sec-'+String(s||'section').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,30);
   const makeRef=()=>'RFQ-'+Date.now().toString(36).toUpperCase().slice(-4)+Math.random().toString(36).slice(2,4).toUpperCase();
   const STAGES=["Received","Quote Drafted","Awaiting Approval","Approved & Sent","Won","Closed"];
-  /* Tower Light — a status colour a supervisor can read from across the room,
-     without opening the RFQ. Keyed on the same STAGES list everything else
-     already uses, so a stage can never show a colour nothing maps to. A true
-     Admin Panel control for these would be the natural next step; for now
-     they are defined once, here, in the same place STAGES itself is. */
-  const TOWER_LIGHTS={
-    "Received":          {c:"#D64541", label:"New — action required"},
-    "Quote Drafted":     {c:"#2F6FD6", label:"AI analysis / costing"},
-    "Awaiting Approval": {c:"#E0A82E", label:"Under review"},
-    "Approved & Sent":   {c:"#E07B1E", label:"Quotation sent"},
-    "Won":                {c:"#2E9E5B", label:"Won"},
-    "Closed":            {c:"#8A94A6", label:"Closed / cancelled"}
-  };
-  function towerLight(status){
-    const t=TOWER_LIGHTS[status]||TOWER_LIGHTS.Received;
-    return `<span class="tower-light" style="background:${t.c}" title="${esc(t.label)}"></span>`;
-  }
   const LAYOUT_DEFAULTS={fontBase:16,titleScale:1,gutter:26,sectionPad:84,cardMin:300,cardGap:22,cardPad:24,
     mediaH:220,portraitH:300,radius:14,barHeight:78,logoMax:230};
 
@@ -2666,7 +2647,7 @@ I would recommend this company as a place to work</textarea></div></div>
      it inherits localStorage. It is the session token, not a credential, and
      the server can still end it at any time regardless of where it is kept. */
   const TOKEN_KEY='app_token';
-  let token=null, currentUser='', rfqs=[], dirty=false, cloudOK=false, openRfqRef=null;
+  let token=null, currentUser='', rfqs=[], dirty=false, cloudOK=false, expandedRfq=null;
   try{ token=localStorage.getItem(TOKEN_KEY)||null; }catch(e){ token=null; }
   function keepToken(t){
     token=t||null;
@@ -3650,18 +3631,13 @@ RULES — these matter more than completeness:
 - For each item give the source (e.g. "title block", "general note 3", "dimension callout", "GD&T frame").
 - Give confidence as one of: High, Medium, Low.
 - Anything a quotation would normally need but which is absent goes in "missing".
-- For each requirement, also estimate roughly WHERE on the sheet it is written, as "x" and
-  "y" — percentages (0-100) of the sheet's width and height from the top-left corner. This
-  is only used to place a small reference number near it on a copy of the drawing, so a
-  rough position (which view, which corner) is far more useful than no position at all.
-  Omit x/y only if you genuinely cannot place the item anywhere on the sheet at all.
 
 Reply with ONLY a JSON object, no commentary and no code fences:
 {
  "part": {"number":"","name":"","drawingNumber":"","revision":""},
  "requirements":[
    {"category":"Material|Dimension|Tolerance|GD&T|Surface Finish|Heat Treatment|Surface Treatment|Thread|Quantity|Packaging|Quality|Other",
-    "requirement":"", "source":"", "confidence":"High|Medium|Low", "x":0, "y":0}
+    "requirement":"", "source":"", "confidence":"High|Medium|Low"}
  ],
  "criticalCharacteristics":[""],
  "missing":[""],
@@ -3692,22 +3668,18 @@ Reply with ONLY a JSON object, no commentary and no code fences:
 
   function extractHtml(r,i){
     const x=r.extract;
-    if(!x) return !r.fileName?`<div class="field-hint">No attachment on this RFQ to read.</div>`:'';
+    if(!x) return `<div class="rfq-actions">
+      <button class="mini-btn ai" data-act="read" data-i="${i}">Read drawing with AI</button>
+      ${!r.fileName?`<span class="t-micro" style="align-self:center;">No attachment on this RFQ</span>`:''}</div>`;
     if(x.error) return `<div class="dx"><div class="dx-err">${esc(x.error)}</div>
       <div class="rfq-actions"><button class="mini-btn ai" data-act="read" data-i="${i}">Try again</button></div></div>`;
 
     const p=x.part||{};
-    const reqs=x.requirements||[];
-    const rows=reqs.map((q,qi)=>`<tr>
-      <td class="dx-num">${qi+1}</td>
+    const rows=(x.requirements||[]).map(q=>`<tr>
       <td class="dx-cat">${esc(q.category)}</td><td>${esc(q.requirement)}</td>
       <td class="dx-src">${esc(q.source)}</td>
       <td><span class="cf ${CONF_CLASS(q.confidence)}">${esc(q.confidence)}</span></td></tr>`).join('')
-      || `<tr><td colspan="5" class="t-micro">Nothing could be read from this drawing.</td></tr>`;
-
-    const canBalloon=r.fileName && !CAD_EXT.test(r.fileName) && READABLE.test((attachmentFrom(r.fileDataUrl)||{}).mime||'')
-      && reqs.some(q=>Number.isFinite(q.x)&&Number.isFinite(q.y));
-    const b=r.ballooned;
+      || `<tr><td colspan="4" class="t-micro">Nothing could be read from this drawing.</td></tr>`;
 
     return `<div class="dx">
       <div class="dx-head">
@@ -3719,7 +3691,7 @@ Reply with ONLY a JSON object, no commentary and no code fences:
         ${p.name?`<span><i>Name</i>${esc(p.name)}</span>`:''}
         ${p.drawingNumber?`<span><i>Drawing</i>${esc(p.drawingNumber)}</span>`:''}
         ${p.revision?`<span><i>Rev</i>${esc(p.revision)}</span>`:''}</div>`:''}
-      <table class="dx-t"><thead><tr><th>#</th><th>Category</th><th>Requirement</th><th>Source</th><th>Conf.</th></tr></thead>
+      <table class="dx-t"><thead><tr><th>Category</th><th>Requirement</th><th>Source</th><th>Conf.</th></tr></thead>
       <tbody>${rows}</tbody></table>
       ${(x.criticalCharacteristics||[]).filter(Boolean).length?`<div class="dx-crit"><b>Critical characteristics:</b>
         ${x.criticalCharacteristics.filter(Boolean).map(esc).join(' · ')}</div>`:''}
@@ -3730,78 +3702,7 @@ Reply with ONLY a JSON object, no commentary and no code fences:
         <button class="mini-btn" data-act="toquote" data-i="${i}">Use as quotation line</button>
         ${(x.missing||[]).filter(Boolean).length?`<button class="mini-btn" data-act="clarify" data-i="${i}">Draft clarification email</button>`:''}
         <button class="mini-btn ai" data-act="read" data-i="${i}">Re-read</button>
-      </div>
-      ${canBalloon||b?`<div class="dx-balloon">
-        <div class="dx-head"><b>Ballooned drawing</b>${b?`<span class="t-micro">${esc(b.generatedAt||'')}</span>`:''}</div>
-        <div class="field-hint" style="margin-bottom:8px;">Each number matches the # column above, placed
-          at the AI's best estimate of where that requirement is written on the sheet — treat placement as
-          approximate, not survey-accurate.</div>
-        ${b?`<img class="dx-balloon-img" src="${b.dataUrl}" alt="Ballooned drawing">`:''}
-        <div class="rfq-actions">
-          ${canBalloon?`<button class="mini-btn ai" data-act="balloon" data-i="${i}">${b?'Regenerate ballooned drawing':'Generate ballooned drawing'}</button>`:''}
-          ${b?`<a class="mini-btn" href="${b.dataUrl}" download="${esc((r.ref||'drawing'))}-ballooned.png">Download</a>
-          <a class="mini-btn" href="${b.dataUrl}" target="_blank" rel="noopener">View full size</a>`:''}
-        </div>
-      </div>`:''}
-      </div>`;
-  }
-
-  /* ---- Ballooned drawing: numbered callouts on a copy of the original sheet ----
-     Reuses the AI's own x/y guess for each requirement (added to
-     EXTRACT_PROMPT above) — no second AI call needed. Works on the image
-     directly, or rasterises page 1 of a PDF with pdf.js (already loaded on
-     this page). Placement is only ever as good as the AI's estimate: treat
-     it as "which corner, which view", not survey-grade coordinates. */
-  async function rasterizeAttachmentToCanvas(r){
-    const src=r.fileDataUrl||'';
-    if(!src) throw new Error('No attachment on this RFQ.');
-    let dataUrl=src;
-    if(!dataUrl.startsWith('data:')){
-      const res=await fetch(dataUrl); const blob=await res.blob();
-      dataUrl=await new Promise((ok,fail)=>{const fr=new FileReader();
-        fr.onload=()=>ok(fr.result); fr.onerror=fail; fr.readAsDataURL(blob);});
-    }
-    const att=attachmentFrom(dataUrl);
-    if(!att) throw new Error('Could not read the attachment.');
-    if(/^application\/pdf$/i.test(att.mime)){
-      if(!window.pdfjsLib) throw new Error('The PDF viewer component did not load — check the internet connection.');
-      pdfjsLib.GlobalWorkerOptions.workerSrc=
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      const bin=atob(att.b64); const arr=new Uint8Array(bin.length);
-      for(let k=0;k<bin.length;k++) arr[k]=bin.charCodeAt(k);
-      const pdf=await pdfjsLib.getDocument({data:arr}).promise;
-      const page=await pdf.getPage(1);
-      const base=page.getViewport({scale:1});
-      const scale=Math.min(2200/base.width,2200/base.height,3);
-      const vp=page.getViewport({scale:Math.max(scale,1)});
-      const canvas=document.createElement('canvas');
-      canvas.width=Math.round(vp.width); canvas.height=Math.round(vp.height);
-      await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
-      return canvas;
-    }
-    const img=await new Promise((ok,fail)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=fail;im.src=dataUrl;});
-    const canvas=document.createElement('canvas');
-    canvas.width=img.naturalWidth||1000; canvas.height=img.naturalHeight||1000;
-    canvas.getContext('2d').drawImage(img,0,0);
-    return canvas;
-  }
-  async function generateBalloonedDrawing(r){
-    const canvas=await rasterizeAttachmentToCanvas(r);
-    const ctx=canvas.getContext('2d');
-    const reqs=(r.extract&&r.extract.requirements)||[];
-    const rad=Math.max(13,Math.round(Math.min(canvas.width,canvas.height)*0.015));
-    reqs.forEach((q,qi)=>{
-      if(!Number.isFinite(q.x)||!Number.isFinite(q.y)) return;
-      const cx=Math.max(rad,Math.min(canvas.width-rad,(q.x/100)*canvas.width));
-      const cy=Math.max(rad,Math.min(canvas.height-rad,(q.y/100)*canvas.height));
-      ctx.beginPath(); ctx.arc(cx,cy,rad,0,Math.PI*2);
-      ctx.fillStyle='rgba(255,255,255,.94)'; ctx.fill();
-      ctx.lineWidth=Math.max(2,rad*0.14); ctx.strokeStyle='#B03A2E'; ctx.stroke();
-      ctx.fillStyle='#B03A2E'; ctx.font='bold '+Math.round(rad*1.05)+'px Arial, sans-serif';
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(String(qi+1),cx,cy+1);
-    });
-    return canvas.toDataURL('image/png');
+      </div></div>`;
   }
 
   function extractSummaryLine(x){
@@ -9139,21 +9040,6 @@ Rules:
   }
 
   const SRC_CLASS=s=>/supplier|quote|verified/i.test(s)?'verified':/ai|estimate/i.test(s)?'ai':'';
-  /* A "source" is normally a short note like "Company price book", not a
-     link — there is nothing to click. If a source string does happen to
-     contain a real URL (a supplier quote link, a document on record, a
-     public price page), it becomes a clickable link so the user can open
-     the actual reference directly rather than retyping it. */
-  const URL_RE=/(https?:\/\/[^\s"'<>]+)/i;
-  function sourceHtml(s){
-    s=s||'—';
-    const m=String(s).match(URL_RE);
-    if(!m) return esc(s);
-    const url=m[1];
-    return esc(s.slice(0,m.index))+
-      `<a href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:underline;">${esc(url)}</a>`+
-      esc(s.slice(m.index+url.length));
-  }
   const listCost=arr=>(arr||[]).reduce((t,i)=>{
     const life=num(i.life);
     const per=life>0?num(i.unitCost)/life:num(i.costPerPart);
@@ -9281,10 +9167,7 @@ Customer's stated requirement: ${r.message||'(none given)'}
    set confidence honestly — Low if you are unsure of current market levels.
 3. TOOLING. For every operation list the cutting tools, inserts and tool holders needed.
    Give specification, typical unit cost, and expected tool life in PIECES for this component.
-4. CONSUMABLES. List coolant, cutting oil, deburring media, cleaning agents etc. with cost per
-   piece, and say which operation number ("op") each belongs to where that is meaningful
-   (e.g. cutting oil against the turning op, deburring media against a deburr op). Leave "op"
-   blank only for something genuinely general to the whole part, such as final wash or packing wipe.
+4. CONSUMABLES. List coolant, cutting oil, deburring media, cleaning agents etc. with cost per piece.
 5. PACKAGING. The customer has not specified packaging. Recommend the lowest-cost packaging
    that protects this component adequately for the stated quantity — state the method,
    the materials, and an estimated cost per piece.
@@ -9312,7 +9195,7 @@ Reply with ONLY this JSON, no commentary or code fences:
    {"op":10,"item":"","kind":"Tool|Insert|Holder|Gauge","spec":"","unitCost":0,"life":0,"source":"","confidence":"High|Medium|Low"}
  ],
  "consumables":[
-   {"op":10,"item":"","spec":"","costPerPart":0,"source":"","confidence":"High|Medium|Low"}
+   {"item":"","spec":"","costPerPart":0,"source":"","confidence":"High|Medium|Low"}
  ],
  "packaging":{"method":"","materials":"","costPerPart":0,"source":"","basis":""},
  "freight":{"method":"","destination":"","costPerPart":0,"source":"","basis":""},
@@ -9375,7 +9258,7 @@ Reply with ONLY this JSON, no commentary or code fences:
       unitCost:num(t.unitCost),life:num(t.life),
       source:t.source||'Market estimate',confidence:t.confidence||'Medium'}));
     c.consumables=(p.consumables||[]).filter(t=>t&&t.item).map(t=>({
-      op:t.op||'',item:t.item,spec:t.spec||'',costPerPart:num(t.costPerPart),
+      item:t.item,spec:t.spec||'',costPerPart:num(t.costPerPart),
       source:t.source||'Market estimate',confidence:t.confidence||'Medium'}));
     const pk=p.packaging||{}, fr=p.freight||{};
     c.packaging={method:pk.method||'',materials:pk.materials||'',costPerPart:num(pk.costPerPart),
@@ -9525,7 +9408,7 @@ Reply with ONLY this JSON, no commentary or code fences:
     <tbody>${c.bom.map(bm=>`<tr><td>${esc(bm.item)}</td><td>${esc(bm.type)}</td><td>${esc(bm.spec||'—')}</td>
       <td class="r">${num(bm.qtyPerPart)}</td><td>${esc(bm.unit)}</td><td class="r">${money2(bm.rate)}</td>
       <td class="r b">${money2(num(bm.costPerPart)||(num(bm.qtyPerPart)*num(bm.rate)))}</td>
-      <td class="src">${sourceHtml(bm.source)}</td></tr>`).join('')}
+      <td class="src">${esc(bm.source||'—')}</td></tr>`).join('')}
     <tr><td colspan="6" class="r b">Material total per piece</td><td class="r b">${money2(t.materialCost)}</td><td></td></tr>
     </tbody></table>`:''}
   <div class="src-note"><b>Price source:</b> ${esc(c.material.rateSource||'not stated')}${c.material.rateDate?' · '+esc(c.material.rateDate):''}
@@ -9547,7 +9430,7 @@ Reply with ONLY this JSON, no commentary or code fences:
       <td>${esc(tl.spec||'—')}</td><td class="r">${money2(tl.unitCost)}</td>
       <td class="r">${num(tl.life)||'—'}</td>
       <td class="r b">${money2(num(tl.life)>0?num(tl.unitCost)/num(tl.life):0)}</td>
-      <td class="src">${sourceHtml(tl.source)}</td></tr>`).join('')}
+      <td class="src">${esc(tl.source||'—')}</td></tr>`).join('')}
     <tr><td colspan="5" class="r b">Tooling total per piece</td><td class="r b">${money2(listCost(c.tooling))}</td><td></td></tr>
     </tbody></table>`:''}
 
@@ -9555,7 +9438,7 @@ Reply with ONLY this JSON, no commentary or code fences:
   <table><thead><tr><th style="width:45mm">Item</th><th>Specification</th>
     <th class="r" style="width:20mm">Cost/pc</th><th style="width:32mm">Source</th></tr></thead>
     <tbody>${c.consumables.map(cn=>`<tr><td>${esc(cn.item)}</td><td>${esc(cn.spec||'—')}</td>
-      <td class="r b">${money2(cn.costPerPart)}</td><td class="src">${sourceHtml(cn.source)}</td></tr>`).join('')}
+      <td class="r b">${money2(cn.costPerPart)}</td><td class="src">${esc(cn.source||'—')}</td></tr>`).join('')}
     <tr><td colspan="2" class="r b">Consumables total per piece</td><td class="r b">${money2(listCost(c.consumables))}</td><td></td></tr>
     </tbody></table>`:''}
 
@@ -9625,7 +9508,8 @@ Reply with ONLY this JSON, no commentary or code fences:
 
   function costingHtml(r,i){
     const c=normaliseCosting(r.costing);
-    if(!c) return '';
+    if(!c) return `<div class="rfq-actions">
+      <button class="mini-btn ai" data-act="cost" data-i="${i}">Work out cost with AI</button></div>`;
     if(c.error) return `<div class="cs"><div class="dx-err">${esc(c.error)}</div>
       <div class="rfq-actions"><button class="mini-btn ai" data-act="cost" data-i="${i}">Try again</button></div></div>`;
 
@@ -9684,7 +9568,7 @@ Reply with ONLY this JSON, no commentary or code fences:
           <td style="width:52px"><input class="cb" data-i="${i}" data-bi="${bi}" data-k="unit" value="${esc(bm.unit)}"></td>
           <td style="width:72px"><input class="cb num" data-i="${i}" data-bi="${bi}" data-k="rate" value="${esc(bm.rate)}"></td>
           <td class="r">${money(num(bm.costPerPart)||(num(bm.qtyPerPart)*num(bm.rate)))}</td>
-          <td style="width:104px"><span class="src-tag ${SRC_CLASS(bm.source)}">${sourceHtml(bm.source)}</span></td>
+          <td style="width:104px"><span class="src-tag ${SRC_CLASS(bm.source)}">${esc(bm.source||'—')}</span></td>
           <td><button class="qb-del" data-act="delbom" data-i="${i}" data-bi="${bi}">×</button></td></tr>`).join('')
           ||'<tr><td colspan="9" class="t-micro">No bill of material — falls back to blank weight × rate.</td></tr>'}</tbody></table>
       <button class="qb-add" data-act="addbom" data-i="${i}">+ Add BOM line</button>
@@ -9706,21 +9590,20 @@ Reply with ONLY this JSON, no commentary or code fences:
           <td style="width:74px"><input class="ct num" data-i="${i}" data-ti="${ti}" data-k="unitCost" value="${esc(tl.unitCost)}"></td>
           <td style="width:64px"><input class="ct num" data-i="${i}" data-ti="${ti}" data-k="life" value="${esc(tl.life)}"></td>
           <td class="r">${money(num(tl.life)>0?num(tl.unitCost)/num(tl.life):0)}</td>
-          <td style="width:110px"><span class="src-tag ${SRC_CLASS(tl.source)}">${sourceHtml(tl.source)}</span></td>
+          <td style="width:110px"><span class="src-tag ${SRC_CLASS(tl.source)}">${esc(tl.source||'—')}</span></td>
           <td><button class="qb-del" data-act="deltool" data-i="${i}" data-ti="${ti}">×</button></td></tr>`).join('')
           ||'<tr><td colspan="8" class="t-micro">No tooling listed.</td></tr>'}</tbody></table>
       <button class="qb-add" data-act="addtool" data-i="${i}">+ Add tooling item</button>
 
       <div class="cs-sub">Consumables</div>
-      <table class="cs-t"><thead><tr><th>Op</th><th>Item</th><th>Specification</th><th class="r">Cost/pc</th><th>Source</th><th></th></tr></thead>
+      <table class="cs-t"><thead><tr><th>Item</th><th>Specification</th><th class="r">Cost/pc</th><th>Source</th><th></th></tr></thead>
         <tbody>${(c.consumables||[]).map((cn,ci)=>`<tr>
-          <td style="width:38px"><input class="cc" data-i="${i}" data-ci="${ci}" data-k="op" value="${esc(cn.op||'')}"></td>
           <td><input class="cc" data-i="${i}" data-ci="${ci}" data-k="item" value="${esc(cn.item)}"></td>
           <td><input class="cc" data-i="${i}" data-ci="${ci}" data-k="spec" value="${esc(cn.spec)}"></td>
           <td style="width:74px"><input class="cc num" data-i="${i}" data-ci="${ci}" data-k="costPerPart" value="${esc(cn.costPerPart)}"></td>
-          <td style="width:110px"><span class="src-tag ${SRC_CLASS(cn.source)}">${sourceHtml(cn.source)}</span></td>
+          <td style="width:110px"><span class="src-tag ${SRC_CLASS(cn.source)}">${esc(cn.source||'—')}</span></td>
           <td><button class="qb-del" data-act="delcons" data-i="${i}" data-ci="${ci}">×</button></td></tr>`).join('')
-          ||'<tr><td colspan="6" class="t-micro">No consumables listed.</td></tr>'}</tbody></table>
+          ||'<tr><td colspan="5" class="t-micro">No consumables listed.</td></tr>'}</tbody></table>
       <button class="qb-add" data-act="addcons" data-i="${i}">+ Add consumable</button>
 
       <div class="cs-sub">Packaging &amp; Freight — proposed by AI where the customer did not specify</div>
@@ -9775,134 +9658,6 @@ Reply with ONLY this JSON, no commentary or code fences:
         <button class="mini-btn" data-act="costpdf" data-i="${i}">Print cost sheet</button>
         <button class="mini-btn ai" data-act="cost" data-i="${i}">Re-plan route</button>
       </div></div>`;
-  }
-
-  /* ================= STAGE / PROCESS DOCUMENTS ================= */
-  /* These are generated reference sheets, not CAD/CAM output — there is no
-     drafting or CAM engine here to derive a real tool path or fixture
-     design from a 2D drawing. Each sheet records the process identity
-     (part, process number and name), lists the requirements read off the
-     original drawing, and shows a placeholder outline marking where
-     clamping is indicated. It is a route-card-style record per operation,
-     built from the process route, tooling and consumables already in the
-     costing above — not a substitute for a manufacturing engineer's actual
-     process plan. Because nothing here can yet tell which individual
-     requirement belongs to which specific operation, every sheet shows the
-     full requirement set and says so, rather than guessing at a filter. */
-  function csvEscape(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
-  function rowsToCsv(headers,rows){
-    return [headers.map(csvEscape).join(',')].concat(rows.map(r=>r.map(csvEscape).join(','))).join('\r\n');
-  }
-  function buildStageSvg(op,part,reqs,companyName){
-    const W=920,H=650,M=24;
-    const reqLines=(reqs||[]).slice(0,14);
-    const reqRows=reqLines.map((q,qi)=>
-      `<text x="${M+16}" y="${192+qi*20}" font-size="11" font-family="Arial" fill="#1b2b44">${esc(qi+1)}. ${esc(q.category)}: ${esc(q.requirement)}</text>`
-    ).join('');
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="Arial">
-      <rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>
-      <rect x="${M}" y="${M}" width="${W-2*M}" height="${H-2*M}" fill="none" stroke="#0B2A5B" stroke-width="2"/>
-      <rect x="${M+6}" y="${M+6}" width="${W-2*M-12}" height="${H-2*M-12}" fill="none" stroke="#0B2A5B" stroke-width="0.75"/>
-      <text x="${M+16}" y="${M+34}" font-size="17" font-weight="700" fill="#0B2A5B">${esc(companyName||'')}</text>
-      <text x="${M+16}" y="${M+54}" font-size="12" letter-spacing="2" fill="#5b6b85">STAGE / PROCESS DRAWING</text>
-      <line x1="${M+16}" y1="${M+66}" x2="${W-M-16}" y2="${M+66}" stroke="#c7cedb"/>
-      <text x="${M+16}" y="176" font-size="12" font-weight="700" fill="#0B2A5B">Requirements read from the drawing (full set — not yet filtered per operation):</text>
-      ${reqRows || `<text x="${M+16}" y="192" font-size="11" fill="#5b6b85">No requirements were read from the drawing.</text>`}
-      <g>
-        <rect x="${W-360}" y="170" width="300" height="220" fill="#F4F7FC" stroke="#0B2A5B" stroke-width="1.5"/>
-        <rect x="${W-340}" y="210" width="130" height="70" fill="none" stroke="#B03A2E" stroke-width="1.5" stroke-dasharray="5,3"/>
-        <text x="${W-340}" y="204" font-size="9.5" fill="#B03A2E">CLAMPING AREA (indicative)</text>
-        <path d="M ${W-330} 330 C ${W-260} 300, ${W-160} 360, ${W-90} 320" fill="none" stroke="#2F6FD6" stroke-width="1.5" marker-end="url(#sd-arrow)"/>
-        <text x="${W-330}" y="345" font-size="9.5" fill="#2F6FD6">TOOL PATH (indicative)</text>
-        <text x="${W-355}" y="405" font-size="9" fill="#8A94A6">Actual part geometry, fixturing and tool path are set by the</text>
-        <text x="${W-355}" y="418" font-size="9" fill="#8A94A6">shop's own process planning — this sheet is a process record,</text>
-        <text x="${W-355}" y="431" font-size="9" fill="#8A94A6">not a CAM output.</text>
-      </g>
-      <defs><marker id="sd-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2F6FD6"/></marker></defs>
-      <g>
-        <rect x="${M+6}" y="${H-M-92}" width="${W-2*M-12}" height="86" fill="#F7F9FC" stroke="#0B2A5B" stroke-width="1"/>
-        <text x="${M+16}" y="${H-M-70}" font-size="10" fill="#5b6b85">PART NAME</text>
-        <text x="${M+16}" y="${H-M-54}" font-size="13" font-weight="700" fill="#0B2A5B">${esc(part.name||'—')}</text>
-        <text x="${M+220}" y="${H-M-70}" font-size="10" fill="#5b6b85">PART CODE</text>
-        <text x="${M+220}" y="${H-M-54}" font-size="13" font-weight="700" fill="#0B2A5B">${esc(part.number||'—')}</text>
-        <text x="${M+400}" y="${H-M-70}" font-size="10" fill="#5b6b85">REV</text>
-        <text x="${M+400}" y="${H-M-54}" font-size="13" font-weight="700" fill="#0B2A5B">${esc(part.revision||'—')}</text>
-        <text x="${M+470}" y="${H-M-70}" font-size="10" fill="#5b6b85">PROCESS NO.</text>
-        <text x="${M+470}" y="${H-M-54}" font-size="13" font-weight="700" fill="#0B2A5B">${esc(op.op)}</text>
-        <text x="${M+620}" y="${H-M-70}" font-size="10" fill="#5b6b85">PROCESS</text>
-        <text x="${M+620}" y="${H-M-54}" font-size="13" font-weight="700" fill="#0B2A5B">${esc(op.process||'—')}</text>
-        <text x="${M+16}" y="${H-M-24}" font-size="10" fill="#5b6b85">NOTES</text>
-        <text x="${M+16}" y="${H-M-9}" font-size="11" fill="#1b2b44">${esc(op.notes||'—')}</text>
-        <text x="${W-M-190}" y="${H-M-9}" font-size="9.5" fill="#8A94A6">Generated ${esc(new Date().toLocaleDateString())}</text>
-      </g>
-    </svg>`;
-  }
-  function generateStageDocs(r){
-    const c=normaliseCosting(r.costing);
-    if(!c || !c.operations || !c.operations.length)
-      throw new Error('Work out cost with AI first — process documents are built from the process route.');
-    const part=(r.extract&&r.extract.part)||{};
-    const reqs=(r.extract&&r.extract.requirements)||[];
-    const companyName=(data.company&&data.company.name)||data.brandName||'';
-    const items=c.operations.map(op=>{
-      const tools=(c.tooling||[]).filter(t=>String(t.op)===String(op.op));
-      const consumables=(c.consumables||[]).filter(cn=>String(cn.op||'')===String(op.op));
-      return {
-        op:op.op, process:op.process||'',
-        svg:buildStageSvg(op,part,reqs,companyName),
-        tools:tools.map(t=>({item:t.item,kind:t.kind||'',spec:t.spec||'',unitCost:num(t.unitCost),life:t.life||''})),
-        consumables:consumables.map(cn=>({item:cn.item,spec:cn.spec||'',costPerPart:num(cn.costPerPart)}))
-      };
-    });
-    return {generatedAt:new Date().toLocaleString(), items};
-  }
-  function stageDocsHtml(r,i){
-    const c=normaliseCosting(r.costing);
-    if(!c || !c.operations || !c.operations.length) return '';
-    const docs=r.stageDocs;
-    const cur=(QC().currencySymbol)||'₹';
-    const fmt=n=>cur+num(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-    return `<div class="dx" style="border-left-color:var(--gold);">
-      <div class="dx-head"><b>Process-wise documents</b>${docs?`<span class="t-micro">${esc(docs.generatedAt||'')}</span>`:''}</div>
-      <div class="field-hint" style="margin-bottom:10px;">One stage drawing, tool list and consumables list per
-        operation in the process route above — generated reference sheets, not CAD/CAM output. Requirements
-        shown on each sheet are the full set read from the drawing; individual requirements are not yet
-        attributed to individual operations.</div>
-      <div class="rfq-actions" style="margin-bottom:4px;">
-        <button class="mini-btn ai" data-act="stagedocs" data-i="${i}">${docs?'Regenerate process documents':'Generate process documents'}</button>
-      </div>
-      ${docs&&docs.items&&docs.items.length?docs.items.map(d=>{
-        const svgUri='data:image/svg+xml,'+encodeURIComponent(d.svg);
-        const toolCsv='data:text/csv;charset=utf-8,'+encodeURIComponent(rowsToCsv(
-          ['Item','Kind','Spec','Unit cost','Life (pcs)'],d.tools.map(t=>[t.item,t.kind,t.spec,t.unitCost,t.life])));
-        const consCsv='data:text/csv;charset=utf-8,'+encodeURIComponent(rowsToCsv(
-          ['Item','Spec','Cost per part'],d.consumables.map(cn=>[cn.item,cn.spec,cn.costPerPart])));
-        return `<div class="stage-doc">
-          <div class="stage-doc-head">Process ${esc(d.op)} — ${esc(d.process||'—')}</div>
-          <div class="stage-doc-grid">
-            <div>
-              <img class="stage-doc-svg" src="${svgUri}" alt="Stage drawing — process ${esc(d.op)}">
-              <div class="rfq-actions">
-                <a class="mini-btn" href="${svgUri}" target="_blank" rel="noopener">View</a>
-                <a class="mini-btn" href="${svgUri}" download="${esc(r.ref)}-op${esc(d.op)}-stage-drawing.svg">Download</a>
-              </div>
-            </div>
-            <div>
-              <div class="stage-doc-sub">Tool details (${d.tools.length})</div>
-              <table class="dx-t"><thead><tr><th>Item</th><th>Kind</th><th>Spec</th><th>Cost</th><th>Life</th></tr></thead>
-                <tbody>${d.tools.map(t=>`<tr><td>${esc(t.item)}</td><td>${esc(t.kind)}</td><td>${esc(t.spec)}</td><td>${fmt(t.unitCost)}</td><td>${esc(t.life)}</td></tr>`).join('')
-                  ||'<tr><td colspan="5" class="t-micro">No tools linked to this operation.</td></tr>'}</tbody></table>
-              <div class="rfq-actions"><a class="mini-btn" href="${toolCsv}" download="${esc(r.ref)}-op${esc(d.op)}-tools.csv">Download CSV</a></div>
-              <div class="stage-doc-sub" style="margin-top:10px;">Consumables (${d.consumables.length})</div>
-              <table class="dx-t"><thead><tr><th>Item</th><th>Spec</th><th>Cost/pc</th></tr></thead>
-                <tbody>${d.consumables.map(cn=>`<tr><td>${esc(cn.item)}</td><td>${esc(cn.spec)}</td><td>${fmt(cn.costPerPart)}</td></tr>`).join('')
-                  ||'<tr><td colspan="3" class="t-micro">No consumables linked to this operation.</td></tr>'}</tbody></table>
-              <div class="rfq-actions"><a class="mini-btn" href="${consCsv}" download="${esc(r.ref)}-op${esc(d.op)}-consumables.csv">Download CSV</a></div>
-            </div>
-          </div>
-        </div>`;
-      }).join(''):''}
-    </div>`;
   }
 
   /* ================= QUOTATION DOCUMENT ENGINE ================= */
@@ -10230,12 +9985,9 @@ Reply with ONLY this JSON, no commentary or code fences:
       triFindings.map(f => `<tr>
         <td><span class="order-badge ${TRI_SEV[f.sev].cls}">${TRI_SEV[f.sev].label}</span>
           ${f.age!==null?`<div class="t-micro">${f.age} days old</div>`:''}</td>
-        <td><button type="button" class="rfq-back-btn" data-open-ref="${esc(f.ref)}" style="padding:0;">${esc(f.ref)}</button><div class="t-micro">${esc(f.status)}</div></td>
+        <td><b>${esc(f.ref)}</b><div class="t-micro">${esc(f.status)}</div></td>
         <td>${esc(f.who)}</td><td>${esc(f.what)}</td>
         <td class="t-micro">${esc(f.why)}</td></tr>`).join('') + '</tbody></table>';
-    host.querySelectorAll('[data-open-ref]').forEach(b=>b.addEventListener('click',()=>{
-      openRfqRef=b.dataset.openRef; renderRfqAdmin(); window.scrollTo({top:0,behavior:'smooth'});
-    }));
   }
 
   async function explainTriage(){
@@ -10279,40 +10031,57 @@ Reply with ONLY this JSON, no commentary or code fences:
       ].filter(Boolean) });
   }
 
-  /* ---- the full-screen working view for a single RFQ ----
-     One action bar, in the fixed order asked for, with WhatsApp-forwarding
-     removed entirely. The buttons carry the same data-act values the
-     existing handlers already listen for ("read", "cost", "gen",
-     "startquote"), so clicking one here does exactly what the equivalent
-     button used to do lower down the old expanding card — nothing about
-     what each action DOES has changed, only where you trigger it from. */
-  function renderRfqDetail(r,i){
-    try{
+  function renderRfqAdmin(){
+    const kpi=document.getElementById('kpi-row'), host=document.getElementById('rfq-list');
+    const triageCard=document.getElementById('pl-triage-card'), aiStatusEl=document.getElementById('ai-status');
+    const stage=document.getElementById('staff-page');
+    const counts=STAGES.map(s=>rfqs.filter(r=>(r.status||'Received')===s).length);
+    kpi.innerHTML=`<div class="kpi"><b>${rfqs.length}</b><span>Total RFQs</span></div>`+
+      STAGES.map((s,i)=>`<div class="kpi"><b>${counts[i]}</b><span>${s}</span></div>`).join('');
+    // A selected RFQ opens as a dedicated full-screen working view rather than
+    // expanding in place, so the triage agent and KPI strip step aside for it —
+    // preserving which RFQ is open (expandedRfq) is what lets Back return to
+    // exactly where the user left the list.
+    const detailOpen = !!(expandedRfq && rfqs.some(r=>r.ref===expandedRfq));
+    if(triageCard) triageCard.style.display = detailOpen ? 'none' : '';
+    if(aiStatusEl) aiStatusEl.style.display = detailOpen ? 'none' : '';
+    if(stage) stage.classList.toggle('detail-open', detailOpen);
+    if(!rfqs.length){host.innerHTML='<p class="empty-note">No RFQs yet.</p>';host.className='';return;}
+    host.className = detailOpen ? 'pl-detail-mode' : 'pl-list-mode';
+    // one problem record must never blank the whole pipeline
+    const safeCard=(fn,i,r)=>{
+      try{ return fn(); }
+      catch(e){
+        console.error('RFQ card failed',r&&r.ref,e);
+        return `<div class="rfq-card pl pl-error"><div class="rfq-ref">${esc((r&&r.ref)||'RFQ')}</div>
+          <div class="dx-err" style="margin-top:8px;">This RFQ could not be displayed (${esc(e.message)}).
+          Its data is safe — use Delete or re-run the AI steps to rebuild it.</div>
+          <div class="rfq-actions"><button class="mini-btn ai" data-act="cost" data-i="${i}">Re-plan route</button>
+          <button class="item-delete" data-act="del" data-i="${i}">Delete RFQ</button></div></div>`;
+      }
+    };
+    host.innerHTML=rfqs.map((r,i)=>safeCard(()=>{
       const si=STAGES.indexOf(r.status||'Received');
-      return `<div class="rfq-detail-screen" data-ref="${esc(r.ref)}">
-        <div class="rfq-detail-head">
-          <div>
-            <button type="button" class="rfq-back-btn" id="rfq-back">← Back to RFQ Pipeline</button>
-            <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
-              ${towerLight(r.status||'Received')}
-              <div class="rfq-ref">${esc(r.ref)}</div>
-              <span class="badge s${Math.max(0,si)}">${esc(r.status||'Received')}</span>
-            </div>
-            <div class="rfq-when" style="margin-top:4px;">${esc(r.name)}${r.company?' · '+esc(r.company):''} · ${esc(r.date)}</div>
-          </div>
-        </div>
-        <div class="rfq-action-bar">
-          <button class="mini-btn ai" data-act="read" data-i="${i}">Read Drawing With AI</button>
-          <button class="mini-btn ai" data-act="cost" data-i="${i}">Work Out Cost With AI</button>
-          <button class="mini-btn ai" data-act="gen" data-i="${i}">AI Draft Quote</button>
-          <button class="mini-btn" data-act="startquote" data-i="${i}">Start Quotation Document</button>
-        </div>
-        <div class="rfq-detail-body">
+      const cust=(r.quote||'')+`\n\nReference: ${r.ref}\n— ${data.quoteSender||''}`;
+      const open=expandedRfq===r.ref;
+      return `<div class="rfq-card pl ${open?'open':''}" data-ref="${esc(r.ref)}">
+        <div class="list-item-head rfq-summary"${open?'':` data-toggle="${esc(r.ref)}"`}>
+          <div><div class="rfq-ref">${esc(r.ref)}</div>
+          <div class="rfq-when">${esc(r.name)}${r.company?' · '+esc(r.company):''} · ${esc(r.date)}</div></div>
+          <div class="rfq-summary-right">
+            <span class="badge s${Math.max(0,si)}">${esc(r.status||'Received')}</span>
+            ${open?'':'<span class="rfq-chevron">▸</span>'}
+          </div></div>
+        <div class="rfq-body" style="display:${open?'block':'none'};">
+        ${open?`<div class="pl-back-bar"><button class="pl-back-btn" data-back="1">← Back to RFQ Pipeline</button></div>`:''}
         <div class="rfq-detail">${esc(r.email)}${r.phone?` · ${esc(r.phone)}`:''}<br>${esc(r.message||'—')}
           ${r.fileName?`<br>📎 ${r.fileDataUrl?`<a style="color:var(--sky-deep);text-decoration:underline;" href="${r.fileDataUrl}" download="${esc(r.fileName)}">${esc(r.fileName)}</a>`:esc(r.fileName)}`:''}</div>
         ${extractHtml(r,i)}
         ${costingHtml(r,i)}
-        ${stageDocsHtml(r,i)}
+        <div class="rfq-actions">
+          <button class="mini-btn ai" data-act="gen" data-i="${i}">${r.quote?'Regenerate quote':'AI draft quote'}</button>
+          <button class="mini-btn" data-act="waforward" data-i="${i}">WhatsApp this to my phone</button>
+        </div>
         ${r.quote?`<div class="quote-editor"><textarea class="quote-text" data-i="${i}">${esc(r.quote)}</textarea></div>`:''}
         ${(()=>{const q=r.quoteDoc; if(!q) return '';
           const t=quoteTotals(q);
@@ -10355,71 +10124,25 @@ Reply with ONLY this JSON, no commentary or code fences:
               ? `<span class="t-micro" style="align-self:center;color:var(--ok);">✓ ${r.idmsParts.length} part(s) sent to the IDMS</span>`
               : `<button class="mini-btn gold" data-act="won" data-i="${i}">Customer approved — send to IDMS</button>`}
           </div></div>`;})()}
+        ${!r.quoteDoc?`<div class="rfq-actions"><button class="mini-btn" data-act="startquote" data-i="${i}">Start quotation document</button></div>`:''}
         <select class="status-select" data-i="${i}">${STAGES.map(s=>`<option ${((r.status||'Received')===s)?'selected':''}>${s}</option>`).join('')}</select>
         ${(r.log&&r.log.length)?`<div class="notif-log">${r.log.slice(0,4).map(l=>`<div>${esc(l)}</div>`).join('')}</div>`:''}
         <div class="rfq-actions"><button class="item-delete" data-act="del" data-i="${i}">Delete RFQ</button></div>
         </div></div>`;
-    }catch(e){
-      console.error('RFQ detail failed',r&&r.ref,e);
-      return `<div class="rfq-detail-screen">
-        <div class="rfq-detail-head"><button type="button" class="rfq-back-btn" id="rfq-back">← Back to RFQ Pipeline</button></div>
-        <div class="rfq-detail-body">
-        <div class="rfq-ref" style="margin-top:16px;">${esc((r&&r.ref)||'RFQ')}</div>
-        <div class="dx-err" style="margin-top:8px;">This RFQ could not be displayed (${esc(e.message)}).
-        Its data is safe — use Delete or re-run the AI steps to rebuild it.</div>
-        <div class="rfq-actions"><button class="mini-btn ai" data-act="cost" data-i="${i}">Re-plan route</button>
-        <button class="item-delete" data-act="del" data-i="${i}">Delete RFQ</button></div>
-        </div></div>`;
-    }
-  }
+    },i,r)).join('');
 
-  function renderRfqAdmin(){
-    const kpi=document.getElementById('kpi-row'), host=document.getElementById('rfq-list');
-    const triageBox=document.getElementById('rfq-triage-box'), aiStatus=document.getElementById('ai-status');
-    const counts=STAGES.map(s=>rfqs.filter(r=>(r.status||'Received')===s).length);
-    kpi.innerHTML=`<div class="kpi"><b>${rfqs.length}</b><span>Total RFQs</span></div>`+
-      STAGES.map((s,i)=>`<div class="kpi"><b>${counts[i]}</b><span>${s}</span></div>`).join('');
-
-    /* ---- full-screen working view for one RFQ ----
-       Opening an RFQ replaces the list with a dedicated screen — the list
-       itself is left exactly as it was underneath, ready the moment
-       "← Back to RFQ Pipeline" is pressed, rather than an inline card that
-       expands and pushes everything else down the page. */
-    const idx=openRfqRef?rfqs.findIndex(x=>x.ref===openRfqRef):-1;
-    if(openRfqRef && idx<0) openRfqRef=null; // the open RFQ was deleted from under us
-    if(openRfqRef){
-      if(kpi) kpi.style.display='none';
-      if(triageBox) triageBox.style.display='none';
-      if(aiStatus) aiStatus.style.display='none';
-      host.innerHTML=renderRfqDetail(rfqs[idx],idx);
-      const back=document.getElementById('rfq-back');
-      if(back) back.addEventListener('click',()=>{ openRfqRef=null; renderRfqAdmin(); window.scrollTo({top:0,behavior:'smooth'}); });
-    } else {
-      if(kpi) kpi.style.display='';
-      if(triageBox) triageBox.style.display='';
-      if(aiStatus) aiStatus.style.display='';
-      if(!rfqs.length){host.innerHTML='<p class="empty-note">No RFQs yet.</p>';}
-      else{
-        host.innerHTML=rfqs.map((r,i)=>{
-          const si=STAGES.indexOf(r.status||'Received');
-          return `<div class="rfq-row" data-open="${esc(r.ref)}">
-            ${towerLight(r.status||'Received')}
-            <div class="rfq-row-main">
-              <div class="rfq-ref">${esc(r.ref)}</div>
-              <div class="rfq-when">${esc(r.name)}${r.company?' · '+esc(r.company):''} · ${esc(r.date)}</div>
-            </div>
-            <span class="badge s${Math.max(0,si)}">${esc(r.status||'Received')}</span>
-            <span class="rfq-row-arrow">›</span>
-          </div>`;
-        }).join('');
-        host.querySelectorAll('[data-open]').forEach(row=>row.addEventListener('click',()=>{
-          openRfqRef=row.dataset.open;
-          renderRfqAdmin();
-          window.scrollTo({top:0,behavior:'smooth'});
-        }));
-      }
-      return; // nothing below this line applies to the list screen
-    }
+    host.querySelectorAll('[data-toggle]').forEach(row=>row.addEventListener('click',(e)=>{
+      // A row never expands in place — it opens the RFQ as a full-screen
+      // working view, replacing the old inline accordion.
+      expandedRfq = row.dataset.toggle;
+      renderRfqAdmin();
+      if(stage) stage.scrollTop=0;
+    }));
+    host.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>{
+      expandedRfq = null;
+      renderRfqAdmin();
+      if(stage) stage.scrollTop=0;
+    }));
 
     const patch=async(ref,p,extra={})=>{
       try{ const j=await api('/api/rfqs',{method:'PATCH',body:JSON.stringify(Object.assign({ref,patch:p},extra))});
@@ -10444,7 +10167,7 @@ Reply with ONLY this JSON, no commentary or code fences:
       if(inp.dataset.k==='discount') refreshTotals(+inp.dataset.i);
     }));
     function refreshTotals(idx){
-      const r=rfqs[idx], card=host.querySelector('.rfq-detail-screen');
+      const r=rfqs[idx], card=host.querySelectorAll('.rfq-card')[idx];
       if(!card) return;
       const box=card.querySelector('.qb-totals'); if(!box) return;
       const t=quoteTotals(r.quoteDoc);
@@ -10573,6 +10296,17 @@ Reply with ONLY this JSON, no commentary or code fences:
       const q=r.quoteDoc||{};
       return (r.quote||'')+`\n\nReference: ${r.ref}${q.number?'\nQuotation No: '+q.number:''}\n— ${data.quoteSender||''}\n${CO().legalName||data.brandName}`;
     };
+    // Summarizes the enquiry itself (not the quote) for the "WhatsApp this to
+    // my phone" action, so staff on the move can see a new RFQ's essentials
+    // without opening the admin panel.
+    const rfqSummaryText=r=>{
+      return `New RFQ ${r.ref} — ${r.name||''}${r.company?' ('+r.company+')':''}\n`+
+        `Status: ${r.status||'Received'}\n`+
+        (r.email?`Email: ${r.email}\n`:'')+
+        (r.phone?`Phone: ${r.phone}\n`:'')+
+        `Date: ${r.date||''}\n\n`+
+        (r.message||'—');
+    };
     host.querySelectorAll('[data-act="mailquote"]').forEach(b=>b.addEventListener('click',async()=>{
       const r=rfqs[+b.dataset.i];
       if(!r.email){ toast('No customer email on this RFQ'); return; }
@@ -10633,9 +10367,7 @@ Reply with ONLY this JSON, no commentary or code fences:
       renderRfqAdmin(); toast('Price added to the quotation');
     }));
     function refreshCost(idx){
-      // Only one RFQ is ever on screen in the detail view now, so just grab
-      // that screen directly rather than indexing into a list of cards.
-      const card=host.querySelector('.rfq-detail-screen'); if(!card) return;
+      const card=host.querySelectorAll('.rfq-card')[idx]; if(!card) return;
       const box=card.querySelector('.cs-break'); if(!box) return;
       const t=computeCosting(rfqs[idx].costing);
       box.innerHTML=`
@@ -10668,29 +10400,6 @@ Reply with ONLY this JSON, no commentary or code fences:
       const log=[`${new Date().toLocaleString()} — drawing read${x.error?' failed':''}`].concat(r.log||[]);
       const u=await patch(r.ref,{extract:x,log});
       if(u) rfqs[idx]=u; else { r.extract=x; }
-      renderRfqAdmin();
-    }));
-    host.querySelectorAll('[data-act="balloon"]').forEach(b=>b.addEventListener('click',async()=>{
-      const idx=+b.dataset.i, r=rfqs[idx];
-      b.textContent='Drawing balloons…'; b.disabled=true;
-      try{
-        const dataUrl=await generateBalloonedDrawing(r);
-        const ballooned={dataUrl,generatedAt:new Date().toLocaleString()};
-        const log=[`${new Date().toLocaleString()} — ballooned drawing generated`].concat(r.log||[]);
-        const u=await patch(r.ref,{ballooned,log});
-        if(u) rfqs[idx]=u; else r.ballooned=ballooned;
-      }catch(e){ toast('Could not generate the ballooned drawing: '+e.message); }
-      renderRfqAdmin();
-    }));
-    host.querySelectorAll('[data-act="stagedocs"]').forEach(b=>b.addEventListener('click',async()=>{
-      const idx=+b.dataset.i, r=rfqs[idx];
-      b.textContent='Building process documents…'; b.disabled=true;
-      try{
-        const stageDocs=generateStageDocs(r);
-        const log=[`${new Date().toLocaleString()} — process documents generated (${stageDocs.items.length} operation(s))`].concat(r.log||[]);
-        const u=await patch(r.ref,{stageDocs,log});
-        if(u) rfqs[idx]=u; else r.stageDocs=stageDocs;
-      }catch(e){ toast(e.message); }
       renderRfqAdmin();
     }));
     host.querySelectorAll('[data-act="toquote"]').forEach(b=>b.addEventListener('click',async()=>{

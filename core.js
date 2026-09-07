@@ -693,7 +693,7 @@
       }
 
       navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 960 } }, audio: false
+        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 640 } }, audio: false
       }).then(async st => {
         if (done) { st.getTracks().forEach(t => t.stop()); return; }
         stream = st; v.srcObject = st;
@@ -758,22 +758,19 @@
 
       async function capture() {
         setRing(1, 'ok'); setStatus('Scanning…');
-        // Take a small burst and keep only the confident reads — one blurry
-        // or badly-lit frame averaged in can drag a genuine match's distance
-        // past the threshold, so it's worth discarding rather than keeping.
         const shots = [];
-        for (let i = 0; i < 5 && !done; i++) {
+        for (let i = 0; i < 3 && !done; i++) {
           try {
-            const d = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 }))
+            const d = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
               .withFaceLandmarks().withFaceDescriptor();
-            if (d && d.detection && d.detection.score >= 0.7) shots.push(Array.from(d.descriptor));
+            if (d) shots.push(Array.from(d.descriptor));
           } catch (e) {}
-          if (!done) await new Promise(r => setTimeout(r, 90));
+          if (!done) await new Promise(r => setTimeout(r, 110));
         }
         if (done) return;
         if (shots.length < 2) {
           steady = 0; setRing(0);
-          setStatus('That reading was not clear enough — check your lighting and hold still.');
+          setStatus('That was too quick — hold still a moment.');
           return;
         }
         const descriptor = averageDescriptors(shots);
@@ -816,6 +813,12 @@
     openReport: openReport, callAI: callAI, uploadFile: uploadFile,
     parseAiJson: parseAiJson, stripMarkup: stripMarkup,
     setFavicon: setFavicon,
-    capturePhoto: capturePhoto, scanFace: scanFace
+    capturePhoto: capturePhoto, scanFace: scanFace,
+    /* Lets a page start downloading the face-recognition model in the
+       background (e.g. while the sign-in screen is idle) instead of only
+       starting once someone actually clicks Face ID. loadFaceApi() already
+       memoizes on faceApiReady, so calling it here just means scanFace()
+       finds the model already loaded (or loading) instead of starting cold. */
+    preloadFaceApi: loadFaceApi
   };
 })(window);

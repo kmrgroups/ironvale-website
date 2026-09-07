@@ -65,216 +65,236 @@ export async function endAllSessions(username) {
   await sql`DELETE FROM sessions WHERE username = ${username}`;
 }
 
+/* ensureTables() used to run its ~28 CREATE/ALTER statements one at a time,
+   each `await`-ed before the next started. Over the HTTP driver that is 28
+   separate network round trips to Neon — and because each api/*.js file is
+   its own serverless function with its own module scope, the `ready` flag
+   below only protects a single warm instance: every route's first hit after
+   a cold start paid the full 28-round-trip tax. That tax, multiplied across
+   several routes hit during one page load (auth, idms, content, hr...), is
+   the main reason the app and Face ID both felt slow.
+
+   Fix: batch every statement that doesn't depend on another's result into
+   one sql.transaction() call — the Neon serverless driver sends a batch like
+   this as a single HTTP request, so this is 1 round trip instead of ~28. The
+   seed-data step still needs to branch on a query result, so it stays as a
+   couple of small follow-up round trips, but those only ever do real work
+   once (the first time the app connects to a fresh database). */
 let ready = false;
 export async function ensureTables() {
   if (ready) return;
-  await sql`CREATE TABLE IF NOT EXISTS sessions (
-    token TEXT PRIMARY KEY,
-    username TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'staff',
-    created_at TIMESTAMPTZ DEFAULT now(),
-    last_seen TIMESTAMPTZ DEFAULT now(),
-    expires_at TIMESTAMPTZ NOT NULL,
-    user_agent TEXT
-  )`;
-  await sql`CREATE INDEX IF NOT EXISTS sessions_user ON sessions (username)`;
-  await sql`CREATE TABLE IF NOT EXISTS site_content (
-    id INT PRIMARY KEY DEFAULT 1,
-    data JSONB NOT NULL DEFAULT '{}'::jsonb,
-    updated_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE TABLE IF NOT EXISTS rfqs (
-    ref TEXT PRIMARY KEY,
-    data JSONB NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE TABLE IF NOT EXISTS hr_employees (
-    emp_id TEXT PRIMARY KEY,
-    data JSONB NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE TABLE IF NOT EXISTS hr_attendance (
-    id TEXT PRIMARY KEY,
-    emp_id TEXT NOT NULL,
-    day DATE NOT NULL,
-    data JSONB NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE INDEX IF NOT EXISTS hr_att_emp_day ON hr_attendance (emp_id, day)`;
-  await sql`CREATE TABLE IF NOT EXISTS hr_leave (
-    leave_id TEXT PRIMARY KEY,
-    emp_id TEXT NOT NULL,
-    data JSONB NOT NULL,
-    status TEXT NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE TABLE IF NOT EXISTS hr_training (
-    rec_id TEXT PRIMARY KEY,
-    kind TEXT NOT NULL,
-    data JSONB NOT NULL,
-    status TEXT DEFAULT 'Open',
-    created_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE TABLE IF NOT EXISTS hr_items (
-    item_id TEXT PRIMARY KEY,
-    kind TEXT NOT NULL,
-    data JSONB NOT NULL,
-    status TEXT DEFAULT 'Open',
-    owner TEXT DEFAULT '',
-    due DATE,
-    created_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE INDEX IF NOT EXISTS hr_items_kind ON hr_items (kind, status)`;
-  await sql`CREATE TABLE IF NOT EXISTS hr_payruns (
-    run_id TEXT PRIMARY KEY,
-    period TEXT NOT NULL,
-    data JSONB NOT NULL,
-    status TEXT NOT NULL DEFAULT 'Draft',
-    created_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE TABLE IF NOT EXISTS hr_audit (
-    id BIGSERIAL PRIMARY KEY,
-    who TEXT, what TEXT, ref TEXT,
-    before_val JSONB, after_val JSONB,
-    reason TEXT, at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE TABLE IF NOT EXISTS ppc_orders (
-    ref TEXT PRIMARY KEY,
-    data JSONB NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  /* ---------------------------------------------------------------
-     IDMS — the manufacturing system that runs alongside the website.
-     One generic document store keyed by kind, exactly as hr_items works,
-     so a new module needs no migration. part_id on every row is what
-     makes the digital thread real: one query returns everything ever
-     recorded against a customer part number.
-     ---------------------------------------------------------------- */
-  await sql`CREATE TABLE IF NOT EXISTS idms_parts (
-    part_id TEXT PRIMARY KEY,
-    tenant TEXT NOT NULL DEFAULT 'default',
-    customer TEXT DEFAULT '',
-    part_no TEXT DEFAULT '',
-    part_name TEXT DEFAULT '',
-    lifecycle TEXT NOT NULL DEFAULT 'New',
-    quote_ref TEXT DEFAULT '',
-    data JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE INDEX IF NOT EXISTS idms_parts_life ON idms_parts (lifecycle, customer)`;
 
-  await sql`CREATE TABLE IF NOT EXISTS idms_docs (
-    doc_id TEXT PRIMARY KEY,
-    tenant TEXT NOT NULL DEFAULT 'default',
-    kind TEXT NOT NULL,
-    part_id TEXT DEFAULT '',
-    doc_no TEXT DEFAULT '',
-    rev TEXT DEFAULT '0',
-    status TEXT NOT NULL DEFAULT 'Draft',
-    data JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now(),
-    updated_by TEXT DEFAULT ''
-  )`;
-  await sql`CREATE INDEX IF NOT EXISTS idms_docs_kind ON idms_docs (kind, status)`;
-  await sql`CREATE INDEX IF NOT EXISTS idms_docs_part ON idms_docs (part_id)`;
+  await sql.transaction([
+    sql`CREATE TABLE IF NOT EXISTS sessions (
+      token TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'staff',
+      created_at TIMESTAMPTZ DEFAULT now(),
+      last_seen TIMESTAMPTZ DEFAULT now(),
+      expires_at TIMESTAMPTZ NOT NULL,
+      user_agent TEXT
+    )`,
+    sql`CREATE INDEX IF NOT EXISTS sessions_user ON sessions (username)`,
+    sql`CREATE TABLE IF NOT EXISTS site_content (
+      id INT PRIMARY KEY DEFAULT 1,
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE TABLE IF NOT EXISTS rfqs (
+      ref TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE TABLE IF NOT EXISTS hr_employees (
+      emp_id TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE TABLE IF NOT EXISTS hr_attendance (
+      id TEXT PRIMARY KEY,
+      emp_id TEXT NOT NULL,
+      day DATE NOT NULL,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE INDEX IF NOT EXISTS hr_att_emp_day ON hr_attendance (emp_id, day)`,
+    sql`CREATE TABLE IF NOT EXISTS hr_leave (
+      leave_id TEXT PRIMARY KEY,
+      emp_id TEXT NOT NULL,
+      data JSONB NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Pending',
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE TABLE IF NOT EXISTS hr_training (
+      rec_id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL,
+      data JSONB NOT NULL,
+      status TEXT DEFAULT 'Open',
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE TABLE IF NOT EXISTS hr_items (
+      item_id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL,
+      data JSONB NOT NULL,
+      status TEXT DEFAULT 'Open',
+      owner TEXT DEFAULT '',
+      due DATE,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE INDEX IF NOT EXISTS hr_items_kind ON hr_items (kind, status)`,
+    sql`CREATE TABLE IF NOT EXISTS hr_payruns (
+      run_id TEXT PRIMARY KEY,
+      period TEXT NOT NULL,
+      data JSONB NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Draft',
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE TABLE IF NOT EXISTS hr_audit (
+      id BIGSERIAL PRIMARY KEY,
+      who TEXT, what TEXT, ref TEXT,
+      before_val JSONB, after_val JSONB,
+      reason TEXT, at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE TABLE IF NOT EXISTS ppc_orders (
+      ref TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    /* ---------------------------------------------------------------
+       IDMS — the manufacturing system that runs alongside the website.
+       One generic document store keyed by kind, exactly as hr_items works,
+       so a new module needs no migration. part_id on every row is what
+       makes the digital thread real: one query returns everything ever
+       recorded against a customer part number.
+       ---------------------------------------------------------------- */
+    sql`CREATE TABLE IF NOT EXISTS idms_parts (
+      part_id TEXT PRIMARY KEY,
+      tenant TEXT NOT NULL DEFAULT 'default',
+      customer TEXT DEFAULT '',
+      part_no TEXT DEFAULT '',
+      part_name TEXT DEFAULT '',
+      lifecycle TEXT NOT NULL DEFAULT 'New',
+      quote_ref TEXT DEFAULT '',
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE INDEX IF NOT EXISTS idms_parts_life ON idms_parts (lifecycle, customer)`,
+    sql`CREATE TABLE IF NOT EXISTS idms_docs (
+      doc_id TEXT PRIMARY KEY,
+      tenant TEXT NOT NULL DEFAULT 'default',
+      kind TEXT NOT NULL,
+      part_id TEXT DEFAULT '',
+      doc_no TEXT DEFAULT '',
+      rev TEXT DEFAULT '0',
+      status TEXT NOT NULL DEFAULT 'Draft',
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now(),
+      updated_by TEXT DEFAULT ''
+    )`,
+    sql`CREATE INDEX IF NOT EXISTS idms_docs_kind ON idms_docs (kind, status)`,
+    sql`CREATE INDEX IF NOT EXISTS idms_docs_part ON idms_docs (part_id)`,
+    /* Serials are incremented in the database, not in a browser variable —
+       two people saving a GRN at the same moment must not get one number. */
+    sql`CREATE TABLE IF NOT EXISTS idms_counters (
+      name TEXT PRIMARY KEY,
+      value BIGINT NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE TABLE IF NOT EXISTS idms_settings (
+      key TEXT PRIMARY KEY,
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE TABLE IF NOT EXISTS idms_audit (
+      id BIGSERIAL PRIMARY KEY,
+      who TEXT, kind TEXT, ref TEXT, action TEXT,
+      before_val JSONB, after_val JSONB,
+      reason TEXT, at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE INDEX IF NOT EXISTS idms_audit_ref ON idms_audit (kind, ref)`,
+    sql`CREATE TABLE IF NOT EXISTS auth (
+      id INT PRIMARY KEY DEFAULT 1,
+      user_name TEXT NOT NULL,
+      pass_hash TEXT NOT NULL
+    )`,
+    sql`CREATE TABLE IF NOT EXISTS users (
+      username TEXT PRIMARY KEY,
+      pass_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'staff',
+      email TEXT DEFAULT '',
+      whatsapp TEXT DEFAULT '',
+      twofa BOOLEAN DEFAULT false,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    /* Added for the User Management & Access Control rework. ADD COLUMN IF NOT
+       EXISTS so an existing users table (and the data already in it) is carried
+       forward rather than recreated. Every new column has a default that keeps
+       an existing login working exactly as it did before this shipped:
+       everyone stays active, every auth method stays on, and nobody's menu
+       narrows until an admin deliberately restricts it. */
+    sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true`,
+    sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_methods JSONB NOT NULL DEFAULT
+      '{"password":true,"otpEmail":true,"otpWhatsapp":true,"face":true}'::jsonb`,
+    sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS face_descriptor JSONB`,
+    sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS face_enrolled_at TIMESTAMPTZ`,
+    sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS restrict_access BOOLEAN NOT NULL DEFAULT false`,
+    sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB NOT NULL DEFAULT '[]'::jsonb`,
+    sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pass_changed_at TIMESTAMPTZ`,
+    sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pass_changed_by TEXT DEFAULT ''`,
+    sql`CREATE TABLE IF NOT EXISTS login_codes (
+      username TEXT PRIMARY KEY,
+      code_hash TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      tries INT DEFAULT 0
+    )`,
+    /* 'login' codes (2FA / OTP sign-in) and 'reset' codes (forgot password) share
+       this table but must never be interchangeable — a code texted for signing
+       in must not be usable to take over the account by resetting its password,
+       and vice versa. */
+    sql`ALTER TABLE login_codes ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'login'`,
+    sql`CREATE TABLE IF NOT EXISTS secrets (
+      name TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE TABLE IF NOT EXISTS assets (
+      id TEXT PRIMARY KEY,
+      mime TEXT NOT NULL,
+      data TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`
+  ]);
 
-  /* Serials are incremented in the database, not in a browser variable —
-     two people saving a GRN at the same moment must not get one number. */
-  await sql`CREATE TABLE IF NOT EXISTS idms_counters (
-    name TEXT PRIMARY KEY,
-    value BIGINT NOT NULL DEFAULT 0,
-    updated_at TIMESTAMPTZ DEFAULT now()
-  )`;
+  // seed the first login if none exists — batched into one round trip too
+  const [authRows, uCountRows] = await sql.transaction([
+    sql`SELECT id, user_name, pass_hash FROM auth WHERE id = 1`,
+    sql`SELECT count(*)::int AS n FROM users`
+  ]);
 
-  await sql`CREATE TABLE IF NOT EXISTS idms_settings (
-    key TEXT PRIMARY KEY,
-    data JSONB NOT NULL DEFAULT '{}'::jsonb,
-    updated_at TIMESTAMPTZ DEFAULT now()
-  )`;
-
-  await sql`CREATE TABLE IF NOT EXISTS idms_audit (
-    id BIGSERIAL PRIMARY KEY,
-    who TEXT, kind TEXT, ref TEXT, action TEXT,
-    before_val JSONB, after_val JSONB,
-    reason TEXT, at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE INDEX IF NOT EXISTS idms_audit_ref ON idms_audit (kind, ref)`;
-
-  await sql`CREATE TABLE IF NOT EXISTS auth (
-    id INT PRIMARY KEY DEFAULT 1,
-    user_name TEXT NOT NULL,
-    pass_hash TEXT NOT NULL
-  )`;
-  await sql`CREATE TABLE IF NOT EXISTS users (
-    username TEXT PRIMARY KEY,
-    pass_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'staff',
-    email TEXT DEFAULT '',
-    whatsapp TEXT DEFAULT '',
-    twofa BOOLEAN DEFAULT false,
-    created_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  /* Added for the User Management & Access Control rework. ADD COLUMN IF NOT
-     EXISTS so an existing users table (and the data already in it) is carried
-     forward rather than recreated. Every new column has a default that keeps
-     an existing login working exactly as it did before this shipped:
-     everyone stays active, every auth method stays on, and nobody's menu
-     narrows until an admin deliberately restricts it. */
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true`;
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_methods JSONB NOT NULL DEFAULT
-    '{"password":true,"otpEmail":true,"otpWhatsapp":true,"face":true}'::jsonb`;
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS face_descriptor JSONB`;
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS face_enrolled_at TIMESTAMPTZ`;
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS restrict_access BOOLEAN NOT NULL DEFAULT false`;
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB NOT NULL DEFAULT '[]'::jsonb`;
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pass_changed_at TIMESTAMPTZ`;
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pass_changed_by TEXT DEFAULT ''`;
-  await sql`CREATE TABLE IF NOT EXISTS login_codes (
-    username TEXT PRIMARY KEY,
-    code_hash TEXT NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL,
-    tries INT DEFAULT 0
-  )`;
-  /* 'login' codes (2FA / OTP sign-in) and 'reset' codes (forgot password) share
-     this table but must never be interchangeable — a code texted for signing
-     in must not be usable to take over the account by resetting its password,
-     and vice versa. */
-  await sql`ALTER TABLE login_codes ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'login'`;
-  await sql`CREATE TABLE IF NOT EXISTS secrets (
-    name TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  await sql`CREATE TABLE IF NOT EXISTS assets (
-    id TEXT PRIMARY KEY,
-    mime TEXT NOT NULL,
-    data TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
-  )`;
-  // seed the first login if none exists
-  const rows = await sql`SELECT id, user_name, pass_hash FROM auth WHERE id = 1`;
-  if (!rows.length) {
+  if (!authRows.length) {
     const u = process.env.ADMIN_USER || 'admin';
     const p = process.env.ADMIN_PASS || 'changeme123';
     await sql`INSERT INTO auth (id, user_name, pass_hash) VALUES (1, ${u}, ${hash(p)})`;
   }
 
   // move the original single login into the new users table, as developer
-  const uCount = await sql`SELECT count(*)::int AS n FROM users`;
-  if (!uCount[0] || uCount[0].n === 0) {
+  if (!uCountRows[0] || uCountRows[0].n === 0) {
     const legacy = (await sql`SELECT user_name, pass_hash FROM auth WHERE id = 1`)[0];
-    if (legacy) {
-      await sql`INSERT INTO users (username, pass_hash, role, twofa)
-                VALUES (${legacy.user_name}, ${legacy.pass_hash}, 'developer', false)
-                ON CONFLICT (username) DO NOTHING`;
-    }
-    // a separate pipeline-only login, so staff never reach the admin panel
     const sp = process.env.STAFF_PASS || 'pipeline123';
-    await sql`INSERT INTO users (username, pass_hash, role, twofa)
-              VALUES ('staff', ${hash(sp)}, 'staff', false)
-              ON CONFLICT (username) DO NOTHING`;
+    const seedInserts = [
+      // a separate pipeline-only login, so staff never reach the admin panel
+      sql`INSERT INTO users (username, pass_hash, role, twofa)
+          VALUES ('staff', ${hash(sp)}, 'staff', false)
+          ON CONFLICT (username) DO NOTHING`
+    ];
+    if (legacy) {
+      seedInserts.push(sql`INSERT INTO users (username, pass_hash, role, twofa)
+        VALUES (${legacy.user_name}, ${legacy.pass_hash}, 'developer', false)
+        ON CONFLICT (username) DO NOTHING`);
+    }
+    await sql.transaction(seedInserts);
   }
   ready = true;
 }

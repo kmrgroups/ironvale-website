@@ -55,18 +55,15 @@ async function issueCode(user, purpose, channel) {
 }
 
 /* Euclidean distance between two face-recognition descriptors (128-length
-   float arrays from face-api.js). Lower is a closer match. 0.6 is
-   face-api.js's own documented cut-off for "the same person" (see its
-   FaceMatcher default) — this used to be set to 0.5, which is stricter
-   than the model was ever tuned for and was rejecting genuine matches
-   captured under ordinary webcam lighting rather than a studio photo. */
+   float arrays from face-api.js). Lower is a closer match; ~0.5 is the usual
+   cut-off between "the same person" and "somebody else" for that model. */
 function faceDistance(a, b) {
   if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return Infinity;
   let sum = 0;
   for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; sum += d * d; }
   return Math.sqrt(sum);
 }
-const FACE_MATCH_THRESHOLD = 0.6;
+const FACE_MATCH_THRESHOLD = 0.5;
 
 function accessFields(u) {
   return { restrictAccess: !!u.restrict_access, permissions: u.permissions || [],

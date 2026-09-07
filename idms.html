@@ -2977,6 +2977,12 @@
   MENU.forEach(function(g){ g[4].forEach(function(it){
     LABEL[it[0]] = it[2]; ICON[it[0]] = it[1]; if (it[3]) LIVE[it[0]] = 1;
   });});
+  /* Home is not one of the MENU groups' items (it is the standalone button to
+     their left), so it was never marked LIVE — go('home') fell through to the
+     "not built yet" placeholder and hid the real home panel (banner, hero
+     image and stats) behind it every time. Wiring it up here the same way
+     every other screen is wired up fixes that. */
+  LIVE.home = 1; LABEL.home = 'Home'; ICON.home = '🏠';
 
   /* Every menu/sub-menu entry is a real <a href="#s=..."> so the browser's own
      right-click menu ("Open Link in New Tab" / "Open Link in New Window") works
@@ -3013,10 +3019,20 @@
         bar.querySelectorAll('.mgroup').forEach(function(x){ x.classList.remove('open'); });
         if (!was){
           g.classList.add('open');
+          var drop = g.querySelector('.drop');
+          /* Fit the dropdown to whatever room is actually left below the menu
+             bar, rather than trusting a fixed CSS max-height that can either
+             cut a long list short when there is plenty of screen left, or (on
+             a short window) still run past the bottom edge, where it reads as
+             "hidden behind" the page content underneath. */
+          drop.style.maxHeight = '';
+          var r = g.getBoundingClientRect();
+          var avail = window.innerHeight - r.bottom - 14;
+          drop.style.maxHeight = Math.max(avail, 160) + 'px';
           /* flip the dropdown to hang from the right edge of its button when
              opening it left-aligned would run it off the side of the screen */
-          var drop = g.querySelector('.drop'), r = drop.getBoundingClientRect();
-          g.classList.toggle('edge', r.right > window.innerWidth);
+          var dr = drop.getBoundingClientRect();
+          g.classList.toggle('edge', dr.right > window.innerWidth);
         }
       });
     });

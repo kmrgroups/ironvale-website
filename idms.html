@@ -288,6 +288,43 @@
 .embed-frame{width:100%;height:calc(100vh - 190px);min-height:520px;border:1px solid var(--line);
   border-radius:var(--radius-sm);background:var(--white);}
 
+/* ---- RFQ Pipeline working screen: the top bar + menu auto-hide ----
+   .chrome wraps .top and .menubar together so both can slide as one unit.
+   Only body.pipeline-focus (set while the RFQ Pipeline embed is open) turns
+   this on; every other screen keeps the ordinary static header. The content
+   area's top padding is driven by --chrome-pad, which JS sets to the
+   chrome's own height when shown and 0 when hidden, so the working screen
+   is given back exactly the space the chrome was using rather than the
+   chrome simply floating on top of it. */
+:root{--chrome-pad:0px;}
+body.pipeline-focus .chrome{position:fixed;top:0;left:0;right:0;z-index:900;
+  transform:translateY(-100%);transition:transform .32s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 10px 28px rgba(15,30,60,.22);}
+body.pipeline-focus .chrome.chrome-show{transform:translateY(0);}
+body.pipeline-focus .app-body{padding-top:var(--chrome-pad);transition:padding-top .32s cubic-bezier(.4,0,.2,1);
+  max-width:100%;padding-left:0;padding-right:0;padding-bottom:0;}
+.chrome-hover-zone{display:none;}
+body.pipeline-focus .chrome-hover-zone{display:block;position:fixed;top:0;left:0;right:0;height:16px;z-index:850;}
+
+/* The pipeline embed itself: no card stacked above the iframe, and the
+   iframe fills essentially the whole viewport. Reload / open-in-new-tab move
+   into a small floating bar over the top-right corner of the frame instead
+   of pushing it down. */
+.embed-wrap{position:relative;}
+body.pipeline-focus [data-panel="embed"]{padding:0;}
+body.pipeline-focus #em-card{display:none;}
+body.pipeline-focus .embed-wrap{margin:0;}
+body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius:0;
+  height:calc(100vh - var(--chrome-pad));min-height:400px;transition:height .32s cubic-bezier(.4,0,.2,1);}
+.embed-float-bar{display:none;position:absolute;top:10px;right:10px;z-index:20;gap:6px;
+  background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:100px;
+  padding:5px;box-shadow:var(--shadow-md);}
+.embed-float-bar.show{display:flex;}
+.embed-float-bar button,.embed-float-bar a{height:32px;width:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;border:1px solid var(--line);
+  background:var(--white);color:var(--navy);font-size:14px;cursor:pointer;text-decoration:none;}
+.embed-float-bar button:hover,.embed-float-bar a:hover{border-color:var(--gold);color:var(--gold-deep);}
+
 .stat{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:6px;}
 .stat .b{background:var(--white);border:1px solid var(--line);border-radius:11px;padding:13px;}
 .stat .b b{font-family:var(--disp);font-size:23px;color:var(--navy);display:block;}
@@ -402,6 +439,8 @@
 
 <div id="app" style="display:none;">
 
+  <div class="chrome-hover-zone" id="chrome-hover-zone"></div>
+  <div class="chrome" id="chrome">
   <div class="top">
     <div class="id">
       <div id="t-logo"></div>
@@ -424,6 +463,7 @@
   </div>
 
   <div class="menubar" id="menubar"></div>
+  </div>
 
   <div class="app-body">
 
@@ -1493,7 +1533,7 @@
          the session used there — no second sign-in, and no way in from the
          public site. -->
     <div class="panel" data-panel="embed">
-      <div class="card">
+      <div class="card" id="em-card">
         <h4 id="em-title">Screen</h4>
         <div class="hint" id="em-note" style="margin-bottom:10px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -1502,7 +1542,13 @@
              style="text-decoration:none;line-height:1.9;">Open in a new tab</a>
         </div>
       </div>
-      <iframe class="embed-frame" id="em-frame" title="Screen"></iframe>
+      <div class="embed-wrap" id="em-wrap">
+        <div class="embed-float-bar" id="em-float-bar">
+          <button id="em-reload2" title="Reload">⟳</button>
+          <a id="em-open2" href="#" target="_blank" rel="noopener" title="Open in a new tab">↗</a>
+        </div>
+        <iframe class="embed-frame" id="em-frame" title="Screen"></iframe>
+      </div>
     </div>
 
     <!-- ============ Admin: home banner ============ -->
@@ -3083,6 +3129,10 @@
       toast('You do not have access to that screen. Ask your administrator.');
       s = 'home';
     }
+    // The pipeline's auto-hiding menu only applies to the RFQ Pipeline working
+    // screen itself — leaving it for any other screen restores the ordinary
+    // static header before that screen's own content loads.
+    if (s !== 'emb_pipeline') exitPipelineFocus();
     var want = LIVE[s] ? (PANEL_OF[s] || s) : 'placeholder';
     document.querySelectorAll('.panel').forEach(function(p){
       p.classList.toggle('on', p.dataset.panel === want);
@@ -8833,7 +8883,85 @@
     var url = '/?embed=' + e[1];
     document.getElementById('em-frame').src = url;
     document.getElementById('em-open').href = url;
+    document.getElementById('em-open2').href = url;
+    document.getElementById('em-float-bar').classList.toggle('show', id === 'emb_pipeline');
+    if (id === 'emb_pipeline') enterPipelineFocus(); else exitPipelineFocus();
   }
+
+  /* ---------------- RFQ Pipeline working screen: auto-hide menu ----------------
+     The top bar + menubar (wrapped together as #chrome) slide out of the way
+     while the pipeline embed is open, so the working screen gets the full
+     viewport. Moving the mouse to the very top of the window (or touching it,
+     on a touch device) brings the chrome back with a smooth slide, and the
+     content area's top padding tracks it so the page is pushed down rather
+     than covered. */
+  var pipelineFocusActive = false, chromeHideTimer = null;
+  function chromeEls(){
+    return { chrome: document.getElementById('chrome'), body: document.querySelector('.app-body') };
+  }
+  function syncChromePad(){
+    var els = chromeEls();
+    if (!els.chrome) return;
+    var pad = (pipelineFocusActive && els.chrome.classList.contains('chrome-show')) ? els.chrome.offsetHeight : 0;
+    document.documentElement.style.setProperty('--chrome-pad', pad + 'px');
+  }
+  function showChrome(){
+    var els = chromeEls(); if (!els.chrome) return;
+    clearTimeout(chromeHideTimer);
+    if (!els.chrome.classList.contains('chrome-show')){
+      els.chrome.classList.add('chrome-show');
+      syncChromePad();
+    }
+  }
+  function hideChromeSoon(){
+    clearTimeout(chromeHideTimer);
+    chromeHideTimer = setTimeout(function(){
+      var els = chromeEls(); if (!els.chrome) return;
+      els.chrome.classList.remove('chrome-show');
+      syncChromePad();
+    }, 380);
+  }
+  function onPipelineMouseMove(ev){
+    if (!pipelineFocusActive) return;
+    if (ev.clientY <= 56) { showChrome(); return; }
+    var els = chromeEls();
+    if (ev.clientY > 170 && !(els.chrome && els.chrome.matches(':hover'))) hideChromeSoon();
+  }
+  function onPipelineTouchStart(ev){
+    if (!pipelineFocusActive) return;
+    var y = ev.touches && ev.touches[0] ? ev.touches[0].clientY : 0;
+    if (y <= 56) { showChrome(); return; }
+    var els = chromeEls();
+    if (y > 170 && !(els.chrome && els.chrome.contains(ev.target))) hideChromeSoon();
+  }
+  function enterPipelineFocus(){
+    if (pipelineFocusActive) return;
+    pipelineFocusActive = true;
+    document.body.classList.add('pipeline-focus');
+    var els = chromeEls();
+    if (els.chrome) els.chrome.classList.remove('chrome-show');
+    syncChromePad();
+    window.addEventListener('mousemove', onPipelineMouseMove);
+    window.addEventListener('touchstart', onPipelineTouchStart, { passive: true });
+    if (els.chrome){
+      els.chrome.addEventListener('mouseenter', showChrome);
+      els.chrome.addEventListener('mouseleave', function(){ if (pipelineFocusActive) hideChromeSoon(); });
+    }
+  }
+  function exitPipelineFocus(){
+    if (!pipelineFocusActive) return;
+    pipelineFocusActive = false;
+    clearTimeout(chromeHideTimer);
+    document.body.classList.remove('pipeline-focus');
+    var els = chromeEls();
+    if (els.chrome) els.chrome.classList.remove('chrome-show');
+    document.documentElement.style.setProperty('--chrome-pad', '0px');
+    window.removeEventListener('mousemove', onPipelineMouseMove);
+    window.removeEventListener('touchstart', onPipelineTouchStart);
+  }
+  document.getElementById('chrome-hover-zone').addEventListener('mouseenter', function(){
+    if (pipelineFocusActive) showChrome();
+  });
 
   /* ---------------- the home banner ---------------- */
   function bannerPreview(){
@@ -16812,6 +16940,10 @@
   });
 
   document.getElementById('em-reload').addEventListener('click', function(){
+    var f = document.getElementById('em-frame');
+    f.src = f.src;                              // eslint-disable-line no-self-assign
+  });
+  document.getElementById('em-reload2').addEventListener('click', function(){
     var f = document.getElementById('em-frame');
     f.src = f.src;                              // eslint-disable-line no-self-assign
   });

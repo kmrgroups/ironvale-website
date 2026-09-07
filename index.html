@@ -479,6 +479,36 @@
   .rfq-detail{font-size:var(--fs-body);color:var(--ink-mid);line-height:1.75;margin:12px 0;}
   .rfq-detail b{color:var(--navy);font-weight:600;}
   .rfq-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+
+  /* ---- RFQ Pipeline: compact list + full-screen working view -----------
+     Scoped to .rfq-card.pl / #rfq-list so the many other accordion lists
+     built on .rfq-card/.rfq-body elsewhere (orders, HR, policies…) are
+     untouched. In list mode every RFQ is one compact row, grouped into a
+     single bordered block instead of a stack of individually-boxed cards.
+     Clicking a row never expands it in place — it opens the matching RFQ
+     as a dedicated full-screen view (#rfq-list.pl-detail-mode). */
+  #rfq-list.pl-list-mode{border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;box-shadow:var(--shadow-sm);background:var(--line);}
+  #rfq-list.pl-list-mode .rfq-card.pl{margin-bottom:1px;border-radius:0;border-left-width:3px;box-shadow:none;}
+  #rfq-list.pl-list-mode .rfq-card.pl:last-child{margin-bottom:0;}
+  #rfq-list.pl-list-mode .rfq-card.pl .rfq-summary{padding:11px 18px;}
+  #rfq-list.pl-list-mode .rfq-card.pl .rfq-ref{font-size:calc(var(--fs-body)*.96);}
+  #rfq-list.pl-list-mode .rfq-card.pl .rfq-when{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #rfq-list.pl-detail-mode{background:none;}
+  #rfq-list.pl-detail-mode .rfq-card.pl:not(.open):not(.pl-error){display:none;}
+  #rfq-list.pl-detail-mode .rfq-card.pl.open{margin:0;border:0;box-shadow:none;background:transparent;border-radius:0;}
+  #rfq-list.pl-detail-mode .rfq-card.pl.open .rfq-summary{padding:14px 2px;cursor:default;}
+  #rfq-list.pl-detail-mode .rfq-card.pl.open .rfq-body{border-top:1px solid var(--line);padding:0 2px 40px;}
+  .pl-back-bar{margin:16px 0 6px;}
+  .pl-back-btn{display:inline-flex;align-items:center;gap:6px;background:var(--white);
+    border:1px solid var(--line-strong);border-radius:100px;padding:9px 20px;
+    font-family:var(--body);font-weight:600;font-size:var(--fs-body);color:var(--navy);
+    cursor:pointer;box-shadow:var(--shadow-sm);transition:.15s;}
+  .pl-back-btn:hover{border-color:var(--gold);color:var(--gold-deep);transform:translateX(-2px);}
+  /* the working view fills the screen: the KPI strip and triage agent
+     card are hidden while it is open (toggled in JS), and the side gutter
+     is trimmed to give the working screen the most room possible. */
+  #staff-page.detail-open .staff-body{padding-left:calc(var(--gutter)*.4);padding-right:calc(var(--gutter)*.4);}
   .mini-btn{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;padding:9px 15px;border-radius:100px;border:1px solid var(--line-strong);background:var(--white);color:var(--navy);}
   .mini-btn:hover{border-color:var(--sky-deep);color:var(--sky-deep);}
   .mini-btn.gold{background:linear-gradient(180deg,var(--gold-light),var(--gold));color:var(--navy-deep);border-color:transparent;font-weight:600;}
@@ -1075,7 +1105,7 @@
   </div>
   <div class="staff-body">
     <div id="ai-status"></div>
-    <div class="qb" style="margin-bottom:18px;">
+    <div class="qb" id="pl-triage-card" style="margin-bottom:18px;">
       <h4>🤖 RFQ Triage Agent</h4>
       <div class="field-hint" style="margin-bottom:10px;">Reads every open enquiry and says which to
         act on and what is stopping each one. The checks are fixed rules over the enquiries
@@ -10003,16 +10033,27 @@ Reply with ONLY this JSON, no commentary or code fences:
 
   function renderRfqAdmin(){
     const kpi=document.getElementById('kpi-row'), host=document.getElementById('rfq-list');
+    const triageCard=document.getElementById('pl-triage-card'), aiStatusEl=document.getElementById('ai-status');
+    const stage=document.getElementById('staff-page');
     const counts=STAGES.map(s=>rfqs.filter(r=>(r.status||'Received')===s).length);
     kpi.innerHTML=`<div class="kpi"><b>${rfqs.length}</b><span>Total RFQs</span></div>`+
       STAGES.map((s,i)=>`<div class="kpi"><b>${counts[i]}</b><span>${s}</span></div>`).join('');
-    if(!rfqs.length){host.innerHTML='<p class="empty-note">No RFQs yet.</p>';return;}
+    // A selected RFQ opens as a dedicated full-screen working view rather than
+    // expanding in place, so the triage agent and KPI strip step aside for it —
+    // preserving which RFQ is open (expandedRfq) is what lets Back return to
+    // exactly where the user left the list.
+    const detailOpen = !!(expandedRfq && rfqs.some(r=>r.ref===expandedRfq));
+    if(triageCard) triageCard.style.display = detailOpen ? 'none' : '';
+    if(aiStatusEl) aiStatusEl.style.display = detailOpen ? 'none' : '';
+    if(stage) stage.classList.toggle('detail-open', detailOpen);
+    if(!rfqs.length){host.innerHTML='<p class="empty-note">No RFQs yet.</p>';host.className='';return;}
+    host.className = detailOpen ? 'pl-detail-mode' : 'pl-list-mode';
     // one problem record must never blank the whole pipeline
     const safeCard=(fn,i,r)=>{
       try{ return fn(); }
       catch(e){
         console.error('RFQ card failed',r&&r.ref,e);
-        return `<div class="rfq-card"><div class="rfq-ref">${esc((r&&r.ref)||'RFQ')}</div>
+        return `<div class="rfq-card pl pl-error"><div class="rfq-ref">${esc((r&&r.ref)||'RFQ')}</div>
           <div class="dx-err" style="margin-top:8px;">This RFQ could not be displayed (${esc(e.message)}).
           Its data is safe — use Delete or re-run the AI steps to rebuild it.</div>
           <div class="rfq-actions"><button class="mini-btn ai" data-act="cost" data-i="${i}">Re-plan route</button>
@@ -10023,23 +10064,23 @@ Reply with ONLY this JSON, no commentary or code fences:
       const si=STAGES.indexOf(r.status||'Received');
       const cust=(r.quote||'')+`\n\nReference: ${r.ref}\n— ${data.quoteSender||''}`;
       const open=expandedRfq===r.ref;
-      return `<div class="rfq-card ${open?'open':''}" data-ref="${esc(r.ref)}">
-        <div class="list-item-head rfq-summary" data-toggle="${esc(r.ref)}">
+      return `<div class="rfq-card pl ${open?'open':''}" data-ref="${esc(r.ref)}">
+        <div class="list-item-head rfq-summary"${open?'':` data-toggle="${esc(r.ref)}"`}>
           <div><div class="rfq-ref">${esc(r.ref)}</div>
           <div class="rfq-when">${esc(r.name)}${r.company?' · '+esc(r.company):''} · ${esc(r.date)}</div></div>
           <div class="rfq-summary-right">
             <span class="badge s${Math.max(0,si)}">${esc(r.status||'Received')}</span>
-            <span class="rfq-chevron">${open?'▾':'▸'}</span>
+            ${open?'':'<span class="rfq-chevron">▸</span>'}
           </div></div>
         <div class="rfq-body" style="display:${open?'block':'none'};">
+        ${open?`<div class="pl-back-bar"><button class="pl-back-btn" data-back="1">← Back to RFQ Pipeline</button></div>`:''}
         <div class="rfq-detail">${esc(r.email)}${r.phone?` · ${esc(r.phone)}`:''}<br>${esc(r.message||'—')}
           ${r.fileName?`<br>📎 ${r.fileDataUrl?`<a style="color:var(--sky-deep);text-decoration:underline;" href="${r.fileDataUrl}" download="${esc(r.fileName)}">${esc(r.fileName)}</a>`:esc(r.fileName)}`:''}</div>
-        <div class="rfq-actions">
-          <button class="mini-btn ai" data-act="gen" data-i="${i}">${r.quote?'Regenerate quote':'AI draft quote'}</button>
-          <button class="mini-btn" data-act="waforward" data-i="${i}">WhatsApp this to my phone</button>
-        </div>
         ${extractHtml(r,i)}
         ${costingHtml(r,i)}
+        <div class="rfq-actions">
+          <button class="mini-btn ai" data-act="gen" data-i="${i}">${r.quote?'Regenerate quote':'AI draft quote'}</button>
+        </div>
         ${r.quote?`<div class="quote-editor"><textarea class="quote-text" data-i="${i}">${esc(r.quote)}</textarea></div>`:''}
         ${(()=>{const q=r.quoteDoc; if(!q) return '';
           const t=quoteTotals(q);
@@ -10090,13 +10131,16 @@ Reply with ONLY this JSON, no commentary or code fences:
     },i,r)).join('');
 
     host.querySelectorAll('[data-toggle]').forEach(row=>row.addEventListener('click',(e)=>{
-      const ref=row.dataset.toggle;
-      expandedRfq = (expandedRfq===ref) ? null : ref;
+      // A row never expands in place — it opens the RFQ as a full-screen
+      // working view, replacing the old inline accordion.
+      expandedRfq = row.dataset.toggle;
       renderRfqAdmin();
-      if(expandedRfq){
-        const card=host.querySelector(`.rfq-card[data-ref="${CSS.escape(expandedRfq)}"]`);
-        if(card) card.scrollIntoView({behavior:'smooth',block:'start'});
-      }
+      if(stage) stage.scrollTop=0;
+    }));
+    host.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>{
+      expandedRfq = null;
+      renderRfqAdmin();
+      if(stage) stage.scrollTop=0;
     }));
 
     const patch=async(ref,p,extra={})=>{
@@ -10274,17 +10318,6 @@ Reply with ONLY this JSON, no commentary or code fences:
       // No automatic WhatsApp set up — fall back to one-tap send, which needs no setup at all.
       toast('Opening WhatsApp — press send');
       window.open(waLink(r.phone,body),'_blank','noopener');
-    }));
-    host.querySelectorAll('[data-act="waforward"]').forEach(b=>b.addEventListener('click',async()=>{
-      const r=rfqs[+b.dataset.i];
-      const text=rfqSummaryText(r);
-      b.textContent='Sending…'; b.disabled=true;
-      // blank number: the server uses the WhatsApp number saved on the Setup screen
-      const res=await sendMessage_({whatsapp:(data.notifyWhatsapp||'').replace(/\D/g,''),text,useOwner:true});
-      const st=readResults(res);
-      b.textContent='WhatsApp this to my phone'; b.disabled=false;
-      if(st.waOk){ toast('Sent to your WhatsApp'); return; }
-      toast(st.wa||'Could not send');
     }));
     host.querySelectorAll('[data-act="costpdf"]').forEach(b=>b.addEventListener('click',()=>{
       openCostSheetPdf(rfqs[+b.dataset.i]);

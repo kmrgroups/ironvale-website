@@ -2735,6 +2735,10 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <div><label>Prepared by</label><input id="fd-prepby"></div>
           <div style="align-self:end;"><button class="btn" id="fd-print">Print</button></div>
         </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Document no.</label><input id="fd-docno" placeholder="e.g. IRV-PFD-0001"></div>
+          <div><label>Revision</label><input id="fd-rev" placeholder="00"></div>
+        </div>
       </div>
       <div class="card">
         <h4 id="fd-title">Flow</h4>
@@ -15748,74 +15752,142 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     return { rows: rows, params: params };
   }
 
+  /* ---------------- AIAG-format document shell ----------------
+     Shared by the PFD, PFMEA and control plan prints so the three read as one
+     family of documents: a coloured title bar (colour is the only thing that
+     differs between them), a boxed metadata grid, and a colour-headed data
+     table. Built once here rather than three times so a change to the look
+     changes all three together. Still goes through C.openReport for the
+     letterhead, the pop-up handling and the footer — this only replaces what
+     each report puts in its own body. */
+  function aiagStyle(){
+    return '<style>' +
+      'h1,.sub{display:none;}' +
+      '.aiagbar{color:#fff;padding:9px 16px;display:flex;justify-content:space-between;' +
+        'align-items:center;gap:14px;border-radius:3px 3px 0 0;margin-top:2px;}' +
+      '.aiagbar .t{font-size:12pt;font-weight:800;letter-spacing:.3pt;}' +
+      '.aiagbar .t small{display:block;font-size:7.2pt;font-weight:500;opacity:.85;' +
+        'margin-top:2px;letter-spacing:.2pt;}' +
+      '.aiagbar .r{text-align:right;font-size:8pt;font-weight:800;line-height:1.55;white-space:nowrap;}' +
+      'table.aiagmeta{width:100%;border-collapse:collapse;border:1pt solid #12233f;border-top:none;}' +
+      'table.aiagmeta td{border:.6pt solid #c7d0e0;padding:4px 7px;vertical-align:top;}' +
+      'table.aiagmeta .k{font-size:6.2pt;text-transform:uppercase;letter-spacing:.3pt;' +
+        'color:#697894;font-weight:700;}' +
+      'table.aiagmeta .v{font-size:8pt;font-weight:700;color:#12233f;margin-top:1px;}' +
+      'table.aiagdata{width:100%;border-collapse:collapse;margin-top:8px;table-layout:fixed;}' +
+      'table.aiagdata th{color:#fff;font-size:6.4pt;text-transform:uppercase;letter-spacing:.2pt;' +
+        'padding:4px 3px;border:.5pt solid rgba(255,255,255,.3);white-space:normal;' +
+        'word-break:break-word;vertical-align:bottom;}' +
+      'table.aiagdata td{font-size:7pt;padding:3px 4px;border:.5pt solid #d7dee9;' +
+        'vertical-align:top;word-break:break-word;}' +
+      '.badge{display:inline-block;padding:1px 5px;border-radius:3px;font-weight:800;font-size:6.2pt;}' +
+      '.badge.cc{background:#fee2e2;color:#b91c1c;} .badge.sc{background:#dcfce7;color:#166534;}' +
+      'table.aiaglegend{width:100%;border-collapse:collapse;margin-top:6px;}' +
+      'table.aiaglegend td{border:.6pt solid #c7d0e0;padding:5px 8px;font-size:7pt;' +
+        'text-align:center;font-weight:700;}' +
+      '</style>';
+  }
+  function aiagBar(accent, title, sub, right){
+    return '<div class="aiagbar" style="background:' + accent + ';">' +
+      '<div class="t">' + esc(title) + '<small>' + esc(sub) + '</small></div>' +
+      (right ? '<div class="r">' + right + '</div>' : '') + '</div>';
+  }
+  /* rows: array of visual rows, each an array of [label, valueHtml] cells. */
+  function aiagMeta(rows){
+    return '<table class="aiagmeta"><tbody>' + rows.map(function(row){
+      return '<tr>' + row.map(function(c){
+        return '<td style="width:' + (100 / row.length) + '%">' +
+          '<div class="k">' + esc(c[0]) + '</div>' +
+          '<div class="v">' + (c[1] == null || c[1] === '' ? '—' : c[1]) + '</div></td>';
+      }).join('') + '</tr>';
+    }).join('') + '</tbody></table>';
+  }
+  function clsBadge(cls){
+    if (!cls) return '—';
+    return '<span class="badge ' + (cls === 'CC' ? 'cc' : 'sc') + '">' + esc(cls) + '</span>';
+  }
+
   function printCp(){
     if (!cpDoc) { toast('Draft the control plan first.'); return; }
     var partId = document.getElementById('ctlp-part').value;
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
     var v = cpDoc.data || {}, rows = v.rows || [], params = v.params || [];
-    var sections = [
-      { type:'pairs', title:'Control plan header', rows:[
-        ['Control plan number', esc(cpDoc.doc_no||'')],
-        ['Control plan type', esc(v.stage||'Production')],
-        ['Part number / name', esc((p.part_no||'')+' — '+(p.part_name||''))],
-        ['Supplier / plant', esc((p.data||{}).plant || '—')],
-        ['Supplier code', esc(v.supplierCode||'—')],
-        ['Key contact / phone', esc(v.keyContact||'—')],
-        ['Core team', esc(v.coreTeam||'—')],
-        ['Date (orig.) / (rev.)', C.fmtDate(v.generatedOn) + ' / rev ' + esc(v.rev||'00')],
-        ['Customer engineering approval / date',
-          esc(v.custEngApproval||'—') + (v.custEngApprovalOn ? ' / ' + C.fmtDate(v.custEngApprovalOn) : '')],
-        ['Customer quality approval / date',
-          esc(v.custQaApproval||'—') + (v.custQaApprovalOn ? ' / ' + C.fmtDate(v.custQaApprovalOn) : '')],
-        ['Other approval / date',
-          esc(v.otherApproval||'—') + (v.otherApprovalOn ? ' / ' + C.fmtDate(v.otherApprovalOn) : '')],
-        ['Supplier / plant approval / date',
-          esc(v.approvedBy||'not yet approved') + (v.approvedOn ? ' / ' + C.fmtDate(v.approvedOn) : '')]
-      ]},
-      { type:'table', title:(v.stage||'Production') + ' control plan', dense:true,
-        columns:[{label:'Char. No.',align:'c'},{label:'Part/process no.',align:'c'},
-          {label:'Process name / operation description'},{label:'Machine, device, jig, tools'},
-          {label:'Product char.'},{label:'Process char.'},{label:'Special char. class.',align:'c'},
-          {label:'Product/process spec. & tolerance'},{label:'Evaluation / measurement technique'},
-          {label:'Sample size',align:'c'},{label:'Sample freq.'},
-          {label:'Control method'},{label:'Reaction plan'}],
-        rows: rows.map(function(r,i){
-          var isProd = r.charType !== 'Process';
-          return [i+1, r.opNo, esc(r.process||''), esc(r.machine||''),
-            isProd?esc(r.characteristic||''):'—', !isProd?esc(r.characteristic||''):'—',
-            r.cls?{v:'<b>'+esc(r.cls)+'</b>'}:'', esc(r.spec||''), esc(r.technique||''),
-            esc(r.sampleSize||''), esc(r.frequency||''), esc(r.method||''), esc(r.reaction||'')];
-        }),
-        note:'Prepared from PFMEA ' + esc(v.fmeaRef||'') +
-             (v.fmeaApproved ? '.' : ' — that PFMEA is an unsigned draft.') + ' Poka-yoke (mistake-' +
-             'proofing) status for each characteristic: ' +
-             rows.map(function(r,i){ return (i+1)+':'+(r.pokaYoke?'Y':'N'); }).join(' ') + '.' }
-    ];
-    if (params.length) sections.push({ type:'table', title:'Process parameters', dense:true,
-      columns:[{label:'Op',align:'c'},{label:'Tool specification'},{label:'Tool life',align:'r'},
-        {label:'Speed',align:'r'},{label:'Feed',align:'r'},{label:'Depth of cut',align:'r'},
-        {label:'Clamping',align:'r'},{label:'Coolant'},{label:'Concentration',align:'r'}],
-      rows: params.map(function(q){
-        return [q.opNo, esc(q.tool||'—'), esc(q.toolLife||'—'), esc(q.speed||'—'), esc(q.feed||'—'),
-          esc(q.doc||'—'), esc(q.clamping||'—'), esc(q.coolant||'—'), esc(q.coolantConc||'—')];
-      }),
-      note:'Settings to be confirmed at first-off approval and held for the run.' });
-    sections.push({ type:'pairs', title:'Record', rows:[
-      ['Stage', esc(v.stage||'Production')],
-      ['Drafted', C.fmtDate(v.generatedOn)],
-      ['Approved by', esc(v.approvedBy || 'not yet approved')],
-      ['Approved on', v.approvedOn ? C.fmtDate(v.approvedOn) : '—'],
-      ['Source PFMEA', esc(v.fmeaRef||'—')],
-      ['Characteristics controlled', rows.length],
-      ['Of which CC or SC', rows.filter(function(r){ return r.cls; }).length]] });
+    var cust = custParts.filter(function(cp2){ return (cp2.data||{}).partId === partId; })
+      .map(function(cp2){ return (cp2.data||{}).customerName; }).filter(Boolean).join(', ') || '—';
+
+    var thead = ['#','Op','Process name / operation description','Machine, device, jig, tool',
+      'Product char.','Process char.','Class','Product/process spec. & tolerance',
+      'Evaluation / measurement technique','Sample size','Sample freq.','Control method','Reaction plan'];
+    var widths = [3,4,15,12,10,9,4,12,11,6,6,9,9];
+
+    var rowsHtml = rows.map(function(r,i){
+      var isProd = r.charType !== 'Process';
+      return '<tr>' +
+        '<td class="c">' + (i+1) + '</td>' +
+        '<td class="c"><b>' + esc(r.opNo||'') + '</b></td>' +
+        '<td>' + esc(r.process||'') + '</td>' +
+        '<td>' + esc(r.machine||'') + '</td>' +
+        '<td>' + (isProd ? esc(r.characteristic||'') : '—') + '</td>' +
+        '<td>' + (!isProd ? esc(r.characteristic||'') : '—') + '</td>' +
+        '<td class="c">' + clsBadge(r.cls) + '</td>' +
+        '<td>' + esc(r.spec||'') + '</td>' +
+        '<td>' + esc(r.technique||'') + '</td>' +
+        '<td class="c">' + esc(r.sampleSize||'') + '</td>' +
+        '<td class="c">' + esc(r.frequency||'') + '</td>' +
+        '<td>' + esc(r.method||'') + '</td>' +
+        '<td>' + esc(r.reaction||'') + '</td>' +
+        '</tr>';
+    }).join('');
+
+    var tableHtml = '<table class="aiagdata"><thead><tr style="background:#0c4a6e;">' +
+      thead.map(function(h,i){ return '<th style="width:' + widths[i] + '%">' + esc(h) + '</th>'; }).join('') +
+      '</tr></thead><tbody>' + (rowsHtml || '<tr><td colspan="13">Nothing recorded.</td></tr>') +
+      '</tbody></table>';
+
+    var paramsHtml = '';
+    if (params.length) paramsHtml = '<h2 style="margin-top:12px;">Process parameters</h2>' +
+      '<table class="aiagdata"><thead><tr style="background:#0c4a6e;">' +
+      '<th>Op</th><th>Tool spec.</th><th>Tool life</th><th>Speed</th><th>Feed</th>' +
+      '<th>Depth of cut</th><th>Clamping</th><th>Coolant</th><th>Concentration</th>' +
+      '</tr></thead><tbody>' + params.map(function(q){
+        return '<tr><td class="c">' + esc(q.opNo||'') + '</td><td>' + esc(q.tool||'—') + '</td>' +
+          '<td class="c">' + esc(q.toolLife||'—') + '</td><td class="c">' + esc(q.speed||'—') + '</td>' +
+          '<td class="c">' + esc(q.feed||'—') + '</td><td class="c">' + esc(q.doc||'—') + '</td>' +
+          '<td class="c">' + esc(q.clamping||'—') + '</td><td>' + esc(q.coolant||'—') + '</td>' +
+          '<td class="c">' + esc(q.coolantConc||'—') + '</td></tr>';
+      }).join('') + '</tbody></table>';
 
     C.openReport({
       title: 'Control Plan' + (v.approvedBy ? '' : ' — DRAFT, NOT APPROVED'),
       kind: v.approvedBy ? 'Control Plan' : 'Control Plan (draft)',
       landscape: true,
-      subtitle: (p.part_no||'') + ' · ' + (p.part_name||'') + ' · ' + esc(cpDoc.doc_no||'') +
-        ' · rev ' + (v.rev||'00'),
-      sections: sections });
+      subtitle: '', sections:[
+        { type:'html', html: aiagStyle() +
+          aiagBar('#0c4a6e', 'CONTROL PLAN',
+            'AIAG Control Plan Reference Manual · 1st Edition · ' + (v.stage||'Production'),
+            esc(cpDoc.doc_no||'') + '<br><span style="font-weight:400;">Rev ' + esc(v.rev||'00') +
+              ' &nbsp;|&nbsp; ' + C.fmtDate(v.generatedOn) + '</span>') +
+          aiagMeta([
+            [['Part number', esc(p.part_no||'—')], ['Part name / description', esc(p.part_name||'—')],
+             ['Supplier / plant', esc((p.data||{}).plant||'—')]],
+            [['Supplier code', esc(v.supplierCode||'—')], ['Customer', esc(cust)],
+             ['Key contact / phone', esc(v.keyContact||'—')]],
+            [['Core team', esc(v.coreTeam||'—')],
+             ['Customer engineering approval', esc(v.custEngApproval||'—') +
+               (v.custEngApprovalOn ? ' / ' + C.fmtDate(v.custEngApprovalOn) : '')],
+             ['Customer quality approval', esc(v.custQaApproval||'—') +
+               (v.custQaApprovalOn ? ' / ' + C.fmtDate(v.custQaApprovalOn) : '')]],
+            [['Other approval', esc(v.otherApproval||'—') +
+               (v.otherApprovalOn ? ' / ' + C.fmtDate(v.otherApprovalOn) : '')],
+             ['Supplier / plant approval', esc(v.approvedBy||'not yet approved') +
+               (v.approvedOn ? ' / ' + C.fmtDate(v.approvedOn) : '')],
+             ['Source PFMEA', esc(v.fmeaRef||'—') + (v.fmeaApproved ? '' : ' (unsigned draft)')]]
+          ]) },
+        { type:'html', html: tableHtml + paramsHtml +
+          '<p class="note" style="margin-top:6px;">Poka-yoke (mistake-proofing) status for each ' +
+          'characteristic above, in order: ' +
+          rows.map(function(r,i){ return (i+1) + ':' + (r.pokaYoke ? 'Y' : 'N'); }).join(' ') + '.</p>' }
+      ]});
   }
 
   /* ---------------- PFMEA ----------------
@@ -16101,57 +16173,85 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var partId = document.getElementById('fm-part').value;
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
     var v = fmeaDoc.data || {}, rows = v.rows || [];
+    var highRpn = rows.reduce(function(m,r){ return Math.max(m, rpn(r)); }, 0);
+
+    var thead = ['Op','Process function / requirement','Characteristic','Potential failure mode',
+      'Potential effect(s)','S','Class','Potential cause(s)','O','Prevention control',
+      'Detection control','D','RPN','Recommended action(s)','Responsibility & target date',
+      'Actions taken',"S\u2032","O\u2032","D\u2032","RPN\u2032"];
+    var widths = [3,10,7.5,9.5,9,2.5,4,8.5,2.5,8,8,2.5,4,8.5,7,6.5,2.5,2.5,2.5,4];
+
+    var rowsHtml = rows.map(function(r){
+      var n = rpn(r);
+      var hasRev = r.revSev || r.revOcc || r.revDet;
+      var rv = (C.num(r.revSev)||C.num(r.sev)) * (C.num(r.revOcc)||C.num(r.occ)) *
+               (C.num(r.revDet)||C.num(r.det));
+      return '<tr>' +
+        '<td class="c"><b>' + esc(r.opNo||'') + '</b></td>' +
+        '<td>' + esc(r.requirement||'') + '</td>' +
+        '<td>' + esc(r.characteristic||'') + '</td>' +
+        '<td>' + esc(r.failureMode||'') + '</td>' +
+        '<td>' + esc(r.effect||'') + '</td>' +
+        '<td class="c">' + (r.sev||'—') + '</td>' +
+        '<td class="c">' + clsBadge(r.cls) + '</td>' +
+        '<td>' + esc(r.cause||'') + '</td>' +
+        '<td class="c">' + (r.occ||'—') + '</td>' +
+        '<td>' + esc(r.prevention||'') + '</td>' +
+        '<td>' + esc(r.detection||'') + '</td>' +
+        '<td class="c">' + (r.det||'—') + '</td>' +
+        '<td class="c"><b style="' + (n>=100?'color:#b91c1c;':(n>=40?'color:#b45309;':'')) + '">' +
+          n + '</b></td>' +
+        '<td>' + esc(r.action||'') + '</td>' +
+        '<td>' + esc(r.responsibility||'') + '</td>' +
+        '<td>' + esc(r.actionsTaken||'') + '</td>' +
+        '<td class="c">' + (hasRev ? (r.revSev||'—') : '—') + '</td>' +
+        '<td class="c">' + (hasRev ? (r.revOcc||'—') : '—') + '</td>' +
+        '<td class="c">' + (hasRev ? (r.revDet||'—') : '—') + '</td>' +
+        '<td class="c">' + (hasRev ? '<b>'+rv+'</b>' : '—') + '</td>' +
+        '</tr>';
+    }).join('');
+
+    var tableHtml = '<table class="aiagdata"><thead><tr style="background:#7f1d1d;">' +
+      thead.map(function(h,i){ return '<th style="width:' + widths[i] + '%">' + esc(h) + '</th>'; }).join('') +
+      '</tr></thead><tbody>' + (rowsHtml || '<tr><td colspan="20">Nothing recorded.</td></tr>') +
+      '</tbody></table>';
+
+    var legendHtml = '<table class="aiaglegend"><tr>' +
+      '<td style="background:#dcfce7;">RPN &lt; 50 — Acceptable</td>' +
+      '<td style="background:#fef9c3;">50–99 — Monitor</td>' +
+      '<td style="background:#fee2e2;">100–199 — Action required</td>' +
+      '<td style="background:#fecaca;">\u2265 200 — Critical, immediate action</td>' +
+      '</tr></table>';
+
     C.openReport({
-      title: 'Potential Failure Mode and Effects Analysis (Process FMEA)' +
-        (v.reviewedBy ? '' : ' — DRAFT, NOT APPROVED'),
+      title: 'PFMEA' + (v.reviewedBy ? '' : ' — DRAFT, NOT APPROVED'),
       kind: v.reviewedBy ? 'PFMEA' : 'PFMEA (draft)',
       landscape: true,
-      subtitle: (p.part_no||'') + ' · ' + (p.part_name||'') + ' · ' + esc(fmeaDoc.doc_no||'') +
-        ' · rev ' + (v.rev||'00'),
-      sections:[
-        { type:'pairs', title:'FMEA header', rows:[
-          ['FMEA number', esc(fmeaDoc.doc_no||'')],
-          ['Item (part number / name)', esc((p.part_no||'')+' — '+(p.part_name||''))],
-          ['Process responsibility', esc(v.processResponsibility||'—')],
-          ['Model year(s) / programme(s)', esc(v.modelProgram||'—')],
-          ['Key date', v.keyDate ? C.fmtDate(v.keyDate) : '—'],
-          ['FMEA date (orig.) / (rev.)', C.fmtDate(v.generatedOn) + ' / rev ' + esc(v.rev||'00')],
-          ['Core team', esc(v.coreTeam||'—')],
-          ['Prepared by', esc(v.preparedBy||'—')]
-        ]},
-        { type:'table', title:'Failure modes and effects analysis', dense:true,
-          columns:[{label:'Op',align:'c'},{label:'Process function / requirement'},
-            {label:'Characteristic'},{label:'Potential failure mode'},
-            {label:'Potential effect(s) of failure'},{label:'S',align:'c'},{label:'Class',align:'c'},
-            {label:'Potential cause(s)'},{label:'O',align:'c'},{label:'Current controls — prevention'},
-            {label:'Current controls — detection'},{label:'D',align:'c'},{label:'RPN',align:'c'},
-            {label:'Recommended action(s)'},{label:'Responsibility & target date'},
-            {label:'Actions taken'},{label:'S′',align:'c'},{label:'O′',align:'c'},
-            {label:'D′',align:'c'},{label:'RPN′',align:'c'}],
-          rows: rows.map(function(r){
-            var n = rpn(r);
-            var hasRev = r.revSev || r.revOcc || r.revDet;
-            var rv = (C.num(r.revSev)||C.num(r.sev)) * (C.num(r.revOcc)||C.num(r.occ)) *
-                     (C.num(r.revDet)||C.num(r.det));
-            return [r.opNo, esc(r.requirement||''), esc(r.characteristic||''),
-              esc(r.failureMode||''), esc(r.effect||''),
-              r.sev, r.cls?{v:'<b>'+esc(r.cls)+'</b>'}:'', esc(r.cause||''), r.occ,
-              esc(r.prevention||''), esc(r.detection||''),
-              r.det, { v:'<b>'+n+'</b>', cls: n>=100?'ab':'' }, esc(r.action||''),
-              esc(r.responsibility||''), esc(r.actionsTaken||''),
-              hasRev?r.revSev:'—', hasRev?r.revOcc:'—', hasRev?r.revDet:'—',
-              hasRev?{v:'<b>'+rv+'</b>'}:'—'];
-          }),
-          note: v.reviewedBy
-            ? 'Reviewed by ' + v.reviewedBy + ' on ' + C.fmtDate(v.reviewedOn) + '.'
+      subtitle: '', sections:[
+        { type:'html', html: aiagStyle() +
+          aiagBar('#7f1d1d',
+            'PROCESS FAILURE MODE & EFFECTS ANALYSIS (PFMEA)' + (v.reviewedBy ? '' : ' \u2014 DRAFT, NOT APPROVED'),
+            'AIAG-VDA FMEA 1st Edition · Process FMEA',
+            esc(fmeaDoc.doc_no||'') + '<br><span style="font-weight:400;">Rev ' + esc(v.rev||'00') +
+              ' &nbsp;|&nbsp; ' + C.fmtDate(v.generatedOn) + '</span>') +
+          aiagMeta([
+            [['Part / item code', esc(p.part_no||'—')], ['Part description', esc(p.part_name||'—')],
+             ['Process responsibility', esc(v.processResponsibility||'—')]],
+            [['Model year(s) / programme(s)', esc(v.modelProgram||'—')],
+             ['Key date', v.keyDate ? C.fmtDate(v.keyDate) : '—'], ['Core team', esc(v.coreTeam||'—')]],
+            [['Total rows', rows.length], ['Highest RPN', highRpn],
+             ['Rows at RPN \u2265 100', rows.filter(function(r){ return rpn(r) >= 100; }).length]]
+          ]) + legendHtml },
+        { type:'html', html: tableHtml },
+        { type:'html', html: aiagMeta([[
+            ['Prepared by', esc(v.preparedBy||'—')],
+            ['Reviewed by', esc(v.reviewedBy||'not yet reviewed')],
+            ['Reviewed on', v.reviewedOn ? C.fmtDate(v.reviewedOn) : '—']
+          ]]) +
+          '<p class="note" style="margin-top:6px;">' + (v.reviewedBy
+            ? 'Reviewed by ' + esc(v.reviewedBy) + ' on ' + C.fmtDate(v.reviewedOn) + '.'
             : 'DRAFT. Rankings were proposed from the recorded process and have not been reviewed ' +
-              'by a cross-functional team. Not to be issued to a customer in this state.' },
-        { type:'pairs', title:'Record', rows:[
-          ['Drafted', C.fmtDate(v.generatedOn)],
-          ['Reviewed by', esc(v.reviewedBy || 'not yet reviewed')],
-          ['Reviewed on', v.reviewedOn ? C.fmtDate(v.reviewedOn) : '—'],
-          ['Lines at RPN 100+', rows.filter(function(r){ return rpn(r) >= 100; }).length],
-          ['Highest RPN', rows.reduce(function(m,r){ return Math.max(m, rpn(r)); }, 0)]]}
+              'by a cross-functional team. Not to be issued to a customer in this state.') + '</p>' }
       ]});
   }
 
@@ -16257,6 +16357,10 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     }
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
     title.textContent = 'Flow for ' + (p.part_no||'') + ' — ' + (p.part_name||'');
+    var docnoEl = document.getElementById('fd-docno'), revEl = document.getElementById('fd-rev');
+    if (docnoEl && !docnoEl.value)
+      docnoEl.value = (C.getProfile().docPrefix||'DOC') + '-PFD-' + (p.part_no||'');
+    if (revEl && !revEl.value) revEl.value = '00';
     var ops = opsFor(partId);
     if (!ops.length){
       host.innerHTML = '<div class="empty"><b>No routing on this part</b>' +
@@ -16282,39 +16386,76 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var ops = opsFor(partId);
     if (!ops.length) { toast('This part has no routing to print.'); return; }
     var prepBy = document.getElementById('fd-prepby').value;
+    var docNo  = document.getElementById('fd-docno').value || '\u2014';
+    var rev    = document.getElementById('fd-rev').value || '00';
+    var today  = new Date().toISOString().slice(0,10);
+    var cust = custParts.filter(function(cp){ return (cp.data||{}).partId === partId; })
+      .map(function(cp){ return (cp.data||{}).customerName; }).filter(Boolean).join(', ') || '—';
+
+    var rowsHtml = ops.map(function(o){
+      var v = o.data||{};
+      var dims = dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
+      var symbol = isInspection(v) ? 'Inspection (I)' : isStorage(v) ? 'Storage (S)' : 'Operation (O)';
+      var charHtml = dims.length
+        ? dims.map(function(d){ var q = d.data||{};
+            return '<div style="margin-bottom:2px;">' + esc(q.description||'') +
+              (q.cls ? ' ' + clsBadge(q.cls) : '') +
+              '<br><span style="color:#697894;">' + (C.num(q.nominal) ? C.qty(q.nominal) : '—') +
+              (q.upper ? ' ' + esc(q.upper) : '') + (q.lower ? ' / ' + esc(q.lower) : '') +
+              (q.unit ? ' ' + esc(q.unit) : '') + '</span></div>'; }).join('')
+        : '<span style="color:#9aa7bd;">none recorded</span>';
+      return '<tr>' +
+        '<td class="c"><b>' + esc(v.opNo||'') + '</b></td>' +
+        '<td>' + esc(v.name||'') + (v.description ?
+          '<div style="color:#697894;font-size:6.4pt;margin-top:2px;">' + esc(v.description) + '</div>' : '') +
+          '</td>' +
+        '<td class="c">' + symbol + '</td>' +
+        '<td>' + esc(v.machine||'—') + '</td>' +
+        '<td class="c">' + (v.where==='sub' ? 'Sub-contract' : 'In house') + '</td>' +
+        '<td class="c">' + (C.num(v.setupMin) ? C.qty(v.setupMin)+' min' : '—') + '</td>' +
+        '<td class="c">' + (C.num(v.cycleSec) ? C.qty(v.cycleSec)+' s' : '—') + '</td>' +
+        '<td>' + charHtml + '</td>' +
+        '</tr>';
+    }).join('');
+
+    var tableHtml = '<table class="aiagdata"><thead><tr style="background:#0B2A5B;">' +
+      '<th style="width:6%">Op</th><th style="width:19%">Process name</th>' +
+      '<th style="width:10%">Symbol</th><th style="width:14%">Machine / equipment</th>' +
+      '<th style="width:9%">Where</th><th style="width:7%">Setup</th><th style="width:7%">Cycle</th>' +
+      '<th style="width:28%">Product characteristics (CC / SC flagged)</th>' +
+      '</tr></thead><tbody>' + (rowsHtml || '<tr><td colspan="8">Nothing recorded.</td></tr>') +
+      '</tbody></table>';
+
+    var legendHtml = '<table class="aiaglegend"><tr>' +
+      '<td style="text-align:left;font-weight:800;">Symbol legend</td>' +
+      '<td>\u25CB Operation</td><td>\u25A1 Inspection</td><td>\u25B3 Storage</td>' +
+      '<td>\u2193 Process flow direction</td>' +
+      '</tr></table>';
+
+    var noDims = ops.filter(function(o){
+      return !dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; }).length; });
+
     C.openReport({
-      title:'Process Flow Diagram', kind:'PFD',
-      subtitle: (p.part_no||'') + ' · ' + (p.part_name||'') +
-        ((p.data||{}).drawingNo ? ' · drawing ' + (p.data||{}).drawingNo : ''),
+      title:'Process Flow Diagram', kind:'PFD', landscape:true, subtitle:'',
       sections:[
-        { type:'pairs', title:'PFD header', rows:[
-          ['Part number / name', esc((p.part_no||'')+' — '+(p.part_name||''))],
-          ['Drawing number', esc((p.data||{}).drawingNo||'—')],
-          ['Prepared by', esc(prepBy||'—')],
-          ['Date', C.fmtDate(new Date().toISOString().slice(0,10))],
-          ['Page', '1 of 1']
-        ]},
-        { type:'html', html: pfdSvg(partId) + pfdLegendHtml() },
-        { type:'table', title:'Operations and characteristics',
-          columns:[{label:'Op',align:'c'},{label:'Operation'},{label:'Symbol'},{label:'Machine'},
-                   {label:'Setup',align:'r'},{label:'Cycle',align:'r'},{label:'Where'},
-                   {label:'Product / process characteristics'}],
-          rows: ops.map(function(o){
-            var v = o.data||{};
-            var dims = dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
-            var symbol = isInspection(v) ? 'Inspection' : isStorage(v) ? 'Storage' : 'Operation';
-            var charText = dims.length
-              ? dims.map(function(d){ var q=d.data||{};
-                  return esc(q.description||'') + (q.cls?' ['+esc(q.cls)+']':''); }).join('; ')
-              : 'none recorded';
-            return [v.opNo, esc(v.name||''), symbol, esc(v.machine||'—'),
-                    C.num(v.setupMin)?C.qty(v.setupMin)+' min':'—',
-                    C.num(v.cycleSec)?C.qty(v.cycleSec)+' s':'—',
-                    v.where==='sub'?'Sub-contract':'In house', charText];
-          }),
-          note:'Drawn from the routing held against this part — a change here means the routing ' +
-               'was changed, not that the diagram was edited separately. CC/SC characteristics are ' +
-               'flagged in brackets.' }
+        { type:'html', html: aiagStyle() +
+          aiagBar('#0B2A5B', 'PROCESS FLOW DIAGRAM (PFD)',
+            'IATF 16949 / AIAG Quality System Reference Manual',
+            esc(docNo) + '<br><span style="font-weight:400;">Rev ' + esc(rev) +
+              ' &nbsp;|&nbsp; ' + C.fmtDate(today) + '</span>') +
+          aiagMeta([
+            [['Part number', esc(p.part_no||'—')], ['Part name', esc(p.part_name||'—')],
+             ['Drawing no. / rev', esc((p.data||{}).drawingNo||'—') + ' / ' +
+               esc((p.data||{}).drawingRev||'—')]],
+            [['Customer', esc(cust)], ['Raw material', esc((p.data||{}).rawMaterial||'—')],
+             ['Prepared by', esc(prepBy||'—')]]
+          ]) + legendHtml },
+        { type:'html', html: tableHtml +
+          (noDims.length ? '<p class="note" style="margin-top:6px;"><b>' + noDims.length +
+            ' operation(s) have no dimensions recorded</b>: ' +
+            noDims.map(function(o){ return esc((o.data||{}).opNo); }).join(', ') + '.</p>' : '') +
+          '<p class="note" style="margin-top:6px;">Drawn from the routing held against this part — ' +
+          'a change here means the routing was changed, not that the diagram was edited separately.</p>' }
       ]});
   }
 

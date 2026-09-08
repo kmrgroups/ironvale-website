@@ -6462,7 +6462,7 @@ within seven days.</p>
   }
 
   function printAuditPack(checks){
-    const co=CO(), w=window.open('','_blank');
+    const co=CO(), logo=absUrl(documentLogo()), w=window.open('','_blank');
     if(!w){ toast('Allow pop-ups for this site.'); return; }
     const active=hrEmployees.filter(e=>e.status!=='Exited');
     w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>HR Evidence Pack</title>
@@ -6473,14 +6473,15 @@ within seven days.</p>
     th{background:#0B2A5B;color:#fff;text-align:left;padding:5px;font-size:7.5pt;text-transform:uppercase;}
     td{padding:4px 5px;border-bottom:.6pt solid #e2e9f2;vertical-align:top;}
     .g{color:#1F9D6B;font-weight:700;}.a{color:#8E6A19;font-weight:700;}.r{color:#B03A2E;font-weight:700;}
-    .head{border-bottom:2pt solid #0B2A5B;padding-bottom:8px;margin-bottom:12px;}
+    .head{display:flex;gap:14px;align-items:center;border-bottom:2pt solid #0B2A5B;padding-bottom:8px;margin-bottom:12px;}
+    .head img{max-height:52px;max-width:130px;object-fit:contain;}
     .note{background:#FFF6E0;border:.7pt solid #e0c37a;padding:8px 10px;font-size:7.5pt;color:#7a5c14;margin-top:14px;}
     .noprint{text-align:center;padding:14px;background:#0B2A5B;color:#fff;}
     .noprint button{background:#E0B44E;color:#0B2A5B;border:none;padding:10px 24px;border-radius:100px;font-weight:700;cursor:pointer;}
     @media print{.noprint{display:none;}}</style></head><body>
     <div class="noprint"><button onclick="window.print()">Save as PDF / Print</button></div>
-    <div class="head"><h1>${esc(co.legalName||data.brandName)}</h1>
-      <div>HR Evidence Pack — generated ${new Date().toLocaleString()}</div></div>
+    <div class="head">${logo?`<img src="${logo}">`:''}<div><h1>${esc(co.legalName||data.brandName)}</h1>
+      <div>HR Evidence Pack — generated ${new Date().toLocaleString()}</div></div></div>
 
     <h2>Evidence Summary</h2>
     <table><thead><tr><th style="width:60px">Status</th><th style="width:90px">Clause</th><th>Requirement</th>

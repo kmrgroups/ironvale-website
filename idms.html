@@ -2636,12 +2636,34 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         </div>
         <div class="note" id="cp-msg" style="display:none;"></div>
       </div>
+      <div class="card" id="cp-header" style="display:none;">
+        <h4>Control plan header (AIAG)</h4>
+        <div class="hint" style="margin-bottom:10px;">These fields print in the header block of the
+          form, as required by the AIAG Control Plan format. They are not generated — enter them
+          once per part and they are kept with the document.</div>
+        <div class="row four">
+          <div><label>Key contact / phone</label><input id="cp-contact"></div>
+          <div style="grid-column:span 2;"><label>Core team</label><input id="cp-team" placeholder="names, comma separated"></div>
+          <div><label>Supplier code</label><input id="cp-supcode"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Customer engineering approval</label><input id="cp-custeng"></div>
+          <div><label>Date</label><input type="date" id="cp-custeng-on"></div>
+          <div><label>Customer quality approval</label><input id="cp-custqa"></div>
+          <div><label>Date</label><input type="date" id="cp-custqa-on"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Other approval</label><input id="cp-other"></div>
+          <div><label>Date</label><input type="date" id="cp-other-on"></div>
+          <div style="align-self:end;grid-column:span 2;"><button class="btn" id="cp-header-save">Save header</button></div>
+        </div>
+      </div>
       <div class="card">
         <h4 id="cp-title">Control Plan</h4>
         <div id="cp-body"></div>
       </div>
       <div class="card" id="cp-signoff" style="display:none;">
-        <h4>Approval</h4>
+        <h4>Supplier / plant approval</h4>
         <div class="hint" style="margin-bottom:10px;">A control plan is what the shop floor is held
           to. Until it is approved the printed copy is stamped DRAFT.</div>
         <div class="row four">
@@ -2667,6 +2689,22 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         </div>
         <div class="note" id="fm-msg" style="display:none;"></div>
       </div>
+      <div class="card" id="fm-header" style="display:none;">
+        <h4>PFMEA header (AIAG)</h4>
+        <div class="hint" style="margin-bottom:10px;">These fields print in the header block of the
+          form, as required by the AIAG FMEA-4 format. They are not generated — enter them once per
+          part and they are kept with the document.</div>
+        <div class="row four">
+          <div><label>Process responsibility</label><input id="fm-resp-owner"></div>
+          <div><label>Model year(s) / programme(s)</label><input id="fm-model"></div>
+          <div><label>Key date</label><input type="date" id="fm-keydate"></div>
+          <div><label>Prepared by</label><input id="fm-prepby"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div style="grid-column:span 3;"><label>Core team</label><input id="fm-team" placeholder="names, comma separated"></div>
+          <div style="align-self:end;"><button class="btn" id="fm-header-save">Save header</button></div>
+        </div>
+      </div>
       <div class="card">
         <h4 id="fm-title">PFMEA</h4>
         <div id="fm-body"></div>
@@ -2689,10 +2727,12 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       <div class="card">
         <h4>Process Flow Diagram</h4>
         <div class="hint" style="margin-bottom:10px;">Drawn from the routing — it is not typed
-          separately, so it can never disagree with the operations you entered. Inspection
-          operations are shown as diamonds; everything else as a box.</div>
+          separately, so it can never disagree with the operations you entered. Standard flowcharting
+          symbols are used throughout: a box is an operation, a diamond is an inspection, and an
+          inverted triangle is storage — the legend prints with the diagram.</div>
         <div class="row four">
           <div style="grid-column:span 2;"><label>Part</label><select id="fd-part"></select></div>
+          <div><label>Prepared by</label><input id="fd-prepby"></div>
           <div style="align-self:end;"><button class="btn" id="fd-print">Print</button></div>
         </div>
       </div>
@@ -9820,6 +9860,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 'no JSON, no markdown, no asterisks:\n\n' +
 'LINE\nOP: <operation number, must be one of the numbers above>\n' +
 'CHAR: <the characteristic this line concerns, copied from above, or "process" if it concerns the step itself>\n' +
+'CLASS: <CC if the characteristic above is marked CC, SC if marked SC, otherwise leave blank>\n' +
 'REQUIREMENT: <what the step must achieve>\n' +
 'MODE: <how it can fail — a physical failure of the characteristic, not a cause>\n' +
 'EFFECT: <consequence, stated for the end customer where it reaches them>\n' +
@@ -9875,6 +9916,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 'Reply in exactly this shape and nothing else — no JSON, no markdown, no asterisks:\n\n' +
 'CONTROL\nOP: <operation number from above>\nCHAR: <the characteristic, copied from above, ' +
 'or a process characteristic such as "programme loaded">\n' +
+'TYPE: <Product or Process — Product for a dimension, form or finish on the part itself; ' +
+'Process for a machine or process setting such as speed, pressure or programme loaded>\n' +
 'SPEC: <the specification and tolerance>\nTECHNIQUE: <how it is measured — name the gauge above ' +
 'where one is recorded>\nSIZE: <sample size, a number or 100%>\nFREQ: <how often>\n' +
 'METHOD: <control method — check sheet, SPC chart, first-off approval, automatic gauging>\n' +
@@ -15490,6 +15533,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var host = document.getElementById('cp-body');
     var title = document.getElementById('cp-title');
     document.getElementById('cp-signoff').style.display = 'none';
+    document.getElementById('cp-header').style.display = 'none';
     if (!partId){
       title.textContent = 'Control Plan';
       host.innerHTML = '<div class="empty"><b>Choose a part</b>' +
@@ -15523,12 +15567,14 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           ' from the PFMEA. Check every reaction plan is one your shop floor can actually carry ' +
           'out, then record the approval below.</div>') +
       '<div style="overflow-x:auto;"><table class="t"><thead><tr>' +
-      '<th class="c">Op</th><th>Process / machine</th><th>Characteristic</th><th class="c">Class</th>' +
+      '<th class="c">Char No.</th><th class="c">Op</th><th>Process / machine</th>' +
+      '<th class="c">Type</th><th>Characteristic</th><th class="c">Class</th>' +
       '<th>Specification</th><th>Technique</th><th class="c">Size</th><th>Frequency</th>' +
       '<th>Control method</th><th>Reaction plan</th><th class="c">Poka-yoke</th>' +
-      '</tr></thead><tbody>' + rows.map(function(r){
-        return '<tr><td class="c">'+esc(r.opNo)+'</td>' +
+      '</tr></thead><tbody>' + rows.map(function(r,i){
+        return '<tr><td class="c">'+(i+1)+'</td><td class="c">'+esc(r.opNo)+'</td>' +
           '<td>'+esc(r.process||'')+'<div class="hint">'+esc(r.machine||'')+'</div></td>' +
+          '<td class="c">'+esc(r.charType||'Process')+'</td>' +
           '<td>'+esc(r.characteristic||'')+'</td>' +
           '<td class="c">'+(r.cls?'<span class="badge '+(r.cls==='CC'?'apqp':'sample')+'">'+
             esc(r.cls)+'</span>':'')+'</td>' +
@@ -15562,6 +15608,42 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     document.getElementById('cp-on').value  = v.approvedOn || '';
     document.getElementById('cp-rev').value = v.rev || '00';
     if (v.stage) document.getElementById('cp-stage').value = v.stage;
+
+    /* AIAG header block fields — entered once per part, not generated */
+    document.getElementById('cp-header').style.display = '';
+    document.getElementById('cp-contact').value    = v.keyContact || '';
+    document.getElementById('cp-team').value        = v.coreTeam || '';
+    document.getElementById('cp-supcode').value     = v.supplierCode || '';
+    document.getElementById('cp-custeng').value     = v.custEngApproval || '';
+    document.getElementById('cp-custeng-on').value  = v.custEngApprovalOn || '';
+    document.getElementById('cp-custqa').value      = v.custQaApproval || '';
+    document.getElementById('cp-custqa-on').value   = v.custQaApprovalOn || '';
+    document.getElementById('cp-other').value       = v.otherApproval || '';
+    document.getElementById('cp-other-on').value    = v.otherApprovalOn || '';
+  }
+
+  async function saveCpHeader(){
+    if (!cpDoc) { toast('Draft the control plan first.'); return; }
+    var btn = document.getElementById('cp-header-save');
+    btn.disabled = true;
+    try {
+      var v = Object.assign({}, cpDoc.data, {
+        keyContact: document.getElementById('cp-contact').value,
+        coreTeam: document.getElementById('cp-team').value,
+        supplierCode: document.getElementById('cp-supcode').value,
+        custEngApproval: document.getElementById('cp-custeng').value,
+        custEngApprovalOn: document.getElementById('cp-custeng-on').value,
+        custQaApproval: document.getElementById('cp-custqa').value,
+        custQaApprovalOn: document.getElementById('cp-custqa-on').value,
+        otherApproval: document.getElementById('cp-other').value,
+        otherApprovalOn: document.getElementById('cp-other-on').value });
+      await C.idms.saveDoc({ docId: cpDoc.doc_id, kind:'control_plan',
+        partId: document.getElementById('cp-part').value,
+        status: cpDoc.status, data: v }, 'control plan header fields updated');
+      cpDoc.data = v;
+      toast('Header saved');
+    } catch(e){ toast(e.message); }
+    btn.disabled = false;
   }
 
   async function generateCp(){
@@ -15589,13 +15671,24 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var parsed = parseCpReply(txt, ops);
       if (!parsed.rows.length) throw new Error('The reply could not be read as control plan lines.');
 
+      /* header fields (contact, core team, customer approvals) are entered once
+         by a person and must survive a re-draft of the rows */
+      var oldHeader = cpDoc ? {
+        keyContact: (cpDoc.data||{}).keyContact, coreTeam: (cpDoc.data||{}).coreTeam,
+        supplierCode: (cpDoc.data||{}).supplierCode,
+        custEngApproval: (cpDoc.data||{}).custEngApproval,
+        custEngApprovalOn: (cpDoc.data||{}).custEngApprovalOn,
+        custQaApproval: (cpDoc.data||{}).custQaApproval,
+        custQaApprovalOn: (cpDoc.data||{}).custQaApprovalOn,
+        otherApproval: (cpDoc.data||{}).otherApproval,
+        otherApprovalOn: (cpDoc.data||{}).otherApprovalOn } : {};
       var doc = { kind:'control_plan', partId: partId, status:'Draft',
         docNo: cpDoc ? cpDoc.doc_no : await C.docNumber('cp'),
-        data:{ partId: partId, rows: parsed.rows, params: parsed.params,
+        data: Object.assign({ partId: partId, rows: parsed.rows, params: parsed.params,
                stage: document.getElementById('cp-stage').value,
                fmeaRef: fmeaDoc.doc_no || '', fmeaApproved: !!(fmeaDoc.data||{}).reviewedBy,
                generatedOn: new Date().toISOString().slice(0,10),
-               approvedBy:'', approvedOn:'', rev:'00' } };
+               approvedBy:'', approvedOn:'', rev:'00' }, oldHeader) };
       if (cpDoc) doc.docId = cpDoc.doc_id;
       await C.idms.saveDoc(doc, 'control plan drafted from the PFMEA');
       await loadCpDoc();
@@ -15640,8 +15733,10 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           var q = d.data||{};
           return C.num(q.opNo) === C.num(op) && q.description &&
                  q.description.toLowerCase().indexOf(chr.toLowerCase().slice(0,18)) >= 0; })[0];
+        var typ = get(block,'TYPE');
         rows.push({ opNo:C.num(op), process:o.name||'', machine:o.machine||'',
           characteristic:chr, cls:(dim && (dim.data||{}).cls) || '',
+          charType: /^prod/i.test(typ) ? 'Product' : 'Process',
           spec:get(block,'SPEC'), technique:get(block,'TECHNIQUE'),
           sampleSize:get(block,'SIZE'), frequency:get(block,'FREQ'),
           method:get(block,'METHOD'), reaction:get(block,'REACTION'),
@@ -15659,19 +15754,42 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
     var v = cpDoc.data || {}, rows = v.rows || [], params = v.params || [];
     var sections = [
+      { type:'pairs', title:'Control plan header', rows:[
+        ['Control plan number', esc(cpDoc.doc_no||'')],
+        ['Control plan type', esc(v.stage||'Production')],
+        ['Part number / name', esc((p.part_no||'')+' — '+(p.part_name||''))],
+        ['Supplier / plant', esc((p.data||{}).plant || '—')],
+        ['Supplier code', esc(v.supplierCode||'—')],
+        ['Key contact / phone', esc(v.keyContact||'—')],
+        ['Core team', esc(v.coreTeam||'—')],
+        ['Date (orig.) / (rev.)', C.fmtDate(v.generatedOn) + ' / rev ' + esc(v.rev||'00')],
+        ['Customer engineering approval / date',
+          esc(v.custEngApproval||'—') + (v.custEngApprovalOn ? ' / ' + C.fmtDate(v.custEngApprovalOn) : '')],
+        ['Customer quality approval / date',
+          esc(v.custQaApproval||'—') + (v.custQaApprovalOn ? ' / ' + C.fmtDate(v.custQaApprovalOn) : '')],
+        ['Other approval / date',
+          esc(v.otherApproval||'—') + (v.otherApprovalOn ? ' / ' + C.fmtDate(v.otherApprovalOn) : '')],
+        ['Supplier / plant approval / date',
+          esc(v.approvedBy||'not yet approved') + (v.approvedOn ? ' / ' + C.fmtDate(v.approvedOn) : '')]
+      ]},
       { type:'table', title:(v.stage||'Production') + ' control plan', dense:true,
-        columns:[{label:'Op',align:'c'},{label:'Process'},{label:'Machine / device'},
-          {label:'Characteristic'},{label:'Class',align:'c'},{label:'Specification'},
-          {label:'Technique'},{label:'Size',align:'c'},{label:'Frequency'},
-          {label:'Control method'},{label:'Reaction plan'},{label:'Poka-yoke',align:'c'}],
-        rows: rows.map(function(r){
-          return [r.opNo, esc(r.process||''), esc(r.machine||''), esc(r.characteristic||''),
+        columns:[{label:'Char. No.',align:'c'},{label:'Part/process no.',align:'c'},
+          {label:'Process name / operation description'},{label:'Machine, device, jig, tools'},
+          {label:'Product char.'},{label:'Process char.'},{label:'Special char. class.',align:'c'},
+          {label:'Product/process spec. & tolerance'},{label:'Evaluation / measurement technique'},
+          {label:'Sample size',align:'c'},{label:'Sample freq.'},
+          {label:'Control method'},{label:'Reaction plan'}],
+        rows: rows.map(function(r,i){
+          var isProd = r.charType !== 'Process';
+          return [i+1, r.opNo, esc(r.process||''), esc(r.machine||''),
+            isProd?esc(r.characteristic||''):'—', !isProd?esc(r.characteristic||''):'—',
             r.cls?{v:'<b>'+esc(r.cls)+'</b>'}:'', esc(r.spec||''), esc(r.technique||''),
-            esc(r.sampleSize||''), esc(r.frequency||''), esc(r.method||''), esc(r.reaction||''),
-            r.pokaYoke?'Yes':'—'];
+            esc(r.sampleSize||''), esc(r.frequency||''), esc(r.method||''), esc(r.reaction||'')];
         }),
         note:'Prepared from PFMEA ' + esc(v.fmeaRef||'') +
-             (v.fmeaApproved ? '.' : ' — that PFMEA is an unsigned draft.') }
+             (v.fmeaApproved ? '.' : ' — that PFMEA is an unsigned draft.') + ' Poka-yoke (mistake-' +
+             'proofing) status for each characteristic: ' +
+             rows.map(function(r,i){ return (i+1)+':'+(r.pokaYoke?'Y':'N'); }).join(' ') + '.' }
     ];
     if (params.length) sections.push({ type:'table', title:'Process parameters', dense:true,
       columns:[{label:'Op',align:'c'},{label:'Tool specification'},{label:'Tool life',align:'r'},
@@ -15736,6 +15854,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var host = document.getElementById('fm-body');
     var title = document.getElementById('fm-title');
     document.getElementById('fm-signoff').style.display = 'none';
+    document.getElementById('fm-header').style.display = 'none';
     if (!partId){
       title.textContent = 'PFMEA';
       host.innerHTML = '<div class="empty"><b>Choose a part</b>' +
@@ -15775,21 +15894,37 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
               'action and a target date before the control plan is written.</div>' : '') +
       '<div style="overflow-x:auto;"><table class="t"><thead><tr>' +
       '<th class="c">Op</th><th>Function / requirement</th><th>Failure mode</th><th>Effect</th>' +
-      '<th class="c">S</th><th>Cause</th><th class="c">O</th><th>Prevention</th><th>Detection</th>' +
-      '<th class="c">D</th><th class="c">RPN</th><th>Action</th></tr></thead><tbody>' +
+      '<th class="c">S</th><th class="c">Class</th><th>Cause</th><th class="c">O</th>' +
+      '<th>Prevention</th><th>Detection</th>' +
+      '<th class="c">D</th><th class="c">RPN</th><th>Recommended action</th>' +
+      '<th>Responsibility & target date</th><th>Actions taken</th>' +
+      '<th class="c">S′</th><th class="c">O′</th><th class="c">D′</th><th class="c">RPN′</th>' +
+      '</tr></thead><tbody>' +
       rows.map(function(r,i){
         var v = rpn(r);
+        var rv = (C.num(r.revSev)||C.num(r.sev)) * (C.num(r.revOcc)||C.num(r.occ)) *
+                 (C.num(r.revDet)||C.num(r.det));
+        var hasRev = r.revSev || r.revOcc || r.revDet;
         return '<tr><td class="c">'+esc(r.opNo)+'</td>' +
           '<td>'+esc(r.requirement||'')+(r.characteristic?'<div class="hint">'+esc(r.characteristic)+
-            (r.cls?' · <b>'+esc(r.cls)+'</b>':'')+'</div>':'')+'</td>' +
+            '</div>':'')+'</td>' +
           '<td>'+esc(r.failureMode||'')+'</td><td>'+esc(r.effect||'')+'</td>' +
           '<td class="c"><input class="num fm-n" data-i="'+i+'" data-k="sev" value="'+esc(r.sev)+'" style="width:44px;text-align:center;"></td>' +
+          '<td class="c"><select class="fm-cls" data-i="'+i+'" style="width:64px;">' +
+            ['','CC','SC'].map(function(o){ return '<option'+(r.cls===o?' selected':'')+'>'+o+'</option>'; }).join('') +
+            '</select></td>' +
           '<td>'+esc(r.cause||'')+'</td>' +
           '<td class="c"><input class="num fm-n" data-i="'+i+'" data-k="occ" value="'+esc(r.occ)+'" style="width:44px;text-align:center;"></td>' +
           '<td class="hint">'+esc(r.prevention||'')+'</td><td class="hint">'+esc(r.detection||'')+'</td>' +
           '<td class="c"><input class="num fm-n" data-i="'+i+'" data-k="det" value="'+esc(r.det)+'" style="width:44px;text-align:center;"></td>' +
           '<td class="c"><b class="fm-rpn" data-i="'+i+'">'+v+'</b></td>' +
-          '<td><input class="fm-act" data-i="'+i+'" value="'+esc(r.action||'')+'"></td></tr>';
+          '<td><input class="fm-act" data-i="'+i+'" value="'+esc(r.action||'')+'"></td>' +
+          '<td><input class="fm-resp" data-i="'+i+'" value="'+esc(r.responsibility||'')+'" placeholder="who, by when"></td>' +
+          '<td><input class="fm-done" data-i="'+i+'" value="'+esc(r.actionsTaken||'')+'"></td>' +
+          '<td class="c"><input class="num fm-n" data-i="'+i+'" data-k="revSev" value="'+esc(r.revSev||'')+'" style="width:40px;text-align:center;"></td>' +
+          '<td class="c"><input class="num fm-n" data-i="'+i+'" data-k="revOcc" value="'+esc(r.revOcc||'')+'" style="width:40px;text-align:center;"></td>' +
+          '<td class="c"><input class="num fm-n" data-i="'+i+'" data-k="revDet" value="'+esc(r.revDet||'')+'" style="width:40px;text-align:center;"></td>' +
+          '<td class="c"><b class="fm-rrpn" data-i="'+i+'">'+(hasRev?rv:'—')+'</b></td></tr>';
       }).join('') + '</tbody></table></div>' +
       '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' +
       '<button class="btn gold" id="fm-save">Save changes</button>' +
@@ -15801,18 +15936,47 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     document.getElementById('fm-on').value  = (fmeaDoc.data||{}).reviewedOn || '';
     document.getElementById('fm-rev').value = (fmeaDoc.data||{}).rev || '00';
 
+    /* AIAG header block fields — entered once per part, not generated */
+    document.getElementById('fm-header').style.display = '';
+    document.getElementById('fm-resp-owner').value = (fmeaDoc.data||{}).processResponsibility || '';
+    document.getElementById('fm-model').value      = (fmeaDoc.data||{}).modelProgram || '';
+    document.getElementById('fm-keydate').value    = (fmeaDoc.data||{}).keyDate || '';
+    document.getElementById('fm-prepby').value     = (fmeaDoc.data||{}).preparedBy || '';
+    document.getElementById('fm-team').value       = (fmeaDoc.data||{}).coreTeam || '';
+
     host.querySelectorAll('.fm-n').forEach(function(inp){
       inp.addEventListener('input', function(){
-        var i = +inp.dataset.i;
-        rows[i][inp.dataset.k] = C.num(inp.value);
-        var v = rpn(rows[i]);
-        var cell = host.querySelector('.fm-rpn[data-i="'+i+'"]');
-        cell.textContent = v;
-        cell.style.color = v >= 100 ? 'var(--bad)' : v >= 40 ? 'var(--warn)' : '';
+        var i = +inp.dataset.i, k = inp.dataset.k;
+        rows[i][k] = C.num(inp.value);
+        if (k === 'sev' || k === 'occ' || k === 'det'){
+          var v = rpn(rows[i]);
+          var cell = host.querySelector('.fm-rpn[data-i="'+i+'"]');
+          cell.textContent = v;
+          cell.style.color = v >= 100 ? 'var(--bad)' : v >= 40 ? 'var(--warn)' : '';
+        } else {
+          /* revised S/O/D after an action is taken — the Action Results block
+             of the AIAG form. Only computed once at least one revised value
+             is entered, so an untouched line still reads as "—". */
+          var r = rows[i];
+          var hasRev = r.revSev || r.revOcc || r.revDet;
+          var rv = (C.num(r.revSev)||C.num(r.sev)) * (C.num(r.revOcc)||C.num(r.occ)) *
+                   (C.num(r.revDet)||C.num(r.det));
+          var rcell = host.querySelector('.fm-rrpn[data-i="'+i+'"]');
+          rcell.textContent = hasRev ? rv : '—';
+        }
       });
     });
     host.querySelectorAll('.fm-act').forEach(function(inp){
       inp.addEventListener('input', function(){ rows[+inp.dataset.i].action = inp.value; });
+    });
+    host.querySelectorAll('.fm-cls').forEach(function(sel){
+      sel.addEventListener('change', function(){ rows[+sel.dataset.i].cls = sel.value; });
+    });
+    host.querySelectorAll('.fm-resp').forEach(function(inp){
+      inp.addEventListener('input', function(){ rows[+inp.dataset.i].responsibility = inp.value; });
+    });
+    host.querySelectorAll('.fm-done').forEach(function(inp){
+      inp.addEventListener('input', function(){ rows[+inp.dataset.i].actionsTaken = inp.value; });
     });
     var save = document.getElementById('fm-save');
     if (save) save.addEventListener('click', async function(){
@@ -15825,6 +15989,26 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       } catch(e){ toast(e.message); }
       this.disabled = false;
     });
+  }
+
+  async function saveFmeaHeader(){
+    if (!fmeaDoc) { toast('Draft the PFMEA first.'); return; }
+    var btn = document.getElementById('fm-header-save');
+    btn.disabled = true;
+    try {
+      var v = Object.assign({}, fmeaDoc.data, {
+        processResponsibility: document.getElementById('fm-resp-owner').value,
+        modelProgram: document.getElementById('fm-model').value,
+        keyDate: document.getElementById('fm-keydate').value,
+        preparedBy: document.getElementById('fm-prepby').value,
+        coreTeam: document.getElementById('fm-team').value });
+      await C.idms.saveDoc({ docId: fmeaDoc.doc_id, kind:'pfmea',
+        partId: document.getElementById('fm-part').value,
+        status: fmeaDoc.status, data: v }, 'PFMEA header fields updated');
+      fmeaDoc.data = v;
+      toast('Header saved');
+    } catch(e){ toast(e.message); }
+    btn.disabled = false;
   }
 
   async function generateFmea(){
@@ -15853,10 +16037,18 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var rows = parseFmeaReply(txt, ops);
       if (!rows.length) throw new Error('The reply could not be read as PFMEA lines.');
 
+      /* header fields (process responsibility, core team, prepared by) are
+         entered once by a person and must survive a re-draft of the rows */
+      var oldHeader = fmeaDoc ? {
+        processResponsibility: (fmeaDoc.data||{}).processResponsibility,
+        modelProgram: (fmeaDoc.data||{}).modelProgram,
+        keyDate: (fmeaDoc.data||{}).keyDate,
+        preparedBy: (fmeaDoc.data||{}).preparedBy,
+        coreTeam: (fmeaDoc.data||{}).coreTeam } : {};
       var doc = { kind:'pfmea', partId: partId, status:'Draft',
         docNo: await C.docNumber('pfmea'),
-        data:{ partId: partId, rows: rows, generatedOn: new Date().toISOString().slice(0,10),
-               reviewedBy:'', reviewedOn:'', rev:'00' } };
+        data: Object.assign({ partId: partId, rows: rows, generatedOn: new Date().toISOString().slice(0,10),
+               reviewedBy:'', reviewedOn:'', rev:'00' }, oldHeader) };
       if (fmeaDoc) { doc.docId = fmeaDoc.doc_id; doc.docNo = fmeaDoc.doc_no; }
       await C.idms.saveDoc(doc, 'PFMEA drafted by AI from the routing and dimensions');
       await loadFmeaDoc();
@@ -15882,21 +16074,24 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var mode = get('MODE');
       if (!mode) return;
       var clamp = function(v){ var n = C.num(v); return n < 1 ? 1 : n > 10 ? 10 : Math.round(n); };
-      out.push({ opNo: C.num(op), characteristic: get('CHAR'), requirement: get('REQUIREMENT'),
+      var cls = get('CLASS').toUpperCase();
+      out.push({ opNo: C.num(op), characteristic: get('CHAR'),
+        cls: /^(CC|SC)$/.test(cls) ? cls : '', requirement: get('REQUIREMENT'),
         failureMode: mode, effect: get('EFFECT'), sev: clamp(get('SEV')),
         cause: get('CAUSE'), occ: clamp(get('OCC')),
         prevention: get('PREVENTION'), detection: get('DETECTION'), det: clamp(get('DET')),
-        action: get('ACTION') });
+        action: get('ACTION'), responsibility:'', actionsTaken:'',
+        revSev:'', revOcc:'', revDet:'' });
     });
-    /* carry the SC/CC class across from the dimension it names, so the table
-       shows it without the model having to be trusted to repeat it */
+    /* the model is told to state CLASS itself, but a dimension already on file
+       is the source of truth — it overrides a blank or disagreeing reply */
     out.forEach(function(r){
       var d = dimensions.filter(function(x){
         var q = x.data||{};
         return C.num(q.opNo) === r.opNo && q.description &&
                r.characteristic && q.description.toLowerCase().indexOf(
                  r.characteristic.toLowerCase().slice(0,18)) >= 0; })[0];
-      if (d) r.cls = (d.data||{}).cls || '';
+      if (d && (d.data||{}).cls) r.cls = (d.data||{}).cls;
     });
     return out.sort(function(a,b){ return a.opNo - b.opNo; });
   }
@@ -15907,23 +16102,45 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
     var v = fmeaDoc.data || {}, rows = v.rows || [];
     C.openReport({
-      title: 'Process FMEA' + (v.reviewedBy ? '' : ' — DRAFT, NOT APPROVED'),
+      title: 'Potential Failure Mode and Effects Analysis (Process FMEA)' +
+        (v.reviewedBy ? '' : ' — DRAFT, NOT APPROVED'),
       kind: v.reviewedBy ? 'PFMEA' : 'PFMEA (draft)',
       landscape: true,
       subtitle: (p.part_no||'') + ' · ' + (p.part_name||'') + ' · ' + esc(fmeaDoc.doc_no||'') +
         ' · rev ' + (v.rev||'00'),
       sections:[
+        { type:'pairs', title:'FMEA header', rows:[
+          ['FMEA number', esc(fmeaDoc.doc_no||'')],
+          ['Item (part number / name)', esc((p.part_no||'')+' — '+(p.part_name||''))],
+          ['Process responsibility', esc(v.processResponsibility||'—')],
+          ['Model year(s) / programme(s)', esc(v.modelProgram||'—')],
+          ['Key date', v.keyDate ? C.fmtDate(v.keyDate) : '—'],
+          ['FMEA date (orig.) / (rev.)', C.fmtDate(v.generatedOn) + ' / rev ' + esc(v.rev||'00')],
+          ['Core team', esc(v.coreTeam||'—')],
+          ['Prepared by', esc(v.preparedBy||'—')]
+        ]},
         { type:'table', title:'Failure modes and effects analysis', dense:true,
-          columns:[{label:'Op',align:'c'},{label:'Requirement'},{label:'Characteristic'},
-            {label:'Failure mode'},{label:'Effect'},{label:'S',align:'c'},{label:'Cause'},
-            {label:'O',align:'c'},{label:'Prevention control'},{label:'Detection control'},
-            {label:'D',align:'c'},{label:'RPN',align:'c'},{label:'Action'}],
+          columns:[{label:'Op',align:'c'},{label:'Process function / requirement'},
+            {label:'Characteristic'},{label:'Potential failure mode'},
+            {label:'Potential effect(s) of failure'},{label:'S',align:'c'},{label:'Class',align:'c'},
+            {label:'Potential cause(s)'},{label:'O',align:'c'},{label:'Current controls — prevention'},
+            {label:'Current controls — detection'},{label:'D',align:'c'},{label:'RPN',align:'c'},
+            {label:'Recommended action(s)'},{label:'Responsibility & target date'},
+            {label:'Actions taken'},{label:'S′',align:'c'},{label:'O′',align:'c'},
+            {label:'D′',align:'c'},{label:'RPN′',align:'c'}],
           rows: rows.map(function(r){
             var n = rpn(r);
-            return [r.opNo, esc(r.requirement||''), esc(r.characteristic||'') +
-              (r.cls?' ['+esc(r.cls)+']':''), esc(r.failureMode||''), esc(r.effect||''),
-              r.sev, esc(r.cause||''), r.occ, esc(r.prevention||''), esc(r.detection||''),
-              r.det, { v:'<b>'+n+'</b>', cls: n>=100?'ab':'' }, esc(r.action||'')];
+            var hasRev = r.revSev || r.revOcc || r.revDet;
+            var rv = (C.num(r.revSev)||C.num(r.sev)) * (C.num(r.revOcc)||C.num(r.occ)) *
+                     (C.num(r.revDet)||C.num(r.det));
+            return [r.opNo, esc(r.requirement||''), esc(r.characteristic||''),
+              esc(r.failureMode||''), esc(r.effect||''),
+              r.sev, r.cls?{v:'<b>'+esc(r.cls)+'</b>'}:'', esc(r.cause||''), r.occ,
+              esc(r.prevention||''), esc(r.detection||''),
+              r.det, { v:'<b>'+n+'</b>', cls: n>=100?'ab':'' }, esc(r.action||''),
+              esc(r.responsibility||''), esc(r.actionsTaken||''),
+              hasRev?r.revSev:'—', hasRev?r.revOcc:'—', hasRev?r.revDet:'—',
+              hasRev?{v:'<b>'+rv+'</b>'}:'—'];
           }),
           note: v.reviewedBy
             ? 'Reviewed by ' + v.reviewedBy + ' on ' + C.fmtDate(v.reviewedOn) + '.'
@@ -15944,6 +16161,13 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   function isInspection(v){
     return /inspect|check|gaug|measur|cmm|audit/i.test((v.name||'') + ' ' + (v.description||''));
   }
+  /* Storage/hold points use the standard inverted-triangle flowchart symbol —
+     a buffer, a hold-for-release, or goods awaiting despatch, none of which are
+     an operation or an inspection in the AIAG sense. */
+  function isStorage(v){
+    return /stor|warehouse|buffer|hold|awaiting|despatch|dispatch/i.test(
+      (v.name||'') + ' ' + (v.description||''));
+  }
 
   async function loadPfd(){
     await fetchParts();
@@ -15962,15 +16186,20 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       'xmlns="http://www.w3.org/2000/svg" style="max-width:760px;display:block;margin:0 auto;">';
     ops.forEach(function(o, i){
       var v = o.data || {}, y = 14 + i * (boxH + gap);
-      var insp = isInspection(v);
+      var insp = isInspection(v), stor = !insp && isStorage(v);
       var dims = dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
       var crit = dims.filter(function(d){ return (d.data||{}).cls; }).length;
-      var fill = insp ? '#FFF6E0' : '#EAF6FD';
-      var line = insp ? '#C2932E' : '#3FA9E0';
+      var fill = insp ? '#FFF6E0' : stor ? '#F1EEFB' : '#EAF6FD';
+      var line = insp ? '#C2932E' : stor ? '#7C5FC7' : '#3FA9E0';
       if (insp) {
         var cx = x + boxW/2, cy = y + boxH/2;
         out += '<polygon points="' + cx + ',' + y + ' ' + (x+boxW) + ',' + cy + ' ' +
           cx + ',' + (y+boxH) + ' ' + x + ',' + cy + '" fill="' + fill +
+          '" stroke="' + line + '" stroke-width="1.6"/>';
+      } else if (stor) {
+        /* inverted triangle — the standard storage/hold symbol */
+        out += '<polygon points="' + x + ',' + y + ' ' + (x+boxW) + ',' + y + ' ' +
+          (x+boxW/2) + ',' + (y+boxH) + '" fill="' + fill +
           '" stroke="' + line + '" stroke-width="1.6"/>';
       } else {
         out += '<rect x="' + x + '" y="' + y + '" width="' + boxW + '" height="' + boxH +
@@ -15999,6 +16228,24 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     return out + '</svg>';
   }
 
+  /* The AIAG-style symbol key — printed once under the diagram rather than on
+     every step, since the same three symbols cover every part. */
+  function pfdLegendHtml(){
+    var item = function(shape, color, label){
+      return '<span style="display:inline-flex;align-items:center;gap:6px;margin-right:20px;">' +
+        shape + '<span style="font-size:9pt;color:#41567E;">' + label + '</span></span>';
+    };
+    var box = '<svg width="20" height="14"><rect x="1" y="1" width="18" height="12" rx="3" ' +
+      'fill="#EAF6FD" stroke="#3FA9E0" stroke-width="1.4"/></svg>';
+    var dia = '<svg width="20" height="14"><polygon points="10,1 19,7 10,13 1,7" ' +
+      'fill="#FFF6E0" stroke="#C2932E" stroke-width="1.4"/></svg>';
+    var tri = '<svg width="20" height="14"><polygon points="1,1 19,1 10,13" ' +
+      'fill="#F1EEFB" stroke="#7C5FC7" stroke-width="1.4"/></svg>';
+    return '<div style="display:flex;flex-wrap:wrap;justify-content:center;margin-top:10px;">' +
+      item(box, '#3FA9E0', 'Operation') + item(dia, '#C2932E', 'Inspection') +
+      item(tri, '#7C5FC7', 'Storage / hold') + '</div>';
+  }
+
   function drawPfd(){
     var partId = document.getElementById('fd-part').value;
     var host = document.getElementById('fd-body');
@@ -16018,7 +16265,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     }
     var noDims = ops.filter(function(o){
       return !dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; }).length; });
-    host.innerHTML = pfdSvg(partId) +
+    host.innerHTML = pfdSvg(partId) + pfdLegendHtml() +
       (noDims.length
         ? '<div class="note" style="margin-top:14px;"><b>' + noDims.length + ' operation(s) have no ' +
           'dimensions recorded</b> — ' + noDims.map(function(o){ return 'Op ' + esc((o.data||{}).opNo); })
@@ -16034,25 +16281,40 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
     var ops = opsFor(partId);
     if (!ops.length) { toast('This part has no routing to print.'); return; }
+    var prepBy = document.getElementById('fd-prepby').value;
     C.openReport({
       title:'Process Flow Diagram', kind:'PFD',
       subtitle: (p.part_no||'') + ' · ' + (p.part_name||'') +
         ((p.data||{}).drawingNo ? ' · drawing ' + (p.data||{}).drawingNo : ''),
       sections:[
-        { type:'html', html: pfdSvg(partId) },
-        { type:'table', title:'Operations',
-          columns:[{label:'Op',align:'c'},{label:'Operation'},{label:'Machine'},
+        { type:'pairs', title:'PFD header', rows:[
+          ['Part number / name', esc((p.part_no||'')+' — '+(p.part_name||''))],
+          ['Drawing number', esc((p.data||{}).drawingNo||'—')],
+          ['Prepared by', esc(prepBy||'—')],
+          ['Date', C.fmtDate(new Date().toISOString().slice(0,10))],
+          ['Page', '1 of 1']
+        ]},
+        { type:'html', html: pfdSvg(partId) + pfdLegendHtml() },
+        { type:'table', title:'Operations and characteristics',
+          columns:[{label:'Op',align:'c'},{label:'Operation'},{label:'Symbol'},{label:'Machine'},
                    {label:'Setup',align:'r'},{label:'Cycle',align:'r'},{label:'Where'},
-                   {label:'Dims',align:'r'}],
+                   {label:'Product / process characteristics'}],
           rows: ops.map(function(o){
             var v = o.data||{};
             var dims = dimensions.filter(function(d){ return (d.data||{}).processId === o.doc_id; });
-            return [v.opNo, esc(v.name||''), esc(v.machine||'—'),
+            var symbol = isInspection(v) ? 'Inspection' : isStorage(v) ? 'Storage' : 'Operation';
+            var charText = dims.length
+              ? dims.map(function(d){ var q=d.data||{};
+                  return esc(q.description||'') + (q.cls?' ['+esc(q.cls)+']':''); }).join('; ')
+              : 'none recorded';
+            return [v.opNo, esc(v.name||''), symbol, esc(v.machine||'—'),
                     C.num(v.setupMin)?C.qty(v.setupMin)+' min':'—',
                     C.num(v.cycleSec)?C.qty(v.cycleSec)+' s':'—',
-                    v.where==='sub'?'Sub-contract':'In house', dims.length];
+                    v.where==='sub'?'Sub-contract':'In house', charText];
           }),
-          note:'Drawn from the routing held against this part. Diamonds are inspection steps.' }
+          note:'Drawn from the routing held against this part — a change here means the routing ' +
+               'was changed, not that the diagram was edited separately. CC/SC characteristics are ' +
+               'flagged in brackets.' }
       ]});
   }
 
@@ -17231,6 +17493,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('cp-part').addEventListener('change', loadCpDoc);
   document.getElementById('cp-gen').addEventListener('click', generateCp);
   document.getElementById('cp-print').addEventListener('click', printCp);
+  document.getElementById('cp-header-save').addEventListener('click', saveCpHeader);
   document.getElementById('cp-approve').addEventListener('click', async function(){
     if (!cpDoc) return;
     var by = document.getElementById('cp-by').value.trim();
@@ -17256,6 +17519,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('fm-part').addEventListener('change', loadFmeaDoc);
   document.getElementById('fm-gen').addEventListener('click', generateFmea);
   document.getElementById('fm-print').addEventListener('click', printFmea);
+  document.getElementById('fm-header-save').addEventListener('click', saveFmeaHeader);
   document.getElementById('fm-approve').addEventListener('click', async function(){
     if (!fmeaDoc) return;
     var by = document.getElementById('fm-by').value.trim();

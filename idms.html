@@ -2626,51 +2626,51 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           cross-checks the two documents against each other — generating the control plan from
           anything else is how they come apart.</div>
         <div class="row four">
-          <div style="grid-column:span 2;"><label>Part</label><select id="cp-part"></select></div>
-          <div><label>Stage</label><select id="cp-stage">
+          <div style="grid-column:span 2;"><label>Part</label><select id="ctlp-part"></select></div>
+          <div><label>Stage</label><select id="ctlp-stage">
             <option>Prototype</option><option>Pre-launch</option>
             <option selected>Production</option></select></div>
           <div style="align-self:end;">
-            <button class="btn ai-btn" id="cp-gen">Draft with AI</button>
-            <button class="btn" id="cp-print" style="margin-left:6px;">Print</button></div>
+            <button class="btn ai-btn" id="ctlp-gen">Draft with AI</button>
+            <button class="btn" id="ctlp-print" style="margin-left:6px;">Print</button></div>
         </div>
-        <div class="note" id="cp-msg" style="display:none;"></div>
+        <div class="note" id="ctlp-msg" style="display:none;"></div>
       </div>
-      <div class="card" id="cp-header" style="display:none;">
+      <div class="card" id="ctlp-header" style="display:none;">
         <h4>Control plan header (AIAG)</h4>
         <div class="hint" style="margin-bottom:10px;">These fields print in the header block of the
           form, as required by the AIAG Control Plan format. They are not generated — enter them
           once per part and they are kept with the document.</div>
         <div class="row four">
-          <div><label>Key contact / phone</label><input id="cp-contact"></div>
-          <div style="grid-column:span 2;"><label>Core team</label><input id="cp-team" placeholder="names, comma separated"></div>
-          <div><label>Supplier code</label><input id="cp-supcode"></div>
+          <div><label>Key contact / phone</label><input id="ctlp-contact"></div>
+          <div style="grid-column:span 2;"><label>Core team</label><input id="ctlp-team" placeholder="names, comma separated"></div>
+          <div><label>Supplier code</label><input id="ctlp-supcode"></div>
         </div>
         <div class="row four" style="margin-top:9px;">
-          <div><label>Customer engineering approval</label><input id="cp-custeng"></div>
-          <div><label>Date</label><input type="date" id="cp-custeng-on"></div>
-          <div><label>Customer quality approval</label><input id="cp-custqa"></div>
-          <div><label>Date</label><input type="date" id="cp-custqa-on"></div>
+          <div><label>Customer engineering approval</label><input id="ctlp-custeng"></div>
+          <div><label>Date</label><input type="date" id="ctlp-custeng-on"></div>
+          <div><label>Customer quality approval</label><input id="ctlp-custqa"></div>
+          <div><label>Date</label><input type="date" id="ctlp-custqa-on"></div>
         </div>
         <div class="row four" style="margin-top:9px;">
-          <div><label>Other approval</label><input id="cp-other"></div>
-          <div><label>Date</label><input type="date" id="cp-other-on"></div>
-          <div style="align-self:end;grid-column:span 2;"><button class="btn" id="cp-header-save">Save header</button></div>
+          <div><label>Other approval</label><input id="ctlp-other"></div>
+          <div><label>Date</label><input type="date" id="ctlp-other-on"></div>
+          <div style="align-self:end;grid-column:span 2;"><button class="btn" id="ctlp-header-save">Save header</button></div>
         </div>
       </div>
       <div class="card">
-        <h4 id="cp-title">Control Plan</h4>
-        <div id="cp-body"></div>
+        <h4 id="ctlp-title">Control Plan</h4>
+        <div id="ctlp-body"></div>
       </div>
-      <div class="card" id="cp-signoff" style="display:none;">
+      <div class="card" id="ctlp-signoff" style="display:none;">
         <h4>Supplier / plant approval</h4>
         <div class="hint" style="margin-bottom:10px;">A control plan is what the shop floor is held
           to. Until it is approved the printed copy is stamped DRAFT.</div>
         <div class="row four">
-          <div><label>Approved by</label><input id="cp-by" placeholder="names, comma separated"></div>
-          <div><label>Date</label><input type="date" id="cp-on"></div>
-          <div><label>Revision</label><input id="cp-rev" placeholder="00"></div>
-          <div style="align-self:end;"><button class="btn green" id="cp-approve">Record approval</button></div>
+          <div><label>Approved by</label><input id="ctlp-by" placeholder="names, comma separated"></div>
+          <div><label>Date</label><input type="date" id="ctlp-on"></div>
+          <div><label>Revision</label><input id="ctlp-rev" placeholder="00"></div>
+          <div style="align-self:end;"><button class="btn green" id="ctlp-approve">Record approval</button></div>
         </div>
       </div>
     </div>
@@ -15052,7 +15052,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         if (to === 'psw') { printPpap(); return; }
         go(to);
         setTimeout(function(){
-          var sel = { parts:'p-filter', pfd:'fd-part', fmea:'fm-part', control_plan:'cp-part' }[to];
+          var sel = { parts:'p-filter', pfd:'fd-part', fmea:'fm-part', control_plan:'ctlp-part' }[to];
           if (to !== 'parts' && document.getElementById(sel)){
             document.getElementById(sel).value = partId;
             document.getElementById(sel).dispatchEvent(new Event('change'));
@@ -15511,7 +15511,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function loadCp(){
     await fetchParts();
-    var sel = document.getElementById('cp-part');
+    var sel = document.getElementById('ctlp-part');
     sel.innerHTML = partOptions(sel.value);
     try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
     try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
@@ -15519,7 +15519,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
 
   async function loadCpDoc(){
-    var partId = document.getElementById('cp-part').value;
+    var partId = document.getElementById('ctlp-part').value;
     cpDoc = null; fmeaDoc = null;
     if (partId){
       try { cpDoc = (await C.idms.docs('control_plan', partId))[0] || null; } catch(e){}
@@ -15529,11 +15529,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
 
   function drawCp(){
-    var partId = document.getElementById('cp-part').value;
-    var host = document.getElementById('cp-body');
-    var title = document.getElementById('cp-title');
-    document.getElementById('cp-signoff').style.display = 'none';
-    document.getElementById('cp-header').style.display = 'none';
+    var partId = document.getElementById('ctlp-part').value;
+    var host = document.getElementById('ctlp-body');
+    var title = document.getElementById('ctlp-title');
+    document.getElementById('ctlp-signoff').style.display = 'none';
+    document.getElementById('ctlp-header').style.display = 'none';
     if (!partId){
       title.textContent = 'Control Plan';
       host.innerHTML = '<div class="empty"><b>Choose a part</b>' +
@@ -15603,42 +15603,42 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       '<div class="hint" style="margin-top:10px;">' + rows.length + ' control(s)' +
       (params.length ? ' · ' + params.length + ' operation(s) with parameters set' : '') + '</div>';
 
-    document.getElementById('cp-signoff').style.display = '';
-    document.getElementById('cp-by').value  = approved || '';
-    document.getElementById('cp-on').value  = v.approvedOn || '';
-    document.getElementById('cp-rev').value = v.rev || '00';
-    if (v.stage) document.getElementById('cp-stage').value = v.stage;
+    document.getElementById('ctlp-signoff').style.display = '';
+    document.getElementById('ctlp-by').value  = approved || '';
+    document.getElementById('ctlp-on').value  = v.approvedOn || '';
+    document.getElementById('ctlp-rev').value = v.rev || '00';
+    if (v.stage) document.getElementById('ctlp-stage').value = v.stage;
 
     /* AIAG header block fields — entered once per part, not generated */
-    document.getElementById('cp-header').style.display = '';
-    document.getElementById('cp-contact').value    = v.keyContact || '';
-    document.getElementById('cp-team').value        = v.coreTeam || '';
-    document.getElementById('cp-supcode').value     = v.supplierCode || '';
-    document.getElementById('cp-custeng').value     = v.custEngApproval || '';
-    document.getElementById('cp-custeng-on').value  = v.custEngApprovalOn || '';
-    document.getElementById('cp-custqa').value      = v.custQaApproval || '';
-    document.getElementById('cp-custqa-on').value   = v.custQaApprovalOn || '';
-    document.getElementById('cp-other').value       = v.otherApproval || '';
-    document.getElementById('cp-other-on').value    = v.otherApprovalOn || '';
+    document.getElementById('ctlp-header').style.display = '';
+    document.getElementById('ctlp-contact').value    = v.keyContact || '';
+    document.getElementById('ctlp-team').value        = v.coreTeam || '';
+    document.getElementById('ctlp-supcode').value     = v.supplierCode || '';
+    document.getElementById('ctlp-custeng').value     = v.custEngApproval || '';
+    document.getElementById('ctlp-custeng-on').value  = v.custEngApprovalOn || '';
+    document.getElementById('ctlp-custqa').value      = v.custQaApproval || '';
+    document.getElementById('ctlp-custqa-on').value   = v.custQaApprovalOn || '';
+    document.getElementById('ctlp-other').value       = v.otherApproval || '';
+    document.getElementById('ctlp-other-on').value    = v.otherApprovalOn || '';
   }
 
   async function saveCpHeader(){
     if (!cpDoc) { toast('Draft the control plan first.'); return; }
-    var btn = document.getElementById('cp-header-save');
+    var btn = document.getElementById('ctlp-header-save');
     btn.disabled = true;
     try {
       var v = Object.assign({}, cpDoc.data, {
-        keyContact: document.getElementById('cp-contact').value,
-        coreTeam: document.getElementById('cp-team').value,
-        supplierCode: document.getElementById('cp-supcode').value,
-        custEngApproval: document.getElementById('cp-custeng').value,
-        custEngApprovalOn: document.getElementById('cp-custeng-on').value,
-        custQaApproval: document.getElementById('cp-custqa').value,
-        custQaApprovalOn: document.getElementById('cp-custqa-on').value,
-        otherApproval: document.getElementById('cp-other').value,
-        otherApprovalOn: document.getElementById('cp-other-on').value });
+        keyContact: document.getElementById('ctlp-contact').value,
+        coreTeam: document.getElementById('ctlp-team').value,
+        supplierCode: document.getElementById('ctlp-supcode').value,
+        custEngApproval: document.getElementById('ctlp-custeng').value,
+        custEngApprovalOn: document.getElementById('ctlp-custeng-on').value,
+        custQaApproval: document.getElementById('ctlp-custqa').value,
+        custQaApprovalOn: document.getElementById('ctlp-custqa-on').value,
+        otherApproval: document.getElementById('ctlp-other').value,
+        otherApprovalOn: document.getElementById('ctlp-other-on').value });
       await C.idms.saveDoc({ docId: cpDoc.doc_id, kind:'control_plan',
-        partId: document.getElementById('cp-part').value,
+        partId: document.getElementById('ctlp-part').value,
         status: cpDoc.status, data: v }, 'control plan header fields updated');
       cpDoc.data = v;
       toast('Header saved');
@@ -15647,8 +15647,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
 
   async function generateCp(){
-    var partId = document.getElementById('cp-part').value;
-    var msg = document.getElementById('cp-msg');
+    var partId = document.getElementById('ctlp-part').value;
+    var msg = document.getElementById('ctlp-msg');
     var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
                                  msg.innerHTML=t; };
     if (!partId) return say('Choose the part first.');
@@ -15661,11 +15661,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
     var ops = opsFor(partId);
     var frows = (fmeaDoc.data||{}).rows || [];
-    var btn = document.getElementById('cp-gen');
+    var btn = document.getElementById('ctlp-gen');
     btn.disabled = true; btn.textContent = 'Drafting…';
     say('Building controls for ' + frows.length + ' failure mode(s).', true);
 
-    var prompt = cpPromptFor(p, ops, frows, document.getElementById('cp-stage').value);
+    var prompt = cpPromptFor(p, ops, frows, document.getElementById('ctlp-stage').value);
     try {
       var txt = await C.callAI(prompt, { maxTokens: 3500 });
       var parsed = parseCpReply(txt, ops);
@@ -15685,7 +15685,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var doc = { kind:'control_plan', partId: partId, status:'Draft',
         docNo: cpDoc ? cpDoc.doc_no : await C.docNumber('cp'),
         data: Object.assign({ partId: partId, rows: parsed.rows, params: parsed.params,
-               stage: document.getElementById('cp-stage').value,
+               stage: document.getElementById('ctlp-stage').value,
                fmeaRef: fmeaDoc.doc_no || '', fmeaApproved: !!(fmeaDoc.data||{}).reviewedBy,
                generatedOn: new Date().toISOString().slice(0,10),
                approvedBy:'', approvedOn:'', rev:'00' }, oldHeader) };
@@ -15750,7 +15750,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   function printCp(){
     if (!cpDoc) { toast('Draft the control plan first.'); return; }
-    var partId = document.getElementById('cp-part').value;
+    var partId = document.getElementById('ctlp-part').value;
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
     var v = cpDoc.data || {}, rows = v.rows || [], params = v.params || [];
     var sections = [
@@ -17490,14 +17490,14 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     this.disabled = false;
   });
 
-  document.getElementById('cp-part').addEventListener('change', loadCpDoc);
-  document.getElementById('cp-gen').addEventListener('click', generateCp);
-  document.getElementById('cp-print').addEventListener('click', printCp);
-  document.getElementById('cp-header-save').addEventListener('click', saveCpHeader);
-  document.getElementById('cp-approve').addEventListener('click', async function(){
+  document.getElementById('ctlp-part').addEventListener('change', loadCpDoc);
+  document.getElementById('ctlp-gen').addEventListener('click', generateCp);
+  document.getElementById('ctlp-print').addEventListener('click', printCp);
+  document.getElementById('ctlp-header-save').addEventListener('click', saveCpHeader);
+  document.getElementById('ctlp-approve').addEventListener('click', async function(){
     if (!cpDoc) return;
-    var by = document.getElementById('cp-by').value.trim();
-    var msg = document.getElementById('cp-msg');
+    var by = document.getElementById('ctlp-by').value.trim();
+    var msg = document.getElementById('ctlp-msg');
     if (!by){
       msg.style.display=''; msg.className='note bad';
       msg.textContent='Name who approved it. This is the document the shop floor is held to.'; return;
@@ -17505,11 +17505,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     this.disabled = true;
     try {
       await C.idms.saveDoc({ docId: cpDoc.doc_id, kind:'control_plan',
-        partId: document.getElementById('cp-part').value, status:'Approved',
+        partId: document.getElementById('ctlp-part').value, status:'Approved',
         data: Object.assign({}, cpDoc.data, { approvedBy: by,
-          approvedOn: document.getElementById('cp-on').value || new Date().toISOString().slice(0,10),
-          rev: document.getElementById('cp-rev').value || '00',
-          stage: document.getElementById('cp-stage').value }) }, 'control plan approved by ' + by);
+          approvedOn: document.getElementById('ctlp-on').value || new Date().toISOString().slice(0,10),
+          rev: document.getElementById('ctlp-rev').value || '00',
+          stage: document.getElementById('ctlp-stage').value }) }, 'control plan approved by ' + by);
       await loadCpDoc();
       toast('Approval recorded');
     } catch(e){ toast(e.message); }

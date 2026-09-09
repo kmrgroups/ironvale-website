@@ -81,9 +81,11 @@ export async function endAllSessions(username) {
    couple of small follow-up round trips, but those only ever do real work
    once (the first time the app connects to a fresh database). */
 let ready = false;
+let readyPromise = null;
 export async function ensureTables() {
   if (ready) return;
-
+  if (readyPromise) return readyPromise;
+  readyPromise = (async () => {
   await sql.transaction([
     sql`CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY,
@@ -180,6 +182,7 @@ export async function ensureTables() {
       updated_at TIMESTAMPTZ DEFAULT now()
     )`,
     sql`CREATE INDEX IF NOT EXISTS idms_parts_life ON idms_parts (lifecycle, customer)`,
+    sql`CREATE INDEX IF NOT EXISTS idms_parts_updated ON idms_parts (updated_at DESC)`,
     sql`CREATE TABLE IF NOT EXISTS idms_docs (
       doc_id TEXT PRIMARY KEY,
       tenant TEXT NOT NULL DEFAULT 'default',
@@ -194,7 +197,9 @@ export async function ensureTables() {
       updated_by TEXT DEFAULT ''
     )`,
     sql`CREATE INDEX IF NOT EXISTS idms_docs_kind ON idms_docs (kind, status)`,
+    sql`CREATE INDEX IF NOT EXISTS idms_docs_kind_updated ON idms_docs (kind, updated_at DESC)`,
     sql`CREATE INDEX IF NOT EXISTS idms_docs_part ON idms_docs (part_id)`,
+    sql`CREATE INDEX IF NOT EXISTS idms_docs_part_updated ON idms_docs (part_id, updated_at DESC)`,
     /* Serials are incremented in the database, not in a browser variable —
        two people saving a GRN at the same moment must not get one number. */
     sql`CREATE TABLE IF NOT EXISTS idms_counters (
@@ -214,6 +219,7 @@ export async function ensureTables() {
       reason TEXT, at TIMESTAMPTZ DEFAULT now()
     )`,
     sql`CREATE INDEX IF NOT EXISTS idms_audit_ref ON idms_audit (kind, ref)`,
+    sql`CREATE INDEX IF NOT EXISTS idms_audit_at ON idms_audit (at DESC)`,
     sql`CREATE TABLE IF NOT EXISTS auth (
       id INT PRIMARY KEY DEFAULT 1,
       user_name TEXT NOT NULL,
@@ -297,6 +303,13 @@ export async function ensureTables() {
     await sql.transaction(seedInserts);
   }
   ready = true;
+  })();
+  try {
+    await readyPromise;
+  } catch (e) {
+    readyPromise = null;
+    throw e;
+  }
 }
 
 export async function tokenUser(token) {

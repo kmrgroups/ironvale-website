@@ -1999,24 +1999,32 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
     <div class="panel" data-panel="sales_plan">
       <div class="card">
-        <h4>Customer orders</h4>
-        <div class="hint" style="margin-bottom:10px;">What has been ordered and when it is due.
-          Everything the production plan says about whether you will make it comes from here, so a
-          date entered loosely produces a plan that is loose in the same way.</div>
+        <h4>Customer PO</h4>
+        <div class="hint" style="margin-bottom:10px;">One line per PO. What has been ordered, at what
+          price and when it is due. Everything the production plan says about whether you will make it
+          comes from here, so a date entered loosely produces a plan that is loose in the same way. The
+          part price fills in from the customer/part price link the moment a part is chosen — override
+          it only when this PO was agreed at a different rate.</div>
         <div class="row four">
-          <div><label>Customer</label><select id="so-cust"></select></div>
-          <div><label>Part</label><select id="so-part"></select></div>
-          <div><label>Their order number</label><input id="so-po"></div>
+          <div><label>Customer Name</label><select id="so-cust"></select></div>
+          <div><label>Part Number / Name</label><select id="so-part"></select></div>
+          <div><label>PO Number</label><input id="so-po"></div>
           <div><label>Quantity ordered</label><input class="num" id="so-qty"></div>
         </div>
         <div class="row four" style="margin-top:9px;">
+          <div><label>Part Price</label><input class="num" id="so-price"></div>
+          <div><label>Currency</label><select id="so-currency"><option value="INR">INR — ₹</option>
+            <option value="USD">USD — $</option></select></div>
+          <div><label>PO Value</label><input id="so-value" disabled></div>
+          <div><label>PO Date</label><input type="date" id="so-on"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
           <div><label>Delivery date</label><input type="date" id="so-due"></div>
-          <div><label>Ordered on</label><input type="date" id="so-on"></div>
           <div><label>Schedule</label><select id="so-kind">
             <option>Firm order</option><option>Schedule release</option>
             <option>Forecast</option></select></div>
           <div style="align-self:end;">
-            <button class="btn gold" id="so-save">Add order</button>
+            <button class="btn gold" id="so-save">Add PO</button>
             <button class="btn" id="so-clear" style="margin-left:6px;">Clear</button></div>
         </div>
         <div class="note" id="so-msg" style="display:none;"></div>
@@ -2085,7 +2093,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         </div>
         <div class="row four" style="margin-top:9px;">
           <div><label>Invoiced quantity</label><input class="num" id="iv-qty"></div>
-          <div><label>Rate (optional)</label><input class="num" id="iv-rate"></div>
+          <div><label>Rate (fills from the price link)</label><input class="num" id="iv-rate"></div>
+          <div><label>Currency</label><select id="iv-currency"><option value="INR">INR — ₹</option>
+            <option value="USD">USD — $</option></select></div>
           <div style="align-self:end;">
             <button class="btn gold" id="iv-save">Save invoice line</button>
             <button class="btn" id="iv-clear" style="margin-left:6px;">Clear</button></div>
@@ -2110,10 +2120,15 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <div style="align-self:end;"><button class="btn gold" id="sd-refresh">Show</button></div>
         </div>
         <h4>Sales Plan vs Actual — overall</h4>
+        <div class="hint" style="margin-bottom:10px;">Quantity, then value in INR and USD kept apart —
+          value comes from the customer/part price link and the invoice rate, never converted between
+          the two.</div>
         <div id="sd-overall"></div>
       </div>
       <div class="card">
         <h4>Customer vs Sales Plan vs Actual</h4>
+        <div class="hint" style="margin-bottom:10px;">Quantity columns first, then plan / actual /
+          pending value for each currency the customer buys in.</div>
         <div id="sd-custtable"></div>
       </div>
       <div class="card">
@@ -11510,14 +11525,39 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   async function loadOrders(){
     await fetchParts();
     await fetchCustomers();
+    try { custParts = await C.idms.docs('cust_part'); } catch(e){ custParts = []; }
     document.getElementById('so-cust').innerHTML = customerOptions('');
-    document.getElementById('so-part').innerHTML = partOptions('');
+    document.getElementById('so-part').innerHTML = partOptionsForCustomer('');
     try { orders = await C.idms.docs('order'); } catch(e){ orders = []; }
     try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
     allocateProduction();
     var on = document.getElementById('so-on');
     if (!on.value) on.value = new Date().toISOString().slice(0,10);
+    updateSoValue();
     drawOrders();
+  }
+
+  /* Price and currency fill in from the customer/part link the moment both are
+     chosen — that is the agreed rate, and retyping it is how a PO ends up
+     priced differently from what was actually quoted. Still editable: a
+     specific PO can carry its own negotiated rate. */
+  function fillSoPriceFromLink(){
+    var custId = document.getElementById('so-cust').value;
+    var partId = document.getElementById('so-part').value;
+    var link = custParts.filter(function(cp){
+      var v = cp.data||{}; return v.customerId === custId && v.partId === partId; })[0];
+    if (link){
+      document.getElementById('so-price').value = C.num((link.data||{}).price) || '';
+      document.getElementById('so-currency').value = (link.data||{}).currency || 'INR';
+    }
+    updateSoValue();
+  }
+  function updateSoValue(){
+    var qty = C.num(document.getElementById('so-qty').value);
+    var price = C.num(document.getElementById('so-price').value);
+    var cur = document.getElementById('so-currency').value || 'INR';
+    document.getElementById('so-value').value = qty && price
+      ? (cur === 'USD' ? '$' : '₹') + C.rate(qty * price) : '';
   }
 
   /* Production has to be allocated across the orders for a part, not counted
@@ -11555,6 +11595,13 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     return Math.ceil((new Date(due).getTime() - Date.now()) / 86400000);
   }
 
+  /* Two currencies are shown side by side, never converted into one — there is
+     no exchange rate on file, and a converted figure nobody agreed to is worse
+     than two figures kept apart. */
+  function moneyFmt(n, cur){
+    return (cur === 'USD' ? '$' : '₹') + C.rate(n);
+  }
+
   function drawOrders(){
     var host = document.getElementById('so-list');
     var f = document.getElementById('so-filter').value;
@@ -11569,8 +11616,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         '</b>The production plan has nothing to plan against until an order exists.</div>';
       return;
     }
-    host.innerHTML = '<table class="t"><thead><tr><th>Order</th><th>Customer</th><th>Part</th>' +
+    host.innerHTML = '<table class="t"><thead><tr><th>PO Number</th><th>Customer</th><th>Part</th>' +
       '<th class="r">Ordered</th><th class="r">Made</th><th class="r">Balance</th>' +
+      '<th class="r">PO Value</th>' +
       '<th>Due</th><th class="c">Days</th><th class="c">Type</th><th></th></tr></thead><tbody>' +
       rows.map(function(o){
         var v = o.data||{}, pr = orderProgress(o), dl = daysTo(v.due);
@@ -11580,6 +11628,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           '<td>'+esc(v.partNo||'')+'<div class="hint">'+esc(v.partName||'')+'</div></td>' +
           '<td class="r">'+C.qty(v.qty)+'</td><td class="r">'+C.qty(pr.made)+'</td>' +
           '<td class="r"><b>'+C.qty(pr.balance)+'</b></td>' +
+          '<td class="r">'+moneyFmt(v.poValue||(C.num(v.qty)*C.num(v.price)), v.currency)+'</td>' +
           '<td class="hint">'+C.fmtDate(v.due)+'</td>' +
           '<td class="c">'+(dl===null?'—':late
             ? '<span class="badge ab">'+Math.abs(dl)+' late</span>'
@@ -11609,10 +11658,12 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var partId = document.getElementById('so-part').value;
     if (!custId) return say('Choose the customer.');
     if (!partId) return say('Choose the part.');
+    if (!g('so-po')) return say('A PO number is needed — that is what this record is.');
     if (!C.num(g('so-qty'))) return say('How many are they ordering?');
+    if (!C.num(g('so-price'))) return say('The part price is needed to work out the PO value — it fills in from the customer/part link, or type it here.');
     if (!g('so-due')) return say('A delivery date is needed, or there is nothing to plan against.');
     if (g('so-on') && g('so-due') < g('so-on'))
-      return say('The delivery date is before the order date. One of the two is wrong.');
+      return say('The delivery date is before the PO date. One of the two is wrong.');
 
     var cust = customers.filter(function(c){ return c.doc_id === custId; })[0] || {};
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
@@ -11622,19 +11673,22 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var dup = orders.filter(function(o){
         var v = o.data||{};
         return v.partId === partId && String(v.po||'').toLowerCase() === g('so-po').toLowerCase(); })[0];
-      if (dup) return say('Order <b>'+esc(g('so-po'))+'</b> already exists for this part. ' +
+      if (dup) return say('PO <b>'+esc(g('so-po'))+'</b> already exists for this part. ' +
                           'Adding it again would double the demand in the plan.');
     }
+    var qty = C.num(g('so-qty')), price = C.num(g('so-price'));
+    var currency = document.getElementById('so-currency').value || 'INR';
     try {
       await C.idms.saveDoc({ kind:'order', partId:partId, status:'Open',
         docNo: await C.docNumber('so'),
         data:{ partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
                customerId:custId, customerName:(cust.data||{}).name||'',
-               po:g('so-po'), qty:C.num(g('so-qty')), due:g('so-due'),
-               orderedOn:g('so-on'), kind:document.getElementById('so-kind').value } },
-        'customer order added');
+               po:g('so-po'), qty:qty, price:price, currency:currency, poValue:qty*price,
+               due:g('so-due'), orderedOn:g('so-on'), kind:document.getElementById('so-kind').value } },
+        'customer PO added');
       say('Added.', true);
-      ['so-po','so-qty','so-due'].forEach(function(id){ document.getElementById(id).value=''; });
+      ['so-po','so-qty','so-price','so-due'].forEach(function(id){ document.getElementById(id).value=''; });
+      updateSoValue();
       await loadOrders();
     } catch(e){ say(esc(e.message)); }
   }
@@ -11645,13 +11699,15 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       title:'Order Book', kind:'Sales', landscape:true,
       subtitle:orders.length + ' order(s)',
       sections:[{ type:'table', title:'Orders',
-        columns:[{label:'Order'},{label:'Customer'},{label:'Part'},{label:'Ordered',align:'r'},
-          {label:'Made',align:'r'},{label:'Balance',align:'r'},{label:'Due'},{label:'Days',align:'c'},
+        columns:[{label:'PO Number'},{label:'Customer'},{label:'Part'},{label:'Ordered',align:'r'},
+          {label:'Made',align:'r'},{label:'Balance',align:'r'},{label:'PO Value',align:'r'},
+          {label:'Due'},{label:'Days',align:'c'},
           {label:'Type'}],
         rows: orders.map(function(o){
           var v = o.data||{}, pr = orderProgress(o), dl = daysTo(v.due);
           return [esc(v.po||o.doc_no||''), esc(v.customerName||''), esc(v.partNo||''),
-            C.qty(v.qty), C.qty(pr.made), C.qty(pr.balance), C.fmtDate(v.due),
+            C.qty(v.qty), C.qty(pr.made), C.qty(pr.balance),
+            moneyFmt(v.poValue||(C.num(v.qty)*C.num(v.price)), v.currency), C.fmtDate(v.due),
             (pr.balance>0 && dl!==null && dl<0) ? { v:'<b>'+Math.abs(dl)+' late</b>', cls:'ab' }
               : (pr.balance<=0 ? 'done' : (dl===null?'—':String(dl))),
             esc(v.kind||'')];
@@ -11681,6 +11737,15 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   function custPartsFor(customerId){
     return custParts.filter(function(cp){ return (cp.data||{}).customerId === customerId; });
+  }
+  /* The agreed rate for a customer/part, read off the price link — never typed
+     a second time on the plan. No link means no rate, and the value is shown
+     as unpriced rather than guessed at. */
+  function priceFor(customerId, partId){
+    var link = custParts.filter(function(cp){
+      var v = cp.data||{}; return v.customerId === customerId && v.partId === partId; })[0];
+    return link ? { price:C.num((link.data||{}).price), currency:(link.data||{}).currency||'INR' }
+                : { price:0, currency:'INR' };
   }
   function partOptionsForCustomer(customerId, selected){
     if (!customerId) return '<option value="">— choose the customer first —</option>';
@@ -11726,6 +11791,16 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         String(v.invoiceDate||'').slice(0,7) === month;
     }).reduce(function(t, iv){ return t + C.num((iv.data||{}).qty); }, 0);
   }
+  /* Actual value is summed from what each invoice line was actually raised at
+     (qty × its own rate) — never recomputed from today's price link, because an
+     old invoice must keep showing what it was really billed. */
+  function invoicedValue(customerId, partId, month){
+    return salesInvoices.filter(function(iv){
+      var v = iv.data || {};
+      return v.customerId === customerId && v.partId === partId &&
+        String(v.invoiceDate||'').slice(0,7) === month;
+    }).reduce(function(t, iv){ var v = iv.data||{}; return t + C.num(v.value||(C.num(v.qty)*C.num(v.rate))); }, 0);
+  }
 
   function drawSalesPlanRegister(){
     var host = document.getElementById('spm-list');
@@ -11744,16 +11819,22 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     }
     host.innerHTML = '<table class="t"><thead><tr><th>Sl</th><th>Customer</th><th>Part No</th>' +
       '<th>Part Name</th><th class="r">Planned Qty</th><th class="r">Actual Qty</th>' +
-      '<th class="r">Pending Qty</th><th class="c">Status</th><th></th></tr></thead><tbody>' +
+      '<th class="r">Pending Qty</th><th class="r">Plan Value</th><th class="r">Actual Value</th>' +
+      '<th class="c">Status</th><th></th></tr></thead><tbody>' +
       rows.map(function(p, i){
         var v = p.data || {};
         var actual = invoicedQty(v.customerId, v.partId, month);
         var pending = Math.max(0, C.num(v.firmQty) - actual);
         var excess = Math.max(0, actual - C.num(v.firmQty));
+        var pr = priceFor(v.customerId, v.partId);
+        var planValue = C.num(v.firmQty) * pr.price;
+        var actualValue = invoicedValue(v.customerId, v.partId, month);
         return '<tr><td>'+(i+1)+'</td><td>'+esc(v.customerName||'—')+'</td>' +
           '<td><b>'+esc(v.partNo||'')+'</b></td><td>'+esc(v.partName||'')+'</td>' +
           '<td class="r">'+C.qty(v.firmQty)+'</td><td class="r">'+C.qty(actual)+'</td>' +
           '<td class="r">'+(pending>0?'<b>'+C.qty(pending)+'</b>':'0')+'</td>' +
+          '<td class="r">'+(pr.price?moneyFmt(planValue, pr.currency):'<span class="hint">no price link</span>')+'</td>' +
+          '<td class="r">'+moneyFmt(actualValue, pr.currency)+'</td>' +
           '<td class="c">'+(excess>0 ? '<span class="badge ab">excess '+C.qty(excess)+'</span>'
             : pending<=0 ? '<span class="badge series">met</span>'
             : '<span class="badge new">open</span>')+'</td>' +
@@ -11933,13 +12014,15 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var v = cp.data||{}; return v.customerId === custId && v.partId === partId; })[0];
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
     var qty = C.num(g('iv-qty')), rate = C.num(g('iv-rate'));
+    var currency = document.getElementById('iv-currency').value || 'INR';
     try {
       await C.idms.saveDoc({ kind:'invoice', partId:partId, status:'Active',
         docNo: g('iv-no'),
         data:{ customerId:custId, customerName:(cust.data||{}).name||'',
                partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
                custPartNo: link ? (link.data||{}).custPartNo||'' : '',
-               invoiceNo:g('iv-no'), invoiceDate:g('iv-date'), qty:qty, rate:rate, value:qty*rate } },
+               invoiceNo:g('iv-no'), invoiceDate:g('iv-date'), qty:qty, rate:rate,
+               currency:currency, value:qty*rate } },
         'sales invoice recorded');
       salesInvoices = await C.idms.docs('invoice');
       var month = g('iv-date').slice(0,7);
@@ -11951,6 +12034,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           ' plan and is shown as excess sales.'
         : ''), true);
       ['iv-no','iv-qty','iv-rate'].forEach(function(id){ document.getElementById(id).value=''; });
+      document.getElementById('iv-currency').value = 'INR';
       drawInvoiceRegister();
     } catch(e){ say(esc(e.message)); }
   }
@@ -11976,22 +12060,36 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (!mk.value) mk.value = thisMonthKey();
     try { salesPlans = await C.idms.docs('salesplan'); } catch(e){ salesPlans = []; }
     try { salesInvoices = await C.idms.docs('invoice'); } catch(e){ salesInvoices = []; }
+    try { custParts = await C.idms.docs('cust_part'); } catch(e){ custParts = []; }
     drawSalesDashboard();
   }
+
+  /* Value is kept in whichever currency the customer/part was actually priced
+     in and never converted — INR and USD are two separate totals, not one
+     blended figure nobody agreed the rate for. */
+  function emptyValue(){ return { INR:{planned:0,actual:0}, USD:{planned:0,actual:0} }; }
 
   function drawSalesDashboard(){
     var month = document.getElementById('sd-month').value || thisMonthKey();
     var plans = salesPlans.filter(function(p){ return (p.data||{}).month === month; });
     var totalPlanned = plans.reduce(function(t,p){ return t + C.num(p.data.firmQty); }, 0);
     var totalActual = 0, totalExcess = 0;
+    var totalValue = emptyValue();
     var byCust = {};
     plans.forEach(function(p){
       var v = p.data;
       var actual = invoicedQty(v.customerId, v.partId, month);
       totalActual += actual;
       var c = byCust[v.customerId] = byCust[v.customerId] ||
-        { name:v.customerName, planned:0, actual:0 };
+        { name:v.customerName, planned:0, actual:0, value:emptyValue() };
       c.planned += C.num(v.firmQty); c.actual += actual;
+
+      var pr = priceFor(v.customerId, v.partId);
+      var cur = pr.currency === 'USD' ? 'USD' : 'INR';
+      var planValue = C.num(v.firmQty) * pr.price;
+      var actualValue = invoicedValue(v.customerId, v.partId, month);
+      totalValue[cur].planned += planValue; totalValue[cur].actual += actualValue;
+      c.value[cur].planned += planValue; c.value[cur].actual += actualValue;
     });
     /* invoices with no plan line at all are still real sales, and still excess */
     var plannedPairs = {};
@@ -12004,8 +12102,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var v = iv.data;
       totalActual += C.num(v.qty); totalExcess += C.num(v.qty);
       var c = byCust[v.customerId] = byCust[v.customerId] ||
-        { name:v.customerName, planned:0, actual:0 };
+        { name:v.customerName, planned:0, actual:0, value:emptyValue() };
       c.actual += C.num(v.qty);
+      var cur = v.currency === 'USD' ? 'USD' : 'INR';
+      var val = C.num(v.value||(C.num(v.qty)*C.num(v.rate)));
+      totalValue[cur].actual += val; c.value[cur].actual += val;
     });
     plans.forEach(function(p){
       var v = p.data;
@@ -12019,24 +12120,41 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       [['Planned', C.qty(totalPlanned)], ['Actual', C.qty(totalActual)],
        ['Pending', C.qty(totalPending)], ['Excess sales', C.qty(totalExcess)]]
       .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
-      '</div>';
+      '</div>' +
+      '<h4 style="margin-top:14px;">Sales value — Plan vs Actual vs Pending</h4>' +
+      '<table class="t"><thead><tr><th>Currency</th><th class="r">Plan Value</th>' +
+        '<th class="r">Actual Value</th><th class="r">Pending Value</th></tr></thead><tbody>' +
+      ['INR','USD'].map(function(cur){
+        var vv = totalValue[cur], pending = Math.max(0, vv.planned - vv.actual);
+        return '<tr><td>'+cur+'</td><td class="r">'+moneyFmt(vv.planned, cur)+'</td>' +
+          '<td class="r">'+moneyFmt(vv.actual, cur)+'</td>' +
+          '<td class="r">'+(pending>0?'<b>'+moneyFmt(pending, cur)+'</b>':moneyFmt(0,cur))+'</td></tr>';
+      }).join('') + '</tbody></table>';
 
     var custRows = Object.keys(byCust).map(function(k){ return byCust[k]; })
       .sort(function(a,b){ return b.planned - a.planned; });
     document.getElementById('sd-custtable').innerHTML = !custRows.length
       ? '<div class="empty"><b>Nothing for '+esc(monthLabel(month))+'</b>' +
         'No sales plan or invoice touches this month yet.</div>'
-      : '<table class="t"><thead><tr><th>Customer</th><th class="r">Planned</th>' +
-        '<th class="r">Actual</th><th class="r">Pending</th><th class="c">Achievement</th>' +
+      : '<table class="t"><thead><tr><th>Customer</th><th class="r">Planned Qty</th>' +
+        '<th class="r">Actual Qty</th><th class="r">Pending Qty</th><th class="c">Achievement</th>' +
+        '<th class="r">Plan Value ₹</th><th class="r">Actual Value ₹</th><th class="r">Pending Value ₹</th>' +
+        '<th class="r">Plan Value $</th><th class="r">Actual Value $</th><th class="r">Pending Value $</th>' +
         '</tr></thead><tbody>' + custRows.map(function(c){
           var pending = Math.max(0, c.planned - c.actual);
           var pct = c.planned ? Math.round(c.actual / c.planned * 100) : (c.actual ? 100 : 0);
+          var inr = c.value.INR, usd = c.value.USD;
+          var pInr = Math.max(0, inr.planned - inr.actual), pUsd = Math.max(0, usd.planned - usd.actual);
           return '<tr><td>'+esc(c.name||'—')+'</td><td class="r">'+C.qty(c.planned)+'</td>' +
             '<td class="r">'+C.qty(c.actual)+'</td>' +
             '<td class="r">'+(pending>0?'<b>'+C.qty(pending)+'</b>':'0')+'</td>' +
             '<td class="c">'+(pct>100
               ? '<span class="badge ab">'+pct+'%</span>'
-              : pct===100 ? '<span class="badge series">100%</span>' : pct+'%')+'</td></tr>';
+              : pct===100 ? '<span class="badge series">100%</span>' : pct+'%')+'</td>' +
+            '<td class="r">'+C.rate(inr.planned)+'</td><td class="r">'+C.rate(inr.actual)+'</td>' +
+            '<td class="r">'+(pInr>0?'<b>'+C.rate(pInr)+'</b>':'0')+'</td>' +
+            '<td class="r">'+C.rate(usd.planned)+'</td><td class="r">'+C.rate(usd.actual)+'</td>' +
+            '<td class="r">'+(pUsd>0?'<b>'+C.rate(pUsd)+'</b>':'0')+'</td></tr>';
         }).join('') + '</tbody></table>';
 
     var excessLines = salesInvoices.filter(function(iv){
@@ -17905,9 +18023,19 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('db-brief').addEventListener('click', briefDashboard);
   document.getElementById('db-print').addEventListener('click', printDashboard);
 
+  document.getElementById('so-cust').addEventListener('change', function(){
+    document.getElementById('so-part').innerHTML = partOptionsForCustomer(this.value);
+    fillSoPriceFromLink();
+  });
+  document.getElementById('so-part').addEventListener('change', fillSoPriceFromLink);
+  document.getElementById('so-qty').addEventListener('input', updateSoValue);
+  document.getElementById('so-price').addEventListener('input', updateSoValue);
+  document.getElementById('so-currency').addEventListener('change', updateSoValue);
   document.getElementById('so-save').addEventListener('click', saveOrder);
   document.getElementById('so-clear').addEventListener('click', function(){
-    ['so-po','so-qty','so-due'].forEach(function(id){ document.getElementById(id).value=''; });
+    ['so-po','so-qty','so-price','so-due'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('so-currency').value = 'INR';
+    updateSoValue();
     document.getElementById('so-msg').style.display='none';
   });
   document.getElementById('so-filter').addEventListener('change', drawOrders);
@@ -17926,12 +18054,22 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('spm-filter-cust').addEventListener('change', drawSalesPlanRegister);
   document.getElementById('spm-print').addEventListener('click', printSalesPlan);
 
+  function fillIvRateFromLink(){
+    var pr = priceFor(document.getElementById('iv-cust').value, document.getElementById('iv-part').value);
+    if (pr.price){
+      document.getElementById('iv-rate').value = pr.price;
+      document.getElementById('iv-currency').value = pr.currency;
+    }
+  }
   document.getElementById('iv-cust').addEventListener('change', function(){
     document.getElementById('iv-part').innerHTML = partOptionsForCustomer(this.value);
+    fillIvRateFromLink();
   });
+  document.getElementById('iv-part').addEventListener('change', fillIvRateFromLink);
   document.getElementById('iv-save').addEventListener('click', saveSalesInvoice);
   document.getElementById('iv-clear').addEventListener('click', function(){
     ['iv-no','iv-qty','iv-rate'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('iv-currency').value = 'INR';
     document.getElementById('iv-msg').style.display='none';
   });
   document.getElementById('iv-filter').addEventListener('change', drawInvoiceRegister);

@@ -1000,6 +1000,55 @@ two sources of truth for the same fact.
 **Key Process Input (`form`) is on hold at the user's request** until the rest is
 done.
 
+## Modules added in v115 — Customer PO, mandatory checks, and sales value
+
+**Won → IDMS is now refused, not just completed, on a gap.** The seam already
+created the customer, the part and the priced `cust_part` link automatically;
+what it did not do was check the line was fit to create records from. It now
+refuses — naming the line and the missing field — a quotation line with no
+price or no HSN code, and refuses the whole transfer if the enquiry carries no
+customer name. A part or a customer record created with a blank in it is worse
+than a transfer that waited for the quotation to be finished.
+
+**Quotation currency** is now a field on the quotation document (`q.currency`,
+INR or USD, defaulting to the site's quote configuration) rather than assumed,
+and it is carried into the `cust_part` price link on win. Nothing downstream
+guesses a currency any more — it is read off the record that set the price.
+
+**Customer PO** is the existing Customer Orders screen under Sales Plan, not a
+second one: PO Number, Customer, Part, Quantity and Delivery date were already
+there. What was missing was the price, so a PO could carry a quantity and a
+date but nothing to value it by. **Part Price now fills in from the customer/
+part price link the moment the part is chosen** (still editable — a specific PO
+can be agreed at its own rate), Currency travels with it, and **PO Value is
+computed, never typed** (`qty × price`), shown live on the form and on the
+order book. The same duplicate-PO refusal that already existed for the order
+number now also requires a price before the line can be saved — a PO with no
+value cannot be measured against anything.
+
+**Sales value is derived the same way everywhere it appears**, never entered a
+second time:
+- **Sales Plan register** — Plan Value is the firm quantity times the current
+  customer/part price; a link with no price shows *no price link* rather than
+  a silent zero.
+- **Sales Invoice** — rate and currency fill in from the same price link when
+  the customer and part are chosen (still editable, because an invoice can be
+  raised at whatever was actually agreed), and the invoice now carries its own
+  currency so a rate revision later does not rewrite what was actually billed.
+  **Actual Value is summed from what each invoice line was really raised at**,
+  not recomputed from today's price.
+- **Sales Dashboard** — the overall panel now shows Plan / Actual / Pending
+  **value**, and the customer table shows it **customer-wise**, both split as
+  **two separate currency columns (₹ and $)**. There is no exchange rate on
+  file, so the two are never blended into one figure nobody agreed the rate
+  for — a customer bought in both currencies shows a value on both lines
+  rather than one converted total.
+
+`moneyFmt(n, currency)` and `priceFor(customerId, partId)` are the shared
+helpers behind all three screens — the same lookup, the same currency symbol,
+everywhere a value is shown. Do not add a second way to read a customer/part
+price; if a screen needs one, it calls `priceFor`.
+
 ## Modules added in v113 — the morning board and the task list
 
 **Daily Work Management** is the board walked at the morning meeting, in the

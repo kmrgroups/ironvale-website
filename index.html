@@ -9681,7 +9681,7 @@ Reply with ONLY this JSON, no commentary or code fences:
     return {number:'',date:new Date().toISOString().slice(0,10),
       items:[{desc:r&&r.message?String(r.message).slice(0,90):'',code:'',drawing:'',rev:'',hsn:'',
               qty:'',unit:'nos',rate:''}],
-      leadTime:'',notes:'',discount:''};
+      leadTime:'',notes:'',discount:'',currency:(QC().currency||'INR')};
   }
   function quoteTotals(q){
     const items=(q.items||[]);
@@ -10108,6 +10108,11 @@ Reply with ONLY this JSON, no commentary or code fences:
           <div class="qb-grid">
             <div><label>Lead Time</label><input class="qf" data-i="${i}" data-k="leadTime" value="${esc(q.leadTime)}" placeholder="e.g. 4 weeks from PO"></div>
             <div><label>Discount (${esc(QC().currencySymbol||'')})</label><input class="qf num" data-i="${i}" data-k="discount" value="${esc(q.discount)}"></div>
+            <div><label>Quotation currency</label><select class="qf" data-i="${i}" data-k="currency">
+              <option value="INR"${(q.currency||'INR')==='INR'?' selected':''}>INR — ₹</option>
+              <option value="USD"${q.currency==='USD'?' selected':''}>USD — $</option></select>
+              <div class="field-hint">Carried into the customer/part price link when the quotation is won,
+                so the sales value lands in the right currency without retyping.</div></div>
             <div style="grid-column:1/-1;"><label>Notes on the quotation</label><textarea class="qf" data-i="${i}" data-k="notes" rows="2">${esc(q.notes)}</textarea></div>
           </div>
           <div class="qb-totals">
@@ -10473,6 +10478,23 @@ Reply with ONLY this JSON, no commentary or code fences:
       const lines=(q.items||[]).filter(x=>String(x.desc||'').trim());
       if(!lines.length){ toast('The quotation has no lines to turn into parts.'); return; }
       const customer=r.company||r.name||'';
+      if(!customer.trim()){
+        toast('No customer name on this enquiry — add one before sending to the IDMS.'); return;
+      }
+      /* What goes to the IDMS becomes the customer master, the part master and the
+         priced link — refusing here, with the numbers named, is cheaper than a
+         part or a customer record with a gap in it downstream. */
+      const gaps=[];
+      lines.forEach(x=>{
+        const nm=String(x.desc||'').slice(0,40)||'(blank line)';
+        if(!(parseFloat(x.rate)>0)) gaps.push(nm+' — no price');
+        if(!String(x.hsn||'').trim()) gaps.push(nm+' — no HSN code');
+      });
+      if(gaps.length){
+        toast('Cannot send to the IDMS — fix first: '+gaps.join('; '));
+        return;
+      }
+      const currency=q.currency||QC().currency||'INR';
       if(!confirm('Create '+lines.length+' part'+(lines.length>1?'s':'')+' in the IDMS from quotation '
         +(q.number||r.ref)+'?\n\n'+lines.map(x=>'  • '+String(x.desc).slice(0,60)).join('\n')
         +'\n\nEach starts at stage New, ready for APQP.')) return;
@@ -10548,6 +10570,7 @@ Reply with ONLY this JSON, no commentary or code fences:
                      customerId, customerName:customer,
                      custPartNo:custNo, custDrawingNo:drg,
                      hsn:String(line.hsn||''), price:parseFloat(line.rate)||0,
+                     currency:currency,
                      uom:line.unit||'Nos', quotedQty:line.qty||'',
                      quoteRef:q.number||r.ref, rfqRef:r.ref,
                      effectiveFrom:q.date||new Date().toISOString().slice(0,10) }},

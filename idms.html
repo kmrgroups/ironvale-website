@@ -330,6 +330,18 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 .stat .b b{font-family:var(--disp);font-size:23px;color:var(--navy);display:block;}
 .stat .b span{font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
   color:var(--ink-soft);}
+
+/* Universal CNC live monitoring */
+.cnc-live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+.cnc-machine{border:1px solid var(--line,#d8dde6);border-radius:12px;padding:14px;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.04)}
+.cnc-machine .head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.cnc-machine .name{font-weight:800;font-size:15px;color:var(--navy)}
+.cnc-badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800;background:#eef2f7}
+.cnc-badge.run{background:#e9f8ee;color:#146c2e}.cnc-badge.alarm{background:#fff0f0;color:#a61b1b}.cnc-badge.idle{background:#fff8df;color:#805d00}.cnc-badge.off{background:#f1f2f4;color:#626a73}
+.cnc-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.cnc-kpi{background:#f7f9fb;border-radius:9px;padding:9px}.cnc-kpi small{display:block;color:#6d7480;font-size:10px}.cnc-kpi b{font-size:17px;color:var(--navy)}
+.cnc-tool{margin-top:10px;padding-top:10px;border-top:1px solid #edf0f3}.cnc-progress{height:8px;background:#e8ebef;border-radius:999px;overflow:hidden;margin-top:6px}.cnc-progress i{display:block;height:100%;width:0;background:currentColor}.cnc-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#36a05a}
+.cnc-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.cnc-toolbar .hint{margin:0}.cnc-alert{padding:10px;border-radius:8px;background:#fff4e5;color:#7a4b00;margin-bottom:12px}
+@media(max-width:600px){.cnc-live-grid{grid-template-columns:1fr}.cnc-kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -481,7 +493,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
            still exist, in case that text-only tagline/strap is wanted again
            somewhere, but nothing on Home reads them any more.) -->
       <div class="hero-banner" id="hero-banner" style="display:none;">
-        <img id="hb-img" alt="" loading="lazy" decoding="async">
+        <img id="hb-img" alt="">
       </div>
       <div class="stat" id="home-stats"></div>
       <div class="card" style="margin-top:18px;">
@@ -1577,7 +1589,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       <div class="card">
         <h4>Preview</h4>
         <div class="banner" style="margin:0;">
-          <img class="bg" id="ab-prev" style="display:none;" alt="" loading="lazy" decoding="async">
+          <img class="bg" id="ab-prev" style="display:none;" alt="">
           <div class="veil" id="ab-veil" style="display:none;"></div>
           <div class="in"><h1 id="ab-prev-title">—</h1><div class="sub" id="ab-prev-sub"></div>
             <div class="strap" id="ab-prev-strap"></div></div>
@@ -3040,6 +3052,28 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       </div>
     </div>
 
+    <!-- ============ Universal CNC Live Monitor ============ -->
+    <div class="panel" data-panel="cnc_live">
+      <div class="card">
+        <h4>Universal CNC Live Monitor</h4>
+        <div class="hint" style="margin-bottom:10px;">The IDMS reads one normalized machine data format, so the dashboard can work with FANUC, Siemens, Haas, Mazak, Mitsubishi, Okuma, Heidenhain and other controllers through the appropriate factory-LAN gateway/protocol adapter.</div>
+        <div class="cnc-toolbar"><button class="btn gold" id="cnc-live-refresh">Refresh now</button><span class="hint" id="cnc-live-updated">Waiting for machine data…</span></div>
+        <div id="cnc-live-alert"></div>
+        <div id="cnc-live-summary" class="stat"></div>
+        <div id="cnc-live-grid" class="cnc-live-grid" style="margin-top:12px;"></div>
+      </div>
+      <div class="card">
+        <h4>How machine connectivity works</h4>
+        <div class="hint">CNC machines stay on the factory LAN. A small gateway reads the controller using MTConnect, vendor software such as FANUC FOCAS, OPC UA, Modbus TCP, or another supported adapter and sends only normalized telemetry to IDMS. This avoids locking the platform to one controller brand.</div>
+        <div class="row four" style="margin-top:10px;">
+          <div><label>Part count</label><div class="hint">Used for production and tool-life counting.</div></div>
+          <div><label>Ideal cycle</label><div class="hint">Configured by part/operation in IDMS.</div></div>
+          <div><label>Actual cycle</label><div class="hint">Calculated from machine events when available.</div></div>
+          <div><label>Tool life</label><div class="hint">Remaining parts = life limit − parts used.</div></div>
+        </div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="placeholder">
       <div class="card"><div class="empty">
         <b id="ph-name">Not built yet</b>
@@ -3164,6 +3198,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     ['accounts','💹','Accounts','Budget and cost',[
       ['dash_accounts','📊','Accounts Dashboard',1],
       ['accounts_pl','💹','P&L']]],
+    ['production_live','📡','Live Production','CNC and machine monitoring',[['cnc_live','🟢','CNC Live Monitor',1]]],
     ['admin','⚙','Admin','Settings and the website',[
       ['admin_site','🌐','Website Content',1],
       ['admin_banner','🖼','Home Banner',1],
@@ -3198,6 +3233,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      image and stats) behind it every time. Wiring it up here the same way
      every other screen is wired up fixes that. */
   LIVE.home = 1; LABEL.home = 'Home'; ICON.home = '🏠';
+  LIVE.cnc_live = 1; LABEL.cnc_live = 'CNC Live Monitor'; ICON.cnc_live = '📡';
 
   /* Every menu/sub-menu entry is a real <a href="#s=..."> so the browser's own
      right-click menu ("Open Link in New Tab" / "Open Link in New Window") works
@@ -3320,6 +3356,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (s === 'fmea')           loadFmea();
     if (s === 'control_plan')   loadCp();
     if (s === 'cnc')            loadCnc();
+    if (s === 'cnc_live')       loadCncLive();
     if (s === 'ppap')           loadPpap();
     if (s === 'report_setup_approval') loadSetup();
     if (s === 'report_self_inspection') loadSelfInsp();
@@ -4165,7 +4202,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var host = document.getElementById('ls-images');
     host.innerHTML = lsImages.map(function(u, i){
       return '<div style="position:relative;">' +
-        '<img src="'+esc(u)+'" style="width:110px;height:78px;object-fit:cover;border-radius:8px;border:1px solid var(--line);" loading="lazy" decoding="async">' +
+        '<img src="'+esc(u)+'" style="width:110px;height:78px;object-fit:cover;border-radius:8px;border:1px solid var(--line);">' +
         '<button type="button" class="btn del ls-rm" data-i="'+i+'" ' +
         'style="position:absolute;top:3px;right:3px;padding:2px 7px;font-size:9px;">✕</button></div>';
     }).join('');
@@ -15821,6 +15858,47 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     '(------------------------------------------------------------)'
   ].join('\n');
 
+  let cncLiveTimer = null;
+  function cncStatusClass(status){
+    var s=String(status||'').toUpperCase();
+    return s==='RUNNING'?'run':(s==='ALARM'?'alarm':(s==='IDLE'?'idle':'off'));
+  }
+  function cncEsc(v){ return C.esc(String(v==null?'':v)); }
+  function cncFmtSec(v){
+    var n=Number(v||0); if(!isFinite(n)||n<=0) return '—';
+    var m=Math.floor(n/60), s=Math.round(n%60); return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  }
+  function cncLife(used,limit){
+    used=Number(used||0); limit=Number(limit||0); if(limit<=0) return {pct:0,remain:null};
+    return {pct:Math.max(0,Math.min(100,(used/limit)*100)),remain:Math.max(0,limit-used)};
+  }
+  async function loadCncLive(){
+    var grid=document.getElementById('cnc-live-grid'); if(!grid) return;
+    try{
+      var r=await C.api('/api/cnc?what=summary');
+      var list=(r.summary&&r.summary.machines)||[];
+      var counts=(r.summary&&r.summary.statusCounts)||{};
+      document.getElementById('cnc-live-updated').textContent='Updated '+new Date().toLocaleTimeString();
+      document.getElementById('cnc-live-summary').innerHTML=[
+        ['Machines',list.length],['Running',counts.RUNNING||0],['Idle',counts.IDLE||0],['Alarms',(counts.ALARM||0)+(counts.OFFLINE||0)],['Part count',r.summary.totalPartCount||0]
+      ].map(function(x){return '<div class="b"><span>'+cncEsc(x[0])+'</span><b>'+cncEsc(x[1])+'</b></div>';}).join('');
+      var alarms=list.filter(function(m){return String(m.state&&m.state.status).toUpperCase()==='ALARM';});
+      document.getElementById('cnc-live-alert').innerHTML=alarms.length?'<div class="cnc-alert">⚠ <b>'+alarms.length+' machine alarm'+(alarms.length>1?'s':'')+'</b> — check the machine card below for the latest alarm.</div>':'';
+      if(!list.length){ grid.innerHTML='<div class="empty"><b>No CNC machines connected yet.</b><span>Install the machine gateway on a factory-LAN PC and add the machine configuration.</span></div>'; return; }
+      grid.innerHTML=list.map(function(m){
+        var s=m.state||{}, status=String(s.status||'UNKNOWN').toUpperCase(), life=cncLife(s.toolLifeUsedParts,s.toolLifeLimitParts);
+        var diff=Number(s.cycleTimeSec||0)-Number(s.idealCycleSec||0);
+        return '<div class="cnc-machine"><div class="head"><div><div class="name">'+cncEsc(m.name||m.machine_id)+'</div><div class="hint">'+cncEsc(m.controller||'')+' · '+cncEsc(m.machine_id)+'</div></div><span class="cnc-badge '+cncStatusClass(status)+'"><span class="cnc-live-dot"></span>'+cncEsc(status)+'</span></div>'+
+          '<div class="cnc-kpis"><div class="cnc-kpi"><small>Part count</small><b>'+cncEsc(s.partCount||0)+'</b></div><div class="cnc-kpi"><small>Program</small><b>'+cncEsc(s.program||'—')+'</b></div><div class="cnc-kpi"><small>Ideal cycle</small><b>'+cncFmtSec(s.idealCycleSec)+'</b></div><div class="cnc-kpi"><small>Actual cycle</small><b>'+cncFmtSec(s.cycleTimeSec)+(diff>0?' <small style="color:#a61b1b">+'+cncFmtSec(diff)+'</small>':'')+'</b></div></div>'+
+          '<div class="cnc-tool"><b>Tool '+cncEsc(s.toolNumber||'—')+'</b><span class="hint" style="float:right">'+(life.remain==null?'Life data unavailable':cncEsc(life.remain)+' parts left')+'</span><div class="cnc-progress"><i style="width:'+life.pct+'%"></i></div></div>'+
+          (s.alarmCode||s.alarmText?'<div class="note bad" style="margin-top:10px"><b>Alarm '+cncEsc(s.alarmCode||'')+'</b> '+cncEsc(s.alarmText||'')+'</div>':'')+
+          '<div class="hint" style="margin-top:9px">Last update: '+cncEsc(new Date(m.updated_at||s.at||Date.now()).toLocaleTimeString())+'</div></div>';
+      }).join('');
+    }catch(e){ grid.innerHTML='<div class="empty"><b>Machine data unavailable.</b><span>'+cncEsc(e.message)+'</span></div>'; }
+    clearTimeout(cncLiveTimer); cncLiveTimer=setTimeout(function(){ if(document.querySelector('.panel[data-panel="cnc_live"].on')) loadCncLive(); },5000);
+  }
+  document.getElementById('cnc-live-refresh')?.addEventListener('click',loadCncLive);
+
   async function loadCnc(){
     await fetchParts();
     var sel = document.getElementById('cn-part');
@@ -17373,7 +17451,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
        ['Address', esc(p.address || '—')],
        ['GSTIN', esc(p.gstin || '—')],
        ['Document prefix', '<b>'+esc(p.docPrefix)+'</b>'],
-       ['Logo', p.logo ? '<img src="'+p.logo+'" style="max-height:34px;" loading="lazy" decoding="async">' : '—']]
+       ['Logo', p.logo ? '<img src="'+p.logo+'" style="max-height:34px;">' : '—']]
       .map(function(r){ return '<tr><th style="width:32%;">'+r[0]+'</th><td>'+r[1]+'</td></tr>'; })
       .join('') + '</tbody>';
     var host = document.getElementById('audit-list');
@@ -17602,7 +17680,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
          name. It has been removed from the title bar by request — the company
          profile itself (Admin → Company Profile) still holds the address. */
       document.getElementById('t-logo').innerHTML = p.logo
-        ? '<img src="'+p.logo+'" alt="" loading="lazy" decoding="async">'
+        ? '<img src="'+p.logo+'" alt="">'
         : '<div class="mark">'+esc(p.docPrefix.slice(0,2))+'</div>';
       document.title = (p.name ? p.name + ' — ' : '') + 'IDMS';
       C.setFavicon(p.logo || '');       // the tab icon follows the company logo
@@ -17665,7 +17743,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      and are edited from Admin → Login Screen. */
   function loadGateBranding(p){
     document.getElementById('g-logo').innerHTML = (p && p.logo)
-      ? '<img src="'+p.logo+'" alt="" loading="lazy" decoding="async">'
+      ? '<img src="'+p.logo+'" alt="">'
       : '<div class="mark">'+esc((p && p.docPrefix ? p.docPrefix.slice(0,2) : '··'))+'</div>';
   }
   /* /api/content is the one endpoint the sign-in screen can read before a
@@ -17681,7 +17759,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       if (ls.welcomeText) document.getElementById('g-welcome-text').textContent = ls.welcomeText;
       var gal = document.getElementById('gl-gallery');
       gal.innerHTML = (ls.images || []).slice(0,6).map(function(u){
-        return '<img src="'+esc(u)+'" alt="" loading="lazy" decoding="async">';
+        return '<img src="'+esc(u)+'" alt="">';
       }).join('');
     } catch(e){ /* the gate still works with the defaults if this is unreachable pre-login */ }
   }

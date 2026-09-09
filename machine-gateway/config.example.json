@@ -1,0 +1,29 @@
+{
+  "pollMs": 2000,
+  "pushMs": 2000,
+  "idmsIngestUrl": "https://YOUR-IDMS-DOMAIN/api/cnc",
+  "machineGatewayKey": "CHANGE-ME-LONG-RANDOM-KEY",
+  "machines": [
+    {
+      "id": "CNC-01",
+      "name": "FANUC CNC 01",
+      "controller": "FANUC",
+      "adapter": "mtconnect",
+      "baseUrl": "http://192.168.1.101:5000",
+      "devicePath": "/current",
+      "partCountPath": "//PartCount",
+      "programPath": "//program",
+      "executionPath": "//execution",
+      "alarmPath": "//Alarm",
+      "toolNumberPath": "//ToolNumber"
+    },
+    {
+      "id": "CNC-02",
+      "name": "Test Machine",
+      "controller": "SIMULATOR",
+      "adapter": "simulator",
+      "idealCycleSec": 260,
+      "toolLifeParts": 500
+    }
+  ]
+}

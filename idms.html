@@ -2128,15 +2128,13 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     <div class="panel" data-panel="production_plan">
       <div class="card">
         <h4>Production Plan</h4>
-        <div class="hint" style="margin-bottom:10px;">What is still to make against each order, the
-          rate needed to hit the date, and whether the machines have the hours. Made and despatched
-          come from the production bookings and the cleared lots, not from anybody's estimate.</div>
+        <div class="hint" style="margin-bottom:10px;">What is still to make against each order, and the
+          rate needed to hit the date. Made and despatched come from the production bookings and the
+          cleared lots, not from anybody's estimate. Whether the machines actually have the hours is
+          answered on Capacity Plan and Machine Loading Plan — one calculation, not repeated here.</div>
         <div class="row four">
           <div><label>Working days per week</label><select id="pp-week">
             <option>5</option><option selected>6</option><option>7</option></select></div>
-          <div><label>Shifts per day</label><select id="pp-shifts">
-            <option>1</option><option selected>2</option><option>3</option></select></div>
-          <div><label>Hours per shift</label><input class="num" id="pp-hours" value="8"></div>
           <div style="align-self:end;">
             <button class="btn gold" id="pp-run">Work out the plan</button>
             <button class="btn" id="pp-print2" style="margin-left:6px;">Print</button></div>
@@ -2149,8 +2147,15 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         <div id="pp-orders"></div>
       </div>
       <div class="card">
-        <h4>Machine loading</h4>
-        <div id="pp-machines"></div>
+        <h4>Capacity check</h4>
+        <div class="hint" style="margin-bottom:10px;">Machine-by-machine hours against demand, month by
+          month, is worked out on <b>Capacity Plan</b>. Where each order actually lands in the machine
+          queue, with a real projected finish date, is worked out on <b>Machine Loading Plan</b>. Both
+          read the same open orders and routings as this screen.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="pp-go-capacity">Open Capacity Plan</button>
+          <button class="btn" id="pp-go-loading">Open Machine Loading Plan</button>
+        </div>
       </div>
     </div>
 
@@ -3096,13 +3101,20 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       ['agent_supplier','🤖','Supplier Watch Agent',1],['supplier_competency','🤝','Supplier Competency']]],
     ['ppc','📦','PPC & MMD','Planning and material movement',[
       ['dash_ppc','📊','PPC & MMD Dashboard',1],
-      ['sales_plan','📈','Order Book',1],['production_plan','🏭','Production Plan',1],
-      ['emb_ppc','🗓','Production Planning (orders & capacity)',1],
+      /* Demand in, in the order it is actually worked: what the customer
+         committed to (Order Book), what is planned to bill this month and the
+         two after (Sales Plan), what is still to make against it (Production
+         Plan), whether the machines have the hours (Capacity Plan) and where
+         each order lands in the queue (Machine Loading Plan). */
+      ['sales_plan','📈','Order Book',1],['sales_monthly_plan','🗓','Sales Plan',1],
+      ['production_plan','🏭','Production Plan',1],
       ['capacity_plan','⚙','Capacity Plan',1],['machine_loading','🔩','Machine Loading Plan',1],
-      ['sales_monthly_plan','🗓','Sales Plan',1],['sales_invoice','🧾','Sales Invoice',1],
-      ['sales_dashboard','📊','Sales Plan vs Actual',1],
-      ['dc','📤','Delivery Challan',1],['sheet_rawmat','🪨','Raw Material Stock',1],
-      ['bom','🧾','Bill of Materials',1],['form','🔑','Key Process Input']]],
+      /* What making it consumes and what despatching it needs. */
+      ['bom','🧾','Bill of Materials',1],['sheet_rawmat','🪨','Raw Material Stock',1],
+      ['dc','📤','Delivery Challan',1],
+      /* The commercial side: daily invoicing, matched back to the Sales Plan. */
+      ['sales_invoice','🧾','Sales Invoice',1],['sales_dashboard','📊','Sales Plan vs Actual',1],
+      ['form','🔑','Key Process Input']]],
     ['production','🏗','Production','Shop floor',[
       ['dash_production','📊','Production Dashboard',1],
       ['entry_prod','📝','Production Entry',1],
@@ -3157,7 +3169,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     doc_master_pfd: 'masterlist', doc_master_pfmea: 'masterlist', doc_master_cp: 'masterlist',
     kpi_entry: 'kpi_entry', admin_banner: 'admin_banner',
     admin_backup: 'admin_backup', admin_sample: 'admin_sample',
-    admin_site: 'embed', emb_pipeline: 'embed', emb_ppc: 'embed', emb_hr: 'embed', emb_me: 'embed'
+    admin_site: 'embed', emb_pipeline: 'embed', emb_hr: 'embed', emb_me: 'embed'
   };
   (window.KPIX ? window.KPIX.DEPTS : []).forEach(function (d) { PANEL_OF['dash_' + d.key] = 'kpidash'; });
 
@@ -9010,8 +9022,6 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     emb_pipeline: ['RFQ Pipeline', 'pipeline',
       'Enquiries from the website: drawing reading, costing, quotations, and the handover that turns ' +
       'a won quotation into a part in this system.'],
-    emb_ppc: ['Production Planning', 'ppc',
-      'Customer orders, capacity and scheduling as held on the website side.'],
     emb_hr: ['HR & Payroll', 'hr',
       'Employees, attendance, leave, payroll and statutory compliance.'],
     emb_me: ['My Attendance', 'me',
@@ -11495,7 +11505,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      The plan is only worth having because the two numbers it compares come from
      somewhere real: made comes from production bookings, despatched from cleared
      lots drawn down by challans. Nothing here asks anybody how it is going. */
-  var orders = [], planRows = [], planLoad = [];
+  var orders = [], planRows = [];
 
   async function loadOrders(){
     await fetchParts();
@@ -12054,7 +12064,6 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     document.getElementById('pp-summary').innerHTML =
       '<div class="empty"><b>Nothing worked out yet</b>Press <b>Work out the plan</b>.</div>';
     document.getElementById('pp-orders').innerHTML = '';
-    document.getElementById('pp-machines').innerHTML = '';
   }
 
   function runPlan(){
@@ -12062,13 +12071,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'');
                                  msg.innerHTML=t; };
     var perWeek = C.num(document.getElementById('pp-week').value);
-    var shifts  = C.num(document.getElementById('pp-shifts').value);
-    var hrs     = C.num(document.getElementById('pp-hours').value);
-    var hoursPerDay = shifts * hrs;
-    if (!hoursPerDay) return say('Set the shifts and hours, or there is no capacity to plan with.');
+    if (!perWeek) return say('Set the working days per week, or there is nothing to plan a rate against.');
 
-    planRows = []; planLoad = [];
-    var load = {};
+    planRows = [];
 
     orders.forEach(function(o){
       var v = o.data||{}, pr = orderProgress(o), dl = daysTo(v.due);
@@ -12084,12 +12089,6 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var secs = ops.reduce(function(t,x){ return t + C.num((x.data||{}).cycleSec); }, 0);
       var hoursNeeded = Math.round((pr.balance * secs / 3600) * 10) / 10;
 
-      ops.forEach(function(x){
-        var d = x.data||{}, m = (d.machine||'not stated').trim();
-        var h = C.num(d.cycleSec) * pr.balance / 3600;
-        load[m] = (load[m] || 0) + h;
-      });
-
       planRows.push({ po:v.po||o.doc_no, customer:v.customerName||'', partNo:v.partNo||'',
         partId:v.partId, qty:C.num(v.qty), made:pr.made, balance:pr.balance,
         due:v.due, days:calDays, workDays:workDays, perDay:perDay,
@@ -12102,42 +12101,29 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       return (a.days === null ? 1e9 : a.days) - (b.days === null ? 1e9 : b.days);
     });
 
-    var horizon = planRows.reduce(function(m,r){
-      return Math.max(m, r.workDays || 0); }, 0) || 1;
-    planLoad = Object.keys(load).map(function(m){
-      var need = Math.round(load[m] * 10) / 10;
-      var avail = Math.round(horizon * hoursPerDay * 10) / 10;
-      return { machine:m, hours:need, available:avail,
-        pct: avail ? Math.round(1000 * need / avail) / 10 : null };
-    }).sort(function(a,b){ return (b.pct||0) - (a.pct||0); });
-
-    drawPlan(hoursPerDay, horizon);
-    var over = planLoad.filter(function(m){ return m.pct !== null && m.pct > 100; }).length;
+    drawPlan();
     var late = planRows.filter(function(r){ return r.late; }).length;
     say(planRows.length + ' open order(s). ' +
-        (late ? '<b>' + late + ' already past its date.</b> ' : '') +
-        (over ? '<b>' + over + ' machine(s) overloaded.</b>' : 'No machine is overloaded.'),
-        !late && !over);
+        (late ? '<b>' + late + ' already past its date.</b> ' : 'None are past their date yet. ') +
+        'Check <b>Capacity Plan</b> for whether the machines have the hours.', !late);
   }
 
-  function drawPlan(hoursPerDay, horizon){
+  function drawPlan(){
     var sum = document.getElementById('pp-summary');
     var oh = document.getElementById('pp-orders');
-    var mh = document.getElementById('pp-machines');
     var late = planRows.filter(function(r){ return r.late; }).length;
     var totBal = planRows.reduce(function(t,r){ return t + r.balance; }, 0);
     var totHrs = Math.round(planRows.reduce(function(t,r){ return t + r.hours; }, 0) * 10) / 10;
 
     sum.innerHTML = '<div class="stat">' +
       [['Open orders', planRows.length], ['Still to make', C.qty(totBal)],
-       ['Machine hours needed', C.qty(totHrs)], ['Past their date', late],
-       ['Capacity per day', C.qty(hoursPerDay) + ' h']]
+       ['Machine hours needed', C.qty(totHrs)], ['Past their date', late]]
       .map(function(x){ return '<div class="b"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'; }).join('') +
       '</div>';
 
     if (!planRows.length){
       oh.innerHTML = '<div class="empty"><b>Nothing outstanding</b>Every order has been made.</div>';
-      mh.innerHTML = ''; return;
+      return;
     }
     oh.innerHTML = '<table class="t"><thead><tr><th>Order</th><th>Customer</th><th>Part</th>' +
       '<th class="r">Balance</th><th>Due</th><th class="c">Working days</th>' +
@@ -12160,26 +12146,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       }).join('') + '</tbody></table>' +
       (planRows.some(function(r){ return r.noRouting; })
         ? '<div class="note" style="margin-top:10px;">Orders marked <b>no routing</b> cannot be ' +
-          'loaded onto a machine, so they are missing from the hours below. The plan is short by ' +
+          'loaded onto a machine, so they are missing from the hours above. The plan is short by ' +
           'however long they take.</div>' : '');
-
-    mh.innerHTML = !planLoad.length
-      ? '<div class="empty"><b>No routings to load</b></div>'
-      : '<table class="t"><thead><tr><th>Machine</th><th class="r">Hours needed</th>' +
-        '<th class="r">Hours available</th><th class="r">Load</th><th class="c"></th>' +
-        '</tr></thead><tbody>' + planLoad.map(function(m){
-          var over = m.pct !== null && m.pct > 100;
-          return '<tr><td>'+esc(m.machine)+'</td><td class="r">'+C.qty(m.hours)+'</td>' +
-            '<td class="r">'+C.qty(m.available)+'</td>' +
-            '<td class="r">'+(m.pct===null?'—':'<b'+(over?' style="color:var(--bad)"':'')+'>'+
-              m.pct+'%</b>')+'</td>' +
-            '<td class="c">'+(over?'<span class="badge ab">overloaded</span>'
-              :m.pct>85?'<span class="badge sample">tight</span>'
-              :'<span class="badge series">room</span>')+'</td></tr>';
-        }).join('') + '</tbody></table>' +
-        '<div class="hint" style="margin-top:8px;">Hours available assume ' + C.qty(hoursPerDay) +
-        ' hours a day over ' + horizon + ' working day(s) — the longest window any open order has. ' +
-        'A machine over 100% cannot make everything by the dates given, whatever the sequence.</div>';
   }
 
   function printPlan(){
@@ -12198,20 +12166,12 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
               r.noRouting?'—':C.qty(r.hours),
               r.late ? { v:'<b>PAST ITS DATE</b>', cls:'ab' }
                      : r.noRouting ? 'no routing' : 'plannable'];
-          }) },
-        { type:'table', title:'Machine loading',
-          columns:[{label:'Machine'},{label:'Hours needed',align:'r'},
-            {label:'Hours available',align:'r'},{label:'Load',align:'r'}],
-          rows: planLoad.map(function(m){
-            return [esc(m.machine), C.qty(m.hours), C.qty(m.available),
-              (m.pct !== null && m.pct > 100) ? { v:'<b>'+m.pct+'%</b>', cls:'ab' }
-                                              : (m.pct===null?'—':m.pct+'%')];
           }),
-          note:'Balance and made come from the production bookings, not from an estimate. Loading ' +
-               'assumes every operation runs on its own machine and takes no account of sequence ' +
-               'or shared setups.' }
+          note:'Machine-by-machine loading is on the Capacity Plan and Machine Loading Plan reports, ' +
+               'not repeated here.' }
       ]});
   }
+
 
   /* ---------------- Production entry ----------------
      The record that everything else has been assuming existed: what was actually
@@ -17980,6 +17940,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('sd-refresh').addEventListener('click', drawSalesDashboard);
   document.getElementById('pp-run').addEventListener('click', runPlan);
   document.getElementById('pp-print2').addEventListener('click', printPlan);
+  document.getElementById('pp-go-capacity').addEventListener('click', function(){ go('capacity_plan'); });
+  document.getElementById('pp-go-loading').addEventListener('click', function(){ go('machine_loading'); });
 
   document.getElementById('pe-part').addEventListener('change', drawProdOps);
   document.getElementById('pe-op').addEventListener('change', function(){

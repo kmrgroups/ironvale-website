@@ -198,67 +198,35 @@
     return api('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'faceForget' }) });
   }
 
-  /* ---------------- IDMS shorthands ----------------
-     Fast-path cache: screen changes often ask for the same reference data more
-     than once. Results are shared between simultaneous callers and kept briefly
-     in memory, so navigating between screens feels instant without allowing
-     stale manufacturing data to linger for long. Every write invalidates the
-     affected cache family below. */
-  const idmsCache = new Map();
-  const IDMS_CACHE_MS = 5000;
-  function cachedIdms(key, loader, ttl) {
-    const now = Date.now();
-    const hit = idmsCache.get(key);
-    if (hit && (now - hit.time) < (ttl || IDMS_CACHE_MS)) return hit.promise;
-    const promise = Promise.resolve().then(loader).catch(err => {
-      idmsCache.delete(key);
-      throw err;
-    });
-    idmsCache.set(key, { time: now, promise });
-    return promise;
-  }
-  function invalidateIdms(prefix) {
-    for (const key of idmsCache.keys()) {
-      if (!prefix || key.indexOf(prefix) === 0) idmsCache.delete(key);
-    }
-  }
+  /* ---------------- IDMS shorthands ---------------- */
   const idms = {
-    docs: (kind, partId) => {
-      const key = 'docs|' + (kind || '') + '|' + (partId || '');
-      return cachedIdms(key, () => api('/api/idms?what=docs' +
-        (kind ? '&kind=' + encodeURIComponent(kind) : '') +
-        (partId ? '&partId=' + encodeURIComponent(partId) : '')).then(j => j.docs || []));
-    },
+    docs: (kind, partId) => api('/api/idms?what=docs' +
+      (kind ? '&kind=' + encodeURIComponent(kind) : '') +
+      (partId ? '&partId=' + encodeURIComponent(partId) : '')).then(j => j.docs || []),
     saveDoc: (doc, reason) => api('/api/idms', {
       method: 'POST', body: JSON.stringify({ what: 'docs', doc: doc, reason: reason || '' })
-    }).then(j => { invalidateIdms('docs|'); invalidateIdms('audit|'); return j; }),
+    }),
     patchDoc: patch => api('/api/idms', {
       method: 'PATCH', body: JSON.stringify(Object.assign({ what: 'docs' }, patch))
-    }).then(j => { invalidateIdms('docs|'); invalidateIdms('audit|'); return j; }),
-    parts: lifecycle => {
-      const key = 'parts|' + (lifecycle || '');
-      return cachedIdms(key, () => api('/api/idms?what=parts' +
-        (lifecycle ? '&lifecycle=' + encodeURIComponent(lifecycle) : '')).then(j => j.parts || []));
-    },
+    }),
+    parts: lifecycle => api('/api/idms?what=parts' +
+      (lifecycle ? '&lifecycle=' + encodeURIComponent(lifecycle) : '')).then(j => j.parts || []),
     savePart: (part, reason) => api('/api/idms', {
       method: 'POST', body: JSON.stringify({ what: 'parts', part: part, reason: reason || '' })
-    }).then(j => { invalidateIdms('parts|'); invalidateIdms('docs|'); return j; }),
+    }),
     removePart: (partId, reason) =>
       api('/api/idms', { method:'PATCH', body: JSON.stringify({ what:'parts', partId,
-        remove:true, reason }) }).then(j => { invalidateIdms('parts|'); return j; }),
+        remove:true, reason }) }),
     setLifecycle: (partId, lifecycle, reason) => api('/api/idms', {
       method: 'PATCH',
       body: JSON.stringify({ what: 'parts', partId: partId, lifecycle: lifecycle, reason: reason || '' })
-    }).then(j => { invalidateIdms('parts|'); return j; }),
-    settings: () => cachedIdms('settings|', () => api('/api/idms?what=settings').then(j => j.settings || {}), 10000),
+    }),
+    settings: () => api('/api/idms?what=settings').then(j => j.settings || {}),
     saveSetting: (key, data) => api('/api/idms', {
       method: 'POST', body: JSON.stringify({ what: 'settings', key: key, data: data })
-    }).then(j => { invalidateIdms('settings|'); return j; }),
-    audit: ref => {
-      const key = 'audit|' + (ref || '');
-      return cachedIdms(key, () => api('/api/idms?what=audit' + (ref ? '&ref=' + encodeURIComponent(ref) : ''))
-        .then(j => j.audit || []), 3000);
-    },
+    }),
+    audit: ref => api('/api/idms?what=audit' + (ref ? '&ref=' + encodeURIComponent(ref) : ''))
+      .then(j => j.audit || []),
     /* A number nobody else can be given at the same moment. */
     serial: (name, by) => api('/api/idms', {
       method: 'POST', body: JSON.stringify({ what: 'serial', name: name, by: by || 1 })

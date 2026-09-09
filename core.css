@@ -181,16 +181,3 @@ table.t tr:hover td{background:var(--paper);}
 .faceid-cancel{margin-top:16px;width:100%;}
 
 @media print{ .app-head,.nav-groups,.nav-tabs,.btn{display:none !important;} body{background:#fff;} }
-
-
-/* Performance-friendly responsive defaults. Keep interaction areas touch-sized
-   while allowing dense manufacturing tables to scroll instead of forcing the
-   whole page wider on phones/tablets. */
-html{-webkit-text-size-adjust:100%;}
-img{content-visibility:auto;}
-@media (max-width: 768px){
-  .wrap{padding-left:14px;padding-right:14px;}
-  button,.btn,a[role=button]{min-height:40px;}
-  table{font-size:13px;}
-  .table-wrap,.table-scroll,.tbl-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
-}

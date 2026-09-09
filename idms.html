@@ -2033,6 +2033,98 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       </div>
     </div>
 
+    <div class="panel" data-panel="sales_monthly_plan">
+      <div class="card">
+        <h4>Sales Plan</h4>
+        <div class="hint" style="margin-bottom:10px;">One line per customer and part, for a firm
+          month plus the two months after it as a tentative forecast. The firm month's quantity is
+          what the plan register and dashboard are measured against — the two tentative figures are
+          for capacity and material planning only, and are never compared to actual despatch.</div>
+        <div class="row four">
+          <div><label>Customer</label><select id="spm-cust"></select></div>
+          <div><label>Part</label><select id="spm-part"></select></div>
+          <div><label>Firm plan month</label><input type="month" id="spm-month"></div>
+          <div><label>Firm plan quantity</label><input class="num" id="spm-firm"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label id="spm-t1-label">Tentative — month 2</label><input class="num" id="spm-t1"></div>
+          <div><label id="spm-t2-label">Tentative — month 3</label><input class="num" id="spm-t2"></div>
+          <div style="align-self:end;">
+            <button class="btn gold" id="spm-save">Save plan line</button>
+            <button class="btn" id="spm-clear" style="margin-left:6px;">Clear</button></div>
+        </div>
+        <div class="note" id="spm-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <div class="row four" style="margin-bottom:8px;">
+          <div><label>Plan month</label><input type="month" id="spm-filter-month"></div>
+          <div><label>Customer</label><select id="spm-filter-cust"><option value="">All customers</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="spm-refresh">Show</button></div>
+          <div style="align-self:end;"><button class="btn" id="spm-print">Print register</button></div>
+        </div>
+        <h4>Sales Plan register</h4>
+        <div class="hint" style="margin-bottom:10px;">Actual quantity is the total invoiced to that
+          customer for that part within the plan month, taken from Sales Invoice — nothing here is
+          typed twice.</div>
+        <div id="spm-list"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="sales_invoice">
+      <div class="card">
+        <h4>Sales Invoice</h4>
+        <div class="hint" style="margin-bottom:10px;">Entered daily as invoices are raised. Each
+          invoice line is matched to that customer and part's Sales Plan for the invoice's month —
+          if the plan for that month is already used up, the excess is flagged here and shown on the
+          dashboard as excess sales, not silently absorbed into the total.</div>
+        <div class="row four">
+          <div><label>Customer</label><select id="iv-cust"></select></div>
+          <div><label>Part</label><select id="iv-part"></select></div>
+          <div><label>Invoice number</label><input id="iv-no"></div>
+          <div><label>Invoice date</label><input type="date" id="iv-date"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Invoiced quantity</label><input class="num" id="iv-qty"></div>
+          <div><label>Rate (optional)</label><input class="num" id="iv-rate"></div>
+          <div style="align-self:end;">
+            <button class="btn gold" id="iv-save">Save invoice line</button>
+            <button class="btn" id="iv-clear" style="margin-left:6px;">Clear</button></div>
+        </div>
+        <div class="note" id="iv-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <div class="row four" style="margin-bottom:8px;">
+          <div><label>Show</label><select id="iv-filter">
+            <option value="">All invoices</option><option value="excess">Over the plan only</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="iv-print">Print register</button></div>
+        </div>
+        <h4>Invoice register</h4>
+        <div id="iv-list"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="sales_dashboard">
+      <div class="card">
+        <div class="row four" style="margin-bottom:8px;">
+          <div><label>Month</label><input type="month" id="sd-month"></div>
+          <div style="align-self:end;"><button class="btn gold" id="sd-refresh">Show</button></div>
+        </div>
+        <h4>Sales Plan vs Actual — overall</h4>
+        <div id="sd-overall"></div>
+      </div>
+      <div class="card">
+        <h4>Customer vs Sales Plan vs Actual</h4>
+        <div id="sd-custtable"></div>
+      </div>
+      <div class="card">
+        <h4>Excess sales — invoiced over the plan</h4>
+        <div class="hint" style="margin-bottom:10px;">Quantity invoiced to a customer for a part,
+          in a month, beyond what that month's firm plan allowed — including invoices raised against
+          a customer/part with no plan line at all for that month.</div>
+        <div id="sd-excess"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="production_plan">
       <div class="card">
         <h4>Production Plan</h4>
@@ -3004,9 +3096,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       ['agent_supplier','🤖','Supplier Watch Agent',1],['supplier_competency','🤝','Supplier Competency']]],
     ['ppc','📦','PPC & MMD','Planning and material movement',[
       ['dash_ppc','📊','PPC & MMD Dashboard',1],
-      ['sales_plan','📈','Sales Plan',1],['production_plan','🏭','Production Plan',1],
+      ['sales_plan','📈','Order Book',1],['production_plan','🏭','Production Plan',1],
       ['emb_ppc','🗓','Production Planning (orders & capacity)',1],
       ['capacity_plan','⚙','Capacity Plan',1],['machine_loading','🔩','Machine Loading Plan',1],
+      ['sales_monthly_plan','🗓','Sales Plan',1],['sales_invoice','🧾','Sales Invoice',1],
+      ['sales_dashboard','📊','Sales Plan vs Actual',1],
       ['dc','📤','Delivery Challan',1],['sheet_rawmat','🪨','Raw Material Stock',1],
       ['bom','🧾','Bill of Materials',1],['form','🔑','Key Process Input']]],
     ['production','🏗','Production','Shop floor',[
@@ -3212,6 +3306,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (s === 'agent_review')   loadReview();
     if (s === 'entry_prod')     loadProduction();
     if (s === 'sales_plan')     loadOrders();
+    if (s === 'sales_monthly_plan') loadSalesPlan();
+    if (s === 'sales_invoice')  loadSalesInvoice();
+    if (s === 'sales_dashboard') loadSalesDashboard();
     if (s === 'dashboard')      loadDashboard();
     if (s === 'ncr')            loadNcr();
     if (s === 'entry_machine')  loadMachines();
@@ -11552,6 +11649,401 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         note:'Made is counted from production bookings for the part since the order date.' }]});
   }
 
+  /* ---------------- Sales Plan — monthly, by customer and part ----------------
+     A firm month plus two tentative months, one line per customer/part. The
+     firm month is the only figure ever compared to actual — the tentative
+     months are for capacity and material planning, kept on the same line so
+     they are entered once and travel together, never scored against despatch.
+     Actual is never typed here: it is the sum of Sales Invoice lines for the
+     same customer, part and month, read live off 'invoice' docs. */
+  var salesPlans = [], salesInvoices = [];
+
+  function monthLabel(m){
+    if (!m) return '—';
+    var parts = m.split('-'); var d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+    return d.toLocaleDateString('en-GB', { month:'short', year:'numeric' });
+  }
+  function addMonths(m, n){
+    if (!m) return '';
+    var parts = m.split('-').map(Number);
+    var d = new Date(parts[0], parts[1] - 1 + n, 1);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+  function custPartsFor(customerId){
+    return custParts.filter(function(cp){ return (cp.data||{}).customerId === customerId; });
+  }
+  function partOptionsForCustomer(customerId, selected){
+    if (!customerId) return '<option value="">— choose the customer first —</option>';
+    var links = custPartsFor(customerId);
+    if (!links.length) return '<option value="">— no parts linked to this customer yet —</option>';
+    return '<option value="">— choose a part —</option>' + links.map(function(cp){
+      var v = cp.data || {};
+      var p = allParts.filter(function(x){ return x.part_id === v.partId; })[0] || {};
+      return '<option value="'+esc(v.partId)+'"'+(selected===v.partId?' selected':'')+'>'+
+        esc(p.part_no||v.internalNo||'')+' · '+esc(p.part_name||'')+
+        (v.custPartNo?' (their no. '+esc(v.custPartNo)+')':'')+'</option>';
+    }).join('');
+  }
+
+  function thisMonthKey(){ return new Date().toISOString().slice(0,7); }
+
+  async function loadSalesPlan(){
+    await fetchParts(); await fetchCustomers();
+    try { custParts = await C.idms.docs('cust_part'); } catch(e){ custParts = []; }
+    document.getElementById('spm-cust').innerHTML = customerOptions('');
+    document.getElementById('spm-part').innerHTML = partOptionsForCustomer('');
+    document.getElementById('spm-filter-cust').innerHTML =
+      '<option value="">All customers</option>' + customerOptions('').replace('<option value="">— choose a customer —</option>','');
+    var mk = document.getElementById('spm-month');
+    if (!mk.value) mk.value = thisMonthKey();
+    var fmk = document.getElementById('spm-filter-month');
+    if (!fmk.value) fmk.value = mk.value;
+    updateTentativeLabels();
+    try { salesPlans = await C.idms.docs('salesplan'); } catch(e){ salesPlans = []; }
+    try { salesInvoices = await C.idms.docs('invoice'); } catch(e){ salesInvoices = []; }
+    drawSalesPlanRegister();
+  }
+  function updateTentativeLabels(){
+    var m = document.getElementById('spm-month').value || thisMonthKey();
+    document.getElementById('spm-t1-label').textContent = 'Tentative — ' + monthLabel(addMonths(m,1));
+    document.getElementById('spm-t2-label').textContent = 'Tentative — ' + monthLabel(addMonths(m,2));
+  }
+
+  function invoicedQty(customerId, partId, month){
+    return salesInvoices.filter(function(iv){
+      var v = iv.data || {};
+      return v.customerId === customerId && v.partId === partId &&
+        String(v.invoiceDate||'').slice(0,7) === month;
+    }).reduce(function(t, iv){ return t + C.num((iv.data||{}).qty); }, 0);
+  }
+
+  function drawSalesPlanRegister(){
+    var host = document.getElementById('spm-list');
+    var month = document.getElementById('spm-filter-month').value || thisMonthKey();
+    var custId = document.getElementById('spm-filter-cust').value;
+    var rows = salesPlans.filter(function(p){
+      var v = p.data || {};
+      if (v.month !== month) return false;
+      if (custId && v.customerId !== custId) return false;
+      return true;
+    });
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>No sales plan for '+esc(monthLabel(month))+'</b>' +
+        'Add a plan line above for this month.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Sl</th><th>Customer</th><th>Part No</th>' +
+      '<th>Part Name</th><th class="r">Planned Qty</th><th class="r">Actual Qty</th>' +
+      '<th class="r">Pending Qty</th><th class="c">Status</th><th></th></tr></thead><tbody>' +
+      rows.map(function(p, i){
+        var v = p.data || {};
+        var actual = invoicedQty(v.customerId, v.partId, month);
+        var pending = Math.max(0, C.num(v.firmQty) - actual);
+        var excess = Math.max(0, actual - C.num(v.firmQty));
+        return '<tr><td>'+(i+1)+'</td><td>'+esc(v.customerName||'—')+'</td>' +
+          '<td><b>'+esc(v.partNo||'')+'</b></td><td>'+esc(v.partName||'')+'</td>' +
+          '<td class="r">'+C.qty(v.firmQty)+'</td><td class="r">'+C.qty(actual)+'</td>' +
+          '<td class="r">'+(pending>0?'<b>'+C.qty(pending)+'</b>':'0')+'</td>' +
+          '<td class="c">'+(excess>0 ? '<span class="badge ab">excess '+C.qty(excess)+'</span>'
+            : pending<=0 ? '<span class="badge series">met</span>'
+            : '<span class="badge new">open</span>')+'</td>' +
+          '<td><button class="btn del spm-del" data-id="'+esc(p.doc_id)+'">Remove</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.spm-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Removing this plan line. Why?');
+        if (why === null) return;
+        if (!why.trim()) { toast('State a reason.'); return; }
+        try {
+          await C.idms.patchDoc({ docId:b.dataset.id, remove:true, reason:'sales plan line removed: '+why.trim() });
+          await loadSalesPlan(); toast('Removed');
+        } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
+  async function saveSalesPlan(){
+    var msg = document.getElementById('spm-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var custId = document.getElementById('spm-cust').value;
+    var partId = document.getElementById('spm-part').value;
+    var month = g('spm-month');
+    if (!custId) return say('Choose the customer.');
+    if (!partId) return say('Choose the part.');
+    if (!month) return say('The firm plan month is needed.');
+    if (!C.num(g('spm-firm'))) return say('A firm plan quantity is needed.');
+
+    var cust = customers.filter(function(c){ return c.doc_id === custId; })[0] || {};
+    var link = custParts.filter(function(cp){
+      var v = cp.data||{}; return v.customerId === custId && v.partId === partId; })[0];
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+
+    /* revising the same customer/part/month replaces the line rather than
+       doubling the demand — a sales plan is redone every month, not appended to */
+    var dup = salesPlans.filter(function(sp){
+      var v = sp.data||{}; return v.customerId === custId && v.partId === partId && v.month === month; })[0];
+
+    var data = { customerId:custId, customerName:(cust.data||{}).name||'',
+      partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
+      custPartNo: link ? (link.data||{}).custPartNo||'' : '',
+      month:month, firmQty:C.num(g('spm-firm')),
+      t1Month:addMonths(month,1), t1Qty:C.num(g('spm-t1')),
+      t2Month:addMonths(month,2), t2Qty:C.num(g('spm-t2')) };
+    try {
+      await C.idms.saveDoc({ docId: dup ? dup.doc_id : '', kind:'salesplan', partId:partId,
+        status:'Active', docNo: dup ? dup.doc_no : await C.docNumber('sp'), data:data },
+        dup ? 'sales plan line revised' : 'sales plan line added');
+      say(dup ? 'Plan line updated for '+esc(monthLabel(month))+'.' : 'Plan line added.', true);
+      ['spm-firm','spm-t1','spm-t2'].forEach(function(id){ document.getElementById(id).value=''; });
+      salesPlans = await C.idms.docs('salesplan');
+      document.getElementById('spm-filter-month').value = month;
+      drawSalesPlanRegister();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  function printSalesPlan(){
+    var month = document.getElementById('spm-filter-month').value || thisMonthKey();
+    var rows = salesPlans.filter(function(p){ return (p.data||{}).month === month; });
+    if (!rows.length) { toast('No plan lines to print for this month.'); return; }
+    C.openReport({
+      title:'Sales Plan Register', kind:'Sales', landscape:true,
+      subtitle: monthLabel(month) + ' · ' + rows.length + ' line(s)',
+      sections:[{ type:'table', title:'Plan vs actual',
+        columns:[{label:'Sl',align:'c'},{label:'Customer'},{label:'Part No'},{label:'Part Name'},
+          {label:'Planned',align:'r'},{label:'Actual',align:'r'},{label:'Pending',align:'r'}],
+        rows: rows.map(function(p, i){
+          var v = p.data||{}, actual = invoicedQty(v.customerId, v.partId, month);
+          return [String(i+1), esc(v.customerName||''), esc(v.partNo||''), esc(v.partName||''),
+            C.qty(v.firmQty), C.qty(actual), C.qty(Math.max(0, C.num(v.firmQty) - actual))];
+        }) }]});
+  }
+
+  /* ---------------- Sales Invoice — the daily actual, interlinked to the plan --- */
+  async function loadSalesInvoice(){
+    await fetchParts(); await fetchCustomers();
+    try { custParts = await C.idms.docs('cust_part'); } catch(e){ custParts = []; }
+    document.getElementById('iv-cust').innerHTML = customerOptions('');
+    document.getElementById('iv-part').innerHTML = partOptionsForCustomer('');
+    var dt = document.getElementById('iv-date');
+    if (!dt.value) dt.value = new Date().toISOString().slice(0,10);
+    try { salesPlans = await C.idms.docs('salesplan'); } catch(e){ salesPlans = []; }
+    try { salesInvoices = await C.idms.docs('invoice'); } catch(e){ salesInvoices = []; }
+    drawInvoiceRegister();
+  }
+
+  function planFor(customerId, partId, month){
+    return salesPlans.filter(function(p){
+      var v = p.data||{}; return v.customerId === customerId && v.partId === partId && v.month === month; })[0];
+  }
+  /* excess for one invoice line: how much of THIS line falls beyond whatever
+     of the month's firm plan earlier invoice lines had not already used up */
+  function excessForInvoice(iv){
+    var v = iv.data || {};
+    var month = String(v.invoiceDate||'').slice(0,7);
+    var plan = planFor(v.customerId, v.partId, month);
+    var firm = plan ? C.num(plan.data.firmQty) : 0;
+    var sameLine = salesInvoices.filter(function(x){
+      var w = x.data||{};
+      return w.customerId === v.customerId && w.partId === v.partId &&
+        String(w.invoiceDate||'').slice(0,7) === month;
+    }).sort(function(a,b){ return String((a.data||{}).invoiceDate||'').localeCompare(String((b.data||{}).invoiceDate||'')) ||
+      String(a.doc_no||'').localeCompare(String(b.doc_no||'')); });
+    var before = 0;
+    for (var i=0;i<sameLine.length;i++){
+      if (sameLine[i].doc_id === iv.doc_id) break;
+      before += C.num((sameLine[i].data||{}).qty);
+    }
+    var usedBefore = Math.min(before, firm);
+    var roomLeft = Math.max(0, firm - usedBefore);
+    return Math.max(0, C.num(v.qty) - roomLeft);
+  }
+
+  function drawInvoiceRegister(){
+    var host = document.getElementById('iv-list');
+    var f = document.getElementById('iv-filter').value;
+    var rows = salesInvoices.slice().sort(function(a,b){
+      return String((b.data||{}).invoiceDate||'').localeCompare(String((a.data||{}).invoiceDate||'')); });
+    if (f === 'excess') rows = rows.filter(function(iv){ return excessForInvoice(iv) > 0; });
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>No invoices' + (f?' over the plan':' yet') + '</b>' +
+        'Save an invoice line above and it appears here.</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Invoice No</th><th>Date</th><th>Customer</th>' +
+      '<th>Part</th><th class="r">Qty</th><th class="c">Against plan</th><th></th></tr></thead><tbody>' +
+      rows.map(function(iv){
+        var v = iv.data||{}, ex = excessForInvoice(iv);
+        var month = String(v.invoiceDate||'').slice(0,7);
+        var plan = planFor(v.customerId, v.partId, month);
+        return '<tr><td><b>'+esc(iv.doc_no||v.invoiceNo||'')+'</b></td>' +
+          '<td class="hint">'+C.fmtDate(v.invoiceDate)+'</td>' +
+          '<td>'+esc(v.customerName||'—')+'</td>' +
+          '<td>'+esc(v.partNo||'')+'<div class="hint">'+esc(v.partName||'')+'</div></td>' +
+          '<td class="r">'+C.qty(v.qty)+'</td>' +
+          '<td class="c">'+(ex>0 ? '<span class="badge ab">excess '+C.qty(ex)+'</span>'
+            : plan ? '<span class="badge series">within plan</span>'
+            : '<span class="badge new">no plan</span>')+'</td>' +
+          '<td><button class="btn del iv-del" data-id="'+esc(iv.doc_id)+'">Remove</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.iv-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Removing this invoice line. Why?');
+        if (why === null) return;
+        if (!why.trim()) { toast('State a reason.'); return; }
+        try {
+          await C.idms.patchDoc({ docId:b.dataset.id, remove:true, reason:'invoice line removed: '+why.trim() });
+          await loadSalesInvoice(); toast('Removed');
+        } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
+  async function saveSalesInvoice(){
+    var msg = document.getElementById('iv-msg');
+    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
+                                 msg.innerHTML=t; };
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var custId = document.getElementById('iv-cust').value;
+    var partId = document.getElementById('iv-part').value;
+    if (!custId) return say('Choose the customer.');
+    if (!partId) return say('Choose the part.');
+    if (!g('iv-no')) return say('The invoice number is needed.');
+    if (!g('iv-date')) return say('The invoice date is needed.');
+    if (!C.num(g('iv-qty'))) return say('The invoiced quantity is needed.');
+
+    var dup = salesInvoices.filter(function(iv){
+      return String((iv.data||{}).invoiceNo||'').toLowerCase() === g('iv-no').toLowerCase(); })[0];
+    if (dup) return say('Invoice <b>'+esc(g('iv-no'))+'</b> is already on file. ' +
+                        'Adding it again would double-count the despatch.');
+
+    var cust = customers.filter(function(c){ return c.doc_id === custId; })[0] || {};
+    var link = custParts.filter(function(cp){
+      var v = cp.data||{}; return v.customerId === custId && v.partId === partId; })[0];
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var qty = C.num(g('iv-qty')), rate = C.num(g('iv-rate'));
+    try {
+      await C.idms.saveDoc({ kind:'invoice', partId:partId, status:'Active',
+        docNo: g('iv-no'),
+        data:{ customerId:custId, customerName:(cust.data||{}).name||'',
+               partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
+               custPartNo: link ? (link.data||{}).custPartNo||'' : '',
+               invoiceNo:g('iv-no'), invoiceDate:g('iv-date'), qty:qty, rate:rate, value:qty*rate } },
+        'sales invoice recorded');
+      salesInvoices = await C.idms.docs('invoice');
+      var month = g('iv-date').slice(0,7);
+      var plan = planFor(custId, partId, month);
+      var already = invoicedQty(custId, partId, month) - qty; // before this line
+      var over = plan ? Math.max(0, (already + qty) - C.num(plan.data.firmQty)) : qty;
+      say('Saved.' + (over > 0
+        ? ' <b>'+C.qty(Math.min(qty, over))+'</b> of this line is over the '+esc(monthLabel(month))+
+          ' plan and is shown as excess sales.'
+        : ''), true);
+      ['iv-no','iv-qty','iv-rate'].forEach(function(id){ document.getElementById(id).value=''; });
+      drawInvoiceRegister();
+    } catch(e){ say(esc(e.message)); }
+  }
+
+  function printInvoiceRegister(){
+    if (!salesInvoices.length) { toast('No invoices to print.'); return; }
+    C.openReport({
+      title:'Sales Invoice Register', kind:'Sales', landscape:true,
+      subtitle:salesInvoices.length + ' line(s)',
+      sections:[{ type:'table', title:'Invoices',
+        columns:[{label:'Invoice No'},{label:'Date'},{label:'Customer'},{label:'Part'},
+          {label:'Qty',align:'r'},{label:'Against plan'}],
+        rows: salesInvoices.map(function(iv){
+          var v = iv.data||{}, ex = excessForInvoice(iv);
+          return [esc(iv.doc_no||''), C.fmtDate(v.invoiceDate), esc(v.customerName||''),
+            esc(v.partNo||''), C.qty(v.qty), ex>0?{v:'excess '+C.qty(ex),cls:'ab'}:'—'];
+        }) }]});
+  }
+
+  /* ---------------- Sales dashboard — plan vs actual, and excess sales ---------------- */
+  async function loadSalesDashboard(){
+    var mk = document.getElementById('sd-month');
+    if (!mk.value) mk.value = thisMonthKey();
+    try { salesPlans = await C.idms.docs('salesplan'); } catch(e){ salesPlans = []; }
+    try { salesInvoices = await C.idms.docs('invoice'); } catch(e){ salesInvoices = []; }
+    drawSalesDashboard();
+  }
+
+  function drawSalesDashboard(){
+    var month = document.getElementById('sd-month').value || thisMonthKey();
+    var plans = salesPlans.filter(function(p){ return (p.data||{}).month === month; });
+    var totalPlanned = plans.reduce(function(t,p){ return t + C.num(p.data.firmQty); }, 0);
+    var totalActual = 0, totalExcess = 0;
+    var byCust = {};
+    plans.forEach(function(p){
+      var v = p.data;
+      var actual = invoicedQty(v.customerId, v.partId, month);
+      totalActual += actual;
+      var c = byCust[v.customerId] = byCust[v.customerId] ||
+        { name:v.customerName, planned:0, actual:0 };
+      c.planned += C.num(v.firmQty); c.actual += actual;
+    });
+    /* invoices with no plan line at all are still real sales, and still excess */
+    var plannedPairs = {};
+    plans.forEach(function(p){ plannedPairs[p.data.customerId+'|'+p.data.partId] = true; });
+    var unplanned = salesInvoices.filter(function(iv){
+      var v = iv.data||{};
+      return String(v.invoiceDate||'').slice(0,7) === month && !plannedPairs[v.customerId+'|'+v.partId];
+    });
+    unplanned.forEach(function(iv){
+      var v = iv.data;
+      totalActual += C.num(v.qty); totalExcess += C.num(v.qty);
+      var c = byCust[v.customerId] = byCust[v.customerId] ||
+        { name:v.customerName, planned:0, actual:0 };
+      c.actual += C.num(v.qty);
+    });
+    plans.forEach(function(p){
+      var v = p.data;
+      var actual = invoicedQty(v.customerId, v.partId, month);
+      totalExcess += Math.max(0, actual - C.num(v.firmQty));
+    });
+    var totalPending = Math.max(0, totalPlanned - totalActual + totalExcess); // excess doesn't offset another part's pending
+
+    document.getElementById('sd-overall').innerHTML =
+      '<div class="stat">' +
+      [['Planned', C.qty(totalPlanned)], ['Actual', C.qty(totalActual)],
+       ['Pending', C.qty(totalPending)], ['Excess sales', C.qty(totalExcess)]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
+      '</div>';
+
+    var custRows = Object.keys(byCust).map(function(k){ return byCust[k]; })
+      .sort(function(a,b){ return b.planned - a.planned; });
+    document.getElementById('sd-custtable').innerHTML = !custRows.length
+      ? '<div class="empty"><b>Nothing for '+esc(monthLabel(month))+'</b>' +
+        'No sales plan or invoice touches this month yet.</div>'
+      : '<table class="t"><thead><tr><th>Customer</th><th class="r">Planned</th>' +
+        '<th class="r">Actual</th><th class="r">Pending</th><th class="c">Achievement</th>' +
+        '</tr></thead><tbody>' + custRows.map(function(c){
+          var pending = Math.max(0, c.planned - c.actual);
+          var pct = c.planned ? Math.round(c.actual / c.planned * 100) : (c.actual ? 100 : 0);
+          return '<tr><td>'+esc(c.name||'—')+'</td><td class="r">'+C.qty(c.planned)+'</td>' +
+            '<td class="r">'+C.qty(c.actual)+'</td>' +
+            '<td class="r">'+(pending>0?'<b>'+C.qty(pending)+'</b>':'0')+'</td>' +
+            '<td class="c">'+(pct>100
+              ? '<span class="badge ab">'+pct+'%</span>'
+              : pct===100 ? '<span class="badge series">100%</span>' : pct+'%')+'</td></tr>';
+        }).join('') + '</tbody></table>';
+
+    var excessLines = salesInvoices.filter(function(iv){
+      return String((iv.data||{}).invoiceDate||'').slice(0,7) === month && excessForInvoice(iv) > 0;
+    });
+    document.getElementById('sd-excess').innerHTML = !excessLines.length
+      ? '<div class="empty"><b>No excess sales in '+esc(monthLabel(month))+'</b>' +
+        'Every invoice this month is within its customer/part plan.</div>'
+      : '<table class="t"><thead><tr><th>Invoice No</th><th>Date</th><th>Customer</th><th>Part</th>' +
+        '<th class="r">Excess Qty</th></tr></thead><tbody>' + excessLines.map(function(iv){
+          var v = iv.data||{};
+          return '<tr><td><b>'+esc(iv.doc_no||'')+'</b></td><td class="hint">'+C.fmtDate(v.invoiceDate)+'</td>' +
+            '<td>'+esc(v.customerName||'—')+'</td><td>'+esc(v.partNo||'')+'</td>' +
+            '<td class="r"><b>'+C.qty(excessForInvoice(iv))+'</b></td></tr>';
+        }).join('') + '</tbody></table>';
+  }
+
   /* ---- the plan itself ---- */
   async function loadPlan(){
     await fetchParts();
@@ -17460,6 +17952,32 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   });
   document.getElementById('so-filter').addEventListener('change', drawOrders);
   document.getElementById('so-print').addEventListener('click', printOrderBook);
+
+  document.getElementById('spm-cust').addEventListener('change', function(){
+    document.getElementById('spm-part').innerHTML = partOptionsForCustomer(this.value);
+  });
+  document.getElementById('spm-month').addEventListener('change', updateTentativeLabels);
+  document.getElementById('spm-save').addEventListener('click', saveSalesPlan);
+  document.getElementById('spm-clear').addEventListener('click', function(){
+    ['spm-firm','spm-t1','spm-t2'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('spm-msg').style.display='none';
+  });
+  document.getElementById('spm-refresh').addEventListener('click', drawSalesPlanRegister);
+  document.getElementById('spm-filter-cust').addEventListener('change', drawSalesPlanRegister);
+  document.getElementById('spm-print').addEventListener('click', printSalesPlan);
+
+  document.getElementById('iv-cust').addEventListener('change', function(){
+    document.getElementById('iv-part').innerHTML = partOptionsForCustomer(this.value);
+  });
+  document.getElementById('iv-save').addEventListener('click', saveSalesInvoice);
+  document.getElementById('iv-clear').addEventListener('click', function(){
+    ['iv-no','iv-qty','iv-rate'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('iv-msg').style.display='none';
+  });
+  document.getElementById('iv-filter').addEventListener('change', drawInvoiceRegister);
+  document.getElementById('iv-print').addEventListener('click', printInvoiceRegister);
+
+  document.getElementById('sd-refresh').addEventListener('click', drawSalesDashboard);
   document.getElementById('pp-run').addEventListener('click', runPlan);
   document.getElementById('pp-print2').addEventListener('click', printPlan);
 

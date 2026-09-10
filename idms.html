@@ -1770,14 +1770,16 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         <div class="row four">
           <div><label>Customer</label><select id="pl-cust"></select></div>
           <div><label>Their part number</label><input id="pl-no"></div>
+          <div><label>Their part name</label><input id="pl-name"></div>
           <div><label>Price</label><input class="num" id="pl-price"></div>
-          <div><label>HSN code</label><input id="pl-hsn"></div>
         </div>
         <div class="row four" style="margin-top:9px;">
+          <div><label>HSN code</label><input id="pl-hsn"></div>
           <div><label>Their drawing number</label><input id="pl-drg"></div>
           <div><label>Effective from</label><input type="date" id="pl-from"></div>
-          <div style="align-self:end;"><button class="btn gold" id="pl-add">Add customer</button></div>
-          <div style="align-self:end;"><button class="btn" id="pl-close">Close</button></div>
+          <div style="align-self:end;">
+            <button class="btn gold" id="pl-add">Add customer</button>
+            <button class="btn" id="pl-close" style="margin-left:6px;">Close</button></div>
         </div>
         <div class="note" id="pl-msg" style="display:none;"></div>
         <div id="pl-list" style="margin-top:10px;"></div>
@@ -2106,7 +2108,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         <div id="db-prod"></div>
       </div>
       <div class="card">
-        <h4>Order book</h4>
+        <h4>Customer PO</h4>
         <div id="db-orders"></div>
       </div>
       <div class="card">
@@ -2118,27 +2120,43 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     <div class="panel" data-panel="sales_plan">
       <div class="card">
         <h4>Customer PO</h4>
-        <div class="hint" style="margin-bottom:10px;">One line per PO. What has been ordered, at what
-          price and when it is due. Everything the production plan says about whether you will make it
-          comes from here, so a date entered loosely produces a plan that is loose in the same way. The
-          part price fills in from the customer/part price link the moment a part is chosen — override
-          it only when this PO was agreed at a different rate.</div>
+        <div class="hint" style="margin-bottom:10px;">Two kinds of PO, because customers send both.
+          A <b>one-time PO</b> is complete in itself — quantity, price and a delivery date, valid for a
+          stated period. A <b>rate contract PO</b> only fixes the part and the price; the customer sends
+          the actual quantities later as <b>schedules</b> against it, and a schedule always takes its
+          part number, part name and price from the contract it is raised against — never typed twice,
+          so a schedule can never end up priced differently from the contract that set the rate.</div>
         <div class="row four">
+          <div><label>PO Type</label><select id="so-potype">
+            <option value="onetime">One-time PO</option>
+            <option value="ratecontract">Rate Contract PO</option>
+            <option value="schedule">Schedule — against a Rate Contract</option></select></div>
           <div><label>Customer Name</label><select id="so-cust"></select></div>
-          <div><label>Part Number / Name</label><select id="so-part"></select></div>
-          <div><label>PO Number</label><input id="so-po"></div>
-          <div><label>Quantity ordered</label><input class="num" id="so-qty"></div>
+          <div id="so-partwrap"><label>Part Number / Name</label><select id="so-part"></select></div>
+          <div id="so-contractwrap" style="display:none;"><label>Rate Contract</label>
+            <select id="so-contract"></select></div>
+          <div><label id="so-po-label">PO Number</label><input id="so-po"></div>
         </div>
         <div class="row four" style="margin-top:9px;">
+          <div><label>Customer Part No.</label><input id="so-custpartno"></div>
+          <div><label>Customer Part Name</label><input id="so-custpartname"></div>
+          <div id="so-qtywrap"><label>Quantity ordered</label><input class="num" id="so-qty"></div>
           <div><label>Part Price</label><input class="num" id="so-price"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
           <div><label>Currency</label><select id="so-currency"><option value="INR">INR — ₹</option>
             <option value="USD">USD — $</option></select></div>
-          <div><label>PO Value</label><input id="so-value" disabled></div>
+          <div id="so-valuewrap"><label>PO Value</label><input id="so-value" disabled></div>
           <div><label>PO Date</label><input type="date" id="so-on"></div>
+          <div id="so-duewrap"><label>Delivery date</label><input type="date" id="so-due"></div>
+        </div>
+        <div class="row four" id="so-validitywrap" style="margin-top:9px;display:none;">
+          <div><label>Valid from</label><input type="date" id="so-validfrom"></div>
+          <div><label>Valid to <span class="hint">(optional — leave blank for no fixed end)</span></label>
+            <input type="date" id="so-validto"></div>
         </div>
         <div class="row four" style="margin-top:9px;">
-          <div><label>Delivery date</label><input type="date" id="so-due"></div>
-          <div><label>Schedule</label><select id="so-kind">
+          <div id="so-kindwrap"><label>Schedule</label><select id="so-kind">
             <option>Firm order</option><option>Schedule release</option>
             <option>Forecast</option></select></div>
           <div style="align-self:end;">
@@ -2154,7 +2172,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
             <option value="done">Completed</option></select></div>
           <div style="align-self:end;"><button class="btn" id="so-print">Print order book</button></div>
         </div>
-        <h4>Order book</h4>
+        <h4>Customer PO register</h4>
         <div id="so-list"></div>
       </div>
     </div>
@@ -2162,21 +2180,23 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     <div class="panel" data-panel="sales_monthly_plan">
       <div class="card">
         <h4>Sales Plan</h4>
-        <div class="hint" style="margin-bottom:10px;">One line per customer and part, for a firm
-          month plus the two months after it as a tentative forecast. The firm month's quantity is
-          what the plan register and dashboard are measured against — the two tentative figures are
-          for capacity and material planning only, and are never compared to actual despatch.</div>
+        <div class="hint" style="margin-bottom:10px;">The plan is <b>arrived at</b>, not typed: every
+          Customer PO due in a month, and every schedule released against a rate contract and due in
+          that month, is demand — added up here automatically by customer and part. Nothing on this
+          screen is entered by hand except an optional forecast, for a month no PO exists for yet.</div>
         <div class="row four">
           <div><label>Customer</label><select id="spm-cust"></select></div>
           <div><label>Part</label><select id="spm-part"></select></div>
-          <div><label>Firm plan month</label><input type="month" id="spm-month"></div>
-          <div><label>Firm plan quantity</label><input class="num" id="spm-firm"></div>
+          <div><label>Forecast month</label><input type="month" id="spm-month"></div>
+          <div><label>Forecast quantity</label><input class="num" id="spm-firm"></div>
         </div>
         <div class="row four" style="margin-top:9px;">
-          <div><label id="spm-t1-label">Tentative — month 2</label><input class="num" id="spm-t1"></div>
-          <div><label id="spm-t2-label">Tentative — month 3</label><input class="num" id="spm-t2"></div>
+          <div style="grid-column:span 3;align-self:end;"><span class="hint">A forecast is only used
+            for a customer/part/month with <b>no</b> Customer PO or schedule due in it — the moment a
+            real PO exists for that month, the forecast is replaced by the real demand automatically,
+            not added to it.</span></div>
           <div style="align-self:end;">
-            <button class="btn gold" id="spm-save">Save plan line</button>
+            <button class="btn gold" id="spm-save">Save forecast</button>
             <button class="btn" id="spm-clear" style="margin-left:6px;">Clear</button></div>
         </div>
         <div class="note" id="spm-msg" style="display:none;"></div>
@@ -2189,9 +2209,10 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <div style="align-self:end;"><button class="btn" id="spm-print">Print register</button></div>
         </div>
         <h4>Sales Plan register</h4>
-        <div class="hint" style="margin-bottom:10px;">Actual quantity is the total invoiced to that
-          customer for that part within the plan month, taken from Sales Invoice — nothing here is
-          typed twice.</div>
+        <div class="hint" style="margin-bottom:10px;">Demand quantity is the total of every Customer
+          PO and schedule due to that customer, for that part, in this month — or the forecast, when
+          neither exists yet. Actual quantity is the total invoiced, taken from Sales Invoice. Nothing
+          here is typed twice.</div>
         <div id="spm-list"></div>
       </div>
     </div>
@@ -2248,6 +2269,12 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         <div class="hint" style="margin-bottom:10px;">Quantity columns first, then plan / actual /
           pending value for each currency the customer buys in.</div>
         <div id="sd-custtable"></div>
+      </div>
+      <div class="card">
+        <h4>Overall Sales Value — day wise</h4>
+        <div class="hint" style="margin-bottom:10px;">What was actually invoiced each day this month,
+          in INR — from Sales Invoice, the same figures the plan vs actual above is measured against.</div>
+        <div id="sd-daywise"></div>
       </div>
       <div class="card">
         <h4>Excess sales — invoiced over the plan</h4>
@@ -3608,11 +3635,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     ['ppc','📦','PPC & MMD','Planning and material movement',[
       ['dash_ppc','📊','PPC & MMD Dashboard',1],
       /* Demand in, in the order it is actually worked: what the customer
-         committed to (Order Book), what is planned to bill this month and the
+         committed to (Customer PO), what is planned to bill this month and the
          two after (Sales Plan), what is still to make against it (Production
          Plan), whether the machines have the hours (Capacity Plan) and where
          each order lands in the queue (Machine Loading Plan). */
-      ['sales_plan','📈','Order Book',1],['sales_monthly_plan','🗓','Sales Plan',1],
+      ['sales_plan','📈','Customer PO',1],['sales_monthly_plan','🗓','Sales Plan',1],
       ['production_plan','🏭','Production Plan',1],
       ['capacity_plan','⚙','Capacity Plan',1],['machine_loading','🔩','Machine Loading Plan',1],
       /* What making it consumes and what despatching it needs. */
@@ -12126,7 +12153,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           ['Rejected', C.qty(d.rejected) + (d.rejectPct ? ' — ' + d.rejectPct + '%' : '')],
           ['Downtime', C.qty(d.downtime) + ' minutes'],
           ['Bookings', String(d.entries)]]},
-        { type:'pairs', title:'Order book', rows:[
+        { type:'pairs', title:'Customer PO', rows:[
           ['Open orders', String(d.openOrders)],
           ['Pieces outstanding', C.qty(d.balance)]]},
         d.overdueList.length ? { type:'table', title:'Orders past their date',
@@ -12156,13 +12183,19 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     await fetchParts();
     await fetchCustomers();
     try { custParts = await C.idms.docs('cust_part'); } catch(e){ custParts = []; }
-    document.getElementById('so-cust').innerHTML = customerOptions('');
-    document.getElementById('so-part').innerHTML = partOptionsForCustomer('');
+    /* Keep whoever was chosen — after adding a rate contract, the very next
+       thing to do is often raise a schedule against it for the SAME customer,
+       and losing the selection on every save meant reselecting every time. */
+    var keepCust = document.getElementById('so-cust').value;
+    document.getElementById('so-cust').innerHTML = customerOptions(keepCust);
+    document.getElementById('so-part').innerHTML = partOptionsForCustomer(keepCust);
     try { orders = await C.idms.docs('order'); } catch(e){ orders = []; }
     try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
     allocateProduction();
     var on = document.getElementById('so-on');
     if (!on.value) on.value = new Date().toISOString().slice(0,10);
+    if (keepCust) fillContractDropdown();
+    soUpdateType();
     updateSoValue();
     drawOrders();
   }
@@ -12170,15 +12203,82 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   /* Price and currency fill in from the customer/part link the moment both are
      chosen — that is the agreed rate, and retyping it is how a PO ends up
      priced differently from what was actually quoted. Still editable: a
-     specific PO can carry its own negotiated rate. */
+     specific PO can carry its own negotiated rate. Customer Part No. and Name
+     fill in the same way, from the same link. */
   function fillSoPriceFromLink(){
     var custId = document.getElementById('so-cust').value;
     var partId = document.getElementById('so-part').value;
     var link = custParts.filter(function(cp){
       var v = cp.data||{}; return v.customerId === custId && v.partId === partId; })[0];
     if (link){
-      document.getElementById('so-price').value = C.num((link.data||{}).price) || '';
-      document.getElementById('so-currency').value = (link.data||{}).currency || 'INR';
+      var v = link.data||{};
+      document.getElementById('so-price').value = C.num(v.price) || '';
+      document.getElementById('so-currency').value = v.currency || 'INR';
+      if (!document.getElementById('so-custpartno').value) document.getElementById('so-custpartno').value = v.custPartNo || '';
+      if (!document.getElementById('so-custpartname').value) document.getElementById('so-custpartname').value = v.custPartName || '';
+    }
+    updateSoValue();
+  }
+
+  /* ---- PO Type: which fields apply, and which are the point of the record ----
+     One-time: quantity + price + delivery date are the PO. Rate Contract: only
+     the part and the price are fixed at this point — no quantity, no date,
+     because none exists yet. Schedule: raised against an existing, open Rate
+     Contract; quantity and a delivery date are the schedule's own, but the
+     part identity and price are read from the contract and are not editable
+     here — a schedule cannot invent its own price. */
+  function soUpdateType(){
+    var t = document.getElementById('so-potype').value;
+    var show = function(id, on){ document.getElementById(id).style.display = on ? '' : 'none'; };
+    show('so-partwrap', t !== 'schedule');
+    show('so-contractwrap', t === 'schedule');
+    show('so-qtywrap', t !== 'ratecontract');
+    show('so-valuewrap', t !== 'ratecontract');
+    show('so-duewrap', t !== 'ratecontract');
+    show('so-validitywrap', t === 'ratecontract');
+    show('so-kindwrap', t === 'onetime');
+    document.getElementById('so-po-label').textContent = t === 'schedule' ? 'Schedule / Release No.' : 'PO Number';
+    var priceField = document.getElementById('so-price'), custNoField = document.getElementById('so-custpartno'),
+        custNameField = document.getElementById('so-custpartname'), curField = document.getElementById('so-currency');
+    var locked = t === 'schedule';
+    priceField.readOnly = locked; custNoField.readOnly = locked; custNameField.readOnly = locked;
+    curField.disabled = locked;
+    if (t === 'schedule') fillContractDropdown();
+    else document.getElementById('so-contract').innerHTML = '';
+  }
+
+  /* Only OPEN rate contracts for the chosen customer can be scheduled against —
+     one with a Valid To date already passed is not something a fresh schedule
+     should be raised on, even though the contract itself stays on file. */
+  function soOpenContracts(custId){
+    var todayK = new Date().toISOString().slice(0,10);
+    return orders.filter(function(o){
+      var v = o.data||{};
+      return v.poType === 'ratecontract' && v.customerId === custId &&
+        (!v.validTo || v.validTo >= todayK);
+    });
+  }
+  function fillContractDropdown(){
+    var custId = document.getElementById('so-cust').value;
+    var sel = document.getElementById('so-contract');
+    var list = custId ? soOpenContracts(custId) : [];
+    sel.innerHTML = list.length
+      ? '<option value="">— choose a contract —</option>' + list.map(function(o){
+          var v = o.data||{};
+          return '<option value="'+esc(o.doc_id)+'">'+esc(v.po||o.doc_no)+' — '+
+            esc(v.custPartNo||v.partNo||'')+' '+esc(v.custPartName||v.partName||'')+'</option>'; }).join('')
+      : '<option value="">— no open rate contracts for this customer —</option>';
+  }
+  function fillScheduleFromContract(){
+    var id = document.getElementById('so-contract').value;
+    var o = orders.filter(function(x){ return x.doc_id === id; })[0];
+    var v = (o && o.data) || {};
+    document.getElementById('so-custpartno').value = v.custPartNo || '';
+    document.getElementById('so-custpartname').value = v.custPartName || '';
+    document.getElementById('so-price').value = C.num(v.price) || '';
+    document.getElementById('so-currency').value = v.currency || 'INR';
+    if (o){
+      document.getElementById('so-part').value = v.partId || '';
     }
     updateSoValue();
   }
@@ -12235,7 +12335,17 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   function drawOrders(){
     var host = document.getElementById('so-list');
     var f = document.getElementById('so-filter').value;
+    var todayK = new Date().toISOString().slice(0,10);
     var rows = orders.filter(function(o){
+      var v = o.data||{};
+      /* Rate contracts have no quantity to be "open" or "done" against — open
+         means still within validity, done means the validity has passed. */
+      if (v.poType === 'ratecontract'){
+        var stillValid = !v.validTo || v.validTo >= todayK;
+        if (f === 'open') return stillValid;
+        if (f === 'done') return !stillValid;
+        return true;
+      }
       var pr = orderProgress(o);
       if (f === 'open') return pr.balance > 0;
       if (f === 'done') return pr.balance <= 0;
@@ -12246,24 +12356,36 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         '</b>The production plan has nothing to plan against until an order exists.</div>';
       return;
     }
-    host.innerHTML = '<table class="t"><thead><tr><th>PO Number</th><th>Customer</th><th>Part</th>' +
+    var typeLabel = { onetime:'One-time', ratecontract:'Rate Contract', schedule:'Schedule' };
+    host.innerHTML = '<table class="t"><thead><tr><th>Type</th><th>PO Number</th><th>Customer</th>' +
+      '<th>Customer Part</th><th>Internal Part</th>' +
       '<th class="r">Ordered</th><th class="r">Made</th><th class="r">Balance</th>' +
       '<th class="r">PO Value</th>' +
-      '<th>Due</th><th class="c">Days</th><th class="c">Type</th><th></th></tr></thead><tbody>' +
+      '<th>Due / Validity</th><th class="c">Days</th><th></th></tr></thead><tbody>' +
       rows.map(function(o){
-        var v = o.data||{}, pr = orderProgress(o), dl = daysTo(v.due);
-        var late = pr.balance > 0 && dl !== null && dl < 0;
-        return '<tr><td><b>'+esc(v.po||o.doc_no||'')+'</b></td>' +
+        var v = o.data||{}, isRC = v.poType === 'ratecontract';
+        var pr = isRC ? null : orderProgress(o), dl = isRC ? null : daysTo(v.due);
+        var late = pr && pr.balance > 0 && dl !== null && dl < 0;
+        var dueCell = isRC
+          ? (v.validFrom || v.validTo
+              ? esc(C.fmtDate(v.validFrom) || '—') + ' to ' + esc(v.validTo ? C.fmtDate(v.validTo) : 'open')
+              : '<span class="hint">no fixed validity</span>')
+          : C.fmtDate(v.due);
+        return '<tr><td class="c hint">'+esc(typeLabel[v.poType]||'One-time')+
+          (v.scheduleAgainstPo ? '<div class="hint">against '+esc(v.scheduleAgainstPo)+'</div>' : '')+'</td>'+
+          '<td><b>'+esc(v.po||o.doc_no||'')+'</b></td>' +
           '<td>'+esc(v.customerName||'—')+'</td>' +
+          '<td>'+esc(v.custPartNo||'—')+'<div class="hint">'+esc(v.custPartName||'')+'</div></td>' +
           '<td>'+esc(v.partNo||'')+'<div class="hint">'+esc(v.partName||'')+'</div></td>' +
-          '<td class="r">'+C.qty(v.qty)+'</td><td class="r">'+C.qty(pr.made)+'</td>' +
-          '<td class="r"><b>'+C.qty(pr.balance)+'</b></td>' +
-          '<td class="r">'+moneyFmt(v.poValue||(C.num(v.qty)*C.num(v.price)), v.currency)+'</td>' +
-          '<td class="hint">'+C.fmtDate(v.due)+'</td>' +
-          '<td class="c">'+(dl===null?'—':late
+          '<td class="r">'+(isRC?'<span class="hint">—</span>':C.qty(v.qty))+'</td>' +
+          '<td class="r">'+(isRC?'<span class="hint">—</span>':C.qty(pr.made))+'</td>' +
+          '<td class="r">'+(isRC?'<span class="hint">—</span>':'<b>'+C.qty(pr.balance)+'</b>')+'</td>' +
+          '<td class="r">'+(isRC?'<span class="hint">rate: '+moneyFmt(v.price,v.currency)+'</span>'
+            :moneyFmt(v.poValue||(C.num(v.qty)*C.num(v.price)), v.currency))+'</td>' +
+          '<td class="hint">'+dueCell+'</td>' +
+          '<td class="c">'+(isRC?'—':dl===null?'—':late
             ? '<span class="badge ab">'+Math.abs(dl)+' late</span>'
             : pr.balance<=0 ? '<span class="badge series">done</span>' : dl)+'</td>' +
-          '<td class="c hint">'+esc(v.kind||'')+'</td>' +
           '<td><button class="btn del so-del" data-id="'+esc(o.doc_id)+'">Remove</button></td></tr>';
       }).join('') + '</tbody></table>';
     host.querySelectorAll('.so-del').forEach(function(b){
@@ -12283,40 +12405,74 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var msg = document.getElementById('so-msg');
     var say = noteWriter(msg);
     var g = fieldVal;
+    var poType = document.getElementById('so-potype').value;
     var custId = document.getElementById('so-cust').value;
     var partId = document.getElementById('so-part').value;
+    var contractId = document.getElementById('so-contract').value;
     if (!custId) return say('Choose the customer.');
-    if (!partId) return say('Choose the part.');
-    if (!g('so-po')) return say('A PO number is needed — that is what this record is.');
-    if (!C.num(g('so-qty'))) return say('How many are they ordering?');
-    if (!C.num(g('so-price'))) return say('The part price is needed to work out the PO value — it fills in from the customer/part link, or type it here.');
-    if (!g('so-due')) return say('A delivery date is needed, or there is nothing to plan against.');
-    if (g('so-on') && g('so-due') < g('so-on'))
-      return say('The delivery date is before the PO date. One of the two is wrong.');
+
+    if (poType === 'schedule'){
+      if (!contractId) return say('Choose which rate contract this schedule is against.');
+      if (!partId) return say('That contract has no part on it — open it and check.');
+    } else if (!partId) return say('Choose the part.');
+
+    if (!g('so-po')) return say(poType === 'schedule'
+      ? 'A schedule or release number is needed — that is what this record is.'
+      : 'A PO number is needed — that is what this record is.');
+    if (!C.num(g('so-price')))
+      return say('The part price is needed' + (poType === 'ratecontract' ? ' — that is the point of a rate contract.' :
+        ' to work out the PO value — it fills in from the customer/part link, or type it here.'));
+
+    if (poType !== 'ratecontract'){
+      if (!C.num(g('so-qty'))) return say('How many are they ordering?');
+      if (!g('so-due')) return say('A delivery date is needed, or there is nothing to plan against.');
+      if (g('so-on') && g('so-due') < g('so-on'))
+        return say('The delivery date is before the PO date. One of the two is wrong.');
+    } else if (g('so-validfrom') && g('so-validto') && g('so-validto') < g('so-validfrom')) {
+      return say('Valid to is before Valid from. One of the two is wrong.');
+    }
 
     var cust = customers.filter(function(c){ return c.doc_id === custId; })[0] || {};
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var contract = poType === 'schedule' ? orders.filter(function(o){ return o.doc_id === contractId; })[0] : null;
+
     /* the same PO twice for the same part is usually a double entry, and it
-       doubles the apparent demand */
-    if (g('so-po')){
+       doubles the apparent demand — schedules are exempt: several schedules
+       against one rate contract, each its own release number, is normal. */
+    if (poType !== 'schedule' && g('so-po')){
       var dup = orders.filter(function(o){
         var v = o.data||{};
         return v.partId === partId && String(v.po||'').toLowerCase() === g('so-po').toLowerCase(); })[0];
       if (dup) return say('PO <b>'+esc(g('so-po'))+'</b> already exists for this part. ' +
                           'Adding it again would double the demand in the plan.');
     }
-    var qty = C.num(g('so-qty')), price = C.num(g('so-price'));
+
+    var qty = poType === 'ratecontract' ? 0 : C.num(g('so-qty'));
+    var price = C.num(g('so-price'));
     var currency = document.getElementById('so-currency').value || 'INR';
+    var custPartNo = contract ? (contract.data||{}).custPartNo || '' : g('so-custpartno');
+    var custPartName = contract ? (contract.data||{}).custPartName || '' : g('so-custpartname');
+
     try {
       await C.idms.saveDoc({ kind:'order', partId:partId, status:'Open',
         docNo: await C.docNumber('so'),
         data:{ partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
                customerId:custId, customerName:(cust.data||{}).name||'',
+               poType:poType, custPartNo:custPartNo, custPartName:custPartName,
                po:g('so-po'), qty:qty, price:price, currency:currency, poValue:qty*price,
-               due:g('so-due'), orderedOn:g('so-on'), kind:document.getElementById('so-kind').value } },
-        'customer PO added');
-      say('Added.', true);
-      ['so-po','so-qty','so-price','so-due'].forEach(function(id){ document.getElementById(id).value=''; });
+               due: poType === 'ratecontract' ? '' : g('so-due'), orderedOn:g('so-on'),
+               validFrom: poType === 'ratecontract' ? g('so-validfrom') : '',
+               validTo: poType === 'ratecontract' ? g('so-validto') : '',
+               scheduleAgainst: poType === 'schedule' ? contractId : '',
+               scheduleAgainstPo: contract ? (contract.data||{}).po || '' : '',
+               kind: poType === 'onetime' ? document.getElementById('so-kind').value :
+                     poType === 'schedule' ? 'Schedule release' : '' } },
+        poType === 'schedule' ? 'schedule added against a rate contract' :
+        poType === 'ratecontract' ? 'rate contract PO added' : 'customer PO added');
+      say(poType === 'ratecontract' ? 'Rate contract added. Schedules can now be raised against it.'
+        : 'Added.', true);
+      ['so-po','so-qty','so-price','so-due','so-custpartno','so-custpartname','so-validfrom','so-validto']
+        .forEach(function(id){ document.getElementById(id).value=''; });
       updateSoValue();
       await loadOrders();
     } catch(e){ say(esc(e.message)); }
@@ -12325,7 +12481,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   function printOrderBook(){
     if (!orders.length) { toast('No orders to print.'); return; }
     C.openReport({
-      title:'Order Book', kind:'Sales', landscape:true,
+      title:'Customer PO Register', kind:'Sales', landscape:true,
       subtitle:orders.length + ' order(s)',
       sections:[{ type:'table', title:'Orders',
         columns:[{label:'PO Number'},{label:'Customer'},{label:'Part'},{label:'Ordered',align:'r'},
@@ -12373,8 +12529,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   function priceFor(customerId, partId){
     var link = custParts.filter(function(cp){
       var v = cp.data||{}; return v.customerId === customerId && v.partId === partId; })[0];
-    return link ? { price:C.num((link.data||{}).price), currency:(link.data||{}).currency||'INR' }
-                : { price:0, currency:'INR' };
+    return link ? { price:C.num((link.data||{}).price), currency:(link.data||{}).currency||'INR',
+                     custPartNo:(link.data||{}).custPartNo||'', custPartName:(link.data||{}).custPartName||'' }
+                : { price:0, currency:'INR', custPartNo:'', custPartName:'' };
   }
   function partOptionsForCustomer(customerId, selected){
     if (!customerId) return '<option value="">— choose the customer first —</option>';
@@ -12402,15 +12559,53 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (!mk.value) mk.value = thisMonthKey();
     var fmk = document.getElementById('spm-filter-month');
     if (!fmk.value) fmk.value = mk.value;
-    updateTentativeLabels();
     try { salesPlans = await C.idms.docs('salesplan'); } catch(e){ salesPlans = []; }
+    try { orders = await C.idms.docs('order'); } catch(e){ orders = []; }
     try { salesInvoices = await C.idms.docs('invoice'); } catch(e){ salesInvoices = []; }
     drawSalesPlanRegister();
   }
-  function updateTentativeLabels(){
-    var m = document.getElementById('spm-month').value || thisMonthKey();
-    document.getElementById('spm-t1-label').textContent = 'Tentative — ' + monthLabel(addMonths(m,1));
-    document.getElementById('spm-t2-label').textContent = 'Tentative — ' + monthLabel(addMonths(m,2));
+
+  /* ---------------- Demand: arrived at, not typed ----------------
+     A customer/part/month's demand is the total quantity due that month from
+     real Customer PO commitments — a one-time PO's own quantity, or a
+     schedule's quantity (never a rate contract itself, which carries none).
+     A manually entered forecast is used only when neither exists for that
+     month; the moment a real PO or schedule is due in it, the forecast steps
+     aside rather than being added on top of it — a forecast and a real order
+     for the same demand would double it. */
+  /* An order saved before PO types existed has no poType at all. Treating
+     that as "not demand" would make every PO already on file vanish from the
+     Sales Plan the moment this deploys — the opposite of harmless. Anything
+     that is not explicitly a rate contract (which never carries a quantity)
+     counts as demand, exactly as it always did. */
+  function isDemandOrder(v){ return v.poType !== 'ratecontract'; }
+
+  function demandOrders(customerId, partId, month){
+    return orders.filter(function(o){
+      var v = o.data||{};
+      return v.customerId === customerId && v.partId === partId &&
+        isDemandOrder(v) && String(v.due||'').slice(0,7) === month;
+    });
+  }
+  function demandFor(customerId, partId, month){
+    var real = demandOrders(customerId, partId, month);
+    if (real.length){
+      var qty = real.reduce(function(t,o){ return t + C.num((o.data||{}).qty); }, 0);
+      var value = real.reduce(function(t,o){ var v=o.data||{}; return t + C.num(v.qty)*C.num(v.price); }, 0);
+      var first = real[0].data||{};
+      return { qty:qty, value:value, price: qty ? value/qty : C.num(first.price),
+        currency: first.currency||'INR', custPartNo:first.custPartNo||'', custPartName:first.custPartName||'',
+        source:'po' };
+    }
+    var fc = salesPlans.filter(function(p){
+      var v = p.data||{}; return v.customerId === customerId && v.partId === partId && v.month === month; })[0];
+    if (fc){
+      var v = fc.data||{}, pr = priceFor(customerId, partId);
+      return { qty:C.num(v.firmQty), value:C.num(v.firmQty)*pr.price, price:pr.price, currency:pr.currency,
+        custPartNo: v.custPartNo || pr.custPartNo, custPartName: v.custPartName || pr.custPartName,
+        source:'forecast' };
+    }
+    return null;
   }
 
   function invoicedQty(customerId, partId, month){
@@ -12431,55 +12626,81 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     }).reduce(function(t, iv){ var v = iv.data||{}; return t + C.num(v.value||(C.num(v.qty)*C.num(v.rate))); }, 0);
   }
 
+  /* Every distinct (customer, part) that has ANY demand or actual sales this
+     month — from a PO, a schedule, a forecast, or an invoice raised with no
+     plan behind it at all (which the register must still show, not hide). */
+  function salesPlanRows(month, custFilter){
+    var seen = {}, keys = [];
+    function key(c,p){ return c+'|'+p; }
+    orders.forEach(function(o){
+      var v = o.data||{};
+      if (!isDemandOrder(v) || String(v.due||'').slice(0,7)!==month) return;
+      var k = key(v.customerId, v.partId);
+      if (!seen[k]){ seen[k]=1; keys.push([v.customerId, v.partId]); }
+    });
+    salesPlans.forEach(function(p){
+      var v = p.data||{}; if (v.month !== month) return;
+      var k = key(v.customerId, v.partId);
+      if (!seen[k]){ seen[k]=1; keys.push([v.customerId, v.partId]); }
+    });
+    salesInvoices.forEach(function(iv){
+      var v = iv.data||{}; if (String(v.invoiceDate||'').slice(0,7) !== month) return;
+      var k = key(v.customerId, v.partId);
+      if (!seen[k]){ seen[k]=1; keys.push([v.customerId, v.partId]); }
+    });
+    if (custFilter) keys = keys.filter(function(k){ return k[0] === custFilter; });
+    return keys.map(function(k){
+      var custId = k[0], partId = k[1];
+      var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+      var cust = customers.filter(function(c){ return c.doc_id === custId; })[0] || {};
+      var d = demandFor(custId, partId, month) || { qty:0, value:0, price:0, currency:'INR',
+        custPartNo:'', custPartName:'', source:'none' };
+      var actualQty = invoicedQty(custId, partId, month);
+      var actualValue = invoicedValue(custId, partId, month);
+      var pendingQty = Math.max(0, d.qty - actualQty);
+      var excessQty = Math.max(0, actualQty - d.qty);
+      var pendingValue = Math.max(0, d.value - actualValue);
+      return { customerId:custId, customerName:(cust.data||{}).name||'',
+        partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
+        custPartNo:d.custPartNo, custPartName:d.custPartName,
+        unitPrice:d.price, currency:d.currency, demandQty:d.qty, actualQty:actualQty,
+        pendingQty:pendingQty, excessQty:excessQty,
+        demandValue:d.value, actualValue:actualValue, pendingValue:pendingValue,
+        source:d.source };
+    }).sort(function(a,b){ return (a.customerName+a.partNo).localeCompare(b.customerName+b.partNo); });
+  }
+
   function drawSalesPlanRegister(){
     var host = document.getElementById('spm-list');
     var month = document.getElementById('spm-filter-month').value || thisMonthKey();
     var custId = document.getElementById('spm-filter-cust').value;
-    var rows = salesPlans.filter(function(p){
-      var v = p.data || {};
-      if (v.month !== month) return false;
-      if (custId && v.customerId !== custId) return false;
-      return true;
-    });
+    var rows = salesPlanRows(month, custId);
     if (!rows.length){
-      host.innerHTML = '<div class="empty"><b>No sales plan for '+esc(monthLabel(month))+'</b>' +
-        'Add a plan line above for this month.</div>';
+      host.innerHTML = '<div class="empty"><b>No demand for '+esc(monthLabel(month))+'</b>' +
+        'Add a Customer PO or schedule due this month, or a forecast above.</div>';
       return;
     }
-    host.innerHTML = '<table class="t"><thead><tr><th>Sl</th><th>Customer</th><th>Part No</th>' +
-      '<th>Part Name</th><th class="r">Planned Qty</th><th class="r">Actual Qty</th>' +
-      '<th class="r">Pending Qty</th><th class="r">Plan Value</th><th class="r">Actual Value</th>' +
-      '<th class="c">Status</th><th></th></tr></thead><tbody>' +
-      rows.map(function(p, i){
-        var v = p.data || {};
-        var actual = invoicedQty(v.customerId, v.partId, month);
-        var pending = Math.max(0, C.num(v.firmQty) - actual);
-        var excess = Math.max(0, actual - C.num(v.firmQty));
-        var pr = priceFor(v.customerId, v.partId);
-        var planValue = C.num(v.firmQty) * pr.price;
-        var actualValue = invoicedValue(v.customerId, v.partId, month);
-        return '<tr><td>'+(i+1)+'</td><td>'+esc(v.customerName||'—')+'</td>' +
-          '<td><b>'+esc(v.partNo||'')+'</b></td><td>'+esc(v.partName||'')+'</td>' +
-          '<td class="r">'+C.qty(v.firmQty)+'</td><td class="r">'+C.qty(actual)+'</td>' +
-          '<td class="r">'+(pending>0?'<b>'+C.qty(pending)+'</b>':'0')+'</td>' +
-          '<td class="r">'+(pr.price?moneyFmt(planValue, pr.currency):'<span class="hint">no price link</span>')+'</td>' +
-          '<td class="r">'+moneyFmt(actualValue, pr.currency)+'</td>' +
-          '<td class="c">'+(excess>0 ? '<span class="badge ab">excess '+C.qty(excess)+'</span>'
-            : pending<=0 ? '<span class="badge series">met</span>'
-            : '<span class="badge new">open</span>')+'</td>' +
-          '<td><button class="btn del spm-del" data-id="'+esc(p.doc_id)+'">Remove</button></td></tr>';
+    host.innerHTML = '<table class="t"><thead><tr><th>Sl</th><th>Customer</th>' +
+      '<th>Customer Part No.</th><th>Customer Part Name</th><th>Internal Part No.</th>' +
+      '<th class="r">Unit Price</th><th class="r">Demand Qty</th><th class="r">Actual Qty</th>' +
+      '<th class="r">Pending Qty</th><th class="r">Demand Value</th><th class="r">Actual Value</th>' +
+      '<th class="r">Pending Value</th><th class="c">Status</th></tr></thead><tbody>' +
+      rows.map(function(r, i){
+        return '<tr><td>'+(i+1)+'</td><td>'+esc(r.customerName||'—')+'</td>' +
+          '<td>'+esc(r.custPartNo||'—')+'</td><td>'+esc(r.custPartName||'—')+'</td>' +
+          '<td><b>'+esc(r.partNo||'')+'</b><div class="hint">'+esc(r.partName||'')+'</div></td>' +
+          '<td class="r">'+(r.unitPrice?moneyFmt(r.unitPrice, r.currency):'<span class="hint">—</span>')+'</td>' +
+          '<td class="r">'+C.qty(r.demandQty)+(r.source==='forecast'?' <span class="hint">(forecast)</span>':'')+'</td>' +
+          '<td class="r">'+C.qty(r.actualQty)+'</td>' +
+          '<td class="r">'+(r.pendingQty>0?'<b>'+C.qty(r.pendingQty)+'</b>':'0')+'</td>' +
+          '<td class="r">'+(r.demandValue?moneyFmt(r.demandValue, r.currency):'<span class="hint">—</span>')+'</td>' +
+          '<td class="r">'+moneyFmt(r.actualValue, r.currency)+'</td>' +
+          '<td class="r">'+(r.pendingValue>0?'<b>'+moneyFmt(r.pendingValue, r.currency)+'</b>':moneyFmt(0,r.currency))+'</td>' +
+          '<td class="c">'+(r.excessQty>0 ? '<span class="badge ab">excess '+C.qty(r.excessQty)+'</span>'
+            : r.pendingQty<=0 && r.demandQty>0 ? '<span class="badge series">met</span>'
+            : r.demandQty>0 ? '<span class="badge new">open</span>'
+            : '<span class="hint">no plan</span>')+'</td></tr>';
       }).join('') + '</tbody></table>';
-    host.querySelectorAll('.spm-del').forEach(function(b){
-      b.addEventListener('click', async function(){
-        var why = prompt('Removing this plan line. Why?');
-        if (why === null) return;
-        if (!why.trim()) { toast('State a reason.'); return; }
-        try {
-          await C.idms.patchDoc({ docId:b.dataset.id, remove:true, reason:'sales plan line removed: '+why.trim() });
-          await loadSalesPlan(); toast('Removed');
-        } catch(e){ toast(e.message); }
-      });
-    });
   }
 
   async function saveSalesPlan(){
@@ -12491,31 +12712,35 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var month = g('spm-month');
     if (!custId) return say('Choose the customer.');
     if (!partId) return say('Choose the part.');
-    if (!month) return say('The firm plan month is needed.');
-    if (!C.num(g('spm-firm'))) return say('A firm plan quantity is needed.');
+    if (!month) return say('The forecast month is needed.');
+    if (!C.num(g('spm-firm'))) return say('A forecast quantity is needed.');
+
+    if (demandOrders(custId, partId, month).length)
+      return say('There is already a real Customer PO or schedule due for this customer and part ' +
+        'in ' + esc(monthLabel(month)) + '. A forecast is for a month with no PO yet — open Customer PO ' +
+        'instead, or choose a different month.');
 
     var cust = customers.filter(function(c){ return c.doc_id === custId; })[0] || {};
     var link = custParts.filter(function(cp){
       var v = cp.data||{}; return v.customerId === custId && v.partId === partId; })[0];
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
 
-    /* revising the same customer/part/month replaces the line rather than
-       doubling the demand — a sales plan is redone every month, not appended to */
+    /* revising the same customer/part/month replaces the forecast rather than
+       doubling it — a forecast is redone, not appended to */
     var dup = salesPlans.filter(function(sp){
       var v = sp.data||{}; return v.customerId === custId && v.partId === partId && v.month === month; })[0];
 
     var data = { customerId:custId, customerName:(cust.data||{}).name||'',
       partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
       custPartNo: link ? (link.data||{}).custPartNo||'' : '',
-      month:month, firmQty:C.num(g('spm-firm')),
-      t1Month:addMonths(month,1), t1Qty:C.num(g('spm-t1')),
-      t2Month:addMonths(month,2), t2Qty:C.num(g('spm-t2')) };
+      custPartName: link ? (link.data||{}).custPartName||'' : '',
+      month:month, firmQty:C.num(g('spm-firm')) };
     try {
       await C.idms.saveDoc({ docId: dup ? dup.doc_id : '', kind:'salesplan', partId:partId,
         status:'Active', docNo: dup ? dup.doc_no : await C.docNumber('sp'), data:data },
-        dup ? 'sales plan line revised' : 'sales plan line added');
-      say(dup ? 'Plan line updated for '+esc(monthLabel(month))+'.' : 'Plan line added.', true);
-      ['spm-firm','spm-t1','spm-t2'].forEach(function(id){ document.getElementById(id).value=''; });
+        dup ? 'sales forecast revised' : 'sales forecast added');
+      say(dup ? 'Forecast updated for '+esc(monthLabel(month))+'.' : 'Forecast added.', true);
+      ['spm-firm'].forEach(function(id){ document.getElementById(id).value=''; });
       salesPlans = await C.idms.docs('salesplan');
       document.getElementById('spm-filter-month').value = month;
       drawSalesPlanRegister();
@@ -12524,18 +12749,21 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   function printSalesPlan(){
     var month = document.getElementById('spm-filter-month').value || thisMonthKey();
-    var rows = salesPlans.filter(function(p){ return (p.data||{}).month === month; });
+    var rows = salesPlanRows(month, '');
     if (!rows.length) { toast('No plan lines to print for this month.'); return; }
     C.openReport({
       title:'Sales Plan Register', kind:'Sales', landscape:true,
       subtitle: monthLabel(month) + ' · ' + rows.length + ' line(s)',
-      sections:[{ type:'table', title:'Plan vs actual',
-        columns:[{label:'Sl',align:'c'},{label:'Customer'},{label:'Part No'},{label:'Part Name'},
-          {label:'Planned',align:'r'},{label:'Actual',align:'r'},{label:'Pending',align:'r'}],
-        rows: rows.map(function(p, i){
-          var v = p.data||{}, actual = invoicedQty(v.customerId, v.partId, month);
-          return [String(i+1), esc(v.customerName||''), esc(v.partNo||''), esc(v.partName||''),
-            C.qty(v.firmQty), C.qty(actual), C.qty(Math.max(0, C.num(v.firmQty) - actual))];
+      sections:[{ type:'table', title:'Demand vs actual', dense:true,
+        columns:[{label:'Sl',align:'c'},{label:'Customer'},{label:'Cust. Part No'},{label:'Cust. Part Name'},
+          {label:'Internal Part'},{label:'Demand Qty',align:'r'},{label:'Actual Qty',align:'r'},
+          {label:'Pending Qty',align:'r'},{label:'Demand Value',align:'r'},{label:'Actual Value',align:'r'},
+          {label:'Pending Value',align:'r'}],
+        rows: rows.map(function(r, i){
+          return [String(i+1), esc(r.customerName||''), esc(r.custPartNo||''), esc(r.custPartName||''),
+            esc(r.partNo||''), C.qty(r.demandQty), C.qty(r.actualQty), C.qty(r.pendingQty),
+            moneyFmt(r.demandValue, r.currency), moneyFmt(r.actualValue, r.currency),
+            moneyFmt(r.pendingValue, r.currency)];
         }) }]});
   }
 
@@ -12552,17 +12780,20 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     drawInvoiceRegister();
   }
 
+  /* Superseded by demandFor(), which is the real, computed figure — a Customer
+     PO or schedule due this month, or the manual forecast only when neither
+     exists. Kept only because excessForInvoice() below still calls it by this
+     name; do not add a new caller of the raw salesPlans list. */
   function planFor(customerId, partId, month){
-    return salesPlans.filter(function(p){
-      var v = p.data||{}; return v.customerId === customerId && v.partId === partId && v.month === month; })[0];
+    return demandFor(customerId, partId, month);
   }
   /* excess for one invoice line: how much of THIS line falls beyond whatever
-     of the month's firm plan earlier invoice lines had not already used up */
+     of the month's demand earlier invoice lines had not already used up */
   function excessForInvoice(iv){
     var v = iv.data || {};
     var month = String(v.invoiceDate||'').slice(0,7);
     var plan = planFor(v.customerId, v.partId, month);
-    var firm = plan ? C.num(plan.data.firmQty) : 0;
+    var firm = plan ? C.num(plan.qty) : 0;
     var sameLine = salesInvoices.filter(function(x){
       var w = x.data||{};
       return w.customerId === v.customerId && w.partId === v.partId &&
@@ -12655,7 +12886,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var month = g('iv-date').slice(0,7);
       var plan = planFor(custId, partId, month);
       var already = invoicedQty(custId, partId, month) - qty; // before this line
-      var over = plan ? Math.max(0, (already + qty) - C.num(plan.data.firmQty)) : qty;
+      var over = plan ? Math.max(0, (already + qty) - C.num(plan.qty)) : qty;
       say('Saved.' + (over > 0
         ? ' <b>'+C.qty(Math.min(qty, over))+'</b> of this line is over the '+esc(monthLabel(month))+
           ' plan and is shown as excess sales.'
@@ -12685,16 +12916,19 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   async function loadSalesDashboard(){
     var mk = document.getElementById('sd-month');
     if (!mk.value) mk.value = thisMonthKey();
+    await fetchParts(); await fetchCustomers();
     /* These reads do not depend on one another. Run in parallel: one wait,
        not 3. */
     var _b12098 = await Promise.all([
       C.idms.docs('salesplan').catch(function(){ return []; }),
       C.idms.docs('invoice').catch(function(){ return []; }),
       C.idms.docs('cust_part').catch(function(){ return []; }),
+      C.idms.docs('order').catch(function(){ return []; }),
     ]);
     salesPlans = _b12098[0];
     salesInvoices = _b12098[1];
     custParts = _b12098[2];
+    orders = _b12098[3];
     drawSalesDashboard();
   }
 
@@ -12705,75 +12939,57 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   function drawSalesDashboard(){
     var month = document.getElementById('sd-month').value || thisMonthKey();
-    var plans = salesPlans.filter(function(p){ return (p.data||{}).month === month; });
-    var totalPlanned = plans.reduce(function(t,p){ return t + C.num(p.data.firmQty); }, 0);
-    var totalActual = 0, totalExcess = 0;
+    /* The dashboard reads the same computed register Sales Plan itself shows —
+       one arrival of demand, read in two places, never two figures that could
+       disagree about what was actually ordered. */
+    var rows = salesPlanRows(month, '');
+
+    var totalDemand = 0, totalActual = 0, totalExcess = 0;
     var totalValue = emptyValue();
     var byCust = {};
-    plans.forEach(function(p){
-      var v = p.data;
-      var actual = invoicedQty(v.customerId, v.partId, month);
-      totalActual += actual;
-      var c = byCust[v.customerId] = byCust[v.customerId] ||
-        { name:v.customerName, planned:0, actual:0, value:emptyValue() };
-      c.planned += C.num(v.firmQty); c.actual += actual;
-
-      var pr = priceFor(v.customerId, v.partId);
-      var cur = pr.currency === 'USD' ? 'USD' : 'INR';
-      var planValue = C.num(v.firmQty) * pr.price;
-      var actualValue = invoicedValue(v.customerId, v.partId, month);
-      totalValue[cur].planned += planValue; totalValue[cur].actual += actualValue;
-      c.value[cur].planned += planValue; c.value[cur].actual += actualValue;
+    rows.forEach(function(r){
+      totalDemand += r.demandQty; totalActual += r.actualQty; totalExcess += r.excessQty;
+      var cur = r.currency === 'USD' ? 'USD' : 'INR';
+      totalValue[cur].planned += r.demandValue; totalValue[cur].actual += r.actualValue;
+      var c = byCust[r.customerId] = byCust[r.customerId] ||
+        { name:r.customerName, planned:0, actual:0, value:emptyValue() };
+      c.planned += r.demandQty; c.actual += r.actualQty;
+      c.value[cur].planned += r.demandValue; c.value[cur].actual += r.actualValue;
     });
-    /* invoices with no plan line at all are still real sales, and still excess */
-    var plannedPairs = {};
-    plans.forEach(function(p){ plannedPairs[p.data.customerId+'|'+p.data.partId] = true; });
-    var unplanned = salesInvoices.filter(function(iv){
-      var v = iv.data||{};
-      return String(v.invoiceDate||'').slice(0,7) === month && !plannedPairs[v.customerId+'|'+v.partId];
-    });
-    unplanned.forEach(function(iv){
-      var v = iv.data;
-      totalActual += C.num(v.qty); totalExcess += C.num(v.qty);
-      var c = byCust[v.customerId] = byCust[v.customerId] ||
-        { name:v.customerName, planned:0, actual:0, value:emptyValue() };
-      c.actual += C.num(v.qty);
-      var cur = v.currency === 'USD' ? 'USD' : 'INR';
-      var val = C.num(v.value||(C.num(v.qty)*C.num(v.rate)));
-      totalValue[cur].actual += val; c.value[cur].actual += val;
-    });
-    plans.forEach(function(p){
-      var v = p.data;
-      var actual = invoicedQty(v.customerId, v.partId, month);
-      totalExcess += Math.max(0, actual - C.num(v.firmQty));
-    });
-    var totalPending = Math.max(0, totalPlanned - totalActual + totalExcess); // excess doesn't offset another part's pending
+    var totalPending = Math.max(0, totalDemand - totalActual + totalExcess); // excess doesn't offset another part's pending
+    var actualPct = totalDemand ? Math.round(totalActual / totalDemand * 100) : (totalActual ? 100 : 0);
+    var pendingPct = totalDemand ? Math.round(totalPending / totalDemand * 100) : 0;
 
     document.getElementById('sd-overall').innerHTML =
       '<div class="stat">' +
-      [['Planned', C.qty(totalPlanned)], ['Actual', C.qty(totalActual)],
-       ['Pending', C.qty(totalPending)], ['Excess sales', C.qty(totalExcess)]]
-      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') +
+      [['Demand', C.qty(totalDemand), ''], ['Actual', C.qty(totalActual), actualPct+'%'],
+       ['Pending', C.qty(totalPending), pendingPct+'%'], ['Excess sales', C.qty(totalExcess), '']]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+
+        (s[2]?' · '+s[2]:'')+'</span></div>'; }).join('') +
       '</div>' +
-      '<h4 style="margin-top:14px;">Sales value — Plan vs Actual vs Pending</h4>' +
-      '<table class="t"><thead><tr><th>Currency</th><th class="r">Plan Value</th>' +
-        '<th class="r">Actual Value</th><th class="r">Pending Value</th></tr></thead><tbody>' +
+      '<h4 style="margin-top:14px;">Sales value — Demand vs Actual vs Pending</h4>' +
+      '<table class="t"><thead><tr><th>Currency</th><th class="r">Demand Value</th>' +
+        '<th class="r">Actual Value</th><th class="r">%</th>' +
+        '<th class="r">Pending Value</th><th class="r">%</th></tr></thead><tbody>' +
       ['INR','USD'].map(function(cur){
         var vv = totalValue[cur], pending = Math.max(0, vv.planned - vv.actual);
+        var aPct = vv.planned ? Math.round(vv.actual / vv.planned * 100) : (vv.actual ? 100 : 0);
+        var pPct = vv.planned ? Math.round(pending / vv.planned * 100) : 0;
         return '<tr><td>'+cur+'</td><td class="r">'+moneyFmt(vv.planned, cur)+'</td>' +
-          '<td class="r">'+moneyFmt(vv.actual, cur)+'</td>' +
-          '<td class="r">'+(pending>0?'<b>'+moneyFmt(pending, cur)+'</b>':moneyFmt(0,cur))+'</td></tr>';
+          '<td class="r">'+moneyFmt(vv.actual, cur)+'</td><td class="r hint">'+aPct+'%</td>' +
+          '<td class="r">'+(pending>0?'<b>'+moneyFmt(pending, cur)+'</b>':moneyFmt(0,cur))+
+          '</td><td class="r hint">'+pPct+'%</td></tr>';
       }).join('') + '</tbody></table>';
 
     var custRows = Object.keys(byCust).map(function(k){ return byCust[k]; })
       .sort(function(a,b){ return b.planned - a.planned; });
     document.getElementById('sd-custtable').innerHTML = !custRows.length
       ? '<div class="empty"><b>Nothing for '+esc(monthLabel(month))+'</b>' +
-        'No sales plan or invoice touches this month yet.</div>'
-      : '<table class="t"><thead><tr><th>Customer</th><th class="r">Planned Qty</th>' +
+        'No demand or invoice touches this month yet.</div>'
+      : '<table class="t"><thead><tr><th>Customer</th><th class="r">Demand Qty</th>' +
         '<th class="r">Actual Qty</th><th class="r">Pending Qty</th><th class="c">Achievement</th>' +
-        '<th class="r">Plan Value ₹</th><th class="r">Actual Value ₹</th><th class="r">Pending Value ₹</th>' +
-        '<th class="r">Plan Value $</th><th class="r">Actual Value $</th><th class="r">Pending Value $</th>' +
+        '<th class="r">Demand Value ₹</th><th class="r">Actual Value ₹</th><th class="r">Pending Value ₹</th>' +
+        '<th class="r">Demand Value $</th><th class="r">Actual Value $</th><th class="r">Pending Value $</th>' +
         '</tr></thead><tbody>' + custRows.map(function(c){
           var pending = Math.max(0, c.planned - c.actual);
           var pct = c.planned ? Math.round(c.actual / c.planned * 100) : (c.actual ? 100 : 0);
@@ -12790,6 +13006,29 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
             '<td class="r">'+C.rate(usd.planned)+'</td><td class="r">'+C.rate(usd.actual)+'</td>' +
             '<td class="r">'+(pUsd>0?'<b>'+C.rate(pUsd)+'</b>':'0')+'</td></tr>';
         }).join('') + '</tbody></table>';
+
+    /* Day-wise value is INR only, deliberately: a chart mixing two currencies
+       on one axis would not mean anything, and INR is what the requirement
+       asked for by name. USD sales still count everywhere else on this page. */
+    var dhost = document.getElementById('sd-daywise');
+    var daysInM = new Date(C.num(month.slice(0,4)), C.num(month.slice(5,7)), 0).getDate();
+    var dayValues = [], dayLabels = [];
+    for (var d = 1; d <= daysInM; d++){
+      var dk = month + '-' + String(d).padStart(2,'0');
+      dayLabels.push(String(d));
+      dayValues.push(salesInvoices.filter(function(iv){
+          var v = iv.data||{}; return v.invoiceDate === dk && (v.currency||'INR') !== 'USD'; })
+        .reduce(function(t, iv){ var v = iv.data||{}; return t + C.num(v.value||(C.num(v.qty)*C.num(v.rate))); }, 0));
+    }
+    var dayTotal = dayValues.reduce(function(t,v){ return t+v; }, 0);
+    if (!dayTotal){
+      dhost.innerHTML = '<div class="empty"><b>No invoices in INR yet for '+esc(monthLabel(month))+'</b>' +
+        'The day-wise chart fills in as invoices are entered through the month.</div>';
+    } else if (window.KPIX && window.KPIX.charts && window.KPIX.charts.line){
+      dhost.innerHTML = window.KPIX.charts.line(dayLabels, [{ name:'Sales value (₹)', values:dayValues }], '₹');
+    } else {
+      dhost.innerHTML = '<div class="hint">Chart engine not available.</div>';
+    }
 
     var excessLines = salesInvoices.filter(function(iv){
       return String((iv.data||{}).invoiceDate||'').slice(0,7) === month && excessForInvoice(iv) > 0;
@@ -18610,10 +18849,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       return;
     }
     host.innerHTML = '<table class="t"><thead><tr><th>Customer</th><th>Their part no</th>' +
-      '<th>Their drawing</th><th>HSN</th><th class="r">Price</th><th>From</th><th>Quotation</th>' +
-      '</tr></thead><tbody>' + rows.map(function(cp){
+      '<th>Their part name</th><th>Their drawing</th><th>HSN</th><th class="r">Price</th>' +
+      '<th>From</th><th>Quotation</th></tr></thead><tbody>' + rows.map(function(cp){
         var v = cp.data || {};
         return '<tr><td>'+esc(v.customerName||'—')+'</td><td><b>'+esc(v.custPartNo||'—')+'</b></td>'+
+          '<td>'+esc(v.custPartName||'—')+'</td>'+
           '<td class="hint">'+esc(v.custDrawingNo||'—')+'</td><td class="hint">'+esc(v.hsn||'—')+'</td>'+
           '<td class="r">'+C.rate(v.price)+'</td>'+
           '<td class="hint">'+(v.effectiveFrom?C.fmtDate(v.effectiveFrom):'—')+'</td>'+
@@ -19603,8 +19843,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('so-cust').addEventListener('change', function(){
     document.getElementById('so-part').innerHTML = partOptionsForCustomer(this.value);
     fillSoPriceFromLink();
+    fillContractDropdown();
   });
   document.getElementById('so-part').addEventListener('change', fillSoPriceFromLink);
+  document.getElementById('so-potype').addEventListener('change', soUpdateType);
+  document.getElementById('so-contract').addEventListener('change', fillScheduleFromContract);
   document.getElementById('so-qty').addEventListener('input', updateSoValue);
   document.getElementById('so-price').addEventListener('input', updateSoValue);
   document.getElementById('so-currency').addEventListener('change', updateSoValue);
@@ -19621,10 +19864,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('spm-cust').addEventListener('change', function(){
     document.getElementById('spm-part').innerHTML = partOptionsForCustomer(this.value);
   });
-  document.getElementById('spm-month').addEventListener('change', updateTentativeLabels);
   document.getElementById('spm-save').addEventListener('click', saveSalesPlan);
   document.getElementById('spm-clear').addEventListener('click', function(){
-    ['spm-firm','spm-t1','spm-t2'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('spm-firm').value = '';
     document.getElementById('spm-msg').style.display='none';
   });
   document.getElementById('spm-refresh').addEventListener('click', drawSalesPlanRegister);
@@ -20349,11 +20591,12 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         docNo: g('pl-no') || (cust.data||{}).code || '',
         data:{ partId: plPart.part_id, internalNo: plPart.part_no,
                customerId: sel.value, customerName: (cust.data||{}).name || '',
-               custPartNo: g('pl-no'), custDrawingNo: g('pl-drg'), hsn: g('pl-hsn'),
+               custPartNo: g('pl-no'), custPartName: g('pl-name'),
+               custDrawingNo: g('pl-drg'), hsn: g('pl-hsn'),
                price: C.num(g('pl-price')), effectiveFrom: g('pl-from') }
       }, 'customer linked to part');
       say('Linked.', true);
-      ['pl-no','pl-price','pl-hsn','pl-drg'].forEach(function(id){
+      ['pl-no','pl-name','pl-price','pl-hsn','pl-drg'].forEach(function(id){
         document.getElementById(id).value=''; });
       custParts = await C.idms.docs('cust_part');
       drawLinks();

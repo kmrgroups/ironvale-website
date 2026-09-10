@@ -1501,6 +1501,111 @@ shift would stop the floor working.
 `tests/orgcharttest.mjs` (11), `tests/dwmsignofftest.mjs` (7) — 43 new checks.
 Whole suite: 546 passing.
 
+## Customer PO: two PO types, and a Sales Plan that is arrived at, not typed
+
+Renamed "Order Book" to **Customer PO** everywhere (menu, panel headings, print
+titles, the dashboard summary card) — no behaviour change, purely the name.
+
+### The two PO shapes, and a third that is really neither
+
+`orders` (kind:'order') now carries a `poType`: `onetime`, `ratecontract`, or
+`schedule`. All three still save to the same collection and the same form
+(`data-panel="sales_plan"`), with `soUpdateType()` showing and hiding fields —
+deliberately one screen, not three, so a schedule and the contract it depends
+on are never far apart.
+
+- **One-time PO** (`onetime`) — quantity, price, delivery date, all its own.
+  Unchanged from what Order Book always did.
+- **Rate Contract PO** (`ratecontract`) — customer, part, price, optional
+  validity dates. **No quantity, no delivery date** — `qty` is saved as `0`
+  and `due` as `''`, deliberately, so it can never be counted as demand by
+  accident. `soOpenContracts()` only offers ones still within validity when a
+  schedule is being raised.
+- **Schedule** (`schedule`) — raised against an open Rate Contract, chosen
+  from a dropdown. The moment a contract is chosen, `fillScheduleFromContract()`
+  fills **and locks** (`readOnly`/`disabled`) Customer Part No., Customer Part
+  Name, Price and Currency from that contract — a schedule cannot invent its
+  own price. Only quantity and delivery date are the schedule's own.
+  `scheduleAgainst` holds the contract's doc id, `scheduleAgainstPo` its PO
+  number, purely for display.
+
+Two bugs found and fixed while building this, both by the new test suite
+(`tests/customerpotest.mjs`) rather than by inspection:
+
+- Switching PO Type to Schedule called `fillScheduleFromContract()` — which
+  reads fields *from* a selected contract — instead of `fillContractDropdown()`,
+  which populates the list of contracts to choose from. The dropdown was
+  empty until the customer was reselected. Fixed; `soUpdateType()` now calls
+  the right one.
+- `loadOrders()` reset `#so-cust` with `customerOptions('')` (no selection
+  kept) after every save — meaning adding a Rate Contract and then
+  immediately raising a Schedule against it for the *same* customer required
+  reselecting the customer in between. `loadOrders()` now preserves the
+  current selection and refreshes the contract dropdown for it.
+
+### Sales Plan: computed, not typed
+
+`sales_monthly_plan` no longer has a "firm plan quantity" you type in. Demand
+for a customer/part/month is **`demandOrders()`** — every `onetime` or
+`schedule` order due that month, summed — with a manually entered forecast
+(`kind:'salesplan'`, unchanged doc shape) used **only** when no real PO or
+schedule exists for that month; `saveSalesPlan()` now refuses a forecast for
+a month a real PO already covers, so the two can never double-count. All of
+this lives in `salesPlanRows()`, which is the *single* place both the Sales
+Plan register and the Sales Dashboard now read from — they cannot disagree
+with each other because they are not two calculations, they are one.
+
+**Backward compatibility, deliberately protected by a test:** an order saved
+before `poType` existed has no such field. `isDemandOrder(v)` treats anything
+that is *not explicitly* `ratecontract` as demand — so pre-existing POs do
+not silently vanish from the Sales Plan the moment this deploys. Do not
+change that condition to an explicit allow-list of `onetime`/`schedule`
+without re-checking `customerpotest.mjs`'s "an order saved before PO types
+existed still counts as demand" case, which exists specifically to catch
+that regression.
+
+`priceFor()` and the customer↔part link (Parts screen → "Customers for this
+part") gained **Customer Part Name** (`custPartName`) alongside the
+Customer Part Number that already existed — both now flow through to Order
+Book/Customer PO's auto-fill, to `demandFor()`, and to every Sales Plan row.
+
+### Sales Dashboard: three views, one of them new
+
+Rewritten to call `salesPlanRows()` instead of filtering the raw `salesplan`
+docs directly — it was reading the *old*, now-fallback-only manual entries
+before this pass, which would have shown demand only from forecasts and
+missed every real PO. Added:
+
+- **% alongside the INR/USD values** on the Overall section (actual% and
+  pending% of demand, overall and per currency).
+- **Overall Sales Value — day-wise**, a new section using
+  `window.KPIX.charts.line` — the existing KPI chart engine, not a new one —
+  fed by summing each day's invoiced value. **INR only, deliberately**: a
+  chart mixing two currencies on one axis would not mean anything, and this
+  was the one place in this whole pass where the requirement asked for INR
+  specifically rather than "whichever currency the customer buys in" (kept
+  everywhere else, per an explicit decision to preserve existing multi-
+  currency support rather than narrow it).
+
+**A second, quieter bug found while rewiring this:** `excessForInvoice()`
+(used by both the Excess Sales section and the Sales Invoice screen's own
+"is this over the plan" check) called `planFor()`, which read *only* the old
+manual `salesplan` docs — so excess sales were being measured against
+forecasts, not real Customer PO commitments, and would have been wrong for
+any customer/part with a real PO but no matching manual forecast line.
+`planFor()` now delegates to `demandFor()`. Its return shape changed (`.qty`
+instead of `.data.firmQty`); both call sites that read the old shape
+(`saveSalesInvoice()` and `excessForInvoice()` itself) were updated — a
+third caller in `drawInvoiceRegister()` only did a truthy check and needed no
+change. Covered by `tests/salesdashboardtest.mjs`'s excess-sales case.
+
+### Tests
+
+`tests/customerpotest.mjs` (25) and `tests/salesdashboardtest.mjs` (14) — 39
+new checks, covering the full Rate Contract → Schedule → computed Sales Plan
+→ Dashboard chain end to end, not just each screen in isolation. Whole
+suite: 586 passing.
+
 ---
 
 ## Conventions

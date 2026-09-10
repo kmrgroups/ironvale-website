@@ -272,5 +272,9 @@
     return Math.round((String(dataUrl).length - (String(dataUrl).indexOf(',') + 1)) * 0.75);
   }
 
-  window.DrawingConvert = { prepare: prepare, sizeOf: sizeOf, MAX_EDGE: MAX_EDGE };
+  /* loadPdfLib is exported so nothing else has to load pdf.js eagerly: index.html's
+     pdfToText() now awaits this instead of relying on a blocking <script> in <head>.
+     One loader, one memoised copy, fetched only when a PDF actually turns up. */
+  window.DrawingConvert = { prepare: prepare, sizeOf: sizeOf, MAX_EDGE: MAX_EDGE,
+                            loadPdfLib: loadPdfLib };
 })();

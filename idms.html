@@ -2617,7 +2617,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
             <option>Start of shift</option><option>Material batch change</option></select></div>
           <div style="align-self:end;"><button class="btn" id="su-load">Load characteristics</button></div>
         </div>
-        <div class="note" id="su-msg" style="display:none;"></div>
+        <div class="note" id="sa-msg" style="display:none;"></div>
       </div>
       <div class="card">
         <h4 id="su-title">First-off readings</h4>
@@ -2633,12 +2633,12 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <div style="align-self:end;">
             <button class="btn green" id="su-approve">Approve setup</button>
             <button class="btn del" id="su-reject" style="margin-left:6px;">Reject</button></div>
-          <div style="align-self:end;"><button class="btn" id="su-print">Print</button></div>
+          <div style="align-self:end;"><button class="btn" id="sa-print">Print</button></div>
         </div>
       </div>
       <div class="card">
         <h4>Recent setups</h4>
-        <div id="su-list"></div>
+        <div id="sa-list"></div>
       </div>
     </div>
 
@@ -3099,6 +3099,57 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     return;
   }
   var C = window.Core, esc = C.esc, toast = C.toast;
+
+  /* ---------------- two helpers that were written out by hand 91 times ----------------
+     Every screen with a form had its own private copy of these, pasted in: an
+     identical `say` in 72 handlers and an identical `g` in 21. They are one
+     definition each now, so a change to how a note is shown (or how a field is
+     read) happens once instead of being missed in 71 places.
+
+     noteWriter(el) returns the same closure the pasted copies were, bound to
+     that screen's note element, so every call site keeps calling say(text, good)
+     exactly as before. */
+  function noteWriter(el) {
+    return function (t, good) {
+      el.style.display = '';
+      el.className = 'note ' + (good ? 'good' : 'bad');
+      el.innerHTML = t;
+    };
+  }
+
+  /* The two screens that only ever report failures kept a one-argument copy;
+     this preserves that shape rather than quietly making them two-argument. */
+  function badWriter(el) {
+    return function (t) {
+      el.style.display = '';
+      el.className = 'note bad';
+      el.innerHTML = t;
+    };
+  }
+
+  /* The trimmed value of a field, by id. */
+  function fieldVal(id) { return document.getElementById(id).value.trim(); }
+
+  /* Reads `KEY: value` out of one block of an AI reply. The routing importer and
+     the dimension importer each had their own identical copy; two readers of the
+     same reply format must not be able to drift apart. */
+  function fieldFromBlock(block) {
+    return function (key) {
+      var m = block.match(new RegExp('^\\s*' + key + '\\s*:\\s*(.+)$', 'mi'));
+      return m ? C.stripMarkup(m[1]).trim() : '';
+    };
+  }
+
+  /* A third variant, on three screens: success is marked but an ordinary message
+     is left unstyled rather than shown as an error. Kept distinct on purpose —
+     folding it into noteWriter would turn those three into red notes. */
+  function quietWriter(el) {
+    return function (t, good) {
+      el.style.display = '';
+      el.className = 'note ' + (good ? 'good' : '');
+      el.innerHTML = t;
+    };
+  }
 
   /* The menu, in the shape the team already works to. A trailing 1 marks a
      screen backed by the database today; the rest are declared so the
@@ -3571,7 +3622,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function dwmOpen(){
     var msg = document.getElementById('dw-pickmsg');
-    var say = function(t){ msg.style.display=''; msg.className='note bad'; msg.innerHTML=t; };
+    var say = badWriter(msg);
     var name = document.getElementById('dw-emp').value;
     if (!name) return say('Choose whose board this is.');
     msg.style.display = 'none';
@@ -3618,7 +3669,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function dwmAddActivity(){
     var msg = document.getElementById('dw-a-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var name = document.getElementById('dw-a-name').value.trim();
     var freq = document.getElementById('dw-a-freq').value;
     if (!name) return say('Say what is done.');
@@ -3678,7 +3729,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var m = C.num(document.getElementById('dw-month').value);
     var now = new Date();
     var msg = document.getElementById('dw-msg');
-    var say = function(t){ msg.style.display=''; msg.className='note bad'; msg.innerHTML=t; };
+    var say = badWriter(msg);
 
     if (y !== now.getFullYear() || m !== now.getMonth()+1)
       return say('Only the month in progress can be marked. A finished month is the record, and a ' +
@@ -3810,6 +3861,15 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      different times, and one of them stays open forever. They are shown, with
      where they live, and they close there. */
   var taskDocs = [], taskElse = [];
+  /* Declared here because it was not declared anywhere at all. loadTasks() reads
+   it and then assigns null to it, and under 'use strict' reading an undeclared
+   name throws — so opening Open Actions raised a ReferenceError before it ever
+   reached loadTasksElsewhere(), and the screen drew only half of itself, every
+   time. Nothing currently sets it: the morning-board "raise this as a task"
+   handover it was written for was never wired up. Left as null so the prefill
+   block simply does not fire, which is what the screen did on the paths that
+   happened to work. */
+  var taskPrefill = null;
 
   async function loadTasks(){
     try { taskDocs = await C.idms.docs('task'); } catch(e){ taskDocs = []; }
@@ -3923,7 +3983,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function addTask(){
     var msg = document.getElementById('tk-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var title = document.getElementById('tk-title').value.trim();
     var owner = document.getElementById('tk-owner').value.trim();
     var due = document.getElementById('tk-due').value;
@@ -4119,7 +4179,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function saveUser(){
     var msg = document.getElementById('us-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var name = document.getElementById('us-name').value.trim();
     var pass = document.getElementById('us-pass').value;
     var role = document.getElementById('us-role').value;
@@ -4301,7 +4361,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function saveTool(){
     var msg = document.getElementById('th-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var desc = document.getElementById('th-desc').value.trim();
     if (!desc) return say('A tool needs a description — "insert" on its own will not identify it ' +
       'when somebody is looking for the one that broke.');
@@ -4374,7 +4434,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function addToolEvent(){
     var msg = document.getElementById('th-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var ev = document.getElementById('th-ev').value;
     var on = document.getElementById('th-on').value;
     var cost = C.num(document.getElementById('th-cost').value);
@@ -4502,7 +4562,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function saveCheckSheet(closing){
     var msg = document.getElementById('cs-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var items = csCollect();
     var by = (document.getElementById('cs-by')||{}).value;
     by = by ? by.trim() : '';
@@ -4654,7 +4714,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function saveFormat(){
     var msg = document.getElementById('df-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var level = C.num(document.getElementById('df-level').value);
     var type = document.getElementById('df-type').value.trim();
     var prefix = document.getElementById('df-prefix').value.trim();
@@ -4729,7 +4789,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function saveSignatory(){
     var msg = document.getElementById('sg-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var lines = function(id){
       return document.getElementById(id).value.split('\n')
         .map(function(x){ return x.trim(); }).filter(Boolean); };
@@ -4766,9 +4826,16 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function loadQmsDocs(level){
     qmsLevel = C.num(level) || 1;
-    try { qmsDocs = await C.idms.docs('qmsdoc'); } catch(e){ qmsDocs = []; }
-    try { docFormats = await C.idms.docs('docformat'); } catch(e){ docFormats = []; }
-    try { signDocs = await C.idms.docs('signatory'); } catch(e){ signDocs = []; }
+    /* These reads do not depend on one another. Run in parallel: one wait,
+       not 3. */
+    var _b4769 = await Promise.all([
+      C.idms.docs('qmsdoc').catch(function(){ return []; }),
+      C.idms.docs('docformat').catch(function(){ return []; }),
+      C.idms.docs('signatory').catch(function(){ return []; }),
+    ]);
+    qmsDocs = _b4769[0];
+    docFormats = _b4769[1];
+    signDocs = _b4769[2];
     document.getElementById('qd-title').textContent = QMS_LEVELS[qmsLevel];
     document.getElementById('qd-note').innerHTML =
       { 1:'The quality policy, the manual and anything that states what the company undertakes to do.',
@@ -4869,8 +4936,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function saveQmsDoc(issuing){
     var msg = document.getElementById('qd-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
-    var g = function(i){ return document.getElementById(i).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     var type = g('qd-type'), title = g('qd-doctitle');
     if (!title) return say('A document needs a title.');
     if (!type) return say('Say what kind of document it is — the number and the signatories both ' +
@@ -5234,7 +5301,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function saveCft(){
     var msg = document.getElementById('cf-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var name = document.getElementById('cf-who').value.trim();
     if (!name) return say('Name the person.');
     var emp = compEmployees.filter(function(e){
@@ -5426,7 +5493,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function addAudit(){
     var msg = document.getElementById('au-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var kind = document.getElementById('au-new-type').value;
     var area = document.getElementById('au-area').value.trim();
     var dept = document.getElementById('au-dept').value;
@@ -5537,7 +5604,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function conductAudit(){
     var msg = document.getElementById('au-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var on = document.getElementById('au-actual').value;
     if (!on) return say('Say when it was carried out.');
     if (on > new Date().toISOString().slice(0,10))
@@ -5549,7 +5616,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function addFinding(){
     var msg = document.getElementById('au-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var d = document.getElementById('au-find').value.trim();
     var due = document.getElementById('au-due').value;
     var owner = document.getElementById('au-owner').value.trim();
@@ -5825,7 +5892,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function ocSave(){
     var msg = document.getElementById('oc-fmsg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var title = document.getElementById('oc-title').value.trim();
     var parent = document.getElementById('oc-parent').value;
     if (!title) return say('Name the post.');
@@ -6013,7 +6080,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function saveRole(issuing){
     var msg = document.getElementById('rr-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var f = roleFields();
     if (!f.designation) return say('Choose a designation.');
     if (issuing){
@@ -6233,7 +6300,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function addCandidate(){
     var msg = document.getElementById('sp-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var pos = currentPosition();
     if (!pos) return say('Choose a position.');
     var pv = pos.data||{};
@@ -6281,7 +6348,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function reviewSuccession(){
     var msg = document.getElementById('sp-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var by = document.getElementById('sp-by').value.trim();
     if (!by) return say('Say who reviewed it.');
     if (!succOpen || !((succOpen.data||{}).candidates||[]).length)
@@ -6341,13 +6408,24 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   var LEVEL_NAME = { 1:'under instruction', 2:'can run, supervised', 3:'can run alone', 4:'can train others' };
 
   async function compLoad(){
-    try { comps = await C.idms.docs('competency'); } catch(e){ comps = []; }
-    try { compSkills = await C.idms.docs('skill'); } catch(e){ compSkills = []; }
-    try { compOrg = await C.idms.docs('orgmaster'); } catch(e){ compOrg = []; }
-    try { trainings = await C.idms.docs('training'); } catch(e){ trainings = []; }
-    try { tniRows = await C.idms.docs('tni'); } catch(e){ tniRows = []; }
-    try { machines = await C.idms.docs('machine'); } catch(e){ machines = []; }
-    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    /* These reads do not depend on one another. Run in parallel: one wait,
+       not 7. */
+    var _b6344 = await Promise.all([
+      C.idms.docs('competency').catch(function(){ return []; }),
+      C.idms.docs('skill').catch(function(){ return []; }),
+      C.idms.docs('orgmaster').catch(function(){ return []; }),
+      C.idms.docs('training').catch(function(){ return []; }),
+      C.idms.docs('tni').catch(function(){ return []; }),
+      C.idms.docs('machine').catch(function(){ return []; }),
+      C.idms.docs('production').catch(function(){ return []; }),
+    ]);
+    comps = _b6344[0];
+    compSkills = _b6344[1];
+    compOrg = _b6344[2];
+    trainings = _b6344[3];
+    tniRows = _b6344[4];
+    machines = _b6344[5];
+    prodDocs = _b6344[6];
     try { compEmployees = (await C.api('/api/hr?what=employees')).employees || []; }
     catch(e){ compEmployees = []; }
   }
@@ -6429,7 +6507,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function saveCompetency(){
     var msg = document.getElementById('cm-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var d = document.getElementById('cm-desig').value;
     var thing = document.getElementById('cm-thing').value.trim();
     if (!d) return say('Choose a designation. A requirement with no role attached cannot be compared ' +
@@ -6650,7 +6728,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function saveTni(){
     var msg = document.getElementById('tn-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var who = document.getElementById('tn-who').value.trim();
     var topic = document.getElementById('tn-topic').value.trim();
     if (!who || !topic) return say('A need is a person and a topic. Both are needed.');
@@ -6772,7 +6850,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function saveTraining(){
     var msg = document.getElementById('tp-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var topic = document.getElementById('tp-topic').value.trim();
     if (!topic) return say('A session needs a topic.');
     if (!document.getElementById('tp-plan').value)
@@ -6830,7 +6908,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function completeTraining(){
     var msg = document.getElementById('tp-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var on = document.getElementById('tp-actual').value;
     var v = Object.assign({}, trainOpen.data||{});
     if (!on) return say('Say when it was held.');
@@ -6961,7 +7039,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveEffectiveness(){
     var msg = document.getElementById('te-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var by = document.getElementById('te-by').value.trim();
     if (!by) return say('Say who reviewed it. An effectiveness review with nobody behind it is not a review.');
     var eff = {}, blank = 0;
@@ -7048,10 +7126,18 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   /* the common load: read orders, routing, machines and production once */
   async function capLoadData(){
     await fetchParts();
-    try { capOrders = await C.idms.docs('order'); } catch(e){ capOrders = []; }
-    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
-    try { prodDocs  = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
-    try { capMachines = await C.idms.docs('machine'); } catch(e){ capMachines = []; }
+    /* These reads do not depend on one another. Run in parallel: one wait,
+       not 4. */
+    var _b7051 = await Promise.all([
+      C.idms.docs('order').catch(function(){ return []; }),
+      C.idms.docs('process').catch(function(){ return []; }),
+      C.idms.docs('production').catch(function(){ return []; }),
+      C.idms.docs('machine').catch(function(){ return []; }),
+    ]);
+    capOrders = _b7051[0];
+    processes = _b7051[1];
+    prodDocs = _b7051[2];
+    capMachines = _b7051[3];
     orders = capOrders;
     allocateProduction();
 
@@ -7570,7 +7656,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveBom(){
     var msg = document.getElementById('bm-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var pid = document.getElementById('bm-part').value;
     if (!pid) return say('Choose a part.');
     if (!bomLines.length) return say('A bill with no lines is not a bill. Add at least one material.');
@@ -7650,11 +7736,20 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var upto = function(d){ return d && String(d).slice(0,10) <= asOn; };
 
     var mats = [], grns = [], boms = [], prod = [], procs = [];
-    try { mats  = await C.idms.docs('rawmat'); } catch(e){}
-    try { grns  = await C.idms.docs('grn'); } catch(e){}
-    try { boms  = await C.idms.docs('bom'); } catch(e){}
-    try { prod  = await C.idms.docs('production'); } catch(e){}
-    try { procs = await C.idms.docs('process'); } catch(e){}
+    /* These reads do not depend on one another. Run in parallel: one wait,
+       not 5. */
+    var _b7653 = await Promise.all([
+      C.idms.docs('rawmat').catch(function(){ return mats; }),
+      C.idms.docs('grn').catch(function(){ return grns; }),
+      C.idms.docs('bom').catch(function(){ return boms; }),
+      C.idms.docs('production').catch(function(){ return prod; }),
+      C.idms.docs('process').catch(function(){ return procs; }),
+    ]);
+    mats = _b7653[0];
+    grns = _b7653[1];
+    boms = _b7653[2];
+    prod = _b7653[3];
+    procs = _b7653[4];
 
     if (!mats.length){
       host.innerHTML = '<div class="card"><div class="empty"><b>No materials on the master</b>' +
@@ -8225,9 +8320,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
 
   async function saveSupplier(){
-    var g = function(i){ return document.getElementById(i).value.trim(); };
+    var g = fieldVal;
     var msg = document.getElementById('su-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var name = g('su-name');
     if (!name) return say('A supplier needs a name — it is the only thing the receipts key on.');
     var dup = supByName(name);
@@ -8307,9 +8402,16 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   var rawmats = [], rmEditing = null;
 
   async function loadRawmats(){
-    try { rawmats = await C.idms.docs('rawmat'); } catch(e){ rawmats = []; }
-    try { suppliers = await C.idms.docs('supplier'); } catch(e){ suppliers = []; }
-    try { supGrns = await C.idms.docs('grn'); } catch(e){ supGrns = []; }
+    /* These reads do not depend on one another. Run in parallel: one wait,
+       not 3. */
+    var _b8310 = await Promise.all([
+      C.idms.docs('rawmat').catch(function(){ return []; }),
+      C.idms.docs('supplier').catch(function(){ return []; }),
+      C.idms.docs('grn').catch(function(){ return []; }),
+    ]);
+    rawmats = _b8310[0];
+    suppliers = _b8310[1];
+    supGrns = _b8310[2];
     fillSupplierPickers();
     drawUnknownMaterials();
     drawRawmatList();
@@ -8399,9 +8501,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     document.getElementById('rm-msg').style.display = 'none';
   }
   async function saveRawmat(){
-    var g = function(i){ return document.getElementById(i).value.trim(); };
+    var g = fieldVal;
     var msg = document.getElementById('rm-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var d = g('rm-desc');
     if (!d) return say('A material needs a description — it is what the receipts are matched on.');
     var dup = rmByDesc(d);
@@ -8577,7 +8679,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   async function saveOrg(){
     var msg = document.getElementById('om-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var name = document.getElementById('om-name').value.trim();
     if (!name) return say('A name is needed.');
     var dup = orgOf(orgType).filter(function(r){
@@ -8906,7 +9008,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var byEl = document.querySelector('.ap-gate-by[data-p="' + no + '"]');
     var by = byEl ? byEl.value.trim() : '';
     var msg = document.getElementById('ap-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad'); msg.innerHTML=t; };
+    var say = noteWriter(msg);
 
     if (!by) return say('A phase sign-off needs a name. "Approved" with nobody against it is not a record.');
     var out = apqpOutstanding(phase, st);
@@ -9736,8 +9838,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function loadDemo(){
     var msg = document.getElementById('demo-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var btn = document.getElementById('demo-add');
     btn.disabled = true;
     var step = function(t){ btn.textContent = t; say(t, true); };
@@ -9956,8 +10057,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function removeDemo(){
     var msg = document.getElementById('demo-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     if (!confirm('Remove every record marked as sample data?\n\nReal records are not touched.')) return;
     var btn = document.getElementById('demo-del');
     btn.disabled = true; btn.textContent = 'Removing';
@@ -10140,9 +10240,16 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var psel = document.getElementById('fm-part2');
     var keep = psel.value;
     psel.innerHTML = partOptions(keep);
-    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
-    try { changes4m = await C.idms.docs('change4m'); } catch(e){ changes4m = []; }
-    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    /* These reads do not depend on one another. Run in parallel: one wait,
+       not 3. */
+    var _b10143 = await Promise.all([
+      C.idms.docs('process').catch(function(){ return []; }),
+      C.idms.docs('change4m').catch(function(){ return []; }),
+      C.idms.docs('production').catch(function(){ return []; }),
+    ]);
+    processes = _b10143[0];
+    changes4m = _b10143[1];
+    prodDocs = _b10143[2];
     var w = document.getElementById('fm-when');
     if (!w.value) w.value = new Date().toISOString().slice(0,10);
     draw4MOps();
@@ -10172,9 +10279,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function save4M(){
     var msg = document.getElementById('fm-msg2');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     var cat = document.getElementById('fm-cat').value;
     var partId = document.getElementById('fm-part2').value;
     if (!partId) return say('Which part does this affect?');
@@ -10418,9 +10524,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveSkill(){
     var msg = document.getElementById('sk-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     if (!g('sk-who'))  return say('Whose skill is this?');
     if (!g('sk-what')) return say('What are they being assessed on — a machine or an operation?');
     if (!g('sk-by'))   return say('Who assessed them? An assessment nobody signed is not evidence ' +
@@ -10551,9 +10656,16 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   var machines = [], mmEditing = null, pmRows = [];
 
   async function loadMachines(){
-    try { machines = await C.idms.docs('machine'); } catch(e){ machines = []; }
-    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
-    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    /* These reads do not depend on one another. Run in parallel: one wait,
+       not 3. */
+    var _b10554 = await Promise.all([
+      C.idms.docs('machine').catch(function(){ return []; }),
+      C.idms.docs('process').catch(function(){ return []; }),
+      C.idms.docs('production').catch(function(){ return []; }),
+    ]);
+    machines = _b10554[0];
+    processes = _b10554[1];
+    prodDocs = _b10554[2];
     drawUnknownMachines();
     drawMachineList();
   }
@@ -10672,9 +10784,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveMachine(){
     var msg = document.getElementById('mm-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     if (!g('mm-name')) return say('The machine needs a name, spelled the way the routing spells it.');
     if (!C.num(g('mm-freq'))) return say('A maintenance interval is needed, or nothing is ever due.');
 
@@ -10962,9 +11073,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function raiseNcr(){
     var msg = document.getElementById('nc-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     var si = document.getElementById('nc-source').value;
     var src = si === '' ? null : ncSources[+si];
     var problem = g('nc-problem') || (src ? src.problem : '');
@@ -11044,8 +11154,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveNcr(closing){
     var msg = document.getElementById('nc-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     if (!ncOpen) return;
     var f = readNcFields();
     if (closing){
@@ -11086,8 +11195,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      machine decided and nobody tested is how the same fault comes back. */
   async function draftNcr(){
     var msg = document.getElementById('nc-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     if (!ncOpen) return;
     var v = ncOpen.data||{}, f = readNcFields();
     if (!f.d2) return say('Write the problem at D2 first. There is nothing to reason from.');
@@ -11313,18 +11421,34 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var inSpan = function(d){ return new Date(d||0).getTime() >= since; };
 
     try {
-      allParts  = await C.idms.parts();
-      processes = await C.idms.docs('process');
-      orders    = await C.idms.docs('order');
-      prodDocs  = await C.idms.docs('production');
-      gauges    = await C.idms.docs('gauge');
-      var pdis  = await C.idms.docs('pdi');
-      var grns  = await C.idms.docs('grn');
-      var inws  = await C.idms.docs('inward');
-      var sis   = await C.idms.docs('self_insp');
-      var setups= await C.idms.docs('setup');
-      var cps   = await C.idms.docs('control_plan');
-      var fms   = await C.idms.docs('pfmea');
+      /* These reads do not depend on one another. Run in parallel: one wait,
+         not 12. */
+      var _b11316 = await Promise.all([
+        C.idms.parts(),
+        C.idms.docs('process'),
+        C.idms.docs('order'),
+        C.idms.docs('production'),
+        C.idms.docs('gauge'),
+        C.idms.docs('pdi'),
+        C.idms.docs('grn'),
+        C.idms.docs('inward'),
+        C.idms.docs('self_insp'),
+        C.idms.docs('setup'),
+        C.idms.docs('control_plan'),
+        C.idms.docs('pfmea'),
+      ]);
+      allParts = _b11316[0];
+      processes = _b11316[1];
+      orders = _b11316[2];
+      prodDocs = _b11316[3];
+      gauges = _b11316[4];
+      var pdis = _b11316[5];
+      var grns = _b11316[6];
+      var inws = _b11316[7];
+      var sis = _b11316[8];
+      var setups = _b11316[9];
+      var cps = _b11316[10];
+      var fms = _b11316[11];
       allocateProduction();
 
       var recent = prodDocs.filter(function(r){ return inSpan((r.data||{}).date || r.updated_at); });
@@ -11688,9 +11812,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveOrder(){
     var msg = document.getElementById('so-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     var custId = document.getElementById('so-cust').value;
     var partId = document.getElementById('so-part').value;
     if (!custId) return say('Choose the customer.');
@@ -11892,9 +12015,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveSalesPlan(){
     var msg = document.getElementById('spm-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     var custId = document.getElementById('spm-cust').value;
     var partId = document.getElementById('spm-part').value;
     var month = g('spm-month');
@@ -12030,9 +12152,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveSalesInvoice(){
     var msg = document.getElementById('iv-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     var custId = document.getElementById('iv-cust').value;
     var partId = document.getElementById('iv-part').value;
     if (!custId) return say('Choose the customer.');
@@ -12095,9 +12216,16 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   async function loadSalesDashboard(){
     var mk = document.getElementById('sd-month');
     if (!mk.value) mk.value = thisMonthKey();
-    try { salesPlans = await C.idms.docs('salesplan'); } catch(e){ salesPlans = []; }
-    try { salesInvoices = await C.idms.docs('invoice'); } catch(e){ salesInvoices = []; }
-    try { custParts = await C.idms.docs('cust_part'); } catch(e){ custParts = []; }
+    /* These reads do not depend on one another. Run in parallel: one wait,
+       not 3. */
+    var _b12098 = await Promise.all([
+      C.idms.docs('salesplan').catch(function(){ return []; }),
+      C.idms.docs('invoice').catch(function(){ return []; }),
+      C.idms.docs('cust_part').catch(function(){ return []; }),
+    ]);
+    salesPlans = _b12098[0];
+    salesInvoices = _b12098[1];
+    custParts = _b12098[2];
     drawSalesDashboard();
   }
 
@@ -12212,9 +12340,16 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   /* ---- the plan itself ---- */
   async function loadPlan(){
     await fetchParts();
-    try { orders = await C.idms.docs('order'); } catch(e){ orders = []; }
-    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
-    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    /* These reads do not depend on one another. Run in parallel: one wait,
+       not 3. */
+    var _b12215 = await Promise.all([
+      C.idms.docs('order').catch(function(){ return []; }),
+      C.idms.docs('process').catch(function(){ return []; }),
+      C.idms.docs('production').catch(function(){ return []; }),
+    ]);
+    orders = _b12215[0];
+    processes = _b12215[1];
+    prodDocs = _b12215[2];
     allocateProduction();
     document.getElementById('pp-summary').innerHTML =
       '<div class="empty"><b>Nothing worked out yet</b>Press <b>Work out the plan</b>.</div>';
@@ -12223,8 +12358,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   function runPlan(){
     var msg = document.getElementById('pp-plan-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'');
-                                 msg.innerHTML=t; };
+    var say = quietWriter(msg);
     var perWeek = C.num(document.getElementById('pp-week').value);
     if (!perWeek) return say('Set the working days per week, or there is nothing to plan a rate against.');
 
@@ -12340,9 +12474,16 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     await fetchParts();
     document.getElementById('pe-part').innerHTML =
       partOptions(document.getElementById('pe-part').value);
-    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
-    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
-    try { prodSetups = await C.idms.docs('setup'); } catch(e){ prodSetups = []; }
+    /* These reads do not depend on one another. Run in parallel: one wait,
+       not 3. */
+    var _b12343 = await Promise.all([
+      C.idms.docs('process').catch(function(){ return []; }),
+      C.idms.docs('production').catch(function(){ return []; }),
+      C.idms.docs('setup').catch(function(){ return []; }),
+    ]);
+    processes = _b12343[0];
+    prodDocs = _b12343[1];
+    prodSetups = _b12343[2];
     var dt = document.getElementById('pe-date');
     if (!dt.value) dt.value = new Date().toISOString().slice(0,10);
     drawProdOps();
@@ -12379,9 +12520,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveProduction(){
     var msg = document.getElementById('pe-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     var partId = document.getElementById('pe-part').value;
     var opId = document.getElementById('pe-op').value;
     if (!partId) return say('Choose the part.');
@@ -12604,11 +12744,20 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     host.innerHTML = '<div class="hint">Reading</div>';
     rvItems = [];
     try {
-      rvParts = await C.idms.parts();
-      var procs = await C.idms.docs('process');
-      var dims  = await C.idms.docs('dimension');
-      var fms   = await C.idms.docs('pfmea');
-      var cps   = await C.idms.docs('control_plan');
+      /* These reads do not depend on one another. Run in parallel: one wait,
+         not 5. */
+      var _b12607 = await Promise.all([
+        C.idms.parts(),
+        C.idms.docs('process'),
+        C.idms.docs('dimension'),
+        C.idms.docs('pfmea'),
+        C.idms.docs('control_plan'),
+      ]);
+      rvParts = _b12607[0];
+      var procs = _b12607[1];
+      var dims = _b12607[2];
+      var fms = _b12607[3];
+      var cps = _b12607[4];
       var nameOf = function(pid){
         var p = rvParts.filter(function(x){ return x.part_id === pid; })[0];
         return p ? (p.part_no + ' ' + (p.part_name||'')) : pid; };
@@ -12718,8 +12867,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function reviewAccept(ids){
     var msg = document.getElementById('rv-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var by = document.getElementById('rv-by').value.trim();
     if (!by) return say('Put your name in first. An acceptance with nobody behind it is worth ' +
                         'nothing, and this is the record that says the AI\'s guess was checked.');
@@ -12751,8 +12899,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function reviewReject(id){
     var msg = document.getElementById('rv-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var by = document.getElementById('rv-by').value.trim();
     if (!by) return say('Put your name in first.');
     var it = rvItems.filter(function(x){ return x.id === id; })[0];
@@ -12815,8 +12962,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function runSupplierAgent(){
     var msg = document.getElementById('sw-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'');
-                                 msg.innerHTML=t; };
+    var say = quietWriter(msg);
     var btn = document.getElementById('sw-run');
     btn.disabled = true; btn.textContent = 'Reading';
     var days = C.num(document.getElementById('sw-days').value);
@@ -12974,8 +13120,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function explainSupplierAgent(){
     var msg = document.getElementById('sw-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     if (!swFindings.length) return say('Run the check first, or there is nothing to prioritise.');
     var btn = document.getElementById('sw-explain');
     btn.disabled = true; btn.textContent = 'Thinking';
@@ -13061,8 +13206,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function planNpd(){
     var msg = document.getElementById('np-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var partId = document.getElementById('np-part').value;
     if (!partId) return say('Choose the part.');
     npdPart = allParts.filter(function(x){ return x.part_id === partId; })[0];
@@ -13139,8 +13283,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function runNpd(){
     var msg = document.getElementById('np-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     if (!npdPart) return;
     var btn = document.getElementById('np-run');
     btn.disabled = true; btn.textContent = 'Running';
@@ -13260,8 +13403,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var blocks = String(txt||'').split(/^\s*OP\s*$/mi);
     for (var i = 0; i < blocks.length; i++){
       var b = blocks[i];
-      var g = function(k){ var m = b.match(new RegExp('^\\s*'+k+'\\s*:\\s*(.+)$','mi'));
-                           return m ? C.stripMarkup(m[1]).trim() : ''; };
+      var g = fieldFromBlock(b);
       var no = C.num(g('NO'));
       if (!no || !g('NAME')) continue;
       await C.idms.saveDoc({ kind:'process', partId:p.part_id, status:'Active', docNo:String(no),
@@ -13296,8 +13438,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var blocks = String(txt||'').split(/^\s*DIM\s*$/mi);
     for (var i = 0; i < blocks.length; i++){
       var b = blocks[i];
-      var g = function(k){ var m = b.match(new RegExp('^\\s*'+k+'\\s*:\\s*(.+)$','mi'));
-                           return m ? C.stripMarkup(m[1]).trim() : ''; };
+      var g = fieldFromBlock(b);
       if (!g('WHAT') || g('NOMINAL') === '') continue;
       var cls = g('CLASS').toUpperCase().replace(/[^SC]/g,'');
       cls = (cls === 'CC' || cls === 'SC') ? cls : '';
@@ -13341,8 +13482,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      argued about on its own terms, which is the point. */
   async function runAuditAgent(){
     var msg = document.getElementById('ag-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'');
-                                 msg.innerHTML=t; };
+    var say = quietWriter(msg);
     var btn = document.getElementById('ag-run');
     btn.disabled = true; btn.textContent = 'Reading…';
     say('Reading parts, routings, dimensions, PFMEAs, control plans, gauges, studies, ' +
@@ -13353,19 +13493,36 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       f.push({ sev:sev, area:area, what:what, why:why, go:go, ref:ref||'' });
     };
     try {
-      var parts = await C.idms.parts();
-      var procs = await C.idms.docs('process');
-      var dims  = await C.idms.docs('dimension');
-      var fmeas = await C.idms.docs('pfmea');
-      var cps   = await C.idms.docs('control_plan');
-      var gs    = await C.idms.docs('gauge');
-      var msas  = await C.idms.docs('msa');
-      var ppaps = await C.idms.docs('ppap');
-      var sis   = await C.idms.docs('self_insp');
-      var grns  = await C.idms.docs('grn');
-      var inws  = await C.idms.docs('inward');
-      var pdis  = await C.idms.docs('pdi');
-      var prods = await C.idms.docs('production');
+      /* These reads do not depend on one another. Run in parallel: one wait,
+         not 13. */
+      var _b13356 = await Promise.all([
+        C.idms.parts(),
+        C.idms.docs('process'),
+        C.idms.docs('dimension'),
+        C.idms.docs('pfmea'),
+        C.idms.docs('control_plan'),
+        C.idms.docs('gauge'),
+        C.idms.docs('msa'),
+        C.idms.docs('ppap'),
+        C.idms.docs('self_insp'),
+        C.idms.docs('grn'),
+        C.idms.docs('inward'),
+        C.idms.docs('pdi'),
+        C.idms.docs('production'),
+      ]);
+      var parts = _b13356[0];
+      var procs = _b13356[1];
+      var dims = _b13356[2];
+      var fmeas = _b13356[3];
+      var cps = _b13356[4];
+      var gs = _b13356[5];
+      var msas = _b13356[6];
+      var ppaps = _b13356[7];
+      var sis = _b13356[8];
+      var grns = _b13356[9];
+      var inws = _b13356[10];
+      var pdis = _b13356[11];
+      var prods = _b13356[12];
       looked = { production:prods.length,
         parts:parts.length, operations:procs.length, dimensions:dims.length,
         pfmea:fmeas.length, controlPlans:cps.length, gauges:gs.length, studies:msas.length,
@@ -13753,8 +13910,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      it being exactly right, and the findings stand without it. */
   async function explainAgent(){
     var msg = document.getElementById('ag-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     if (!agentFindings.length) return say('Run the check first.');
     var btn = document.getElementById('ag-explain');
     btn.disabled = true; btn.textContent = 'Thinking…';
@@ -13831,16 +13987,22 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     await fetchCustomers();
     document.getElementById('pd-part').innerHTML = partOptions(document.getElementById('pd-part').value);
     document.getElementById('pd-cust').innerHTML = customerOptions('');
-    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
-    try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
-    try { pdiDocs = await C.idms.docs('pdi'); } catch(e){ pdiDocs = []; }
+    /* These reads do not depend on one another. Run in parallel: one wait,
+       not 3. */
+    var _b13834 = await Promise.all([
+      C.idms.docs('process').catch(function(){ return []; }),
+      C.idms.docs('dimension').catch(function(){ return []; }),
+      C.idms.docs('pdi').catch(function(){ return []; }),
+    ]);
+    processes = _b13834[0];
+    dimensions = _b13834[1];
+    pdiDocs = _b13834[2];
     drawPdiList();
   }
 
   async function loadPdiChars(){
     var msg = document.getElementById('pd-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var partId = document.getElementById('pd-part').value;
     if (!partId) return say('Choose the part.');
     if (!document.getElementById('pd-lot').value.trim())
@@ -13983,8 +14145,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function savePdi(cleared){
     var msg = document.getElementById('pd-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var by = document.getElementById('pd-by').value.trim();
     if (!by) return say('Name who inspected the lot.');
     if (!pdiChars.length) return say('Load the characteristics first.');
@@ -14137,10 +14298,18 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   async function loadMsa(){
     await fetchParts();
     document.getElementById('ms-part').innerHTML = partOptions(document.getElementById('ms-part').value);
-    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
-    try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
-    try { gauges = await C.idms.docs('gauge'); } catch(e){ gauges = []; }
-    try { msaDocs = await C.idms.docs('msa'); } catch(e){ msaDocs = []; }
+    /* These reads do not depend on one another. Run in parallel: one wait,
+       not 4. */
+    var _b14140 = await Promise.all([
+      C.idms.docs('process').catch(function(){ return []; }),
+      C.idms.docs('dimension').catch(function(){ return []; }),
+      C.idms.docs('gauge').catch(function(){ return []; }),
+      C.idms.docs('msa').catch(function(){ return []; }),
+    ]);
+    processes = _b14140[0];
+    dimensions = _b14140[1];
+    gauges = _b14140[2];
+    msaDocs = _b14140[3];
     document.getElementById('ms-gauge').innerHTML =
       '<option value="">— choose a gauge —</option>' +
       gauges.filter(function(g){ return g.status !== 'Withdrawn'; }).map(function(g){
@@ -14175,8 +14344,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   function buildMsaSheet(){
     var msg = document.getElementById('ms-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var ci = document.getElementById('ms-char').value;
     if (ci === '') return say('Choose the characteristic being studied.');
     if (!document.getElementById('ms-gauge').value)
@@ -14238,8 +14406,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   function calcMsa(){
     var msg = document.getElementById('ms-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var blank = 0, nums = [];
     msaReadings.forEach(function(opRows){
       var o = [];
@@ -14305,8 +14472,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveMsa(){
     var msg = document.getElementById('ms-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     if (!msaResult) return say('Calculate the study before saving it.');
     if (!document.getElementById('ms-by').value.trim())
       return say('Name who carried out the study.');
@@ -14589,9 +14755,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveGauge(){
     var msg = document.getElementById('cal-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     if (!g('cal-desc')) return say('Describe the gauge — an entry with no description cannot be found ' +
                                    'on a shop floor.');
     if (!C.num(g('cal-freq'))) return say('A calibration frequency is needed, or nothing is ever due.');
@@ -14778,10 +14943,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveInward(){
     var msg = document.getElementById('ii-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     if (!iiCurrent) return;
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var g = fieldVal;
     var v = iiCurrent.data || {};
     var acc = C.num(g('ii-acc')), rej = C.num(g('ii-rej')), recd = C.num(v.qty);
     var disp = document.getElementById('ii-disp').value;
@@ -14911,8 +15075,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function openSiSheet(){
     var msg = document.getElementById('si-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var partId = document.getElementById('si-part').value;
     var opId = document.getElementById('si-op').value;
     if (!partId) return say('Choose the part.');
@@ -15061,8 +15224,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function saveSi(closing){
     var msg = document.getElementById('si-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var partId = document.getElementById('si-part').value;
     var opId = document.getElementById('si-op').value;
     var op = processes.filter(function(x){ return x.doc_id === opId; })[0] || {};
@@ -15200,9 +15362,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
 
   async function loadSetupChars(){
-    var msg = document.getElementById('su-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var msg = document.getElementById('sa-msg');
+    var say = noteWriter(msg);
     var partId = document.getElementById('su-part').value;
     var opId = document.getElementById('su-op').value;
     if (!partId) return say('Choose the part.');
@@ -15340,7 +15501,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
 
   async function drawSetupList(){
-    var host = document.getElementById('su-list');
+    var host = document.getElementById('sa-list');
     try { setupDocs = await C.idms.docs('setup'); } catch(e){ setupDocs = []; }
     if (!setupDocs.length){
       host.innerHTML = '<div class="empty"><b>No setups recorded yet</b>' +
@@ -15369,9 +15530,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
 
   async function saveSetup(approved){
-    var msg = document.getElementById('su-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var msg = document.getElementById('sa-msg');
+    var say = noteWriter(msg);
     var by = document.getElementById('su-by').value.trim();
     if (!by) return say('Name who is signing. An approved setup with nobody behind it is not a record.');
     if (!setupChars.length) return say('Load the characteristics first.');
@@ -15725,8 +15885,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   async function savePpap(state, sign){
     var partId = document.getElementById('pp-part').value;
     var msg = document.getElementById('pp-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var custId = document.getElementById('pp-cust').value;
     if (!custId) { say('Choose the customer this is being submitted to.'); return false; }
     var cust = customers.filter(function(c){ return c.doc_id === custId; })[0] || {};
@@ -16013,8 +16172,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   async function generateCnc(){
     var msg = document.getElementById('cn-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var partId = document.getElementById('cn-part').value;
     var opId = document.getElementById('cn-op').value;
     if (!partId) return say('Choose the part.');
@@ -16301,8 +16459,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   async function generateCp(){
     var partId = document.getElementById('ctlp-part').value;
     var msg = document.getElementById('ctlp-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     if (!partId) return say('Choose the part first.');
     if (!fmeaDoc || !((fmeaDoc.data||{}).rows||[]).length)
       return say('This part has no PFMEA. Draft that first — a control plan written without one ' +
@@ -16734,8 +16891,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   async function generateFmea(){
     var partId = document.getElementById('fm-part').value;
     var msg = document.getElementById('fm-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     if (!partId) return say('Choose the part first.');
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
     var ops = opsFor(partId);
@@ -18239,7 +18395,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('cal-print').addEventListener('click', printCalibration);
 
   document.getElementById('ii-addline').addEventListener('click', function(){
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var g = fieldVal;
     if (!g('ii-what')) { toast('Say what was checked.'); return; }
     iiLines.push({ what:g('ii-what'), spec:g('ii-spec'), observed:g('ii-obs'),
                    result:document.getElementById('ii-res').value });
@@ -18276,7 +18432,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('su-load').addEventListener('click', loadSetupChars);
   document.getElementById('su-approve').addEventListener('click', function(){ saveSetup(true); });
   document.getElementById('su-reject').addEventListener('click', function(){ saveSetup(false); });
-  document.getElementById('su-print').addEventListener('click', function(){
+  document.getElementById('sa-print').addEventListener('click', function(){
     if (setupDocs.length) printSetup(setupDocs[0]);
     else toast('Save the setup first, then print it from the list.');
   });
@@ -18393,9 +18549,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   });
   document.getElementById('pr-add').addEventListener('click', async function(){
     var msg = document.getElementById('pr-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     var partId = document.getElementById('pr-part').value;
     if (!partId) return say('Choose the part this operation belongs to.');
     if (!g('pr-name')) return say('Give the operation a name.');
@@ -18437,9 +18592,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   });
   document.getElementById('dm-add').addEventListener('click', async function(){
     var msg = document.getElementById('dm-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     var partId = document.getElementById('dm-part').value;
     var opId = document.getElementById('dm-op').value;
     if (!partId) return say('Choose the part.');
@@ -18484,9 +18638,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('cu-clear').addEventListener('click', clearCustomerForm);
   document.getElementById('cu-save').addEventListener('click', async function(){
     var msg = document.getElementById('cu-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     var name = g('cu-name');
     if (!name) return say('The customer needs a name.');
 
@@ -18527,7 +18680,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('he-save').addEventListener('click', async function(){
     if (!hrOpen) return;
     var msg = document.getElementById('he-msg');
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var g = fieldVal;
     if (!g('he-name')){
       msg.style.display=''; msg.className='note bad'; msg.textContent='A name is required.'; return;
     }
@@ -18602,8 +18755,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   document.getElementById('dc-save').addEventListener('click', async function(){
     var msg = document.getElementById('dc-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
+    var say = noteWriter(msg);
     var cust = document.getElementById('dc-cust').value.trim();
     if (!cust) return say('Name the customer the material is going to.');
     /* a challan with no lines is a number issued for nothing, and the number
@@ -18731,9 +18883,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   document.getElementById('gr-save').addEventListener('click', async function(){
     var msg = document.getElementById('gr-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     var qty = C.num(g('gr-qty')), acc = C.num(g('gr-acc')), rej = C.num(g('gr-rej'));
 
     if (!g('gr-sup'))  return say('Name the supplier.');
@@ -18775,9 +18926,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   document.getElementById('p-add').addEventListener('click', async function(){
     var msg = document.getElementById('p-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     if (!g('p-name')) return say('Give the part a name.');
 
     /* the same drawing entered twice is two APQP records for one component and
@@ -18818,9 +18968,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('pl-add').addEventListener('click', async function(){
     if (!plPart) return;
     var msg = document.getElementById('pl-msg');
-    var say = function(t, good){ msg.style.display=''; msg.className='note '+(good?'good':'bad');
-                                 msg.innerHTML=t; };
-    var g = function(id){ return document.getElementById(id).value.trim(); };
+    var say = noteWriter(msg);
+    var g = fieldVal;
     var sel = document.getElementById('pl-cust');
     var cust = customers.filter(function(c){ return c.doc_id === sel.value; })[0];
     if (!cust) return say('Choose the customer.');

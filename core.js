@@ -198,19 +198,51 @@
     return api('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'faceForget' }) });
   }
 
+  /* ---------------- IDMS read de-duplication ----------------
+     Why this exists. Screens read the same tables over and over: 'process' is
+     fetched from 27 places in idms.html, 'dimension' from 17, 'production' from
+     13. A screen that gathers six tables used to make six round trips even when
+     two of them wanted the same table.
+
+     What this does, and deliberately all it does: if a read is ALREADY IN FLIGHT
+     when an identical read is asked for, both callers get the same promise. One
+     request, one moment, two readers.
+
+     What it deliberately does NOT do is hold answers after they resolve. A
+     time-based cache was tried and removed: it makes one user's screen show
+     another user's superseded figure for as long as the cache lives, and on a
+     shop floor two people working the same part is the ordinary case, not the
+     exception. A stale control plan or stock balance is exactly the class of
+     error this system exists to prevent. The saving that mattered was the
+     duplicate-and-concurrent one, and that is kept here in full.
+
+     This is what makes Promise.all() over a screen's reads free to write: batch
+     the reads, and repeats within the batch cost nothing. */
+  const inFlight = new Map();
+
+  function sharedGet(key, fetcher) {
+    const live = inFlight.get(key);
+    if (live) return live;
+    const p = fetcher().finally(() => { inFlight.delete(key); });
+    inFlight.set(key, p);
+    return p;
+  }
+
   /* ---------------- IDMS shorthands ---------------- */
   const idms = {
-    docs: (kind, partId) => api('/api/idms?what=docs' +
-      (kind ? '&kind=' + encodeURIComponent(kind) : '') +
-      (partId ? '&partId=' + encodeURIComponent(partId) : '')).then(j => j.docs || []),
+    docs: (kind, partId) => sharedGet('docs|' + (kind || '') + '|' + (partId || ''), () =>
+      api('/api/idms?what=docs' +
+        (kind ? '&kind=' + encodeURIComponent(kind) : '') +
+        (partId ? '&partId=' + encodeURIComponent(partId) : '')).then(j => j.docs || [])),
     saveDoc: (doc, reason) => api('/api/idms', {
       method: 'POST', body: JSON.stringify({ what: 'docs', doc: doc, reason: reason || '' })
     }),
     patchDoc: patch => api('/api/idms', {
       method: 'PATCH', body: JSON.stringify(Object.assign({ what: 'docs' }, patch))
     }),
-    parts: lifecycle => api('/api/idms?what=parts' +
-      (lifecycle ? '&lifecycle=' + encodeURIComponent(lifecycle) : '')).then(j => j.parts || []),
+    parts: lifecycle => sharedGet('parts|' + (lifecycle || ''), () =>
+      api('/api/idms?what=parts' +
+        (lifecycle ? '&lifecycle=' + encodeURIComponent(lifecycle) : '')).then(j => j.parts || [])),
     savePart: (part, reason) => api('/api/idms', {
       method: 'POST', body: JSON.stringify({ what: 'parts', part: part, reason: reason || '' })
     }),

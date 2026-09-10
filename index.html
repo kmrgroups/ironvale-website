@@ -860,7 +860,11 @@
     .gallery-grid{grid-template-columns:1fr 1fr;}    #chat-panel{bottom:12px;left:12px;right:12px;width:auto;height:calc(100vh - 90px);}
   }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- pdf.js is deliberately NOT loaded here. It is ~340KB and is only needed when
+     somebody actually attaches a PDF, but loading it eagerly from the head blocked
+     first paint for every visitor on every page view. drawing-convert.js already
+     lazy-loads and memoises it, and pdfToText() below awaits that same loader.
+     Do not reinstate an eager tag for it. -->
 </head>
 <body>
 
@@ -5273,7 +5277,7 @@ ${sections}
       <div class="field" style="margin-top:10px;"><label>Anything you would like us to know</label>
         <textarea id="ap-note" rows="3"></textarea></div>
       <button class="btn btn-primary" id="ap-submit" style="width:100%;margin-top:16px;">Submit Application</button>
-      <div class="field-hint" id="ap-msg" style="margin-top:10px;"></div>`;
+      <div class="field-hint" id="japp-msg" style="margin-top:10px;"></div>`;
     document.getElementById('job-modal').classList.add('open');
 
     /* the applicant's photo: a file, or one taken on the spot */
@@ -5299,7 +5303,7 @@ ${sections}
     document.getElementById('ap-submit').addEventListener('click',async function(){
       const name=document.getElementById('ap-name').value.trim();
       const phone=document.getElementById('ap-phone').value.trim();
-      const msg=document.getElementById('ap-msg');
+      const msg=document.getElementById('japp-msg');
       if(!name||!phone){ msg.textContent='Name and phone are required.'; msg.style.color='#B03A2E'; return; }
       const f=document.getElementById('ap-file').files[0];
       this.disabled=true; this.textContent='Submitting…';
@@ -5349,8 +5353,16 @@ ${sections}
   /* Free AI providers read images but not PDFs. Rather than asking the user to
      paste the text, pull it out of the PDF here and send that instead. */
   async function pdfToText(dataUrl){
-    if(!window.pdfjsLib) return '';
+    /* Fetch the reader on demand. Previously this returned '' whenever pdfjsLib was
+       missing, which is why the library had to be loaded on every page view just in
+       case. Awaiting the shared loader keeps the same result and costs the download
+       only to the people who actually attach a PDF. */
     try{
+      if(!window.pdfjsLib){
+        if(!(window.DrawingConvert&&window.DrawingConvert.loadPdfLib)) return '';
+        await window.DrawingConvert.loadPdfLib();
+      }
+      if(!window.pdfjsLib) return '';
       pdfjsLib.GlobalWorkerOptions.workerSrc=
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       const b64=String(dataUrl).split(',')[1];

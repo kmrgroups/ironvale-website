@@ -1185,6 +1185,106 @@ website whatever happens** (printed ID cards).
 
 ---
 
+## The v115 restructuring pass — what was wrong and what was done
+
+This pass changed no feature. 93 of 95 screens render byte-for-byte what they
+rendered before; the two that differ are the two defects below being fixed.
+Verified by an equivalence harness that boots both builds against one fake
+server, walks every live menu screen and compares the markup.
+
+### Four defects, three of them silent
+
+**Two screens were writing into a different screen's elements.** `su-msg`,
+`su-print` and `su-list` were declared twice: once on Supplier Master, once on
+Setup Approval. `getElementById` returns the first match in document order, so
+Setup Approval's messages and its Recent-setups list went into the Supplier
+panel, which is hidden — the screen looked dead and nobody could see why. The
+Print button had two handlers on one element. Setup Approval's are now `sa-*`.
+The same fault existed on the website: the job-application modal and the HR
+appraisal panel both used `ap-msg`, so **validation errors on the public careers
+form were invisible to applicants**. The modal's is now `japp-msg`.
+
+*Keep literal ids unique.* Neither of these throws, neither shows in a console,
+and both look like "the screen is a bit odd" until somebody checks.
+
+**Open Actions threw every time it opened.** `taskPrefill` was read, and assigned
+to, but never declared anywhere. Under `'use strict'` that is a ReferenceError,
+raised before `loadTasksElsewhere()` ran, so the screen drew half of itself on
+every visit. It is declared now. Nothing sets it — the morning-board "raise this
+as a task" handover it was written for was never wired up, and that is still
+outstanding rather than invented here.
+
+**pdf.js was loaded on every page view of the public site.** ~340KB, in `<head>`,
+blocking first paint, for a library only needed when somebody attaches a PDF.
+`drawing-convert.js` already lazy-loaded and memoised it; `pdfToText()` was the
+only reason the eager tag existed, because it gave up silently when the library
+was absent. It now awaits the shared loader. **Do not reinstate an eager tag.**
+
+### Why screens were slow: 363 awaits, 2 of them batched
+
+Reads that do not depend on each other were run one after another. The Audit
+Readiness Agent made 13 round trips in series, the Works Dashboard 12 — every
+one of them independent. 15 clusters are now `Promise.all`, so those screens make
+one wait instead of a dozen.
+
+Three clusters were deliberately **not** batched: one is non-contiguous and two
+have a call that reads an earlier result. A read that depends on a previous read
+must stay serial; batching it would send the second request with an undefined
+argument.
+
+Two details worth keeping when adding more:
+- An empty `catch(e){}` left the variable at its **previous** value. Batching it
+  as `.catch(function(){ return undefined; })` would silently wipe it, so those
+  read the variable back instead.
+- `Promise.all` rejects the whole batch on one failure, so every guarded read
+  keeps its own `.catch` inside the array rather than one around the outside.
+
+`core.js` shares **in-flight** reads: two callers asking for the same thing before
+the first answer arrives get one request. A time-based cache was tried here and
+**removed** — it shows one user another user's superseded figure for as long as
+it lives, and two people working the same part is the ordinary case on a shop
+floor. `materialtest` caught it. Do not add one back without solving that.
+
+### Duplication
+
+`say` was pasted out 72 times and `g` 21 times, identically. They are
+`noteWriter(el)`, `badWriter(el)`, `quietWriter(el)`, `fieldVal(id)` and
+`fieldFromBlock(block)` now. The three writers are kept **distinct on purpose**:
+they differ in whether an ordinary message is styled as an error, and folding
+them together would turn three screens' notes red.
+
+The six stale root copies of the API files are deleted. One of them, `auth.js`,
+still contained `token: current.pass_hash` — the withdrawn scheme — and Vercel
+served it as a static file, so the schema and the old hashing approach were
+downloadable from the live domain. `.vercelignore` now keeps tests and docs out
+of the deployment.
+
+### Tests
+
+They live in `tests/` and run with `npm test`. 438 pass. Two failures are left
+**deliberately visible** rather than deleted: the sign-in screen no longer shows
+the company name from the site profile, which both this file and the original
+requirement say it should. The check used to crash on the missing element and
+took the whole suite down with it, which is why nobody saw it. It is null-safe
+now and reports. Restoring the branding is an output change and was left for a
+decision.
+
+Three assertions were stale and were corrected, not weakened: the user-facing
+wording changed from "developer" to "administrator", and `Live Production` was
+added to the menu between Accounts and Admin.
+
+### Two things found and deliberately left alone
+
+- The AI routing and dimension importers build their regex from `'^\\\\s*'`,
+  which in JavaScript is a literal backslash followed by `s`, not whitespace.
+  If that is what it looks like, those importers return empty for every field.
+  Preserved byte-for-byte; test against a real reply before changing it.
+- Spacing is applied ad hoc: 772 inline `style=` attributes in `idms.html` using
+  15 different `margin-top` values. That is why screens look slightly different
+  from one another. Normalising it changes pixels, so it was not done here.
+
+---
+
 ## Conventions
 
 - **No build step.** Plain ES5-compatible JS in `idms.html`, modern JS in

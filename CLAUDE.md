@@ -1606,6 +1606,81 @@ new checks, covering the full Rate Contract → Schedule → computed Sales Plan
 → Dashboard chain end to end, not just each screen in isolation. Whole
 suite: 586 passing.
 
+## Matching the Esbee Sales Plan spreadsheet, and edit/delete for Sales Plan
+
+A real spreadsheet in daily use (Esbee_Sales_Plan.xlsx — Sales Plan register,
+two 31-day dispatch/value grids, a Dashboard bar chart, and two pivots:
+Customer vs Sales, Daily Value) was the reference for this pass. Its demand
+model (type a quantity once per part per month) was **not** adopted — Sales
+Plan stays computed from Customer PO, per the decision already recorded above
+— but its dashboard shape and its dispatch-tracking approach were.
+
+### Sales Invoice: a real invoice, not a log line
+
+Was one record = one customer/part/qty, no document produced. Rebuilt as a
+genuine header + multiple line items: one customer, one invoice number,
+several parts, a live subtotal/GST/total as lines are added, and pressing
+Save **both** writes the record and opens a real printable tax invoice
+(`printInvoiceDoc()`) — letterhead, Bill To, line items, GST summary — using
+`C.openReport()`, the same engine every other printed document in the IDMS
+uses. Nothing new was built for the document itself.
+
+**Everything that reads invoices now goes through one function:**
+`invoiceLines()` flattens every invoice's `data.lines[]` into individually
+attributable entries (customer, part, qty, value, which invoice and which
+line position). `invoicedQty()`, `invoicedValue()`, `excessForLine()`
+(replaces the old `excessForInvoice()` — excess is a property of a *line*,
+since one invoice can now have several), the day-wise dashboard chart, and
+the new per-customer day-wise view all call this rather than reading
+`salesInvoices` directly. Do not add a new reader of `salesInvoices` that
+assumes one invoice = one part; it will be silently wrong the first time
+someone raises a multi-line invoice.
+
+### Sales Dashboard: per-customer day-wise added
+
+`Daily Value` in the spreadsheet was a pivot: customer × day-of-month,
+dispatched value — genuinely different from the overall day-wise total
+already built. Added as a second chart, `sd-daywise-cust`, same INR-only
+scope and same reasoning as the overall one.
+
+### Edit and delete, on both Customer PO and Sales Plan
+
+Customer PO only had Remove before. Now has **Edit**: `editOrder(docId)`
+loads a PO/contract/schedule back into the exact same form `saveOrder()`
+validates — editing a schedule still cannot end up with a hand-typed price,
+because it goes through the same locking logic a new one would. `soEditing`
+holds which record is being changed; `saveOrder()` checks it to decide
+between creating and updating, and the duplicate-PO-number check exempts a
+record from matching itself while it's being edited.
+
+Sales Plan is a **computed** register, so "edit the row" has to mean "edit
+what's behind it." Each row backed by real orders gets a **Manage** button
+that expands to list every contributing PO/schedule, each with its own Edit
+(hands off to Customer PO's `editOrder()`, via `navigate()`) and Remove. A
+row backed only by a manual forecast gets a Remove for the forecast itself.
+`demandFor()` now returns `orderIds` (the real-demand case) or
+`forecastDocId` (the fallback case) alongside the figures, and
+`salesPlanRows()` carries them through — this is what the Manage button
+reads to know what it's managing.
+
+### A recurring mistake worth naming
+
+Twice in this pass, a `\'` meant for one literal backslash before an
+apostrophe in a JS string ended up as `\\'` — two backslashes — after being
+written through a tool call, breaking the script's syntax at load. Both were
+caught by the `node --check` step this project already runs after every
+edit, not by inspection. If a string built with `str_replace` needs an
+escaped apostrophe, prefer double-quoting the string instead (`"…don't…"`)
+to sidestep the escaping entirely, or verify the raw byte content with
+`cat -A` before moving on rather than assuming the tool call applied cleanly.
+
+### Tests
+
+`tests/editdeletetest.mjs` — 19 checks covering Edit/Cancel-edit on Customer
+PO and Manage/Edit/Remove on both PO-backed and forecast-backed Sales Plan
+rows. `tests/salesdashboardtest.mjs` was updated for the new multi-line
+invoice shape. Whole suite: 623 passing.
+
 ---
 
 ## Conventions

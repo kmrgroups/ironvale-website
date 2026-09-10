@@ -35,13 +35,19 @@ const orders = [{ doc_id: 'o1', doc_no: 'OT-01', data: {
   custPartNo: 'ALPHA-BR-9', custPartName: 'Bracket Assy 9', poType: 'onetime',
   po: 'OT-01', qty: 200, price: 100, currency: 'INR', poValue: 20000, due: thisMonth + '-10' } }];
 // invoices: 120 on the 5th, 30 on the 12th (150 actual, within 200 demand — no excess)
+// each invoice is a real header + one or more lines, matching the redesigned
+// multi-line Sales Invoice this dashboard now reads via invoiceLines().
 const invoices = [
   { doc_id: 'iv1', doc_no: 'INV-1', data: { customerId: 'c1', customerName: 'Alpha Motors',
-    partId: 'p1', partNo: 'PART-100', invoiceNo: 'INV-1', invoiceDate: thisMonth + '-05',
-    qty: 120, rate: 100, currency: 'INR', value: 12000 } },
+    invoiceNo: 'INV-1', invoiceDate: thisMonth + '-05', currency: 'INR',
+    lines: [{ partId: 'p1', partNo: 'PART-100', partName: 'Bracket', custPartNo: 'ALPHA-BR-9',
+      qty: 120, rate: 100, currency: 'INR', value: 12000 }],
+    subtotal: 12000, taxPct: 18, taxValue: 2160, totalValue: 14160 } },
   { doc_id: 'iv2', doc_no: 'INV-2', data: { customerId: 'c1', customerName: 'Alpha Motors',
-    partId: 'p1', partNo: 'PART-100', invoiceNo: 'INV-2', invoiceDate: thisMonth + '-12',
-    qty: 30, rate: 100, currency: 'INR', value: 3000 } }
+    invoiceNo: 'INV-2', invoiceDate: thisMonth + '-12', currency: 'INR',
+    lines: [{ partId: 'p1', partNo: 'PART-100', partName: 'Bracket', custPartNo: 'ALPHA-BR-9',
+      qty: 30, rate: 100, currency: 'INR', value: 3000 }],
+    subtotal: 3000, taxPct: 18, taxValue: 540, totalValue: 3540 } }
 ];
 const salesPlans = [];
 
@@ -108,8 +114,10 @@ check('the day-wise chart is real SVG output, not a placeholder',
 
 // ---- Excess sales: now invoice a further 80 (total 230, over the 200 demand by 30) ----
 invoices.push({ doc_id: 'iv3', doc_no: 'INV-3', data: { customerId: 'c1', customerName: 'Alpha Motors',
-  partId: 'p1', partNo: 'PART-100', invoiceNo: 'INV-3', invoiceDate: thisMonth + '-20',
-  qty: 80, rate: 100, currency: 'INR', value: 8000 } });
+  invoiceNo: 'INV-3', invoiceDate: thisMonth + '-20', currency: 'INR',
+  lines: [{ partId: 'p1', partNo: 'PART-100', partName: 'Bracket', custPartNo: 'ALPHA-BR-9',
+    qty: 80, rate: 100, currency: 'INR', value: 8000 }],
+  subtotal: 8000, taxPct: 18, taxValue: 1440, totalValue: 9440 } });
 click($('sd-refresh')); await wait(200);
 check('excess sales are measured against the computed demand (30 over 200)',
   /excess/i.test(txt($('sd-excess'))) && /30/.test(txt($('sd-excess'))),

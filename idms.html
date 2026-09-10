@@ -2155,10 +2155,21 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <div><label>Valid to <span class="hint">(optional — leave blank for no fixed end)</span></label>
             <input type="date" id="so-validto"></div>
         </div>
+        <div class="row four" id="so-tentwrap" style="margin-top:9px;">
+          <div><label id="so-t1-label">Tentative — next month</label>
+            <input class="num" id="so-t1"></div>
+          <div><label id="so-t2-label">Tentative — month after</label>
+            <input class="num" id="so-t2"></div>
+          <div style="grid-column:span 2;align-self:end;"><span class="hint">Quantities the customer
+            has indicated but not yet ordered. They become demand in the Sales Plan for those two
+            months, and are replaced by a real PO for that month the moment one exists — never added
+            on top of it.</span></div>
+        </div>
         <div class="row four" style="margin-top:9px;">
-          <div id="so-kindwrap"><label>Schedule</label><select id="so-kind">
-            <option>Firm order</option><option>Schedule release</option>
-            <option>Forecast</option></select></div>
+          <div id="so-pofilewrap" style="grid-column:span 2;"><label>PO document
+            <span class="hint">(PDF, Word, Excel or text)</span></label>
+            <input type="file" id="so-pofile" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv">
+            <div class="hint" id="so-pofilename"></div></div>
           <div style="align-self:end;">
             <button class="btn gold" id="so-save">Add PO</button>
             <button class="btn" id="so-clear" style="margin-left:6px;">Clear</button>
@@ -2183,23 +2194,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         <h4>Sales Plan</h4>
         <div class="hint" style="margin-bottom:10px;">The plan is <b>arrived at</b>, not typed: every
           Customer PO due in a month, and every schedule released against a rate contract and due in
-          that month, is demand — added up here automatically by customer and part. Nothing on this
-          screen is entered by hand except an optional forecast, for a month no PO exists for yet.</div>
-        <div class="row four">
-          <div><label>Customer</label><select id="spm-cust"></select></div>
-          <div><label>Part</label><select id="spm-part"></select></div>
-          <div><label>Forecast month</label><input type="month" id="spm-month"></div>
-          <div><label>Forecast quantity</label><input class="num" id="spm-firm"></div>
-        </div>
-        <div class="row four" style="margin-top:9px;">
-          <div style="grid-column:span 3;align-self:end;"><span class="hint">A forecast is only used
-            for a customer/part/month with <b>no</b> Customer PO or schedule due in it — the moment a
-            real PO exists for that month, the forecast is replaced by the real demand automatically,
-            not added to it.</span></div>
-          <div style="align-self:end;">
-            <button class="btn gold" id="spm-save">Save forecast</button>
-            <button class="btn" id="spm-clear" style="margin-left:6px;">Clear</button></div>
-        </div>
+          that month, is demand — added up here automatically by customer and part. Tentative
+          quantities entered on a Customer PO for the two months after it count as demand for those
+          months too, until a real PO replaces them.</div>
         <div class="note" id="spm-msg" style="display:none;"></div>
       </div>
       <div class="card">
@@ -2211,10 +2208,16 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         </div>
         <h4>Sales Plan register</h4>
         <div class="hint" style="margin-bottom:10px;">Demand quantity is the total of every Customer
-          PO and schedule due to that customer, for that part, in this month — or the forecast, when
-          neither exists yet. Actual quantity is the total invoiced, taken from Sales Invoice. Nothing
-          here is typed twice.</div>
+          PO and schedule due to that customer, for that part, in this month — including any tentative
+          quantity carried forward from an earlier PO. Actual quantity is the total invoiced, taken
+          from Sales Invoice. Nothing here is typed twice.</div>
         <div id="spm-list"></div>
+      </div>
+      <div class="card">
+        <h4>Previous month — <span id="spm-prev-label"></span></h4>
+        <div class="hint" style="margin-bottom:10px;">The month before the one above, for comparison:
+          what was carried, what was billed, and what was left behind.</div>
+        <div id="spm-prev-list"></div>
       </div>
     </div>
 
@@ -3248,6 +3251,57 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       <div id="al-result"></div>
     </div>
 
+    <div class="panel" data-panel="legal_docs">
+      <div class="card">
+        <h4>Company Legal Documents</h4>
+        <div class="hint" style="margin-bottom:10px;">The company's own statutory and legal papers —
+          incorporation, GST, PAN, licences, certificates, insurance. Uploaded once, held in the
+          backend, and available to view or download whenever an auditor, a customer or a bank asks
+          for them. An expiry date is optional, but anything with one is flagged here before it runs
+          out rather than after.</div>
+        <div class="row four">
+          <div><label>Document type</label><select id="ld-type">
+            <option>Certificate of Incorporation</option>
+            <option>GST Registration</option>
+            <option>PAN Card</option>
+            <option>TAN Certificate</option>
+            <option>MSME / Udyam Registration</option>
+            <option>Factory Licence</option>
+            <option>Trade Licence</option>
+            <option>Pollution Control Consent</option>
+            <option>Fire Safety Certificate</option>
+            <option>ESI Registration</option>
+            <option>PF Registration</option>
+            <option>Import Export Code</option>
+            <option>ISO / IATF Certificate</option>
+            <option>Insurance Policy</option>
+            <option>Lease / Property Deed</option>
+            <option>Bank Mandate</option>
+            <option>Other</option></select></div>
+          <div><label>Reference / number</label><input id="ld-ref"></div>
+          <div><label>Issued on</label><input type="date" id="ld-issued"></div>
+          <div><label>Valid until <span class="hint">(leave blank if it does not expire)</span></label>
+            <input type="date" id="ld-expiry"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div style="grid-column:span 2;"><label>Notes</label><input id="ld-notes"></div>
+          <div style="grid-column:span 2;"><label>File <span class="hint">(PDF, image, Word or Excel)</span></label>
+            <input type="file" id="ld-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,image/*">
+            <div class="hint" id="ld-filename"></div></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div style="align-self:end;">
+            <button class="btn gold" id="ld-save">Save document</button>
+            <button class="btn" id="ld-clear" style="margin-left:6px;">Clear</button></div>
+        </div>
+        <div class="note bad" id="ld-msg" style="display:none;margin-top:10px;"></div>
+      </div>
+      <div class="card">
+        <h4>On file</h4>
+        <div id="ld-list"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="bulk_upload">
       <div class="card">
         <h4>Bulk Upload</h4>
@@ -3714,6 +3768,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       ['admin_banner','🖼','Home Banner',1],
       ['login_screen','🔐','Login Screen',1],
       ['profile','🏢','Company Profile',1],
+      ['legal_docs','📜','Company Legal Documents',1],
       ['users','👥','User Management',1],
       ['dept_master','🏢','Department Master',1],['desig_master','🎖','Designation Master',1],
       ['position_master','📌','Position Master',1],
@@ -3871,6 +3926,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (s === 'cnc_setup')      loadCncSetup();
     if (s === 'attendance_lookup') loadAttendanceLookup();
     if (s === 'bulk_upload') loadBulkUpload();
+    if (s === 'legal_docs') loadLegalDocs();
     if (s === 'ppap')           loadPpap();
     if (s === 'report_setup_approval') loadSetup();
     if (s === 'report_self_inspection') loadSelfInsp();
@@ -12215,8 +12271,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     try { orders = await C.idms.docs('order'); } catch(e){ orders = []; }
     try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
     allocateProduction();
-    var on = document.getElementById('so-on');
-    if (!on.value) on.value = new Date().toISOString().slice(0,10);
+    /* PO Date is deliberately NOT pre-filled with today. A PO carries the date
+       the customer put on it, which is often not today, and a pre-filled field
+       is the one people forget to change. */
     if (keepCust) fillContractDropdown();
     soUpdateType();
     updateSoValue();
@@ -12259,7 +12316,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     show('so-valuewrap', t !== 'ratecontract');
     show('so-duewrap', t !== 'ratecontract');
     show('so-validitywrap', t === 'ratecontract');
-    show('so-kindwrap', t === 'onetime');
+    /* Tentative quantities belong to a PO that actually orders something —
+       a rate contract orders nothing, so it has nothing to project forward. */
+    show('so-tentwrap', t === 'onetime' || t === 'schedule');
     document.getElementById('so-po-label').textContent = t === 'schedule' ? 'Schedule / Release No.' : 'PO Number';
     var priceField = document.getElementById('so-price'), custNoField = document.getElementById('so-custpartno'),
         custNameField = document.getElementById('so-custpartname'), curField = document.getElementById('so-currency');
@@ -12436,6 +12495,19 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      can. soEditing holds the doc id being changed; saveOrder() checks it to
      decide between creating and updating. */
   var soEditing = null;
+  var soPoUpload = null;   // { url, name, mime } once a PO document is attached
+
+  document.getElementById('so-pofile').addEventListener('change', async function(){
+    var f = this.files[0]; if (!f) return;
+    var nameEl = document.getElementById('so-pofilename');
+    nameEl.textContent = 'Uploading ' + f.name + '…';
+    try {
+      var up = await C.uploadFile(f);
+      soPoUpload = { url: up.url, name: f.name, mime: f.type };
+      nameEl.textContent = 'Attached: ' + f.name;
+    } catch(e){ nameEl.textContent = 'Could not upload: ' + e.message; soPoUpload = null; }
+  });
+
   function editOrder(docId){
     var o = orders.filter(function(x){ return x.doc_id === docId; })[0];
     if (!o) return;
@@ -12458,7 +12530,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       document.getElementById('so-on').value = v.orderedOn || '';
       document.getElementById('so-validfrom').value = v.validFrom || '';
       document.getElementById('so-validto').value = v.validTo || '';
-      if (v.kind) document.getElementById('so-kind').value = v.kind;
+      document.getElementById('so-t1').value = v.tent1 || '';
+      document.getElementById('so-t2').value = v.tent2 || '';
       updateSoValue();
       var btn = document.getElementById('so-save');
       btn.textContent = 'Update PO'; btn.classList.add('editing');
@@ -12542,8 +12615,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
                validTo: poType === 'ratecontract' ? g('so-validto') : '',
                scheduleAgainst: poType === 'schedule' ? contractId : '',
                scheduleAgainstPo: contract ? (contract.data||{}).po || '' : '',
-               kind: poType === 'onetime' ? document.getElementById('so-kind').value :
-                     poType === 'schedule' ? 'Schedule release' : '' } },
+               kind: poType === 'schedule' ? 'Schedule release' :
+                     poType === 'ratecontract' ? '' : 'Firm order',
+               tent1: poType === 'ratecontract' ? 0 : C.num(g('so-t1')),
+               tent2: poType === 'ratecontract' ? 0 : C.num(g('so-t2')),
+               poFile: soPoUpload || (editingExisting ? (editingExisting.data||{}).poFile || null : null) } },
         soEditing ? 'customer PO edited' :
         poType === 'schedule' ? 'schedule added against a rate contract' :
         poType === 'ratecontract' ? 'rate contract PO added' : 'customer PO added');
@@ -12631,14 +12707,12 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   async function loadSalesPlan(){
     await fetchParts(); await fetchCustomers();
     try { custParts = await C.idms.docs('cust_part'); } catch(e){ custParts = []; }
-    document.getElementById('spm-cust').innerHTML = customerOptions('');
-    document.getElementById('spm-part').innerHTML = partOptionsForCustomer('');
     document.getElementById('spm-filter-cust').innerHTML =
       '<option value="">All customers</option>' + customerOptions('').replace('<option value="">— choose a customer —</option>','');
-    var mk = document.getElementById('spm-month');
-    if (!mk.value) mk.value = thisMonthKey();
+    /* The filter month is not a data-entry box — it has to point somewhere for
+       the register to show anything, so it opens on the current month. */
     var fmk = document.getElementById('spm-filter-month');
-    if (!fmk.value) fmk.value = mk.value;
+    if (!fmk.value) fmk.value = thisMonthKey();
     try { salesPlans = await C.idms.docs('salesplan'); } catch(e){ salesPlans = []; }
     try { orders = await C.idms.docs('order'); } catch(e){ orders = []; }
     try { salesInvoices = await C.idms.docs('invoice'); } catch(e){ salesInvoices = []; }
@@ -12677,6 +12751,14 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         currency: first.currency||'INR', custPartNo:first.custPartNo||'', custPartName:first.custPartName||'',
         source:'po', orderIds: real.map(function(o){ return o.doc_id; }) };
     }
+    /* No real PO for this month — fall back to a tentative quantity stated on
+       an earlier PO for one of the next two months. A tentative is a stated
+       intention, not an order, so it is only ever used where nothing real
+       exists: the check above returns first the moment a PO appears, which is
+       what "replaced by the real demand, not added to it" means. */
+    var tent = tentativeFor(customerId, partId, month);
+    if (tent) return tent;
+
     var fc = salesPlans.filter(function(p){
       var v = p.data||{}; return v.customerId === customerId && v.partId === partId && v.month === month; })[0];
     if (fc){
@@ -12686,6 +12768,31 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         source:'forecast', forecastDocId: fc.doc_id };
     }
     return null;
+  }
+
+  /* A PO due in month M can carry tentative quantities for M+1 and M+2. Several
+     POs can project into the same month; they add up, the same way several real
+     POs due in one month do. */
+  function tentativeFor(customerId, partId, month){
+    var qty = 0, value = 0, srcIds = [], first = null;
+    orders.forEach(function(o){
+      var v = o.data||{};
+      if (v.customerId !== customerId || v.partId !== partId) return;
+      if (!isDemandOrder(v)) return;
+      var due = String(v.due||'').slice(0,7);
+      if (!due) return;
+      var t = null;
+      if (addMonths(due, 1) === month) t = C.num(v.tent1);
+      else if (addMonths(due, 2) === month) t = C.num(v.tent2);
+      if (!t) return;
+      qty += t; value += t * C.num(v.price);
+      srcIds.push(o.doc_id);
+      if (!first) first = v;
+    });
+    if (!qty) return null;
+    return { qty:qty, value:value, price: qty ? value/qty : 0,
+      currency:(first||{}).currency||'INR', custPartNo:(first||{}).custPartNo||'',
+      custPartName:(first||{}).custPartName||'', source:'tentative', orderIds:srcIds };
   }
 
   /* An invoice is one customer, one invoice number, one or more parts on it —
@@ -12733,7 +12840,13 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     function key(c,p){ return c+'|'+p; }
     orders.forEach(function(o){
       var v = o.data||{};
-      if (!isDemandOrder(v) || String(v.due||'').slice(0,7)!==month) return;
+      if (!isDemandOrder(v)) return;
+      var due = String(v.due||'').slice(0,7);
+      /* Due this month, or projecting a tentative quantity into it. */
+      var touches = due === month ||
+        (C.num(v.tent1) && addMonths(due, 1) === month) ||
+        (C.num(v.tent2) && addMonths(due, 2) === month);
+      if (!touches) return;
       var k = key(v.customerId, v.partId);
       if (!seen[k]){ seen[k]=1; keys.push([v.customerId, v.partId]); }
     });
@@ -12742,12 +12855,20 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var k = key(v.customerId, v.partId);
       if (!seen[k]){ seen[k]=1; keys.push([v.customerId, v.partId]); }
     });
-    salesInvoices.forEach(function(iv){
-      var v = iv.data||{}; if (String(v.invoiceDate||'').slice(0,7) !== month) return;
-      var k = key(v.customerId, v.partId);
-      if (!seen[k]){ seen[k]=1; keys.push([v.customerId, v.partId]); }
+    /* An invoice header carries no partId of its own — its parts live on its
+       lines. Reading v.partId here produced a phantom "customerId|undefined"
+       key, which drew a ghost row with no part, no demand and no price that
+       no amount of deleting would clear, because nothing was actually wrong
+       with the data. Walk the lines instead. */
+    invoiceLines().forEach(function(l){
+      if (String(l.invoiceDate||'').slice(0,7) !== month) return;
+      var k = key(l.customerId, l.partId);
+      if (!seen[k]){ seen[k]=1; keys.push([l.customerId, l.partId]); }
     });
     if (custFilter) keys = keys.filter(function(k){ return k[0] === custFilter; });
+    /* A key needs both halves to mean anything. Anything malformed enough to
+       reach here has nothing to show and cannot be cleared by deleting. */
+    keys = keys.filter(function(k){ return k[0] && k[1]; });
     return keys.map(function(k){
       var custId = k[0], partId = k[1];
       var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
@@ -12766,17 +12887,31 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         pendingQty:pendingQty, excessQty:excessQty,
         demandValue:d.value, actualValue:actualValue, pendingValue:pendingValue,
         source:d.source, orderIds:d.orderIds||[], forecastDocId:d.forecastDocId||'' };
+    }).filter(function(r){
+      /* No demand and nothing invoiced is not a plan line — it is a leftover.
+         An excess line (no demand, but real invoices) still shows. */
+      return r.demandQty > 0 || r.actualQty > 0;
     }).sort(function(a,b){ return (a.customerName+a.partNo).localeCompare(b.customerName+b.partNo); });
   }
 
   function drawSalesPlanRegister(){
-    var host = document.getElementById('spm-list');
     var month = document.getElementById('spm-filter-month').value || thisMonthKey();
     var custId = document.getElementById('spm-filter-cust').value;
+    spmRenderInto('spm-list', month, custId, true);
+    /* The month before, for comparison. Read-only: Manage belongs on the month
+       being worked on, not on one already closed out. */
+    var prev = addMonths(month, -1);
+    document.getElementById('spm-prev-label').textContent = monthLabel(prev);
+    spmRenderInto('spm-prev-list', prev, custId, false);
+  }
+
+  function spmRenderInto(hostId, month, custId, interactive){
+    var host = document.getElementById(hostId);
+    if (!host) return;
     var rows = salesPlanRows(month, custId);
     if (!rows.length){
       host.innerHTML = '<div class="empty"><b>No demand for '+esc(monthLabel(month))+'</b>' +
-        'Add a Customer PO or schedule due this month, or a forecast above.</div>';
+        'Nothing is due to any customer in this month yet.</div>';
       return;
     }
     host.innerHTML = '<table class="t"><thead><tr><th>Sl</th><th>Customer</th>' +
@@ -12785,12 +12920,14 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       '<th class="r">Pending Qty</th><th class="r">Demand Value</th><th class="r">Actual Value</th>' +
       '<th class="r">Pending Value</th><th class="c">Status</th><th></th></tr></thead><tbody>' +
       rows.map(function(r, i){
-        var rid = 'spmr' + i;
+        var rid = hostId + 'r' + i;
         return '<tr><td>'+(i+1)+'</td><td>'+esc(r.customerName||'—')+'</td>' +
           '<td>'+esc(r.custPartNo||'—')+'</td><td>'+esc(r.custPartName||'—')+'</td>' +
           '<td><b>'+esc(r.partNo||'')+'</b><div class="hint">'+esc(r.partName||'')+'</div></td>' +
           '<td class="r">'+(r.unitPrice?moneyFmt(r.unitPrice, r.currency):'<span class="hint">—</span>')+'</td>' +
-          '<td class="r">'+C.qty(r.demandQty)+(r.source==='forecast'?' <span class="hint">(forecast)</span>':'')+'</td>' +
+          '<td class="r">'+C.qty(r.demandQty)+
+            (r.source==='forecast'?' <span class="hint">(forecast)</span>':
+             r.source==='tentative'?' <span class="hint">(tentative)</span>':'')+'</td>' +
           '<td class="r">'+C.qty(r.actualQty)+'</td>' +
           '<td class="r">'+(r.pendingQty>0?'<b>'+C.qty(r.pendingQty)+'</b>':'0')+'</td>' +
           '<td class="r">'+(r.demandValue?moneyFmt(r.demandValue, r.currency):'<span class="hint">—</span>')+'</td>' +
@@ -12800,7 +12937,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
             : r.pendingQty<=0 && r.demandQty>0 ? '<span class="badge series">met</span>'
             : r.demandQty>0 ? '<span class="badge new">open</span>'
             : '<span class="hint">no plan</span>')+'</td>' +
-          '<td>'+((r.orderIds&&r.orderIds.length)||r.forecastDocId
+          '<td>'+(interactive && ((r.orderIds&&r.orderIds.length)||r.forecastDocId)
             ? '<button class="btn spm-manage" data-t="'+rid+'">Manage</button>' : '')+'</td></tr>' +
           '<tr id="'+rid+'" class="spm-managerow" style="display:none;"><td colspan="13">'+
             spmManageHtml(r)+'</td></tr>';
@@ -12871,49 +13008,12 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     return '';
   }
 
-  async function saveSalesPlan(){
-    var msg = document.getElementById('spm-msg');
-    var say = noteWriter(msg);
-    var g = fieldVal;
-    var custId = document.getElementById('spm-cust').value;
-    var partId = document.getElementById('spm-part').value;
-    var month = g('spm-month');
-    if (!custId) return say('Choose the customer.');
-    if (!partId) return say('Choose the part.');
-    if (!month) return say('The forecast month is needed.');
-    if (!C.num(g('spm-firm'))) return say('A forecast quantity is needed.');
-
-    if (demandOrders(custId, partId, month).length)
-      return say('There is already a real Customer PO or schedule due for this customer and part ' +
-        'in ' + esc(monthLabel(month)) + '. A forecast is for a month with no PO yet — open Customer PO ' +
-        'instead, or choose a different month.');
-
-    var cust = customers.filter(function(c){ return c.doc_id === custId; })[0] || {};
-    var link = custParts.filter(function(cp){
-      var v = cp.data||{}; return v.customerId === custId && v.partId === partId; })[0];
-    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
-
-    /* revising the same customer/part/month replaces the forecast rather than
-       doubling it — a forecast is redone, not appended to */
-    var dup = salesPlans.filter(function(sp){
-      var v = sp.data||{}; return v.customerId === custId && v.partId === partId && v.month === month; })[0];
-
-    var data = { customerId:custId, customerName:(cust.data||{}).name||'',
-      partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
-      custPartNo: link ? (link.data||{}).custPartNo||'' : '',
-      custPartName: link ? (link.data||{}).custPartName||'' : '',
-      month:month, firmQty:C.num(g('spm-firm')) };
-    try {
-      await C.idms.saveDoc({ docId: dup ? dup.doc_id : '', kind:'salesplan', partId:partId,
-        status:'Active', docNo: dup ? dup.doc_no : await C.docNumber('sp'), data:data },
-        dup ? 'sales forecast revised' : 'sales forecast added');
-      say(dup ? 'Forecast updated for '+esc(monthLabel(month))+'.' : 'Forecast added.', true);
-      ['spm-firm'].forEach(function(id){ document.getElementById(id).value=''; });
-      salesPlans = await C.idms.docs('salesplan');
-      document.getElementById('spm-filter-month').value = month;
-      drawSalesPlanRegister();
-    } catch(e){ say(esc(e.message)); }
-  }
+  /* saveSalesPlan() removed. A forecast is no longer typed on this screen —
+     the two tentative months on a Customer PO are where a not-yet-ordered
+     quantity is stated now, so it sits next to the PO it follows on from
+     rather than in a second, competing place. demandFor()'s fallback to a
+     stored 'salesplan' doc is kept so forecasts saved before this change
+     still show; nothing new writes one. */
 
   function printSalesPlan(){
     var month = document.getElementById('spm-filter-month').value || thisMonthKey();
@@ -17257,6 +17357,122 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   });
 
 
+
+  /* ================= COMPANY LEGAL DOCUMENTS =================
+     The company's own statutory papers, stored as ordinary IDMS documents
+     (kind:'legaldoc') with the file itself uploaded through the same
+     C.uploadFile() every other attachment in the system uses, so there is one
+     upload path to keep working rather than a second one just for this.
+
+     Expiry is the reason this is a screen rather than a folder: a licence that
+     lapsed is worth knowing about before an auditor finds it, so anything with
+     a date is sorted and flagged by how close it is. */
+  var legalDocs = [], ldUpload = null;
+
+  async function loadLegalDocs(){
+    try { legalDocs = await C.idms.docs('legaldoc'); } catch(e){ legalDocs = []; }
+    drawLegalDocs();
+  }
+
+  function ldMsg(t){
+    var m = document.getElementById('ld-msg');
+    m.style.display = t ? '' : 'none'; m.innerHTML = t || '';
+  }
+
+  document.getElementById('ld-file').addEventListener('change', async function(){
+    var f = this.files[0]; if (!f) return;
+    var nameEl = document.getElementById('ld-filename');
+    nameEl.textContent = 'Uploading ' + f.name + '…';
+    try {
+      var up = await C.uploadFile(f);
+      ldUpload = { url: up.url, name: f.name, mime: f.type };
+      nameEl.textContent = 'Attached: ' + f.name;
+    } catch(e){ nameEl.textContent = 'Could not upload: ' + e.message; ldUpload = null; }
+  });
+
+  document.getElementById('ld-save').addEventListener('click', async function(){
+    ldMsg('');
+    var g = fieldVal;
+    if (!ldUpload) return ldMsg('Choose the file first — a record with no document attached is not much use.');
+    if (g('ld-issued') && g('ld-expiry') && g('ld-expiry') < g('ld-issued'))
+      return ldMsg('Valid until is before Issued on. One of the two is wrong.');
+    try {
+      await C.idms.saveDoc({ kind:'legaldoc', status:'Active',
+        docNo: g('ld-ref') || await C.docNumber('legal'),
+        data:{ type:document.getElementById('ld-type').value, ref:g('ld-ref'),
+               issued:g('ld-issued'), expiry:g('ld-expiry'), notes:g('ld-notes'),
+               file: ldUpload } }, 'legal document uploaded');
+      ldMsg('');
+      ['ld-ref','ld-issued','ld-expiry','ld-notes'].forEach(function(id){
+        document.getElementById(id).value=''; });
+      document.getElementById('ld-file').value = '';
+      document.getElementById('ld-filename').textContent = '';
+      ldUpload = null;
+      toast('Saved');
+      await loadLegalDocs();
+    } catch(e){ ldMsg(esc(e.message)); }
+  });
+
+  document.getElementById('ld-clear').addEventListener('click', function(){
+    ['ld-ref','ld-issued','ld-expiry','ld-notes'].forEach(function(id){
+      document.getElementById(id).value=''; });
+    document.getElementById('ld-file').value = '';
+    document.getElementById('ld-filename').textContent = '';
+    ldUpload = null; ldMsg('');
+  });
+
+  function drawLegalDocs(){
+    var host = document.getElementById('ld-list');
+    if (!legalDocs.length){
+      host.innerHTML = '<div class="empty"><b>Nothing on file yet</b>' +
+        'Upload the company\u2019s statutory documents above.</div>';
+      return;
+    }
+    var todayK = new Date().toISOString().slice(0,10);
+    var rows = legalDocs.slice().sort(function(a,b){
+      /* Expiring soonest first — anything already lapsed at the very top,
+         because that is the one somebody has to act on. Documents with no
+         expiry sort last; they need no attention. */
+      var ax = (a.data||{}).expiry || '9999-12-31', bx = (b.data||{}).expiry || '9999-12-31';
+      return ax.localeCompare(bx);
+    });
+    host.innerHTML = '<table class="t"><thead><tr><th>Document</th><th>Reference</th>' +
+      '<th>Issued</th><th>Valid until</th><th class="c">Status</th><th>Notes</th>' +
+      '<th></th></tr></thead><tbody>' +
+      rows.map(function(d){
+        var v = d.data||{};
+        var state = '<span class="hint">no expiry</span>';
+        if (v.expiry){
+          var days = Math.round((new Date(v.expiry) - new Date(todayK)) / 86400000);
+          state = days < 0 ? '<span class="badge ab">expired '+Math.abs(days)+'d ago</span>'
+                : days <= 30 ? '<span class="badge new">'+days+'d left</span>'
+                : '<span class="badge series">valid</span>';
+        }
+        return '<tr><td><b>'+esc(v.type||'—')+'</b></td>' +
+          '<td>'+esc(v.ref||'—')+'</td>' +
+          '<td class="hint">'+(v.issued?C.fmtDate(v.issued):'—')+'</td>' +
+          '<td class="hint">'+(v.expiry?C.fmtDate(v.expiry):'—')+'</td>' +
+          '<td class="c">'+state+'</td>' +
+          '<td class="hint">'+esc(v.notes||'')+'</td>' +
+          '<td>'+(v.file && v.file.url
+            ? '<a class="btn" href="'+esc(v.file.url)+'" target="_blank" rel="noopener">View</a> ' +
+              '<a class="btn" href="'+esc(v.file.url)+'" download="'+esc(v.file.name||'document')+'">Download</a> '
+            : '') +
+          '<button class="btn del ld-del" data-id="'+esc(d.doc_id)+'">Remove</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.ld-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Removing this legal document. Why?');
+        if (why === null) return;
+        if (!why.trim()) { toast('State a reason.'); return; }
+        try {
+          await C.idms.patchDoc({ docId:b.dataset.id, remove:true, reason:'legal document removed: '+why.trim() });
+          await loadLegalDocs(); toast('Removed');
+        } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
   /* ================= BULK UPLOAD =================
      One import engine for every master, instead of eight bespoke upload
      screens that would each parse CSV, preview rows and report errors in a
@@ -20171,15 +20387,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('so-filter').addEventListener('change', drawOrders);
   document.getElementById('so-print').addEventListener('click', printOrderBook);
 
-  document.getElementById('spm-cust').addEventListener('change', function(){
-    document.getElementById('spm-part').innerHTML = partOptionsForCustomer(this.value);
-  });
-  document.getElementById('spm-save').addEventListener('click', saveSalesPlan);
-  document.getElementById('spm-clear').addEventListener('click', function(){
-    document.getElementById('spm-firm').value = '';
-    document.getElementById('spm-msg').style.display='none';
-  });
   document.getElementById('spm-refresh').addEventListener('click', drawSalesPlanRegister);
+  document.getElementById('spm-filter-month').addEventListener('change', drawSalesPlanRegister);
   document.getElementById('spm-filter-cust').addEventListener('change', drawSalesPlanRegister);
   document.getElementById('spm-print').addEventListener('click', printSalesPlan);
 

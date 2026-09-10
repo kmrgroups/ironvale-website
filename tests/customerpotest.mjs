@@ -156,28 +156,13 @@ check('demand quantity is the schedule + the one-time PO, added automatically',
 check('customer part no. shows on the computed plan line', /ALPHA-BR-9/.test(txt($('spm-list'))));
 check('customer part name shows on the computed plan line', /Bracket Assy 9/.test(txt($('spm-list'))));
 
-// ---- a forecast is refused once a real PO covers that month ----
-$('spm-cust').value = 'c1'; change($('spm-cust')); await wait(60);
-$('spm-part').value = 'p1'; change($('spm-part')); await wait(60);
-$('spm-month').value = thisMonth;
-$('spm-firm').value = '999';
-click($('spm-save')); await wait(150);
-check('a forecast is refused when real demand already exists this month',
-  /already a real Customer PO/i.test(txt($('spm-msg'))));
-check('and nothing extra was saved', salesPlans.length === 0);
+/* The typed-forecast box on Sales Plan is gone — a not-yet-ordered quantity is
+   now stated as tentative-1/tentative-2 on the Customer PO it follows on from,
+   so it sits beside the PO rather than in a second, competing place. */
+check('the forecast entry box is gone from Sales Plan', !$('spm-firm') && !$('spm-save'));
 
-// ---- but a forecast for a month with no PO is accepted ----
-const futureMonth = (() => { const d = new Date(); d.setMonth(d.getMonth() + 6);
-  return d.toISOString().slice(0,7); })();
-$('spm-month').value = futureMonth;
-$('spm-firm').value = '80';
-click($('spm-save')); await wait(150);
-check('a forecast for a month with no PO is accepted', salesPlans.length === 1);
-
-$('spm-filter-month').value = futureMonth;
-click($('spm-refresh')); await wait(150);
-check('the forecast appears in the register, marked as a forecast',
-  /80/.test(txt($('spm-list'))) && /forecast/i.test(txt($('spm-list'))));
+// the previous-month table is shown below the register
+check('the previous month is shown for comparison', !!$('spm-prev-list') && !!$('spm-prev-label'));
 
 // ---- backward compatibility: an order with no poType at all still counts ----
 orders.push({ doc_id: 'legacy1', doc_no: 'PO-OLD', data: {
@@ -187,6 +172,46 @@ $('spm-filter-month').value = thisMonth;
 click($('spm-refresh')); await wait(150);
 check('an order saved before PO types existed still counts as demand (500 + 50 = 550)',
   /550/.test(txt($('spm-list'))), txt($('spm-list')).slice(0, 300));
+
+// ---- tentative quantities project demand into the next two months ----
+const nextMonth = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()+1);
+  return d.toISOString().slice(0,7); })();
+const monthAfter = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()+2);
+  return d.toISOString().slice(0,7); })();
+orders.push({ doc_id: 'tent1', doc_no: 'OT-TENT', data: {
+  customerId: 'c1', customerName: 'Alpha Motors', partId: 'p1', partNo: 'PART-100', partName: 'Bracket',
+  custPartNo: 'ALPHA-BR-9', custPartName: 'Bracket Assy 9', poType: 'onetime',
+  po: 'OT-TENT', qty: 10, price: 200, currency: 'INR', due: thisMonth + '-15',
+  tent1: 70, tent2: 30 } });
+click([...window.document.querySelectorAll('#menubar a[data-s]')].find(a => a.dataset.s === 'sales_plan'));
+await wait(150);
+click([...window.document.querySelectorAll('#menubar a[data-s]')].find(a => a.dataset.s === 'sales_monthly_plan'));
+await wait(250);
+$('spm-filter-month').value = nextMonth;
+click($('spm-refresh')); await wait(150);
+check('tentative-1 becomes demand in the following month',
+  /70/.test(txt($('spm-list'))) && /tentative/i.test(txt($('spm-list'))),
+  txt($('spm-list')).slice(0, 240));
+$('spm-filter-month').value = monthAfter;
+click($('spm-refresh')); await wait(150);
+check('tentative-2 becomes demand in the month after that',
+  /30/.test(txt($('spm-list'))) && /tentative/i.test(txt($('spm-list'))));
+
+// a real PO for that month replaces the tentative rather than adding to it
+orders.push({ doc_id: 'realnext', doc_no: 'OT-NEXT', data: {
+  customerId: 'c1', customerName: 'Alpha Motors', partId: 'p1', partNo: 'PART-100', partName: 'Bracket',
+  custPartNo: 'ALPHA-BR-9', custPartName: 'Bracket Assy 9', poType: 'onetime',
+  po: 'OT-NEXT', qty: 500, price: 200, currency: 'INR', due: nextMonth + '-10' } });
+click([...window.document.querySelectorAll('#menubar a[data-s]')].find(a => a.dataset.s === 'sales_plan'));
+await wait(150);
+click([...window.document.querySelectorAll('#menubar a[data-s]')].find(a => a.dataset.s === 'sales_monthly_plan'));
+await wait(250);
+$('spm-filter-month').value = nextMonth;
+click($('spm-refresh')); await wait(150);
+check('a real PO replaces the tentative, not added on top of it (500, not 570)',
+  /500/.test(txt($('spm-list'))) && !/570/.test(txt($('spm-list'))),
+  txt($('spm-list')).slice(0, 240));
+check('and it is no longer marked tentative', !/tentative/i.test(txt($('spm-list'))));
 
 check('no page errors', pageErrors.length === 0, pageErrors.slice(0,3).join(' | '));
 let pass = 0;

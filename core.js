@@ -65,21 +65,34 @@
   }
 
   /* ---------------- session ----------------
-     localStorage rather than sessionStorage: the token has to survive opening
-     a menu link in a new tab or window (right-click → Open Link in New Tab),
-     which sessionStorage does not reliably carry over to — a fresh top-level
-     browsing context started that way gets its own sessionStorage, empty,
-     even though it is the same person in the same browser. checkSession()
-     still asks the server whether the token is still good, so a revoked or
-     expired session is still caught; this only changes where the token lives
-     between page loads, not whether it is trusted blindly. */
+     sessionStorage, deliberately, so a session belongs to ONE tab. Opening a
+     menu link in a new tab or window (right-click → Open Link in New Tab)
+     starts a fresh top-level browsing context with its own, empty
+     sessionStorage, so that tab asks for a sign-in of its own even though it
+     is the same person in the same browser.
+
+     This reverses an earlier choice of localStorage, which was made so a
+     token would survive exactly that. It was changed on an explicit
+     requirement: a second tab must not inherit the first tab's session. It
+     also matches the standing requirement that the sign-in is never saved by
+     the browser and never auto-logs-in on opening.
+
+     Consequence worth knowing: closing and reopening the tab now signs the
+     person out, and so does a browser restart. That is the intended trade.
+     checkSession() still asks the server whether the token is good, so a
+     revoked or expired session is caught either way — this only changes where
+     the token lives, not whether it is trusted blindly.
+
+     The website (index.html) keeps its own token under this same key name in
+     localStorage; the two no longer collide, because they are now different
+     storage areas entirely. */
   const TOKEN_KEY = 'app_token';
   let token = '';
-  try { token = localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { token = ''; }
+  try { token = sessionStorage.getItem(TOKEN_KEY) || ''; } catch (e) { token = ''; }
 
   function setToken(t) {
     token = t || '';
-    try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); }
+    try { t ? sessionStorage.setItem(TOKEN_KEY, t) : sessionStorage.removeItem(TOKEN_KEY); }
     catch (e) { /* private browsing — the token simply lives for this page only */ }
   }
   const getToken = () => token;

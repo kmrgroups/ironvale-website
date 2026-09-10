@@ -126,7 +126,7 @@ check('powered-by links to KMR Groups',
   /kmr-groups\.com/.test(window.document.querySelector('.gate .powered a').href));
 check('password field is not autofilled by the browser',
   $('g-pass').getAttribute('autocomplete') === 'new-password');
-check('no session token stored before sign-in', !window.localStorage.getItem('app_token'));
+check('no session token stored before sign-in', !window.sessionStorage.getItem('app_token'));
 
 // ---- 2. sign in ----
 $('g-user').value = 'tester'; $('g-pass').value = 'secret123';
@@ -249,9 +249,15 @@ check('the hero banner on Home reads from the website\'s own content record',
   $('hb-img').src.includes('hero-test.jpg'), $('hb-img').src);
 
 // ---- 12. the session token now survives a fresh top-level context, not just this tab ----
-check('token is kept in localStorage (survives Open Link in New Tab/Window)',
-  window.localStorage.getItem('app_token') === 'TOK', window.localStorage.getItem('app_token'));
-check('token is not left in sessionStorage', !window.sessionStorage.getItem('app_token'));
+/* Reversed deliberately. The token used to live in localStorage so it would
+   survive right-click → Open Link in New Tab. The requirement changed: a
+   second tab must NOT inherit the first tab's session and has to sign in on
+   its own, which is what sessionStorage gives — a new top-level browsing
+   context starts with its own, empty one. The trade is that closing the tab
+   or restarting the browser now signs the person out. */
+check('token is kept in sessionStorage, so it does not cross into a new tab',
+  window.sessionStorage.getItem('app_token') === 'TOK', window.sessionStorage.getItem('app_token'));
+check('token is not left in localStorage', !window.localStorage.getItem('app_token'));
 
 // ---- diagnostics ----
 console.log('\nWhat each dashboard drew:');

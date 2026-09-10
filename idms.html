@@ -341,6 +341,31 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 .cnc-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.cnc-kpi{background:#f7f9fb;border-radius:9px;padding:9px}.cnc-kpi small{display:block;color:#6d7480;font-size:10px}.cnc-kpi b{font-size:17px;color:var(--navy)}
 .cnc-tool{margin-top:10px;padding-top:10px;border-top:1px solid #edf0f3}.cnc-progress{height:8px;background:#e8ebef;border-radius:999px;overflow:hidden;margin-top:6px}.cnc-progress i{display:block;height:100%;width:0;background:currentColor}.cnc-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#36a05a}
 .cnc-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.cnc-toolbar .hint{margin:0}.cnc-alert{padding:10px;border-radius:8px;background:#fff4e5;color:#7a4b00;margin-bottom:12px}
+/* ---- the setup guide: numbered steps a non-programmer can follow ---- */
+.cs-step{border:1px solid var(--line,#d8dde6);border-radius:12px;background:#fff;padding:0;margin-bottom:12px;overflow:hidden}
+.cs-step>.h{display:flex;gap:11px;align-items:flex-start;padding:14px 15px;cursor:pointer;user-select:none}
+.cs-step>.h:hover{background:#f7fafd}
+.cs-num{flex:none;width:27px;height:27px;border-radius:50%;background:var(--navy,#0B2A5B);color:#fff;
+  font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+.cs-step.done .cs-num{background:#1F9D6B}
+.cs-step.done .cs-num::after{content:'✓';font-size:15px}
+.cs-step.done .cs-num span{display:none}
+.cs-ttl{font-weight:800;color:var(--navy,#0B2A5B);font-size:14.5px}
+.cs-sub{font-size:12px;color:#6d7480;margin-top:2px;line-height:1.45}
+.cs-step>.b{display:none;padding:0 15px 15px 53px}
+.cs-step.open>.b{display:block}
+.cs-step>.h .cs-ar{margin-left:auto;flex:none;color:#8a929c;font-size:11px}
+.cs-code{background:#0e1726;color:#dbe6f5;border-radius:9px;padding:11px 13px;font-family:var(--mono,monospace);
+  font-size:12px;white-space:pre-wrap;word-break:break-all;line-height:1.6;margin:8px 0}
+.cs-key{background:#f2f6fb;border:1px dashed #9db4d0;border-radius:8px;padding:10px 12px;
+  font-family:var(--mono,monospace);font-size:13px;word-break:break-all;color:#0B2A5B}
+.cs-mrow{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:9px}
+.cs-mlist table{width:100%;border-collapse:collapse;font-size:12.5px}
+.cs-mlist th{text-align:left;color:#6d7480;font-weight:700;font-size:11px;padding:6px 8px;border-bottom:1px solid #e6eaf0}
+.cs-mlist td{padding:7px 8px;border-bottom:1px solid #f0f3f7}
+.cs-why{background:#f7fafd;border-left:3px solid var(--sky,#3FA9E0);padding:9px 12px;border-radius:0 8px 8px 0;
+  font-size:12.5px;color:#41567E;margin:9px 0;line-height:1.5}
+@media(max-width:820px){.cs-mrow{grid-template-columns:1fr 1fr}.cs-step>.b{padding-left:15px}}
 @media(max-width:600px){.cnc-live-grid{grid-template-columns:1fr}.cnc-kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -3057,7 +3082,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       <div class="card">
         <h4>Universal CNC Live Monitor</h4>
         <div class="hint" style="margin-bottom:10px;">The IDMS reads one normalized machine data format, so the dashboard can work with FANUC, Siemens, Haas, Mazak, Mitsubishi, Okuma, Heidenhain and other controllers through the appropriate factory-LAN gateway/protocol adapter.</div>
-        <div class="cnc-toolbar"><button class="btn gold" id="cnc-live-refresh">Refresh now</button><span class="hint" id="cnc-live-updated">Waiting for machine data…</span></div>
+        <div class="cnc-toolbar"><button class="btn gold" id="cnc-live-refresh">Refresh now</button><button class="btn" id="cnc-live-guide">Setup Guide</button><span class="hint" id="cnc-live-updated">Waiting for machine data…</span></div>
         <div id="cnc-live-alert"></div>
         <div id="cnc-live-summary" class="stat"></div>
         <div id="cnc-live-grid" class="cnc-live-grid" style="margin-top:12px;"></div>
@@ -3070,6 +3095,252 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <div><label>Ideal cycle</label><div class="hint">Configured by part/operation in IDMS.</div></div>
           <div><label>Actual cycle</label><div class="hint">Calculated from machine events when available.</div></div>
           <div><label>Tool life</label><div class="hint">Remaining parts = life limit − parts used.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="cnc_setup">
+      <div class="card">
+        <h4>Connect your machines — step by step</h4>
+        <div class="hint" style="margin-bottom:4px;">Follow the seven steps below in order. You do not
+          need to know any programming. Steps 1 to 3 take about ten minutes and are done once. Step 4
+          onwards is done on the PC that sits in the factory near your machines.</div>
+        <div class="cs-why" style="margin-top:12px;">
+          <b>How this works, in one picture.</b><br>
+          Your CNC machine → factory network cable → a small PC in the factory (the
+          <b>gateway</b>) → internet → this IDMS.<br><br>
+          The machine is <b>never</b> put on the internet. The gateway is a tiny program that reads the
+          machine and sends only the numbers — part count, running or stopped, tool number, alarms.
+          Nothing else, and nothing can be sent back to the machine.
+        </div>
+        <div id="cs-overall" class="note" style="display:none;"></div>
+      </div>
+
+      <!-- 1 -->
+      <div class="cs-step open" data-step="1">
+        <div class="h"><div class="cs-num"><span>1</span></div>
+          <div><div class="cs-ttl">Check you have what you need</div>
+            <div class="cs-sub">Three things, before you start</div></div>
+          <span class="cs-ar">▼</span></div>
+        <div class="b">
+          <div class="cs-sub" style="font-size:13px;">
+            <p style="margin:0 0 9px;"><b>1. A PC that stays switched on in the factory.</b> Any ordinary
+              Windows PC or mini-PC will do. It must be plugged into the same network as your CNC
+              machines, and it must have internet access. It will run quietly in the background.</p>
+            <p style="margin:0 0 9px;"><b>2. The IP address of each machine.</b> This looks like
+              <code>192.168.1.101</code>. Your machine supplier or maintenance engineer will know it. If
+              nobody knows it yet, that is fine — do Step 7 with the <b>test machine</b> first and come
+              back to this later.</p>
+            <p style="margin:0;"><b>3. Permission to add a setting to your website hosting.</b> That is
+              Step 3. If somebody else manages your Vercel account, send them Step 3 only.</p>
+          </div>
+          <div class="cs-why"><b>Why a separate PC?</b> A CNC controller is not built to face the
+            internet and must never be exposed to it. The gateway PC is the safe go-between: it can see
+            the machines, and only it talks outward.</div>
+          <button class="btn gold" data-cs-next="1">I have these — next</button>
+        </div>
+      </div>
+
+      <!-- 2 -->
+      <div class="cs-step" data-step="2">
+        <div class="h"><div class="cs-num"><span>2</span></div>
+          <div><div class="cs-ttl">Create your secret key</div>
+            <div class="cs-sub">A password that lets your factory PC send data in — and keeps everyone else out</div></div>
+          <span class="cs-ar">▼</span></div>
+        <div class="b">
+          <div class="cs-sub" style="font-size:13px;">Press the button. It makes a long random key on
+            this computer. You will paste the same key in two places: on your hosting (Step 3) and in
+            the factory PC's settings file (Step 6). They must match exactly.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:11px 0;">
+            <button class="btn gold" id="cs-genkey">Generate my key</button>
+            <button class="btn" id="cs-copykey" style="display:none;">Copy the key</button>
+          </div>
+          <div class="cs-key" id="cs-keybox" style="display:none;"></div>
+          <div class="note bad" style="margin-top:10px;">Keep this key private. Anyone who has it can send
+            machine readings into your system. If it ever leaks, generate a new one and redo Steps 3 and 6.
+            <b>It is shown here once and is not saved anywhere</b> — copy it somewhere safe now.</div>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <div class="cs-step" data-step="3">
+        <div class="h"><div class="cs-num"><span>3</span></div>
+          <div><div class="cs-ttl">Put the key on your hosting</div>
+            <div class="cs-sub">Done once, in your Vercel account, in a web browser</div></div>
+          <span class="cs-ar">▼</span></div>
+        <div class="b">
+          <div class="cs-sub" style="font-size:13px;">
+            <p style="margin:0 0 7px;">1. Open <b>vercel.com</b> and sign in.</p>
+            <p style="margin:0 0 7px;">2. Click your IDMS project.</p>
+            <p style="margin:0 0 7px;">3. Go to <b>Settings</b>, then <b>Environment Variables</b>.</p>
+            <p style="margin:0 0 7px;">4. Add a new one. Type the name exactly as below — capital letters
+              and underscores matter:</p>
+          </div>
+          <div class="cs-code">CNC_GATEWAY_KEY</div>
+          <div class="cs-sub" style="font-size:13px;">
+            <p style="margin:0 0 7px;">5. In the <b>Value</b> box, paste the key from Step 2.</p>
+            <p style="margin:0 0 7px;">6. Tick all three environments (Production, Preview, Development)
+              and press <b>Save</b>.</p>
+            <p style="margin:0;">7. Go to the <b>Deployments</b> tab and press <b>Redeploy</b> on the
+              newest one. <b>This last step is the one people forget</b> — the key does not take effect
+              until the site is redeployed.</p>
+          </div>
+          <div class="cs-why">Until this is done, the factory PC will be turned away with the message
+            <i>“Invalid machine gateway key”</i>. That message means Step 3 was missed or the key does
+            not match.</div>
+          <button class="btn gold" data-cs-next="3">Done — next</button>
+        </div>
+      </div>
+
+      <!-- 4 -->
+      <div class="cs-step" data-step="4">
+        <div class="h"><div class="cs-num"><span>4</span></div>
+          <div><div class="cs-ttl">Install the gateway on the factory PC</div>
+            <div class="cs-sub">Two downloads and one folder copy</div></div>
+          <span class="cs-ar">▼</span></div>
+        <div class="b">
+          <div class="cs-sub" style="font-size:13px;">
+            <p style="margin:0 0 7px;"><b>On the factory PC</b> (not this one):</p>
+            <p style="margin:0 0 7px;">1. Open <b>nodejs.org</b> and download the version marked
+              <b>LTS</b>. Install it, pressing Next through every screen. Nothing needs changing.</p>
+            <p style="margin:0 0 7px;">2. Copy the <b>machine-gateway</b> folder from your IDMS files onto
+              that PC. Put it somewhere easy to find, such as <code>C:\ironvale-gateway</code>.</p>
+            <p style="margin:0;">3. That is all for now. Step 6 creates the settings file that goes inside
+              that folder.</p>
+          </div>
+          <button class="btn gold" data-cs-next="4">Done — next</button>
+        </div>
+      </div>
+
+      <!-- 5 -->
+      <div class="cs-step" data-step="5">
+        <div class="h"><div class="cs-num"><span>5</span></div>
+          <div><div class="cs-ttl">Tell it about your machines</div>
+            <div class="cs-sub">Add one line per machine — or start with the test machine to prove it works</div></div>
+          <span class="cs-ar">▼</span></div>
+        <div class="b">
+          <div class="note" style="margin-bottom:11px;">
+            <b>Not sure of your machine's details yet?</b> Press <b>Add a test machine</b> below. It
+            pretends to be a CNC and produces realistic readings, so you can finish every step and see
+            the live screen working today. Delete it once a real machine is connected.
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:13px;">
+            <button class="btn" id="cs-add-sim">Add a test machine</button>
+          </div>
+
+          <div class="cs-mrow">
+            <div><label>Machine name</label><input id="cs-m-name" placeholder="Lathe 1"></div>
+            <div><label>Short code</label><input id="cs-m-id" placeholder="CNC-01"></div>
+            <div><label>Controller make</label><select id="cs-m-ctrl">
+              <option>FANUC</option><option>Siemens</option><option>Haas</option><option>Mazak</option>
+              <option>Mitsubishi</option><option>Okuma</option><option>Heidenhain</option><option>Other</option>
+            </select></div>
+            <div><label>Machine IP address</label><input id="cs-m-ip" placeholder="192.168.1.101"></div>
+            <div><button class="btn gold" id="cs-m-add">Add</button></div>
+          </div>
+          <div class="cs-mrow">
+            <div><label>How it connects</label><select id="cs-m-adapter">
+              <option value="mtconnect">MTConnect (most common)</option>
+              <option value="http-json">A JSON/HTTP box on the machine</option>
+              <option value="simulator">Test machine (no real CNC)</option>
+            </select></div>
+            <div><label>Port number</label><input id="cs-m-port" placeholder="5000"></div>
+            <div><label>Standard cycle (seconds)</label><input id="cs-m-cycle" placeholder="260"></div>
+            <div><label>Tool life (parts)</label><input id="cs-m-life" placeholder="500"></div>
+            <div></div>
+          </div>
+          <div class="cs-why"><b>Not sure about “How it connects”?</b> Leave it on MTConnect and ask your
+            machine supplier whether an <i>MTConnect agent</i> is switched on, and on which port. Most
+            machines made after roughly 2015 support it. Port <b>5000</b> is the usual answer.</div>
+          <div class="note bad" id="cs-m-msg" style="display:none;"></div>
+          <div class="cs-mlist" id="cs-mlist" style="margin-top:12px;"></div>
+        </div>
+      </div>
+
+      <!-- 6 -->
+      <div class="cs-step" data-step="6">
+        <div class="h"><div class="cs-num"><span>6</span></div>
+          <div><div class="cs-ttl">Create the settings file</div>
+            <div class="cs-sub">Written for you — copy it, or download it ready to use</div></div>
+          <span class="cs-ar">▼</span></div>
+        <div class="b">
+          <div class="cs-sub" style="font-size:13px;">This is built from your machines in Step 5 and your
+            key from Step 2. Save it as <b>config.json</b> inside the <b>machine-gateway</b> folder on the
+            factory PC.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:11px 0;">
+            <button class="btn gold" id="cs-dl-config">Download config.json</button>
+            <button class="btn" id="cs-copy-config">Copy it instead</button>
+          </div>
+          <div class="cs-code" id="cs-config">Add a machine in Step 5 first.</div>
+          <div class="note bad">The file contains your secret key. Do not email it and do not put it in a
+            shared drive that other companies can read.</div>
+        </div>
+      </div>
+
+      <!-- 7 -->
+      <div class="cs-step" data-step="7">
+        <div class="h"><div class="cs-num"><span>7</span></div>
+          <div><div class="cs-ttl">Start it, and check the data arrives</div>
+            <div class="cs-sub">The moment of truth</div></div>
+          <span class="cs-ar">▼</span></div>
+        <div class="b">
+          <div class="cs-sub" style="font-size:13px;">
+            <p style="margin:0 0 7px;">1. On the factory PC, open the <b>machine-gateway</b> folder.</p>
+            <p style="margin:0 0 7px;">2. Double-click <b>start-gateway.cmd</b>.</p>
+            <p style="margin:0 0 9px;">3. A black window opens. If it says
+              <i>Gateway running: 1 machine(s)</i> and then stays quiet, it is working. Leave the window
+              open — closing it stops the readings.</p>
+            <p style="margin:0 0 9px;"><b>Any red text in that window is telling you what is wrong.</b>
+              Match it against the table further down.</p>
+            <p style="margin:0;">4. Now press the button below. It asks the IDMS whether anything has
+              arrived.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:11px 0;">
+            <button class="btn gold" id="cs-check">Check for machine data now</button>
+            <button class="btn" id="cs-open-live">Open the Live Monitor</button>
+          </div>
+          <div id="cs-check-result"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>If something is not working</h4>
+        <div class="hint" style="margin-bottom:10px;">Find the message you can see, and do what the right
+          column says. These cover nearly everything that goes wrong.</div>
+        <div class="cs-mlist">
+          <table>
+            <thead><tr><th style="width:42%;">What you see</th><th>What it means and what to do</th></tr></thead>
+            <tbody>
+              <tr><td><b>“No CNC machines connected yet”</b> on the Live Monitor</td>
+                <td>Nothing has arrived. The gateway is not running, or it cannot reach the internet, or
+                  Step 3 was not finished with a redeploy. Look at the black window on the factory PC.</td></tr>
+              <tr><td><b>IDMS ingest 401</b> in the black window</td>
+                <td>The keys do not match. The key in <code>config.json</code> must be character-for-character
+                  the same as <code>CNC_GATEWAY_KEY</code> on Vercel — and the site must have been
+                  redeployed after adding it.</td></tr>
+              <tr><td><b>IDMS ingest 404</b></td>
+                <td>The address is wrong. In <code>config.json</code>, <code>idmsIngestUrl</code> must end
+                  with <code>/api/cnc</code> — nothing after it.</td></tr>
+              <tr><td><b>IDMS unreachable</b></td>
+                <td>The factory PC has no internet, or a firewall is blocking it. Open your IDMS site in a
+                  browser on that same PC. If it does not open, it is a network problem, not a
+                  settings problem.</td></tr>
+              <tr><td><b>MTConnect HTTP 404</b>, or the machine shows <b>OFFLINE</b></td>
+                <td>The gateway reached the machine's address but found nothing there. The IP or port is
+                  wrong, or the MTConnect agent is not switched on. Ask your machine supplier to confirm
+                  both.</td></tr>
+              <tr><td><b>Unsupported adapter</b></td>
+                <td>“How it connects” was set to something that is not installed. Use MTConnect, the
+                  JSON/HTTP option, or the test machine.</td></tr>
+              <tr><td>The test machine works, a real one does not</td>
+                <td>This is good news: your key, your address and your internet are all correct. The
+                  problem is only between the gateway PC and that machine — an IP, a port, or the agent
+                  not being switched on.</td></tr>
+              <tr><td>Part count does not match the machine's own counter</td>
+                <td>Do not put this into production yet. Run one machine for a full shift and compare
+                  against the machine's own counter before trusting the figures or connecting more.</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -3249,7 +3520,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     ['accounts','💹','Accounts','Budget and cost',[
       ['dash_accounts','📊','Accounts Dashboard',1],
       ['accounts_pl','💹','P&L']]],
-    ['production_live','📡','Live Production','CNC and machine monitoring',[['cnc_live','🟢','CNC Live Monitor',1]]],
+    ['production_live','📡','Live Production','CNC and machine monitoring',[
+      ['cnc_live','🟢','CNC Live Monitor',1],
+      ['cnc_setup','🧭','Setup Guide — Connect a Machine',1]]],
     ['admin','⚙','Admin','Settings and the website',[
       ['admin_site','🌐','Website Content',1],
       ['admin_banner','🖼','Home Banner',1],
@@ -3285,6 +3558,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      every other screen is wired up fixes that. */
   LIVE.home = 1; LABEL.home = 'Home'; ICON.home = '🏠';
   LIVE.cnc_live = 1; LABEL.cnc_live = 'CNC Live Monitor'; ICON.cnc_live = '📡';
+  LIVE.cnc_setup = 1; LABEL.cnc_setup = 'Setup Guide — Connect a Machine'; ICON.cnc_setup = '🧭';
 
   /* Every menu/sub-menu entry is a real <a href="#s=..."> so the browser's own
      right-click menu ("Open Link in New Tab" / "Open Link in New Window") works
@@ -3408,6 +3682,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (s === 'control_plan')   loadCp();
     if (s === 'cnc')            loadCnc();
     if (s === 'cnc_live')       loadCncLive();
+    if (s === 'cnc_setup')      loadCncSetup();
     if (s === 'ppap')           loadPpap();
     if (s === 'report_setup_approval') loadSetup();
     if (s === 'report_self_inspection') loadSelfInsp();
@@ -16043,7 +16318,15 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       ].map(function(x){return '<div class="b"><span>'+cncEsc(x[0])+'</span><b>'+cncEsc(x[1])+'</b></div>';}).join('');
       var alarms=list.filter(function(m){return String(m.state&&m.state.status).toUpperCase()==='ALARM';});
       document.getElementById('cnc-live-alert').innerHTML=alarms.length?'<div class="cnc-alert">⚠ <b>'+alarms.length+' machine alarm'+(alarms.length>1?'s':'')+'</b> — check the machine card below for the latest alarm.</div>':'';
-      if(!list.length){ grid.innerHTML='<div class="empty"><b>No CNC machines connected yet.</b><span>Install the machine gateway on a factory-LAN PC and add the machine configuration.</span></div>'; return; }
+      if(!list.length){ /* Land somebody here with nowhere to go and they give up. Send them to the guide. */
+        grid.innerHTML='<div class="empty"><b>No CNC machines connected yet.</b>'+
+          '<span>Nothing has been received from the factory. The <b>Setup Guide</b> walks through '+
+          'connecting a machine step by step, and can add a test machine so you can see this screen '+
+          'working before a real CNC is wired up.</span>'+
+          '<button class="btn gold" id="cnc-live-setup" style="margin-top:12px;">Open the Setup Guide</button></div>';
+        var b=document.getElementById('cnc-live-setup');
+        if(b) b.addEventListener('click',function(){ navigate('cnc_setup'); });
+        return; }
       grid.innerHTML=list.map(function(m){
         var s=m.state||{}, status=String(s.status||'UNKNOWN').toUpperCase(), life=cncLife(s.toolLifeUsedParts,s.toolLifeLimitParts);
         var diff=Number(s.cycleTimeSec||0)-Number(s.idealCycleSec||0);
@@ -16057,6 +16340,263 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     clearTimeout(cncLiveTimer); cncLiveTimer=setTimeout(function(){ if(document.querySelector('.panel[data-panel="cnc_live"].on')) loadCncLive(); },5000);
   }
   document.getElementById('cnc-live-refresh')?.addEventListener('click',loadCncLive);
+  document.getElementById('cnc-live-guide')?.addEventListener('click',function(){ navigate('cnc_setup'); });
+
+
+  /* ================= CNC SETUP GUIDE =================
+     A screen for the person who has to actually make machine monitoring work,
+     who is usually not a programmer. Three things it does that a written
+     document cannot:
+
+       - it generates the shared secret, so nobody invents a weak one;
+       - it writes config.json for them from a form, so the JSON cannot be
+         mistyped (a stray comma here is the single commonest failure);
+       - it asks the server whether data has actually arrived, and answers in a
+         sentence that says what to do next rather than a status code.
+
+     The machine list is kept in idms_settings so it survives a reload. The
+     secret key is deliberately NOT stored anywhere — it is shown once and the
+     user is told to copy it. */
+  var cncSetupMachines = [];
+
+  function csEl(id){ return document.getElementById(id); }
+
+  async function loadCncSetup(){
+    try {
+      var st = await C.idms.settings();
+      cncSetupMachines = ((st || {}).cnc_gateway || {}).machines || [];
+    } catch(e){ cncSetupMachines = []; }
+    csDrawMachines();
+    csDrawConfig();
+    csRefreshProgress();
+  }
+
+  /* Steps open one at a time by clicking the heading. */
+  function csBindSteps(){
+    var steps = document.querySelectorAll('.panel[data-panel="cnc_setup"] .cs-step');
+    Array.prototype.forEach.call(steps, function(st){
+      st.querySelector('.h').addEventListener('click', function(){
+        st.classList.toggle('open');
+      });
+    });
+    Array.prototype.forEach.call(
+      document.querySelectorAll('.panel[data-panel="cnc_setup"] [data-cs-next]'),
+      function(b){
+        b.addEventListener('click', function(e){
+          e.stopPropagation();
+          var n = Number(b.getAttribute('data-cs-next'));
+          var cur = document.querySelector('.cs-step[data-step="'+n+'"]');
+          var nxt = document.querySelector('.cs-step[data-step="'+(n+1)+'"]');
+          if (cur){ cur.classList.add('done'); cur.classList.remove('open'); }
+          if (nxt){ nxt.classList.add('open'); nxt.scrollIntoView({behavior:'smooth',block:'center'}); }
+        });
+      });
+  }
+
+  /* A key nobody has to think up. crypto.getRandomValues is the browser's
+     cryptographic source; Math.random() would not be good enough for a shared
+     secret and is not used here. */
+  function csGenerateKey(){
+    var bytes = new Uint8Array(32);
+    (window.crypto || window.msCrypto).getRandomValues(bytes);
+    var out = '';
+    Array.prototype.forEach.call(bytes, function(b){ out += ('0'+b.toString(16)).slice(-2); });
+    return out;
+  }
+
+  function csMarkDone(step, done){
+    var el = document.querySelector('.cs-step[data-step="'+step+'"]');
+    if (el) el.classList[done ? 'add' : 'remove']('done');
+  }
+
+  function csRefreshProgress(){
+    csMarkDone(2, !!(csEl('cs-keybox') && csEl('cs-keybox').textContent));
+    csMarkDone(5, cncSetupMachines.length > 0);
+    csMarkDone(6, cncSetupMachines.length > 0);
+  }
+
+  function csDrawMachines(){
+    var host = csEl('cs-mlist'); if (!host) return;
+    if (!cncSetupMachines.length){
+      host.innerHTML = '<div class="empty"><b>No machines added yet.</b>' +
+        '<span>Add a test machine above if you want to see the whole thing working before ' +
+        'a real CNC is wired up.</span></div>';
+      return;
+    }
+    host.innerHTML = '<table><thead><tr><th>Name</th><th>Code</th><th>Controller</th>' +
+      '<th>Connects by</th><th>Address</th><th></th></tr></thead><tbody>' +
+      cncSetupMachines.map(function(m, i){
+        return '<tr><td><b>' + esc(m.name) + '</b></td><td>' + esc(m.id) + '</td>' +
+          '<td>' + esc(m.controller) + '</td><td>' + esc(m.adapter) + '</td>' +
+          '<td>' + esc(m.baseUrl || (m.adapter === 'simulator' ? 'test machine — no address' : '')) + '</td>' +
+          '<td style="text-align:right;"><button class="btn del" data-cs-del="' + i + '">Remove</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    Array.prototype.forEach.call(host.querySelectorAll('[data-cs-del]'), function(b){
+      b.addEventListener('click', async function(){
+        cncSetupMachines.splice(Number(b.getAttribute('data-cs-del')), 1);
+        await csSaveMachines(); csDrawMachines(); csDrawConfig(); csRefreshProgress();
+      });
+    });
+  }
+
+  async function csSaveMachines(){
+    try { await C.idms.saveSetting('cnc_gateway', { machines: cncSetupMachines }); }
+    catch(e){ /* the list is a convenience; losing it must not block the guide */ }
+  }
+
+  function csDrawConfig(){
+    var box = csEl('cs-config'); if (!box) return;
+    if (!cncSetupMachines.length){ box.textContent = 'Add a machine in Step 5 first.'; return; }
+    var key = (csEl('cs-keybox') && csEl('cs-keybox').textContent) || '';
+    box.textContent = JSON.stringify({
+      pollMs: 2000,
+      pushMs: 5000,
+      idmsIngestUrl: location.origin + '/api/cnc',
+      machineGatewayKey: key || 'PASTE-THE-KEY-FROM-STEP-2-HERE',
+      machines: cncSetupMachines
+    }, null, 2);
+  }
+
+  /* ---- step 2: the key ---- */
+  csEl('cs-genkey') && csEl('cs-genkey').addEventListener('click', function(){
+    var k = csGenerateKey();
+    csEl('cs-keybox').textContent = k;
+    csEl('cs-keybox').style.display = '';
+    csEl('cs-copykey').style.display = '';
+    csDrawConfig(); csRefreshProgress();
+  });
+  csEl('cs-copykey') && csEl('cs-copykey').addEventListener('click', function(){
+    csCopy(csEl('cs-keybox').textContent, 'Key copied. Paste it into Vercel in Step 3.');
+  });
+
+  function csCopy(text, okMsg){
+    var done = function(){ toast(okMsg); };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, function(){ csCopyFallback(text, done); });
+    } else csCopyFallback(text, done);
+  }
+  /* Clipboard access is refused in some locked-down works browsers, and a
+     "copy" button that silently does nothing is worse than none. */
+  function csCopyFallback(text, done){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch(e){ ok = false; }
+    document.body.removeChild(ta);
+    if (ok) done();
+    else toast('This browser will not allow copying. Select the text and press Ctrl+C.');
+  }
+
+  /* ---- step 5: machines ---- */
+  csEl('cs-add-sim') && csEl('cs-add-sim').addEventListener('click', async function(){
+    if (cncSetupMachines.filter(function(m){ return m.adapter === 'simulator'; }).length)
+      return csMsg('A test machine is already on the list.');
+    cncSetupMachines.push({ id:'TEST-01', name:'Test machine', controller:'SIMULATOR',
+      adapter:'simulator', idealCycleSec:60, toolLifeParts:500 });
+    await csSaveMachines(); csDrawMachines(); csDrawConfig(); csRefreshProgress();
+    csMsg('Test machine added. Finish Step 6 and Step 7 — you should see it running within a minute.', true);
+  });
+
+  function csMsg(t, good){
+    var m = csEl('cs-m-msg'); if (!m) return;
+    m.style.display = ''; m.className = 'note ' + (good ? 'good' : 'bad'); m.textContent = t;
+  }
+
+  csEl('cs-m-add') && csEl('cs-m-add').addEventListener('click', async function(){
+    var name = fieldVal('cs-m-name'), id = fieldVal('cs-m-id');
+    var adapter = csEl('cs-m-adapter').value, ip = fieldVal('cs-m-ip'), port = fieldVal('cs-m-port');
+    if (!name) return csMsg('Give the machine a name — it is what you will see on the live screen.');
+    if (!id)   return csMsg('Give the machine a short code, such as CNC-01.');
+
+    /* Two machines under one code would overwrite each other's readings, and
+       the figures would be wrong in a way nobody would spot. */
+    if (cncSetupMachines.filter(function(m){ return m.id.toLowerCase() === id.toLowerCase(); }).length)
+      return csMsg('The code "' + id + '" is already used. Every machine needs its own code, or their ' +
+                   'readings will overwrite each other.');
+
+    if (adapter !== 'simulator' && !ip)
+      return csMsg('A real machine needs its IP address, such as 192.168.1.101. If you do not know it ' +
+                   'yet, add a test machine instead and come back to this.');
+
+    var m = { id:id, name:name, controller:csEl('cs-m-ctrl').value, adapter:adapter };
+    if (adapter !== 'simulator'){
+      m.baseUrl = 'http://' + ip + ':' + (port || '5000');
+      m.devicePath = '/current';
+    }
+    var cyc = C.num(fieldVal('cs-m-cycle')), life = C.num(fieldVal('cs-m-life'));
+    if (cyc)  m.idealCycleSec = cyc;
+    if (life) m.toolLifeParts = life;
+
+    cncSetupMachines.push(m);
+    await csSaveMachines(); csDrawMachines(); csDrawConfig(); csRefreshProgress();
+    ['cs-m-name','cs-m-id','cs-m-ip','cs-m-port','cs-m-cycle','cs-m-life']
+      .forEach(function(f){ csEl(f).value = ''; });
+    csMsg('Added. Add another, or move on to Step 6.', true);
+  });
+
+  /* ---- step 6: the file ---- */
+  csEl('cs-copy-config') && csEl('cs-copy-config').addEventListener('click', function(){
+    csCopy(csEl('cs-config').textContent, 'Copied. Save it as config.json on the factory PC.');
+  });
+  csEl('cs-dl-config') && csEl('cs-dl-config').addEventListener('click', function(){
+    if (!cncSetupMachines.length) return toast('Add a machine in Step 5 first.');
+    var blob = new Blob([csEl('cs-config').textContent], { type:'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'config.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  });
+
+  /* ---- step 7: has anything arrived? ---- */
+  csEl('cs-open-live') && csEl('cs-open-live').addEventListener('click', function(){ navigate('cnc_live'); });
+
+  csEl('cs-check') && csEl('cs-check').addEventListener('click', async function(){
+    var host = csEl('cs-check-result');
+    this.disabled = true; host.innerHTML = '<div class="note">Checking…</div>';
+    try {
+      var r = await C.api('/api/cnc?what=summary');
+      var list = (r.summary && r.summary.machines) || [];
+      if (!list.length){
+        host.innerHTML = '<div class="note bad"><b>Nothing has arrived yet.</b><br>' +
+          'The IDMS is working — it answered this check — but no factory PC has sent it anything. ' +
+          'Go to the black window on the factory PC and read the last line. If there is no black ' +
+          'window, the gateway is not running: double-click <b>start-gateway.cmd</b>. ' +
+          'If it says <b>401</b>, the key does not match. If it says <b>404</b>, the address is wrong. ' +
+          'The table at the bottom of this page explains each one.</div>';
+      } else {
+        var stale = list.filter(function(m){
+          return (Date.now() - new Date(m.updated_at || 0).getTime()) > 120000; });
+        var live = list.length - stale.length;
+        host.innerHTML =
+          '<div class="note good"><b>It is working.</b> ' + list.length + ' machine' +
+          (list.length > 1 ? 's have' : ' has') + ' reported in' +
+          (live ? ', ' + live + ' of them in the last two minutes' : '') + '.</div>' +
+          '<div class="cs-mlist" style="margin-top:10px;"><table><thead><tr><th>Machine</th>' +
+          '<th>Status</th><th>Part count</th><th>Last heard from</th></tr></thead><tbody>' +
+          list.map(function(m){
+            var s = m.state || {};
+            var age = Math.round((Date.now() - new Date(m.updated_at || 0).getTime()) / 1000);
+            return '<tr><td><b>' + esc(m.name || m.machine_id) + '</b></td><td>' +
+              esc(String(s.status || 'UNKNOWN')) + '</td><td>' + esc(s.partCount || 0) + '</td><td>' +
+              (age < 120 ? age + ' seconds ago'
+                         : '<b style="color:#a61b1b">' + Math.round(age/60) + ' minutes ago — has it stopped?</b>') +
+              '</td></tr>';
+          }).join('') + '</tbody></table></div>' +
+          '<div class="cs-why" style="margin-top:10px;">Before you rely on these numbers: run one ' +
+          'machine for a full shift and check the part count against the machine\'s own counter. ' +
+          'Only then connect the rest.</div>';
+        csMarkDone(7, true);
+      }
+    } catch(e){
+      host.innerHTML = '<div class="note bad"><b>Could not ask the server.</b> ' + esc(e.message) +
+        '<br>This is about your own connection to the IDMS, not the factory PC. Check you are still ' +
+        'signed in, then try again.</div>';
+    }
+    this.disabled = false;
+  });
+
+  csBindSteps();
 
   async function loadCnc(){
     await fetchParts();

@@ -32,7 +32,24 @@ The gateway's `machineGatewayKey` must be exactly the same value.
 
 The gateway posts to:
 
-`https://YOUR-IDMS-DOMAIN/api/cnc/state`
+`https://YOUR-IDMS-DOMAIN/api/cnc?what=state`
+
+`idmsIngestUrl` in `config.json` is the part **before** the question mark —
+`https://YOUR-IDMS-DOMAIN/api/cnc` — and the gateway appends the rest.
+
+> **Corrected in v115.** This previously read `/api/cnc/state`, and the gateway
+> built that URL. Vercel routes `api/cnc.js` to `/api/cnc` and nothing below it,
+> so every push came back **404** and no machine reading ever reached the IDMS.
+> If you set this up before v115 and never saw data, this was why.
+
+## The easy way: use the Setup Guide in the IDMS
+
+This document is the reference. For actually doing it, open the IDMS and go to
+**Live Production → Setup Guide — Connect a Machine**. It generates the shared
+key, writes `config.json` from a form (so the JSON cannot be mistyped), and has
+a button that checks whether readings have arrived and says what to fix if not.
+It also offers a **test machine** so the whole chain can be proved before a real
+CNC is touched.
 
 ## Gateway installation on Windows
 

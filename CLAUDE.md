@@ -1283,6 +1283,61 @@ added to the menu between Accounts and Admin.
   15 different `margin-top` values. That is why screens look slightly different
   from one another. Normalising it changes pixels, so it was not done here.
 
+## Live Production — the guide, and the bug it was hiding
+
+**The feature had never worked.** `machine-gateway/gateway.mjs` posted to
+`cfg.idmsIngestUrl + '/state'` → `/api/cnc/state`. Vercel routes `api/cnc.js` to
+`/api/cnc` and **nothing below it**, so every push came back 404. Even reaching
+the handler would not have helped: the ingest branch requires
+`what === 'state'`, and neither the query string nor the body carried it. The
+Live Monitor therefore sat on *"No CNC machines connected yet"* permanently,
+with no way for anyone to tell whether it was their wiring or the software.
+
+The gateway now posts to `/api/cnc?what=state` and **also puts `what` in the
+body**, so the ingest still resolves if a proxy strips the query string. A
+dropped link is logged and survived rather than thrown; a 401 and a 404 each
+print the specific thing to fix. `SETUP-CNC-UNIVERSAL.md` carried the same wrong
+URL and is corrected.
+
+`cnctest.mjs` pins the URL shape at both ends. **Do not change the ingest path
+without changing both sides and that test.**
+
+### The Setup Guide
+
+`Live Production → Setup Guide — Connect a Machine` (`cnc_setup`). Seven steps,
+written for a maintenance engineer rather than a programmer. Three things it
+does that a written document cannot:
+
+- **Generates the shared key** with `crypto.getRandomValues`, so nobody invents
+  a weak one. It is shown once and **deliberately never stored** — not in
+  `idms_settings`, not anywhere. `cnctest` asserts it does not reach the server.
+- **Writes `config.json` from a form.** A mistyped comma in hand-written JSON was
+  the commonest failure; now the file is generated, and `idmsIngestUrl` is built
+  from `location.origin` so it cannot be wrong.
+- **Asks the server whether data has actually arrived** and answers in a
+  sentence that names the fix — not a status code. A machine that has gone quiet
+  for over two minutes is called out rather than shown as live.
+
+The machine list is saved to `idms_settings` key `cnc_gateway` so it need not be
+retyped. Two rules are enforced: a duplicate machine code is refused (two
+machines under one code overwrite each other's readings, and the figures would
+be wrong in a way nobody would spot), and a non-simulator machine with no IP is
+refused.
+
+**The test machine matters more than it looks.** It lets somebody prove the key,
+the URL, the firewall and the whole chain before touching a CNC — so when a real
+machine fails, the fault is known to be between the gateway PC and that machine
+and nowhere else. Keep it.
+
+The empty state on the Live Monitor links here. Landing on an empty screen with
+nowhere to go is why this feature was never commissioned.
+
+**Still to do:** the gateway pushes every state every `pushMs` whether it changed
+or not — 30 invocations/minute/machine on Vercel. Fine for a few machines, worth
+making change-only before a works-wide rollout. And the guide tells the user to
+verify part count against the machine's own counter for a full shift before
+trusting it; that instruction is load-bearing and should not be softened.
+
 ---
 
 ## Conventions

@@ -54,27 +54,22 @@ export default async function handler(req, res) {
        birth. That is deliberately limited — it returns only that person's own
        attendance and pay position, never anyone else's, and it can change
        nothing. Treat it as a convenience, not a secure login. ---- */
-    if (askedFor === 'me' && req.method === 'POST') {
-      const empId = String(preBody.empId || '').trim().toUpperCase();
-      const dob = String(preBody.dob || '').trim();
-      if (!empId || !dob)
-        return res.status(400).json({ ok: false, error: 'Employee ID and date of birth are required.' });
-
+    /* Shared by both routes below: the employee's own record plus one month of
+       attendance and leave. 'me' and the IDMS lookup used to carry two copies
+       of this query and would silently drift apart the next time either one
+       was edited. Only the gate in front of it differs. */
+    async function attendancePacket(empId, periodIn) {
       const rows = await sql`SELECT data FROM hr_employees WHERE upper(emp_id) = ${empId}`;
       const emp = rows.length ? rows[0].data : null;
-      // one message for both failures, so the form cannot be used to discover valid IDs
-      if (!emp || String(emp.dob || '') !== dob)
-        return res.status(401).json({ ok: false, error: 'Those details do not match our records.' });
-
-      const period = String(preBody.period || new Date().toISOString().slice(0, 10)).slice(0, 7);
+      if (!emp) return null;
+      const period = String(periodIn || new Date().toISOString().slice(0, 10)).slice(0, 7);
       const [yy, mm] = period.split('-').map(Number);
       const last = new Date(yy, mm, 0).getDate();
       const att = await sql`SELECT data FROM hr_attendance WHERE emp_id = ${emp.empId}
                             AND day >= ${period + '-01'} AND day <= ${period + '-' + String(last).padStart(2, '0')}
                             ORDER BY day`;
       const lv = await sql`SELECT data, status FROM hr_leave WHERE emp_id = ${emp.empId}`;
-
-      return res.status(200).json({ ok: true,
+      return {
         employee: {
           empId: emp.empId, name: emp.name, designation: emp.designation,
           department: emp.department, doj: emp.doj, photo: emp.photo || '',
@@ -88,8 +83,36 @@ export default async function handler(req, res) {
         },
         attendance: att.map(r => r.data),
         leave: lv.map(r => Object.assign({}, r.data, { status: r.status })),
-        period
-      });
+        period, dob: String(emp.dob || '')
+      };
+    }
+
+    if (askedFor === 'me' && req.method === 'POST') {
+      const empId = String(preBody.empId || '').trim().toUpperCase();
+      const dob = String(preBody.dob || '').trim();
+      if (!empId || !dob)
+        return res.status(400).json({ ok: false, error: 'Employee ID and date of birth are required.' });
+      const packet = await attendancePacket(empId, preBody.period);
+      // one message for both failures, so the form cannot be used to discover valid IDs
+      if (!packet || packet.dob !== dob)
+        return res.status(401).json({ ok: false, error: 'Those details do not match our records.' });
+      delete packet.dob;
+      return res.status(200).json(Object.assign({ ok: true }, packet));
+    }
+
+    /* ---- IDMS: the same packet, for a staff member who is signed in and does
+       not know (and should not need to know) the employee's date of birth.
+       Pay figures are in this response, so it is gated the same way the rest
+       of HR & Payroll already is: the developer login only. ---- */
+    if (askedFor === 'lookup' && req.method === 'POST') {
+      if (!(await checkRole(req.headers['x-auth-token'] || '', ['developer'])))
+        return res.status(403).json({ ok: false, error: 'Attendance lookup needs the administrator login.' });
+      const empId = String(preBody.empId || '').trim().toUpperCase();
+      if (!empId) return res.status(400).json({ ok: false, error: 'Choose an employee.' });
+      const packet = await attendancePacket(empId, preBody.period);
+      if (!packet) return res.status(404).json({ ok: false, error: 'No employee with that ID.' });
+      delete packet.dob;
+      return res.status(200).json(Object.assign({ ok: true }, packet));
     }
 
     /* an employee applying for their own leave from the portal */

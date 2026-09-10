@@ -636,6 +636,50 @@
   body.embedded header, body.embedded footer, body.embedded #chat-fab, body.embedded #chat-panel,
   body.embedded section, body.embedded #admin-toggle, body.embedded .custom-sec{display:none !important;}
   body.embedded{background:var(--white);}
+  /* The admin panel opened this way used to keep its own navy title bar with
+     "Admin" and a ✕ close button — a second app window inside the IDMS's own
+     frame, with its own way to leave a screen the IDMS already navigates. That
+     bar is what made this read as a remote view rather than part of the IDMS.
+     It is hidden here; Publish moves onto one plain line so the action survives
+     without the window dressing around it. The engine underneath — DEFAULTS,
+     the live data object, every tab — is untouched: it is the same code that
+     renders the public site, and it has to stay that way for "what you see
+     here is what publishes" to keep meaning what it says. Duplicating that
+     engine into the IDMS would mean two copies of the website's renderer that
+     could quietly drift apart, which is the opposite of what this pass is for. */
+  body.embedded .admin-head{background:transparent;color:var(--ink);padding:14px 4px 10px;
+    border-bottom:1px solid var(--line);}
+  body.embedded .admin-head h2{display:none;}
+  body.embedded .admin-head .pubbtn{margin-left:auto;}
+  body.embedded .admin-head .admin-close{display:none;}
+  /* Positioning is deliberately NOT touched here. #admin-panel is
+     position:fixed;inset:0 in its own right, which — same as #staff-page and
+     #hr-page below — already fills the iframe's own viewport correctly with
+     no changes needed; the iframe is the viewport it's fixed to. An earlier
+     version of this fix also set position:static and height:auto, which
+     turned the flex-column layout with its inner scrolling .admin-body into
+     an untested shape for no actual benefit (the properties it was meant to
+     undo — box-shadow, border-radius — were never set on #admin-panel to
+     begin with). Removed; only the chrome above is touched. */
+
+  /* RFQ Pipeline and HR & Payroll (#staff-page, #hr-page) share this bar, and
+     it carried the same "second app window" problem as the admin panel, plus
+     something worse: the token in "Sign Out" is read from and written to
+     localStorage under the key 'app_token' — the EXACT key core.js uses for
+     the IDMS's own session, in the same origin, so the same storage. Pressing
+     Sign Out in here did not just close this screen: it silently cleared the
+     IDMS tab's session too. The IDMS would not notice until its next token
+     read or a reload, at which point the person would be signed out with no
+     visible reason. "Site Admin" and "View Website" have the same category of
+     problem in miniature — they duplicate or fight the IDMS's own navigation.
+     All three are hidden here; only Refresh, a genuine action, stays. */
+  body.embedded .staff-bar h2,
+  body.embedded .staff-bar #staff-admin, body.embedded .staff-bar #staff-back, body.embedded .staff-bar #staff-logout,
+  body.embedded .staff-bar #hr-admin, body.embedded .staff-bar #hr-back, body.embedded .staff-bar #hr-logout,
+  body.embedded .staff-bar .t-micro{display:none !important;}
+  body.embedded .staff-bar{position:static;background:transparent;color:var(--ink);
+    padding:0 0 10px;height:auto;border-bottom:1px solid var(--line);}
+  body.embedded .staff-actions button{color:var(--navy);border-color:var(--line);}
   .embed-msg{max-width:520px;margin:60px auto;padding:26px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;text-align:center;}
   .embed-msg h3{font-family:var(--display);margin-bottom:8px;}
 

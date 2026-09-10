@@ -219,9 +219,13 @@ check('the entered figure reaches the dashboard', /1,?500/.test($('kd-body').inn
 nav('admin_site');
 await wait(120);
 check('website content opens the admin panel in a frame', /embed=admin/.test($('em-frame').src), $('em-frame').src);
-nav('emb_me');
+// My Attendance stopped being one of these screens: it is a native panel now
+// (see cnctest-style suite for the full behaviour), so this only checks it
+// no longer routes through the frame at all.
+nav('attendance_lookup');
 await wait(120);
-check('My Attendance opens in the IDMS', /embed=me/.test($('em-frame').src), $('em-frame').src);
+check('My Attendance is native, not framed',
+  !!$('al-emp') && !window.document.querySelector('.panel[data-panel="embed"]').classList.contains('on'));
 
 // ---- 10. the old Home Banner admin screen still saves (its settings survive;
 //      its image is deliberately no longer shown on Home — see #11) ----

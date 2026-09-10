@@ -64,6 +64,47 @@ async function boot(url, token) {
   check('embedded mode hides the public chrome', window.document.body.classList.contains('embedded'));
   check('the admin panel opens when the IDMS opens it',
     window.document.getElementById('admin-panel').classList.contains('open'));
+  /* This used to keep its own navy "Admin" title bar with a second close
+     button — a whole extra app window inside the IDMS's own frame, which is
+     what made it read as a remote screen rather than part of the IDMS. The
+     engine underneath (DEFAULTS, the live content object, every tab) stays on
+     the website on purpose: it is the same code that renders the public site,
+     and copying it into the IDMS would mean two renderers that could quietly
+     drift apart. Only the window dressing goes. */
+  const css = window.document.querySelector('style') ? [...window.document.querySelectorAll('style')]
+    .map(s => s.textContent).join('\n') : '';
+  check('the embedded admin panel no longer shows its own title bar',
+    /body\.embedded \.admin-head h2\{display:none/.test(css));
+  check('and no longer shows its own close button', /body\.embedded \.admin-head \.admin-close\{display:none/.test(css));
+  check('Publish Changes is still there — it is a real action, not chrome',
+    !!window.document.getElementById('publish-btn'));
+}
+
+// ---------- 2b. RFQ Pipeline and HR & Payroll opened from the IDMS ----------
+{
+  const { window } = await boot('https://example.test/?embed=pipeline', 'TOK');
+  await wait(250);
+  const css = [...window.document.querySelectorAll('style')].map(s => s.textContent).join('\n');
+  check('the pipeline bar drops its own title', /body\.embedded \.staff-bar h2/.test(css));
+  check('and Sign Out is hidden', /#staff-logout/.test(css) && /display:none !important/.test(
+    css.match(/body\.embedded[^{]*#staff-logout[^{]*\{[^}]*\}/)?.[0] || ''));
+  /* This is the bug this pass found: Sign Out and the IDMS both keep their
+     session token under localStorage key 'app_token', same origin, same
+     storage — so pressing it in here cleared the IDMS's own session too, with
+     nothing to explain why the IDMS asked for a fresh sign-in shortly after.
+     The button is hidden now; this pins that the two really do collide, so a
+     reappearing Sign Out button here is treated as the regression it is. */
+  window.localStorage.setItem('app_token', 'TOK');
+  window.document.getElementById('staff-logout').click();
+  check('confirmed: that button clears the same key the IDMS session uses',
+    window.localStorage.getItem('app_token') === null);
+}
+{
+  const { window } = await boot('https://example.test/?embed=hr', 'TOK');
+  await wait(250);
+  const css = [...window.document.querySelectorAll('style')].map(s => s.textContent).join('\n');
+  check('HR & Payroll drops its own title too', /body\.embedded \.staff-bar h2/.test(css));
+  check('Refresh remains — it is a real action, not chrome', !!window.document.getElementById('hr-refresh'));
 }
 
 // ---------- 3. opened without a session ----------

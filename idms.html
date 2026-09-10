@@ -366,6 +366,15 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 .cs-why{background:#f7fafd;border-left:3px solid var(--sky,#3FA9E0);padding:9px 12px;border-radius:0 8px 8px 0;
   font-size:12.5px;color:#41567E;margin:9px 0;line-height:1.5}
 @media(max-width:820px){.cs-mrow{grid-template-columns:1fr 1fr}.cs-step>.b{padding-left:15px}}
+/* ---- attendance & pay lookup ---- */
+.al-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.al-tile{background:#fff;border:1px solid var(--line,#d8dde6);border-radius:11px;padding:12px;text-align:center}
+.al-tile b{font-family:var(--disp,inherit);font-size:22px;color:var(--navy);display:block}
+.al-tile span{font-family:var(--mono,monospace);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#6d7480}
+.al-t{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:14px}
+.al-t th{text-align:left;color:#6d7480;font-weight:700;font-size:11px;padding:6px 8px;border-bottom:1px solid #e6eaf0}
+.al-t td{padding:7px 8px;border-bottom:1px solid #f0f3f7}
+.al-t td.r{text-align:right}
 @media(max-width:600px){.cnc-live-grid{grid-template-columns:1fr}.cnc-kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -3099,6 +3108,24 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       </div>
     </div>
 
+    <div class="panel" data-panel="attendance_lookup">
+      <div class="card">
+        <h4>Attendance &amp; Pay Lookup</h4>
+        <div class="hint" style="margin-bottom:10px;">Look up any employee's attendance, leave and pay
+          position for the current or a past month. This reads the same records the employee's own
+          self-service screen and payroll use — nothing here can be edited; go to People — HR records
+          to change master data, or HR &amp; Payroll to run payroll.</div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>Employee</label>
+            <select id="al-emp"><option value="">— choose —</option></select></div>
+          <div><label>Month</label><input type="month" id="al-period"></div>
+          <div style="align-self:end;"><button class="btn gold" id="al-go">Look up</button></div>
+        </div>
+        <div class="note bad" id="al-msg" style="display:none;"></div>
+      </div>
+      <div id="al-result"></div>
+    </div>
+
     <div class="panel" data-panel="cnc_setup">
       <div class="card">
         <h4>Connect your machines — step by step</h4>
@@ -3510,7 +3537,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       ['dash_hrm','📊','HR Dashboard',1],
       ['hrm','👥','People — HR records',1],
       ['emb_hr','💼','HR & Payroll',1],
-      ['emb_me','🪪','My Attendance',1],
+      ['attendance_lookup','🪪','My Attendance',1],
       ['skill_matrix','📊','Skill Matrix',1],
       ['org_chart','🏗','Organisation Chart',1],['roles_resp','📋','Roles & Responsibilities',1],
       ['competency_map','🎯','Competency Mapping',1],['gap_analysis','📈','Skill Gap Analysis',1],
@@ -3543,7 +3570,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     doc_master_pfd: 'masterlist', doc_master_pfmea: 'masterlist', doc_master_cp: 'masterlist',
     kpi_entry: 'kpi_entry', admin_banner: 'admin_banner',
     admin_backup: 'admin_backup', admin_sample: 'admin_sample',
-    admin_site: 'embed', emb_pipeline: 'embed', emb_hr: 'embed', emb_me: 'embed'
+    admin_site: 'embed', emb_pipeline: 'embed', emb_hr: 'embed'
   };
   (window.KPIX ? window.KPIX.DEPTS : []).forEach(function (d) { PANEL_OF['dash_' + d.key] = 'kpidash'; });
 
@@ -3683,6 +3710,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (s === 'cnc')            loadCnc();
     if (s === 'cnc_live')       loadCncLive();
     if (s === 'cnc_setup')      loadCncSetup();
+    if (s === 'attendance_lookup') loadAttendanceLookup();
     if (s === 'ppap')           loadPpap();
     if (s === 'report_setup_approval') loadSetup();
     if (s === 'report_self_inspection') loadSelfInsp();
@@ -9452,9 +9480,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       'Enquiries from the website: drawing reading, costing, quotations, and the handover that turns ' +
       'a won quotation into a part in this system.'],
     emb_hr: ['HR & Payroll', 'hr',
-      'Employees, attendance, leave, payroll and statutory compliance.'],
-    emb_me: ['My Attendance', 'me',
-      'The employee self-service screen. The QR code on every printed ID card opens this same screen.']
+      'Employees, attendance, leave, payroll and statutory compliance.']
+    /* emb_me removed: My Attendance is now the native attendance_lookup panel, not an iframe. */
   };
   function loadEmbed(id){
     var e = EMBEDS[id]; if (!e) return;
@@ -16342,6 +16369,178 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('cnc-live-refresh')?.addEventListener('click',loadCncLive);
   document.getElementById('cnc-live-guide')?.addEventListener('click',function(){ navigate('cnc_setup'); });
 
+
+
+  /* ================= ATTENDANCE & PAY LOOKUP =================
+     A native replacement for the "My Attendance" iframe. That iframe showed
+     the public self-service form — the one gated by employee ID + date of
+     birth, because it also has to work for someone scanning the QR code on
+     their printed ID card with no IDMS session at all. Inside the IDMS, staff
+     do not know an employee's date of birth and should not need to, so this
+     calls /api/hr?what=lookup instead of what=me: same record, gated by the
+     signed-in session rather than by DOB. The public self-service screen is
+     untouched and still lives on the website, because those QR codes are
+     already printed and in people's pockets.
+
+     The day-by-day reconciliation below (present/paid-leave/LOP/holiday/week-
+     off/permission-hours) is ported unchanged from the website's own renderMe()
+     so a manager sees the same arithmetic an employee sees of themselves.
+     The full payslip breakdown (basic/DA/HRA/PF/ESI/TDS line items) is not
+     duplicated here — that engine is ported once, into HR & Payroll, later in
+     this same restructuring; duplicating a payroll tax calculation into two
+     screens is exactly the kind of drift this pass exists to remove. */
+  var alSiteConf = null, alEmployees = [];
+
+  async function alSiteData(){
+    if (alSiteConf) return alSiteConf;
+    try { var j = await C.api('/api/content'); alSiteConf = (j && j.data) || {}; }
+    catch(e){ alSiteConf = {}; }
+    return alSiteConf;
+  }
+  function alLP(conf){ return conf.leavePolicy || {}; }
+  function alPM(conf){
+    return Object.assign({ standardHours:8, maxHoursPerRequest:2, freeInstancesPerMonth:2,
+      freeHoursPerMonth:4, excessTreatment:'lop' }, (conf.leavePolicy || {}).permission || {});
+  }
+  function alDayKey(d){ return new Date(d).toISOString().slice(0,10); }
+  function alIsWeekOff(d, conf){ return (alLP(conf).weekOff || []).includes(new Date(d).getDay()); }
+  function alIsHoliday(d, conf){ var k = alDayKey(d); return (conf.holidays || []).some(function(h){ return h.date === k; }); }
+  function alDaysInPeriod(period){
+    var parts = String(period || '').split('-'), y = C.num(parts[0]), m = C.num(parts[1]);
+    if (!y || !m) return [];
+    var out = [], last = new Date(y, m, 0).getDate();
+    for (var d = 1; d <= last; d++) out.push(new Date(y, m - 1, d));
+    return out;
+  }
+  function alIsPermission(d){
+    var x = (d && (d.data || d)) || {};
+    return String(x.kind || '') === 'permission' || String(x.type || '') === 'PERM';
+  }
+  function alPermHoursOf(d){
+    var x = (d && (d.data || d)) || {};
+    if (C.num(x.hours)) return C.num(x.hours);
+    if (x.fromTime && x.toTime){
+      var mins = (new Date('2000-01-01T'+x.toTime) - new Date('2000-01-01T'+x.fromTime)) / 60000;
+      return mins > 0 ? Math.round(mins/6)/10 : 0;
+    }
+    return 0;
+  }
+  function alPermCharge(hours, count, conf){
+    var p = alPM(conf), std = C.num(p.standardHours) || 8;
+    var excess = Math.max(0, +(hours - C.num(p.freeHoursPerMonth)).toFixed(2));
+    var lopDays = 0;
+    if (excess > 0){
+      if (p.excessTreatment === 'ignore') lopDays = 0;
+      else if (p.excessTreatment === 'halfday') lopDays = Math.ceil((excess/std)*2)/2;
+      else lopDays = Math.round((excess/std)*1000)/1000;
+    }
+    return { hours:+(+hours).toFixed(2), count:count, excessHours:excess, lopDays:lopDays };
+  }
+
+  async function loadAttendanceLookup(){
+    var sel = document.getElementById('al-emp');
+    if (!document.getElementById('al-period').value)
+      document.getElementById('al-period').value = new Date().toISOString().slice(0,7);
+    try {
+      var r = await C.api('/api/hr?what=employees');
+      alEmployees = (r.employees || []).map(function(x){ return x.data || x; })
+        .sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
+    } catch(e){ alEmployees = []; }
+    sel.innerHTML = '<option value="">— choose —</option>' + alEmployees.map(function(e){
+      return '<option value="'+esc(e.empId)+'">'+esc(e.name)+' — '+esc(e.empId)+
+        (e.department?' ('+esc(e.department)+')':'')+'</option>';
+    }).join('');
+  }
+
+  function alMsg(t){
+    var m = document.getElementById('al-msg');
+    m.style.display = t ? '' : 'none'; m.textContent = t || '';
+  }
+
+  document.getElementById('al-go')?.addEventListener('click', async function(){
+    var empId = document.getElementById('al-emp').value;
+    var period = document.getElementById('al-period').value.slice(0,7);
+    var out = document.getElementById('al-result');
+    alMsg('');
+    if (!empId) return alMsg('Choose an employee first.');
+    out.innerHTML = '<div class="card"><div class="hint">Looking up…</div></div>';
+    try {
+      var conf = await alSiteData();
+      var r = await C.api('/api/hr', { method:'POST',
+        body: JSON.stringify({ what:'lookup', empId: empId, period: period }) });
+      var e = r.employee, days = alDaysInPeriod(r.period || period);
+      var recs = {}; (r.attendance || []).forEach(function(a){ recs[a.day] = a; });
+      var lmap = {};
+      (r.leave || []).filter(function(l){ return l.status === 'Approved'; }).forEach(function(l){
+        if (alIsPermission(l)) return;
+        var c = new Date(l.from), end = new Date(l.to);
+        while (c <= end){ lmap[alDayKey(c)] = l.type; c.setDate(c.getDate()+1); }
+      });
+      var paidCodes = {}; (alLP(conf).types || []).forEach(function(t){ if (t.paid) paidCodes[t.code] = 1; });
+      var todayK = alDayKey(new Date());
+      var present=0, paidLeave=0, lop=0, ot=0, elapsed=0;
+      days.forEach(function(d){
+        var k = alDayKey(d); if (k > todayK) return;
+        elapsed++;
+        var rec = recs[k], lv = lmap[k];
+        if (rec && rec.status === 'Present'){ present += C.num(rec.dayFraction || 1); ot += C.num(rec.otHours); return; }
+        if (rec && rec.status === 'Absent'){ lop++; return; }
+        if (lv){ if (paidCodes[lv]) paidLeave++; else lop++; return; }
+        if (alIsHoliday(d, conf)) return;
+        if (alIsWeekOff(d, conf)) return;
+        lop++;
+      });
+      var permHours = 0, permCount = 0;
+      (r.leave || []).filter(function(l){ return l.status === 'Approved' && alIsPermission(l); })
+        .filter(function(l){ return String(l.from||'').startsWith(r.period || period); })
+        .forEach(function(l){ permHours += alPermHoursOf(l); permCount++; });
+      var perm = alPermCharge(permHours, permCount, conf);
+      var payableSoFar = Math.max(0, Math.round((elapsed - lop - perm.lopDays) * 1000) / 1000);
+
+      var bal = (alLP(conf).types || []).map(function(t){
+        var taken = (r.leave || []).filter(function(l){ return l.status === 'Approved' && l.type === t.code; })
+          .reduce(function(tt,l){ return tt + Math.max(1, Math.round((new Date(l.to)-new Date(l.from))/86400000)+1); }, 0);
+        return { name:t.name, annualDays:C.num(t.annualDays), taken:taken, balance:Math.max(0, C.num(t.annualDays)-taken) };
+      }).filter(function(t){ return t.annualDays > 0; });
+
+      out.innerHTML =
+        '<div class="card"><h4>'+esc(e.name)+' <span class="hint">'+esc(e.empId)+' · '+esc(e.designation||'')+
+          (e.department?' · '+esc(e.department):'')+'</span></h4>'+
+        '<div class="al-tiles">'+
+          '<div class="al-tile"><b>'+present+'</b><span>Present</span></div>'+
+          '<div class="al-tile"><b>'+paidLeave+'</b><span>Paid Leave</span></div>'+
+          '<div class="al-tile"><b style="color:'+(lop?'#B03A2E':'#1F9D6B')+'">'+lop+'</b><span>Loss of Pay</span></div>'+
+          '<div class="al-tile"><b>'+ot+'</b><span>OT Hours</span></div>'+
+          '<div class="al-tile"><b style="color:'+(perm.excessHours?'#B03A2E':'inherit')+'">'+perm.hours+'</b><span>Permission Hrs</span></div>'+
+          '<div class="al-tile"><b>'+payableSoFar+'</b><span>Payable Days</span></div>'+
+        '</div>'+
+        (perm.count ? '<div class="hint" style="margin-bottom:10px;">Permission this month: '+perm.count+
+          ' instance(s), '+perm.hours+' hours.'+(perm.excessHours?
+          ' <b style="color:#B03A2E">'+perm.excessHours+' hours beyond the allowance — '+perm.lopDays+' day of pay deducted.</b>'
+          :' Within the allowance.')+'</div>' : '') +
+        '<div class="hint">Reconciled from attendance and approved leave, exactly as payroll will see it at '+
+          'month end. This is a live position, not a payslip.</div></div>'+
+
+        (bal.length ? '<div class="card"><h4>Leave balance</h4><table class="al-t"><thead><tr><th>Type</th>'+
+          '<th class="r">Entitled</th><th class="r">Taken</th><th class="r">Left</th></tr></thead><tbody>'+
+          bal.map(function(b){ return '<tr><td>'+esc(b.name)+'</td><td class="r">'+b.annualDays+
+            '</td><td class="r">'+b.taken+'</td><td class="r"><b>'+b.balance+'</b></td></tr>'; }).join('')+
+          '</tbody></table></div>' : '') +
+
+        '<div class="card"><h4>On record</h4><table class="al-t"><tbody>'+
+          '<tr><td>UAN</td><td><b>'+esc(e.uan||'—')+'</b></td><td>PF Number</td><td><b>'+esc(e.pfNumber||'—')+'</b></td></tr>'+
+          '<tr><td>ESI Number</td><td><b>'+esc(e.esiNumber||'—')+'</b></td><td>PAN</td><td><b>'+esc(e.pan||'—')+'</b></td></tr>'+
+          '<tr><td>Bank</td><td><b>'+esc(e.bankName||'—')+'</b></td><td>Account</td><td><b>'+esc(e.bankAcc||'—')+'</b></td></tr>'+
+          '<tr><td>IFSC</td><td><b>'+esc(e.ifsc||'—')+'</b></td><td>Date of Joining</td><td><b>'+
+            (e.doj?new Date(e.doj).toLocaleDateString('en-GB'):'—')+'</b></td></tr>'+
+        '</tbody></table>'+
+        '<div class="hint">For the full payslip breakdown (basic, HRA, PF, ESI, TDS) or to run payroll, use HR &amp; Payroll.</div>'+
+        '</div>';
+    } catch(err){
+      out.innerHTML = '';
+      alMsg(err.message || 'Could not look this up.');
+    }
+  });
 
   /* ================= CNC SETUP GUIDE =================
      A screen for the person who has to actually make machine monitoring work,

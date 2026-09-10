@@ -1338,6 +1338,72 @@ making change-only before a works-wide rollout. And the guide tells the user to
 verify part count against the machine's own counter for a full shift before
 trusting it; that instruction is load-bearing and should not be softened.
 
+## The four "moved to the IDMS" screens — what "merged" actually meant
+
+Four staff screens reached from the IDMS menu were website pages shown inside
+an `<iframe>` (`data-panel="embed"`, `#em-frame`). That is why they read as a
+remote-desktop view rather than part of the IDMS: each one is a second
+document, with its own navy header bar, its own Sign Out / View Website / Site
+Admin buttons, sitting inside a frame.
+
+**They do not all take the same fix, and finding that out was most of the
+work.** Before changing anything, each screen's actual data coupling was
+checked:
+
+- **My Attendance** → fully native now (`attendance_lookup` panel in
+  `idms.html`). It called `/api/hr?what=me`, the same DOB-gated endpoint the
+  public self-service page uses — meaning a staff member had to know an
+  employee's date of birth to look anything up. A new role-gated route,
+  `what=lookup` (`api/hr.js`), shares its query logic with `what=me` via one
+  `attendancePacket()` function rather than two copies that could drift. The
+  reconciliation arithmetic (present/paid-leave/LOP/OT/permission-hours) is
+  ported line-for-line from the website's `renderMe()`, so a manager sees
+  exactly what the employee sees of themselves. **The public `#me` self-service
+  page was deliberately left untouched** — it is reached by QR codes already
+  printed on employee ID cards, has no IDMS session, and removing it would
+  lock out every card already issued.
+
+- **Website Content admin, RFQ Pipeline, HR & Payroll** → chrome stripped, the
+  engine underneath **deliberately left on the website**. All three generate
+  branded, config-driven output — the live site's sections, quotations and
+  cost sheets, payslips and statutory forms — through the one shared `data`/
+  `DEFAULTS` content object and its `CO()`/`QC()`/`documentLogo()` accessors,
+  which is the same engine that renders the public pages. Copying any of the
+  three into `idms.html` would mean a second copy of company branding and
+  quoting/pay configuration, with no mechanism to keep the two in sync — a
+  change to the company GST number or the quoting validity period in one place
+  would quietly stop matching the other. That is a worse outcome than the
+  screen it would replace, and it is exactly the class of duplication the rest
+  of this pass exists to remove, not add. `.staff-bar`/`.admin-head`'s own
+  title, Sign Out, Site Admin and View Website are hidden under
+  `body.embedded`; Refresh and Publish stay, because they are real actions,
+  not window dressing. Positioning was deliberately **not** touched — each of
+  the three is already `position:fixed;inset:0`, which fills the iframe's own
+  viewport correctly on its own; an earlier draft of this fix also forced
+  `position:static`, which changed the admin panel's flex layout for no actual
+  benefit, and was reverted.
+
+### A real bug this uncovered, not just a look
+
+`index.html` and `core.js` store the session token under the same
+`localStorage` key, `app_token`. Same origin, so same storage. The "Sign Out"
+button inside RFQ Pipeline and HR & Payroll called `keepToken('')`, which
+cleared that key — **silently ending the IDMS tab's own session**, with nothing
+to explain why the IDMS asked for a fresh sign-in shortly after. Hiding those
+buttons under `body.embedded` (above) fixes the symptom described here; the
+underlying collision is documented in `tests/sitetest.mjs`, which sets the
+token, clicks Sign Out inside the embedded pipeline, and asserts the shared
+key is gone — so if either app's storage key is ever changed independently,
+that test explains why the other broke.
+
+### `#ppc-page` ("Production Planning") is not one of the four
+
+It still exists in `index.html` with the same `.staff-bar` chrome, but nothing
+in the IDMS menu opens it — `PPC & MMD` is already a native panel. It picked
+up the same `body.embedded` chrome rule as a side effect of sharing `.staff-bar`,
+but it is unreached dead weight otherwise, worth deleting in a future pass
+rather than this one.
+
 ---
 
 ## Conventions

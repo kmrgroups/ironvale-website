@@ -159,8 +159,12 @@ check('with months chosen it is added', (dwmDocRec.data.activities || []).length
 const grid = () => $('dw-body').querySelector('.dwm-grid');
 check('the grid is drawn', !!grid());
 const daysInMonth = new Date(YEAR, MONTH, 0).getDate();
+/* Activity, one th per day, then Plan / Actual / % — four fixed columns, not
+   two, since Plan and Actual were added alongside the existing % column so the
+   board matches the reference layout of showing the raw counts, not just the
+   percentage. */
 check('there is a column for every day of the month',
-  grid() && grid().querySelectorAll('thead th').length === daysInMonth + 2,
+  grid() && grid().querySelectorAll('thead th').length === daysInMonth + 4,
   'cols=' + (grid() ? grid().querySelectorAll('thead th').length : 0));
 check('the categories are shown as bands',
   /DEPARTMENT ACTIVITIES/i.test(txt(grid())) && /ANNUAL CALENDAR/i.test(txt(grid())),

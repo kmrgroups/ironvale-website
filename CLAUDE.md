@@ -1404,6 +1404,103 @@ up the same `body.embedded` chrome rule as a side effect of sharing `.staff-bar`
 but it is unreached dead weight otherwise, worth deleting in a future pass
 rather than this one.
 
+## Masters, Bulk Upload, Org Chart and DWM
+
+### DWM moved to HRM; Org Chart was already there
+
+Only DWM was under Production — Organisation Chart was already correctly
+under HRM. Moved DWM; no other change to the menu tree beyond the new Masters
+group below.
+
+### The Masters menu, and what "ensure the screen exists" actually found
+
+Customer Addition, Supplier Master, Parts, Machine Addition and Bill of
+Materials were **relocated** (single location, not duplicated) into a new
+`masters` menu group. Three of the eight requested masters were **not
+missing** — they existed already, just buried under different names:
+
+- **Tools Addition** → `report_tool_history` already is the tool master (adds
+  a tool, tracks its life). Listed under Masters, not rebuilt.
+- **Consumables Addition** → `entry_rawmat` (Raw Material Master) already has
+  `Consumable` as one of its Type options, with the same auto-generated code
+  (`C.docNumber('rm')`) the request asked for. Listed under Masters as
+  "Consumables Addition (Raw Material Master)" rather than built as a second,
+  competing material list.
+- **Equipment / Instruments / Gauges** → the gauge register already lives on
+  `report_calibration`, because adding a gauge and scheduling its calibration
+  are correctly one screen, not two.
+
+Building new screens for these three would have meant a tool, a consumable or
+a gauge could end up under two different codes in two different places — the
+same class of problem the rest of this codebase's restructuring has been
+removing, not adding. `LABEL[panel id]` resolves to whichever menu entry runs
+last in `MENU.forEach` (array order), so the page header shows the screen's
+real identity (e.g. "Raw Material Master") even when reached via its Masters
+shortcut; the Masters menu label itself says both names so this isn't a
+surprise.
+
+### Parts gained real drawing upload
+
+`p-drg` was a drawing **number** field only — no file. Parts now has a file
+input wired to the existing `C.uploadFile()` (the same mechanism the Home
+Banner image uses, backed by `api/assets.js`), stored as `data.drawingFile`
+and shown as a clickable link in the parts list.
+
+### Bulk Upload — one engine, eight categories, in `BULK_KINDS`
+
+Customer, Supplier, Parts, Machine, Tools, Consumables, BOM, Gauges each get
+a downloadable CSV template, a hand-rolled parser (no CDN library — this
+should work the instant the screen opens, and the format is ours to define),
+per-row validation against both the database and duplicates within the same
+file, and only writes on pressing Import. Every row's own pass/fail is kept,
+not merged into one file-level result.
+
+BOM is the one category that is `grouped:true`: several CSV rows (one per
+material) become one bill-of-materials document per Part No. Adding a new
+category means adding one entry to `BULK_KINDS` — do not write a ninth bespoke
+screen.
+
+### Org Chart: redrawn, not rebuilt
+
+The tree-building logic (payroll cross-check, reporting-loop detection) was
+already more capable than the reference and is untouched. It was rendering as
+a plain nested `<ul><li>` with no chart CSS, so the browser drew it as an
+indented bulleted list. Added the standard pure-CSS horizontal box-and-
+connector-line technique — `ul{display:flex}` + `li::before/::after` for the
+lines — which only changes the drawing, not the tree. Added the PDF
+Signatories row (saved to `idms_settings.org_signatories`, a single default
+since the chart itself is one shared document) and split Print into
+**Print Full** / **Print Dept**, plus **View Full** / **View Dept** buttons
+that drive the pre-existing Show filter rather than adding a second, competing
+way to filter the chart.
+
+### DWM: Plan/Actual columns, and per-board sign-off
+
+Added explicit Plan and Actual count columns alongside the existing % column
+in `drawDwm()`'s grid (`daysInMonth + 4` header cells now, not `+2` —
+`dwmtest.mjs`'s column-count check was updated to match). Added a Prepared/
+Reviewed/Approved By row, saved into **`dwmDoc.data.signatories`** — the DWM
+document itself, not a shared default like the org chart's, because a DWM
+board belongs to one person for one month and a different employee's board
+must never show another's sign-off. Included in the printed report too.
+
+### Dropdown wiring: three machine fields were free text, wired to nothing
+
+Production Entry, Setup Approval and Self Inspection all had a "Machine"
+field as plain `<input>` — free text with no connection to the Machine
+Addition master, the same drift-risk the Machine Addition screen's own hint
+already warns about for routings. Given a `<datalist>` suggesting from
+`C.idms.docs('machine')`, the same pattern the GRN screen already used for
+suppliers (`fillMachineDatalist()`, shared by all three). Deliberately kept as
+free text, not a locked `<select>` — refusing an unrecognised machine mid-
+shift would stop the floor working.
+
+### Tests
+
+`tests/bulkuploadtest.mjs` (18), `tests/dropdownwiretest.mjs` (7),
+`tests/orgcharttest.mjs` (11), `tests/dwmsignofftest.mjs` (7) — 43 new checks.
+Whole suite: 546 passing.
+
 ---
 
 ## Conventions

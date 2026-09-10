@@ -253,6 +253,31 @@
 .oc-node .acts a{font-size:10.5px;color:var(--sky-deep);cursor:pointer;}
 .oc-lvl{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;
   font-weight:700;color:#fff;letter-spacing:.03em;}
+/* ---- horizontal box-and-line org chart ----
+   The tree markup (nested <ul><li>) was already there and already correct —
+   it just had no chart styling, so the browser drew it as a plain indented
+   bulleted list. This is the classic pure-CSS org-chart technique: each <ul>
+   lays its <li> children out in a row, and a pair of pseudo-elements per <li>
+   draws the connector down to its parent and across to its siblings. Nothing
+   about how the tree is built changes — only how it is drawn. */
+#oc-body{overflow-x:auto;padding-bottom:12px;}
+#oc-body ul{display:flex;justify-content:center;padding-top:26px;position:relative;
+  margin:0;list-style:none;}
+#oc-body li{display:flex;flex-direction:column;align-items:center;list-style:none;
+  position:relative;padding:26px 14px 0;}
+/* the line down from this box's parent */
+#oc-body li::before{content:'';position:absolute;top:0;left:50%;width:1px;height:26px;
+  background:var(--line-strong,#c3cbd6);}
+/* the horizontal bar connecting this box to its siblings, broken for the outer edges */
+#oc-body li::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:var(--line-strong,#c3cbd6);}
+#oc-body li:only-child::after{display:none;}
+#oc-body li:only-child::before{height:26px;}
+#oc-body li:first-child::after{left:50%;}
+#oc-body li:last-child::after{right:50%;}
+#oc-body > ul{padding-top:0;}
+#oc-body > ul > li::before, #oc-body > ul > li::after{display:none;}
+.oc-node{position:relative;z-index:1;}
 .oc-legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 
 .org-co{text-align:center;margin-bottom:18px;}
@@ -375,6 +400,18 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 .al-t th{text-align:left;color:#6d7480;font-weight:700;font-size:11px;padding:6px 8px;border-bottom:1px solid #e6eaf0}
 .al-t td{padding:7px 8px;border-bottom:1px solid #f0f3f7}
 .al-t td.r{text-align:right}
+/* ---- bulk upload preview ---- */
+.bu-t{width:100%;border-collapse:collapse;font-size:12px}
+.bu-t th{text-align:left;color:#6d7480;font-weight:700;font-size:10.5px;padding:6px 7px;
+  border-bottom:1px solid #e6eaf0;white-space:nowrap}
+.bu-t td{padding:6px 7px;border-bottom:1px solid #f0f3f7;white-space:nowrap;max-width:220px;
+  overflow:hidden;text-overflow:ellipsis}
+.bu-t tr.bad td{background:#fdf1ef}
+.bu-row-err{color:#B03A2E;font-size:11px}
+.bu-summary{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px}
+.bu-summary b{font-size:20px;display:block}
+.bu-summary .ok b{color:#1F9D6B}
+.bu-summary .bad b{color:#B03A2E}
 @media(max-width:600px){.cnc-live-grid{grid-template-columns:1fr}.cnc-kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -759,6 +796,17 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         </div>
 
         <div id="dw-body"></div>
+
+        <div class="card">
+          <h4>Sign-off</h4>
+          <div class="row four">
+            <div><label>Prepared By</label><input id="dw-prep"></div>
+            <div><label>Reviewed By</label><input id="dw-rev"></div>
+            <div><label>Approved By</label><input id="dw-app"></div>
+            <div style="align-self:end;"><button class="btn gold" id="dw-savesig">Save</button></div>
+          </div>
+          <div class="note" id="dw-sigmsg" style="display:none;margin-top:10px;"></div>
+        </div>
       </div>
     </div>
 
@@ -1169,15 +1217,32 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           masters, and who holds each post comes from the employee records. Put a name in a box and
           the chart checks it against the payroll — if it disagrees, one of the two is wrong, and
           that is worth knowing.</div>
-        <div class="oc-legend" id="oc-legend" style="margin-bottom:12px;"></div>
+        <div class="row four" style="margin-bottom:2px;">
+          <div><label>Prepared By</label><select id="oc-prep-by"></select></div>
+          <div><label>Prep. Date</label><input type="date" id="oc-prep-date"></div>
+          <div><label>Reviewed By</label><select id="oc-rev-by"></select></div>
+          <div><label>Rev. Date</label><input type="date" id="oc-rev-date"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Approved By</label><select id="oc-app-by"></select></div>
+          <div><label>App. Date</label><input type="date" id="oc-app-date"></div>
+          <div><label>Doc No.</label><input id="oc-docno" placeholder="e.g. ORG-001"></div>
+        </div>
+        <div class="oc-legend" id="oc-legend" style="margin:14px 0 12px;"></div>
         <div class="row four">
           <div><label>Show</label><select id="oc-filter">
             <option value="all">The whole organisation</option>
             <option value="dept">One department</option></select></div>
           <div id="oc-deptwrap" style="display:none;"><label>Department</label>
             <select id="oc-dept"></select></div>
-          <div style="align-self:end;"><button class="btn gold" id="oc-add">Add a box</button></div>
-          <div style="align-self:end;"><button class="btn" id="oc-print">Print</button></div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="oc-add">+ Add Node</button>
+          <button class="btn gold" id="oc-savesig">Save</button>
+          <button class="btn" id="oc-viewfull">View Full</button>
+          <button class="btn" id="oc-viewdept">View Dept</button>
+          <button class="btn" id="oc-printfull">Print Full</button>
+          <button class="btn" id="oc-printdept">Print Dept</button>
         </div>
         <div class="note" id="oc-msg" style="display:none;margin-top:10px;"></div>
       </div>
@@ -1681,6 +1746,13 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <div><label>Gross weight (kg)</label><input class="num" id="p-grosswt"></div>
           <div><label>Unit</label><select id="p-uom">
             <option>Nos</option><option>Kg</option><option>Set</option><option>Metre</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div style="grid-column:span 2;"><label>Customer drawing file</label>
+            <input type="file" id="p-drgfile" accept=".pdf,.dxf,.dwg,image/*">
+            <div class="hint" id="p-drgname"></div></div>
+          <div style="align-self:end;"><span class="hint">PDF, DXF/DWG, or an image of the drawing.
+            Stored against this part; download it again from the Parts list below.</span></div>
         </div>
         <div class="row four" style="margin-top:9px;">
           <div style="align-self:end;"><button class="btn gold" id="p-add">Add part</button></div>
@@ -2234,7 +2306,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
             <option>A</option><option>B</option><option>C</option><option>General</option></select></div>
         </div>
         <div class="row four" style="margin-top:9px;">
-          <div><label>Machine</label><input id="pe-machine"></div>
+          <div><label>Machine</label><input id="pe-machine" list="pe-machine-list" autocomplete="off"><datalist id="pe-machine-list"></datalist></div>
           <div><label>Operator</label><input id="pe-operator"></div>
           <div><label>Started</label><input type="time" id="pe-from"></div>
           <div><label>Finished</label><input type="time" id="pe-to"></div>
@@ -2604,7 +2676,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         </div>
         <div class="row four" style="margin-top:9px;">
           <div><label>Operator</label><input id="si-operator"></div>
-          <div><label>Machine</label><input id="si-machine"></div>
+          <div><label>Machine</label><input id="si-machine" list="si-machine-list" autocomplete="off"><datalist id="si-machine-list"></datalist></div>
           <div style="align-self:end;"><button class="btn" id="si-open">Open sheet</button></div>
           <div style="align-self:end;"><button class="btn" id="si-print">Print</button></div>
         </div>
@@ -2637,7 +2709,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         <div class="row four">
           <div><label>Part</label><select id="su-part"></select></div>
           <div><label>Operation</label><select id="su-op"></select></div>
-          <div><label>Machine</label><input id="su-machine"></div>
+          <div><label>Machine</label><input id="su-machine" list="su-machine-list" autocomplete="off"><datalist id="su-machine-list"></datalist></div>
           <div><label>Pieces to check</label><select id="su-n">
             <option>3</option><option>5</option><option>1</option></select></div>
         </div>
@@ -3126,6 +3198,25 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       <div id="al-result"></div>
     </div>
 
+    <div class="panel" data-panel="bulk_upload">
+      <div class="card">
+        <h4>Bulk Upload</h4>
+        <div class="hint" style="margin-bottom:10px;">Add many records at once from a spreadsheet,
+          instead of one at a time. Choose what you're adding, download the template so the columns
+          are right, fill it in, and upload it back. Nothing is saved until you check the preview and
+          press Import — a bad row is reported, not silently skipped or silently saved wrong.</div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>What are you adding</label>
+            <select id="bu-kind"></select></div>
+          <div style="align-self:end;"><button class="btn" id="bu-template">Download CSV template</button></div>
+          <div style="align-self:end;"><input type="file" id="bu-file" accept=".csv"></div>
+        </div>
+        <div class="hint" id="bu-kindhint" style="margin-top:8px;"></div>
+        <div class="note bad" id="bu-msg" style="display:none;margin-top:10px;"></div>
+      </div>
+      <div id="bu-preview"></div>
+    </div>
+
     <div class="panel" data-panel="cnc_setup">
       <div class="card">
         <h4>Connect your machines — step by step</h4>
@@ -3475,14 +3566,32 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       ['doc_master_pfd','📑','Master List — PFD',1],
       ['doc_master_pfmea','📑','Master List — PFMEA',1],
       ['doc_master_cp','📑','Master List — Control Plan',1]]],
+    ['masters','🗄','Masters','Customers, suppliers, parts and everything else screens choose from',[
+      ['entry_customer','👤','Customer Addition',1],
+      ['entry_supplier','🏭','Supplier Master',1],
+      ['parts','📦','Parts Addition',1],
+      ['entry_machine','⚙','Machine Addition',1],
+      /* Tools and Consumables are not separate screens: Tool History Card already
+         is the tool master (add a tool, track its life) and Raw Material Master
+         already lists Consumable as one of its Types, with the same auto-generated
+         code. Building a second tool list or a second material list would mean two
+         places a tool or a consumable could exist under two different codes — so
+         these two entries point at the real screens instead of new, empty ones. */
+      ['report_tool_history','🔧','Tools Addition (Tool History Card)',1],
+      ['entry_rawmat','🧯','Consumables Addition (Raw Material Master)',1],
+      ['bom','🧾','Bill of Materials',1],
+      /* Same reasoning: the gauge register already lives on the Calibration
+         Report, because a gauge without a calibration due date is not usable —
+         so adding one and scheduling its calibration are one screen, not two. */
+      ['report_calibration','📏','Equipment / Instruments / Gauges (Calibration Report)',1],
+      ['bulk_upload','⬆','Bulk Upload',1]]],
     ['marketing','📣','Marketing','Enquiry to order',[
       ['dash_marketing','📊','Marketing Dashboard',1],
-      ['emb_pipeline','📨','RFQ Pipeline',1],
-      ['entry_customer','👤','Customer Addition',1]]],
+      ['emb_pipeline','📨','RFQ Pipeline',1]]],
     ['npd','🗂','NPD','New product development',[
       ['dash_npd','📊','NPD Dashboard',1],
       ['dash_engineering','📐','Engineering Dashboard',1],
-      ['parts','📦','Parts',1],['apqp','🗂','APQP Programme',1],
+      ['apqp','🗂','APQP Programme',1],
       ['process_master','🎛','Process Master Configuration',1],['dim_entry','📐','Dimensions Master',1],
       ['pfd','🔵','Process Flow Diagram',1],['fmea','⚠','PFMEA',1],['control_plan','📋','Control Plan',1],
       ['cnc','⌨','CNC Programme',1],['ppap','📦','PPAP',1],
@@ -3494,7 +3603,6 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       ['pp_spec_master','📋','PP Spec Master'],['agent_npd','🤖','NPD Agent',1]]],
     ['purchase','🏭','Purchase & SCM','Suppliers and inward material',[
       ['dash_purchase','📊','Purchase & SCM Dashboard',1],
-      ['entry_supplier','🏭','Supplier Master',1],['entry_rawmat','🪨','Raw Material Master',1],
       ['grn','📥','GRN — Goods Receipt',1],['report_inward_inspection','📥','Inward Inspection Report',1],
       ['agent_supplier','🤖','Supplier Watch Agent',1],['supplier_competency','🤝','Supplier Competency']]],
     ['ppc','📦','PPC & MMD','Planning and material movement',[
@@ -3508,7 +3616,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       ['production_plan','🏭','Production Plan',1],
       ['capacity_plan','⚙','Capacity Plan',1],['machine_loading','🔩','Machine Loading Plan',1],
       /* What making it consumes and what despatching it needs. */
-      ['bom','🧾','Bill of Materials',1],['sheet_rawmat','🪨','Raw Material Stock',1],
+      ['sheet_rawmat','🪨','Raw Material Stock',1],
       ['dc','📤','Delivery Challan',1],
       /* The commercial side: daily invoicing, matched back to the Sales Plan. */
       ['sales_invoice','🧾','Sales Invoice',1],['sales_dashboard','📊','Sales Plan vs Actual',1],
@@ -3518,8 +3626,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       ['entry_prod','📝','Production Entry',1],
       ['report_setup_approval','✅','Setup Approval',1],
       ['report_self_inspection','🔍','Self Inspection',1],
-      ['entry_machine','⚙','Machine Addition',1],
-      ['dwm','📊','DWM — Daily Work Management',1],['task_list','✅','Task List',1],
+      ['task_list','✅','Task List',1],
       ['report_machine_checksheet','⚙','Machine Check Sheet',1],
       ['report_tool_history','🔧','Tool History Card',1]]],
     ['quality','🔬','Quality Assurance','Inspection, gauges and corrective action',[
@@ -3539,7 +3646,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       ['emb_hr','💼','HR & Payroll',1],
       ['attendance_lookup','🪪','My Attendance',1],
       ['skill_matrix','📊','Skill Matrix',1],
-      ['org_chart','🏗','Organisation Chart',1],['roles_resp','📋','Roles & Responsibilities',1],
+      ['org_chart','🏗','Organisation Chart',1],
+      ['dwm','📊','DWM — Daily Work Management',1],
+      ['roles_resp','📋','Roles & Responsibilities',1],
       ['competency_map','🎯','Competency Mapping',1],['gap_analysis','📈','Skill Gap Analysis',1],
       ['tni','📚','Training Need Identification',1],
       ['training_plan_actual','📅','Training Plan vs Actual',1],
@@ -3711,6 +3820,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (s === 'cnc_live')       loadCncLive();
     if (s === 'cnc_setup')      loadCncSetup();
     if (s === 'attendance_lookup') loadAttendanceLookup();
+    if (s === 'bulk_upload') loadBulkUpload();
     if (s === 'ppap')           loadPpap();
     if (s === 'report_setup_approval') loadSetup();
     if (s === 'report_self_inspection') loadSelfInsp();
@@ -3940,6 +4050,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       esc(name) + (dwmDept ? ' <span class="hint">· ' + esc(dwmDept) + '</span>' : '');
     document.getElementById('dw-pick').style.display = 'none';
     document.getElementById('dw-board').style.display = '';
+    var sig = dwmDoc.data.signatories || {};
+    document.getElementById('dw-prep').value = sig.prepBy || '';
+    document.getElementById('dw-rev').value = sig.revBy || '';
+    document.getElementById('dw-app').value = sig.appBy || '';
+    document.getElementById('dw-sigmsg').style.display = 'none';
     drawDwm();
   }
 
@@ -4079,7 +4194,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       head += '<th class="'+(sun?'sun':'')+'">'+d+'<div style="font-weight:400;">' +
         dwmDayName(y, m, d).slice(0,2) + '</div></th>';
     }
-    head += '<th>%</th></tr>';
+    head += '<th>Plan</th><th>Actual</th><th>%</th></tr>';
 
     var rows = '';
     [['Dept','Department activities'],['General','General activities'],
@@ -4087,7 +4202,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var inCat = acts.filter(function(a){ return (a.cat||'Dept') === g[0]; });
       if (!inCat.length) return;
       var cs = s[g[0]];
-      rows += '<tr class="cat"><td colspan="'+(days+2)+'">' + esc(g[1]) +
+      rows += '<tr class="cat"><td colspan="'+(days+4)+'">' + esc(g[1]) +
         ' — ' + (cs.plan ? Math.round(cs.done/cs.plan*100) + '% (' + cs.done + ' of ' + cs.plan + ')'
                          : 'nothing planned this month') + '</td></tr>';
       inCat.forEach(function(a){
@@ -4109,7 +4224,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         }
         var p = s.per[a.id] || {plan:0,done:0};
         var pct = p.plan ? Math.round(p.done/p.plan*100) : null;
-        rows += '<td class="pct" style="color:'+(pct === null ? 'var(--ink-soft)'
+        rows += '<td class="r">'+p.plan+'</td><td class="r">'+p.done+'</td>' +
+          '<td class="pct" style="color:'+(pct === null ? 'var(--ink-soft)'
           : pct >= DWM_TARGET ? '#1F6F4A' : '#8A2F22')+';">' +
           (pct === null ? '—' : pct+'%') + '</td></tr>';
       });
@@ -4151,6 +4267,10 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           var p = s.per[a.id] || {plan:0,done:0};
           return [a.name, a.cat, a.freq + (a.day ? ' (' + a.day + ')' : ''), p.plan, p.done,
                   p.plan ? Math.round(p.done/p.plan*100) + '%' : '—']; }) },
+      { type:'pairs', title:'Sign-off', rows:[
+        ['Prepared By', (dwmDoc.data.signatories||{}).prepBy || '—'],
+        ['Reviewed By', (dwmDoc.data.signatories||{}).revBy || '—'],
+        ['Approved By', (dwmDoc.data.signatories||{}).appBy || '—'] ] },
       { type:'text', title:'How the plan is set',
         body:'The plan is not typed: it follows from how often each activity is done. The plan for a ' +
              'month is frozen the first time anything in that month is marked, so changing an ' +
@@ -6028,6 +6148,29 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     try { ocNodes = await C.idms.docs('orgnode'); } catch(e){ ocNodes = []; }
     ocNodes = ocNodes.filter(function(n){ return !(n.data||{}).removed; });
 
+    var names = (compEmployees||[]).map(empData)
+      .filter(function(d){ return String(d.status||'Active') !== 'Left'; })
+      .map(function(d){ return d.name; }).filter(Boolean);
+    ['oc-prep-by','oc-rev-by','oc-app-by'].forEach(function(id){
+      var sel = document.getElementById(id), keep = sel.value;
+      sel.innerHTML = '<option value="">— select —</option>' +
+        names.map(function(n){ return '<option>'+esc(n)+'</option>'; }).join('');
+      if (keep) sel.value = keep;
+    });
+    if (!document.getElementById('oc-docno').value){
+      try {
+        var st = await C.idms.settings();
+        var sig = (st && st.org_signatories) || {};
+        document.getElementById('oc-prep-by').value = sig.prepBy || '';
+        document.getElementById('oc-prep-date').value = sig.prepDate || '';
+        document.getElementById('oc-rev-by').value = sig.revBy || '';
+        document.getElementById('oc-rev-date').value = sig.revDate || '';
+        document.getElementById('oc-app-by').value = sig.appBy || '';
+        document.getElementById('oc-app-date').value = sig.appDate || '';
+        document.getElementById('oc-docno').value = sig.docNo || '';
+      } catch(e){ /* signatories are a convenience; the chart works without them */ }
+    }
+
     document.getElementById('oc-legend').innerHTML =
       '<span class="hint">Levels:</span>' + OC_LEVELS.map(function(l){
         return '<span class="oc-lvl" style="background:'+l[2]+';">'+esc(l[1])+'</span>'; }).join('');
@@ -6247,7 +6390,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     } catch(e){ toast(e.message); }
   }
 
-  function printOrgChart(){
+  function printOrgChart(deptOnly){
     var rows = [], seen = {};
     function walk(parentId, depth){
       ocNodes.filter(function(n){ return ((n.data||{}).parent || '') === parentId; })
@@ -6255,9 +6398,10 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           if (seen[n.doc_id] || depth > 12) return;
           seen[n.doc_id] = 1;
           var v = n.data||{}, problems = ocCheck(v);
-          rows.push([ new Array(depth+1).join('    ') + (v.title||''),
-                      v.who || 'VACANT', v.department || '', ocLevel(v.level)[1],
-                      problems.length ? problems.join('; ') : '' ]);
+          if (!deptOnly || v.department === deptOnly)
+            rows.push([ new Array(depth+1).join('    ') + (v.title||''),
+                        v.who || 'VACANT', v.department || '', ocLevel(v.level)[1],
+                        problems.length ? problems.join('; ') : '' ]);
           walk(n.doc_id, depth+1);
         });
     }
@@ -6265,9 +6409,16 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var onChart = {};
     ocNodes.forEach(function(n){ if ((n.data||{}).who) onChart[(n.data||{}).who] = 1; });
     var off = (compEmployees||[]).map(empData)
-      .filter(function(d){ return String(d.status||'Active') !== 'Left' && d.name && !onChart[d.name]; });
+      .filter(function(d){ return String(d.status||'Active') !== 'Left' && d.name && !onChart[d.name]; })
+      .filter(function(d){ return !deptOnly || d.department === deptOnly; });
 
-    C.openReport({ title:'Organisation Chart', landscape:true, sections:[
+    var g = fieldVal;
+    C.openReport({ title:'Organisation Chart' + (deptOnly ? ' — ' + deptOnly : ''), landscape:true, sections:[
+      { type:'pairs', title:'Signatories', rows:[
+        ['Prepared By', g('oc-prep-by') || '—'], ['Prep. Date', g('oc-prep-date') || '—'],
+        ['Reviewed By', g('oc-rev-by') || '—'], ['Rev. Date', g('oc-rev-date') || '—'],
+        ['Approved By', g('oc-app-by') || '—'], ['App. Date', g('oc-app-date') || '—'],
+        ['Doc No.', g('oc-docno') || '—'] ] },
       { type:'table', title:'Reporting lines', dense:true,
         columns:[{label:'Post'},{label:'Who holds it'},{label:'Department'},{label:'Level'},
                  {label:'Flagged'}],
@@ -9685,7 +9836,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         return '<tr><td><b>'+esc(p.part_no||'—')+'</b></td>'+
           '<td>'+esc(p.part_name||'—')+'<div class="hint">'+
             (v.drawingNo?'drg '+esc(v.drawingNo)+(v.drawingRev?' rev '+esc(v.drawingRev):''):'no drawing')+
-            (v.rawMaterial?' · '+esc(v.rawMaterial):'')+'</div></td>'+
+            (v.rawMaterial?' · '+esc(v.rawMaterial):'')+
+            (v.drawingFile&&v.drawingFile.url?' · <a href="'+esc(v.drawingFile.url)+'" target="_blank" ' +
+              'rel="noopener">'+esc(v.drawingFile.name||'drawing file')+'</a>':'')+'</div></td>'+
           '<td>'+(links.length
             ? links.map(function(cp){ var q=cp.data||{};
                 return '<div>'+esc(q.customerName||'—')+
@@ -10956,6 +11109,20 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      The breakdown figures are counted from the production bookings. Nothing here
      asks anybody to type a downtime figure a second time. */
   var machines = [], mmEditing = null, pmRows = [];
+  /* Production Entry and Setup Approval used to take the machine name as
+     plain free text, wired to nothing — the same machine spelled two ways on
+     a booking versus on the Machine Addition master is exactly the kind of
+     drift that splits a loading report and hides a breakdown pattern (the
+     Machine Addition screen's own hint already warns about this for
+     routings). A free-text field stays, deliberately: refusing an unrecognised
+     machine mid-shift would stop the floor working. It now offers the master
+     list, the same way the GRN screen already offers known suppliers. */
+  async function fillMachineDatalist(listId){
+    var list = document.getElementById(listId); if (!list) return;
+    if (!machines.length){ try { machines = await C.idms.docs('machine'); } catch(e){ machines = []; } }
+    list.innerHTML = machines.map(function(m){
+      return '<option value="'+esc((m.data||{}).name||'')+'">'; }).join('');
+  }
 
   async function loadMachines(){
     /* These reads do not depend on one another. Run in parallel: one wait,
@@ -12776,6 +12943,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     await fetchParts();
     document.getElementById('pe-part').innerHTML =
       partOptions(document.getElementById('pe-part').value);
+    fillMachineDatalist('pe-machine-list');
     /* These reads do not depend on one another. Run in parallel: one wait,
        not 3. */
     var _b12343 = await Promise.all([
@@ -15357,6 +15525,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     await fetchParts();
     var sel = document.getElementById('si-part');
     sel.innerHTML = partOptions(sel.value);
+    fillMachineDatalist('si-machine-list');
     try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
     try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
     var dt = document.getElementById('si-date');
@@ -15646,6 +15815,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     await fetchParts();
     var sel = document.getElementById('su-part');
     sel.innerHTML = partOptions(sel.value);
+    fillMachineDatalist('su-machine-list');
     try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
     try { dimensions = await C.idms.docs('dimension'); } catch(e){ dimensions = []; }
     drawSetupOps();
@@ -16541,6 +16711,407 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       alMsg(err.message || 'Could not look this up.');
     }
   });
+
+
+  /* ================= BULK UPLOAD =================
+     One import engine for every master, instead of eight bespoke upload
+     screens that would each parse CSV, preview rows and report errors in a
+     slightly different way. Each entry in BULK_KINDS describes one category:
+     its CSV columns, how to turn a row into the same shape the matching
+     single-entry screen saves, and how to detect a duplicate — using the
+     exact same duplicate rules those screens already use, so a row imported
+     here is refused for the same reason it would be refused if typed by hand.
+
+     Nothing is saved during parsing or preview. Only pressing Import writes
+     anything, one row at a time, and every row's own success or failure is
+     reported — a bad row does not silently vanish and does not silently save
+     with the wrong data. */
+
+  function buCsvParse(text){
+    /* A small hand-written parser, not a library: the format is ours (we
+       generate the template), so it only has to handle what our own template
+       produces — comma-separated, double-quoted fields when a value itself
+       contains a comma or a quote. Loading a real CSV parsing library just for
+       this would mean a network fetch on a screen that should work the moment
+       you open it. */
+    var rows = [], row = [], field = '', inQuotes = false;
+    text = text.replace(/\r\n/g, '\n');
+    for (var i = 0; i < text.length; i++){
+      var c = text[i];
+      if (inQuotes){
+        if (c === '"'){
+          if (text[i+1] === '"'){ field += '"'; i++; } else inQuotes = false;
+        } else field += c;
+      } else if (c === '"') inQuotes = true;
+      else if (c === ','){ row.push(field); field = ''; }
+      else if (c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+      else field += c;
+    }
+    if (field.length || row.length){ row.push(field); rows.push(row); }
+    rows = rows.filter(function(r){ return r.some(function(x){ return String(x).trim() !== ''; }); });
+    if (!rows.length) return [];
+    var headers = rows[0].map(function(h){ return String(h).trim(); });
+    return rows.slice(1).map(function(r){
+      var o = {};
+      headers.forEach(function(h, i){ o[h] = String(r[i] == null ? '' : r[i]).trim(); });
+      return o;
+    });
+  }
+  function buCsvCell(v){
+    v = String(v == null ? '' : v);
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+  function buCsvBuild(headers, rows){
+    return headers.map(buCsvCell).join(',') + '\n' +
+      rows.map(function(r){ return headers.map(function(h){ return buCsvCell(r[h] || ''); }).join(','); }).join('\n');
+  }
+
+  var BULK_KINDS = [
+    { id:'customer', label:'Customers',
+      cols:['Name*','Code','GSTIN','PaymentTerms','BillingAddress','DespatchAddress','ContactPerson','Phone','Email'],
+      example:{ 'Name*':'Acme Auto Components', Code:'', GSTIN:'29ABCDE1234F1Z5', PaymentTerms:'45 days',
+        BillingAddress:'Plot 12, Industrial Area, Pune', DespatchAddress:'Same as billing',
+        ContactPerson:'R. Sharma', Phone:'9876543210', Email:'purchase@acmeauto.example' },
+      async validate(r, ctx){
+        var name = (r['Name*']||'').trim();
+        if (!name) return { errors:['Name is required'] };
+        var clash = ctx.customers.some(function(c){ return ((c.data||{}).name||'').toLowerCase() === name.toLowerCase(); });
+        if (clash) return { errors:['"'+name+'" already exists — edit it instead of importing it again'] };
+        return { errors:[], summary:name };
+      },
+      async save(r, ctx){
+        var name = r['Name*'].trim();
+        var code = (r.Code||'').trim() ||
+          name.replace(/[^A-Za-z]/g,'').slice(0,4).toUpperCase() + '-' + String(ctx.customers.length + ctx.savedCount + 1).padStart(3,'0');
+        await C.idms.saveDoc({ kind:'customer', docNo:code, status:'Active',
+          data:{ name:name, code:code, gstin:r.GSTIN||'', terms:r.PaymentTerms||'',
+                 billing:r.BillingAddress||'', despatch:r.DespatchAddress||'',
+                 contact:r.ContactPerson||'', phone:r.Phone||'', email:r.Email||'' } }, 'bulk uploaded');
+      } },
+
+    { id:'supplier', label:'Suppliers',
+      cols:['Name*','Code','Category','Status','GSTIN','ContactPerson','Phone','Email','LeadTimeDays','Address'],
+      colHint:{ Category:'Raw material / Consumables / Tools & fixtures / Sub-contract processing / Services',
+                Status:'Under evaluation / Approved / Conditionally approved / On hold' },
+      example:{ 'Name*':'Precision Tooling Co', Code:'', Category:'Tools & fixtures', Status:'Approved',
+        GSTIN:'27PQRSX5678G1Z2', ContactPerson:'K. Iyer', Phone:'9988776655',
+        Email:'sales@precisiontooling.example', LeadTimeDays:'7', Address:'MIDC, Nashik' },
+      async validate(r, ctx){
+        var name = (r['Name*']||'').trim();
+        if (!name) return { errors:['Name is required'] };
+        var clash = ctx.suppliers.some(function(s){ return ((s.data||{}).name||'').toLowerCase() === name.toLowerCase(); });
+        if (clash) return { errors:['"'+name+'" already exists — edit it instead of importing it again'] };
+        var cats = ['Raw material','Consumables','Tools & fixtures','Sub-contract processing','Services'];
+        var cat = (r.Category||'').trim() || 'Raw material';
+        if (cats.indexOf(cat) < 0) return { errors:['Category must be one of: ' + cats.join(', ')] };
+        var stats = ['Under evaluation','Approved','Conditionally approved','On hold'];
+        var status = (r.Status||'').trim() || 'Under evaluation';
+        if (stats.indexOf(status) < 0) return { errors:['Status must be one of: ' + stats.join(', ')] };
+        return { errors:[], summary:name };
+      },
+      async save(r, ctx){
+        var name = r['Name*'].trim();
+        var code = (r.Code||'').trim() || await C.docNumber('sup');
+        await C.idms.saveDoc({ kind:'supplier', docNo:code, status:(r.Status||'Under evaluation').trim(),
+          data:{ name:name, code:code, category:(r.Category||'Raw material').trim(),
+                 status:(r.Status||'Under evaluation').trim(), gstin:r.GSTIN||'',
+                 contact:r.ContactPerson||'', phone:r.Phone||'', email:r.Email||'',
+                 cert:'', certTill:'', terms:'', leadDays:C.num(r.LeadTimeDays), address:r.Address||'' } },
+          'bulk uploaded');
+      } },
+
+    { id:'parts', label:'Parts',
+      cols:['PartName*','DrawingNumber','DrawingRevision','RawMaterial','NetWeightKg','GrossWeightKg','UOM'],
+      colHint:{ UOM:'Nos / Kg / Set / Metre — defaults to Nos' },
+      example:{ 'PartName*':'Flange Coupling 40mm', DrawingNumber:'DWG-4021', DrawingRevision:'02',
+        RawMaterial:'EN8 bright bar Ø45', NetWeightKg:'0.82', GrossWeightKg:'1.05', UOM:'Nos' },
+      async validate(r, ctx){
+        var name = (r['PartName*']||'').trim();
+        if (!name) return { errors:['Part name is required'] };
+        var drg = (r.DrawingNumber||'').trim();
+        if (drg){
+          var clash = ctx.parts.some(function(p){ return ((p.data||{}).drawingNo||'').toLowerCase() === drg.toLowerCase(); });
+          if (clash) return { errors:['Drawing "'+drg+'" is already on file as a part'] };
+        }
+        return { errors:[], summary:name };
+      },
+      async save(r, ctx){
+        var internal = await C.docNumber('part');
+        await C.idms.savePart({ customer:'', partNo:internal, partName:r['PartName*'].trim(), lifecycle:'New',
+          data:{ drawingNo:r.DrawingNumber||'', drawingRev:r.DrawingRevision||'',
+                 uom:(r.UOM||'Nos').trim(), rawMaterial:r.RawMaterial||'',
+                 netWeight:C.num(r.NetWeightKg), grossWeight:C.num(r.GrossWeightKg) } }, 'bulk uploaded');
+      } },
+
+    { id:'machine', label:'Machines',
+      cols:['Name*','Code','MakeModel','Location','Type','Criticality','MaintenanceFrequencyDays','LastMaintained'],
+      colHint:{ Type:'CNC turning centre / CNC machining centre / Conventional lathe / Milling machine / Grinder / Drilling machine / Press / Inspection / Other',
+                Criticality:'Critical — no alternative / Important — one alternative / General',
+                LastMaintained:'YYYY-MM-DD, optional' },
+      example:{ 'Name*':'CNC Lathe 3', Code:'', MakeModel:'HMT STALLION-100', Location:'Bay 2',
+        Type:'CNC turning centre', Criticality:'Important — one alternative',
+        MaintenanceFrequencyDays:'90', LastMaintained:'' },
+      async validate(r, ctx){
+        var name = (r['Name*']||'').trim();
+        if (!name) return { errors:['Machine name is required'] };
+        var clash = ctx.machines.some(function(m){ return ((m.data||{}).name||'').toLowerCase() === name.toLowerCase(); });
+        if (clash) return { errors:['"'+name+'" already exists — edit it instead of importing it again'] };
+        return { errors:[], summary:name };
+      },
+      async save(r, ctx){
+        var code = (r.Code||'').trim() || await C.docNumber('mc');
+        await C.idms.saveDoc({ kind:'machine', docNo:code, status:'Active',
+          data:{ name:r['Name*'].trim(), make:r.MakeModel||'', location:r.Location||'',
+                 type:r.Type||'Other', criticality:r.Criticality||'General',
+                 frequencyDays:C.num(r.MaintenanceFrequencyDays)||90, lastMaintained:r.LastMaintained||'' } },
+          'bulk uploaded');
+      } },
+
+    { id:'tool', label:'Tools',
+      cols:['Description*','Number','PartNo','Type','Machine','ExpectedLife','LifeUnit'],
+      colHint:{ Type:'Cutting insert / Drill / Reamer / Tap / End mill / Grinding wheel / Fixture / Form tool / Other',
+                LifeUnit:'pieces / regrinds / hours', PartNo:'The internal part number it runs on, optional' },
+      example:{ 'Description*':'Carbide insert CNMG120408', Number:'', PartNo:'', Type:'Cutting insert',
+        Machine:'CNC Lathe 3', ExpectedLife:'500', LifeUnit:'pieces' },
+      async validate(r, ctx){
+        var desc = (r['Description*']||'').trim();
+        if (!desc) return { errors:['A description is required'] };
+        var no = (r.Number||'').trim();
+        if (no && ctx.tools.some(function(t){ return t.doc_no === no; }))
+          return { errors:['"'+no+'" is already the number of another tool'] };
+        var pno = (r.PartNo||'').trim(), pid = '';
+        if (pno){
+          var p = ctx.parts.filter(function(x){ return x.part_no === pno; })[0];
+          if (!p) return { errors:['No part with internal number "'+pno+'"'] };
+          pid = p.part_id;
+        }
+        return { errors:[], summary:desc, pid:pid };
+      },
+      async save(r, ctx, v){
+        await C.idms.saveDoc({ kind:'tool', partId:v.pid||'', docNo:(r.Number||'').trim() || await C.docNumber('tool'),
+          status:'In use', data:{ description:r['Description*'].trim(), type:r.Type||'Other',
+            machine:r.Machine||'', partId:v.pid||'', expectedLife:C.num(r.ExpectedLife),
+            lifeUnit:r.LifeUnit||'pieces', history:[] } }, 'bulk uploaded');
+      } },
+
+    { id:'consumable', label:'Consumables (Raw Material Master, Type = Consumable)',
+      cols:['Description*','Code','Form','Spec','Standard','Size','UOM','Rate','ReorderLevel','ShelfLifeDays'],
+      colHint:{ Form:'Bar / Tube / Sheet / Plate / Casting / Forging / Component',
+                UOM:'Kg / Nos / Metre / Litre / Set' },
+      example:{ 'Description*':'Cutting oil — soluble, 20L', Code:'', Form:'Component', Spec:'Water-soluble, 6-8% conc.',
+        Standard:'', Size:'20 L can', UOM:'Litre', Rate:'185', ReorderLevel:'40', ShelfLifeDays:'365' },
+      async validate(r, ctx){
+        var desc = (r['Description*']||'').trim();
+        if (!desc) return { errors:['A description is required'] };
+        var clash = ctx.rawmats.some(function(m){ return ((m.data||{}).description||'').toLowerCase() === desc.toLowerCase(); });
+        if (clash) return { errors:['"'+desc+'" already exists — edit it instead of importing it again'] };
+        return { errors:[], summary:desc };
+      },
+      async save(r, ctx){
+        var code = (r.Code||'').trim() || await C.docNumber('rm');
+        await C.idms.saveDoc({ kind:'rawmat', docNo:code, status:'Active',
+          data:{ description:r['Description*'].trim(), code:code, type:'Consumable',
+                 form:r.Form||'Component', spec:r.Spec||'', standard:r.Standard||'', size:r.Size||'',
+                 uom:r.UOM||'Nos', supplierId:'', supplierName:'', rate:C.num(r.Rate),
+                 reorder:C.num(r.ReorderLevel), shelfDays:C.num(r.ShelfLifeDays) } }, 'bulk uploaded');
+      } },
+
+    { id:'bom', label:'Bill of Materials (one row per line — several rows can share a Part No.)',
+      cols:['PartNo*','MaterialCode*','QtyPerPiece*','ScrapPercent'],
+      colHint:{ PartNo:'The internal part number (Parts screen), must already exist',
+                MaterialCode:'The material code (Raw Material Master), must already exist' },
+      example:{ 'PartNo*':'PART-000123', 'MaterialCode*':'RM-001', 'QtyPerPiece*':'0.45', ScrapPercent:'3' },
+      grouped:true,   // handled specially below rather than one row = one save
+      async validate(r, ctx){
+        var pno = (r['PartNo*']||'').trim(), mcode = (r['MaterialCode*']||'').trim();
+        var qty = C.num(r['QtyPerPiece*']);
+        if (!pno) return { errors:['Part No. is required'] };
+        if (!mcode) return { errors:['Material Code is required'] };
+        if (!(qty > 0)) return { errors:['Quantity per piece must be above zero'] };
+        var p = ctx.parts.filter(function(x){ return x.part_no === pno; })[0];
+        if (!p) return { errors:['No part with internal number "'+pno+'"'] };
+        var m = ctx.rawmats.filter(function(x){ return x.doc_no === mcode; })[0];
+        if (!m) return { errors:['No material with code "'+mcode+'"'] };
+        if (ctx.boms.some(function(b){ return (b.data||{}).partId === p.part_id; }))
+          return { errors:['Part "'+pno+'" already has a bill of materials — edit it on the Bill of Materials screen instead'] };
+        return { errors:[], summary:pno + ' — ' + mcode, partId:p.part_id, partNo:p.part_no, partName:p.part_name,
+          materialId:m.doc_id, qtyPer:qty, scrapPct:C.num(r.ScrapPercent) };
+      } },
+
+    { id:'gauge', label:'Equipment / Instruments / Gauges',
+      cols:['Description*','Number','Type','Range','LeastCount','Location','FrequencyMonths','LastCalibrated'],
+      colHint:{ Type:'Micrometer / Vernier / Bore gauge / Dial gauge / Height gauge / Plug gauge / Snap gauge / Air gauge / CMM / Surface roughness tester / Hardness tester / Torque wrench / Weighing scale / Other',
+                LastCalibrated:'YYYY-MM-DD, optional — leave blank if never calibrated' },
+      example:{ 'Description*':'Micrometer 25-50mm', Number:'', Type:'Micrometer', Range:'25-50 mm',
+        LeastCount:'0.001 mm', Location:'QC lab', FrequencyMonths:'12', LastCalibrated:'' },
+      async validate(r, ctx){
+        var desc = (r['Description*']||'').trim();
+        if (!desc) return { errors:['A description is required'] };
+        var no = (r.Number||'').trim();
+        if (no && ctx.gauges.some(function(g){ return g.doc_no === no; }))
+          return { errors:['"'+no+'" is already the number of another gauge'] };
+        return { errors:[], summary:desc };
+      },
+      async save(r, ctx){
+        await C.idms.saveDoc({ kind:'gauge', docNo:(r.Number||'').trim() || await C.docNumber('gauge'), status:'Active',
+          data:{ description:r['Description*'].trim(), type:r.Type||'Other', range:r.Range||'',
+            leastCount:r.LeastCount||'', location:r.Location||'', frequencyMonths:C.num(r.FrequencyMonths)||12,
+            lastCalibrated:r.LastCalibrated||'', agency:'', certificate:'' } }, 'bulk uploaded');
+      } }
+  ];
+  function buKind(id){ return BULK_KINDS.filter(function(k){ return k.id === id; })[0]; }
+
+  var buRows = null, buValidated = null;
+
+  async function loadBulkUpload(){
+    var sel = document.getElementById('bu-kind');
+    if (!sel.options.length)
+      sel.innerHTML = BULK_KINDS.map(function(k){ return '<option value="'+k.id+'">'+esc(k.label)+'</option>'; }).join('');
+    buShowHint();
+    document.getElementById('bu-preview').innerHTML = '';
+    document.getElementById('bu-file').value = '';
+    buRows = null; buValidated = null;
+  }
+  function buShowHint(){
+    var k = buKind(document.getElementById('bu-kind').value);
+    document.getElementById('bu-kindhint').innerHTML = k ?
+      'Columns: <code>' + k.cols.join('</code>, <code>') + '</code>. Columns marked * are required.' : '';
+  }
+  document.getElementById('bu-kind').addEventListener('change', function(){
+    buShowHint(); document.getElementById('bu-preview').innerHTML = '';
+    document.getElementById('bu-file').value = ''; buRows = null; buValidated = null;
+  });
+
+  document.getElementById('bu-template').addEventListener('click', function(){
+    var k = buKind(document.getElementById('bu-kind').value);
+    var csv = buCsvBuild(k.cols, [k.example]);
+    var blob = new Blob([csv], { type:'text/csv' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = k.id + '-template.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  });
+
+  function buMsg(t){
+    var m = document.getElementById('bu-msg');
+    m.style.display = t ? '' : 'none'; m.innerHTML = t || '';
+  }
+
+  document.getElementById('bu-file').addEventListener('change', async function(){
+    var f = this.files[0]; if (!f) return;
+    buMsg('');
+    var k = buKind(document.getElementById('bu-kind').value);
+    var text;
+    try { text = await f.text(); } catch(e){ return buMsg('Could not read that file.'); }
+    var rows = buCsvParse(text);
+    if (!rows.length) return buMsg('That file has no rows after the header.');
+    buRows = rows;
+
+    document.getElementById('bu-preview').innerHTML = '<div class="card"><div class="hint">Checking ' +
+      rows.length + ' row(s) against your records…</div></div>';
+
+    var ctx = { savedCount:0 };
+    try {
+      var need = { customer:['customers'], supplier:['suppliers'], parts:['parts'], machine:['machines'],
+        tool:['tools','parts'], consumable:['rawmats'], bom:['parts','rawmats','boms'], gauge:['gauges'] };
+      var fetchers = {
+        customers: function(){ return C.idms.docs('customer'); },
+        suppliers: function(){ return C.idms.docs('supplier'); },
+        parts: function(){ return C.idms.parts(); },
+        machines: function(){ return C.idms.docs('machine'); },
+        tools: function(){ return C.idms.docs('tool'); },
+        rawmats: function(){ return C.idms.docs('rawmat'); },
+        boms: function(){ return C.idms.docs('bom'); },
+        gauges: function(){ return C.idms.docs('gauge'); }
+      };
+      var keys = need[k.id] || [];
+      var got = await Promise.all(keys.map(function(x){ return fetchers[x](); }));
+      keys.forEach(function(x, i){ ctx[x] = got[i]; });
+    } catch(e){ return buMsg('Could not check against existing records: ' + esc(e.message)); }
+
+    var results = [];
+    for (var i = 0; i < rows.length; i++){
+      var v = await k.validate(rows[i], ctx);
+      results.push({ row:rows[i], ok:!v.errors.length, errors:v.errors, v:v });
+      /* within-file duplicates: catch a name/code repeated twice in the same
+         upload, which the against-the-database check above cannot see */
+      if (v.errors.length === 0 && v.summary){
+        var again = results.slice(0, -1).some(function(r){ return r.ok && r.v.summary === v.summary; });
+        if (again){ results[results.length-1].ok = false;
+          results[results.length-1].errors = ['Repeated within this file — only the first copy would be imported']; }
+      }
+    }
+    buValidated = { kind:k, ctx:ctx, results:results };
+    buDrawPreview();
+  });
+
+  function buDrawPreview(){
+    var host = document.getElementById('bu-preview');
+    var k = buValidated.kind, results = buValidated.results;
+    var good = results.filter(function(r){ return r.ok; }).length;
+    var bad = results.length - good;
+    host.innerHTML =
+      '<div class="card"><div class="bu-summary">' +
+        '<div class="ok"><b>'+good+'</b>ready to import</div>' +
+        '<div class="bad"><b>'+bad+'</b>need fixing</div></div>' +
+        (bad ? '<div class="hint">Fix the rows below in your spreadsheet and upload it again — rows ' +
+          'that are ready will not be affected by re-uploading.</div>' : '') +
+        (good ? '<button class="btn gold" id="bu-import" style="margin-top:10px;">Import ' + good +
+          ' row(s)</button>' : '') +
+        '<div class="note" id="bu-importmsg" style="display:none;margin-top:10px;"></div></div>' +
+      '<div class="card"><div class="scroll-x"><table class="bu-t"><thead><tr><th></th>' +
+        k.cols.map(function(c){ return '<th>'+esc(c)+'</th>'; }).join('') + '</tr></thead><tbody>' +
+        results.map(function(r){
+          return '<tr class="'+(r.ok?'':'bad')+'"><td>'+(r.ok?'✓':'✗')+'</td>' +
+            k.cols.map(function(c){ return '<td>'+esc(r.row[c]||'')+'</td>'; }).join('') +
+            (r.errors.length ? '</tr><tr class="bad"><td></td><td colspan="'+k.cols.length+
+              '" class="bu-row-err">'+esc(r.errors.join('; '))+'</td>' : '') + '</tr>';
+        }).join('') + '</tbody></table></div></div>';
+    var btn = document.getElementById('bu-import');
+    if (btn) btn.addEventListener('click', buImport);
+  }
+
+  async function buImport(){
+    var k = buValidated.kind, ctx = buValidated.ctx, results = buValidated.results;
+    var good = results.filter(function(r){ return r.ok; });
+    var btn = document.getElementById('bu-import'); btn.disabled = true;
+    var msg = document.getElementById('bu-importmsg');
+    msg.style.display = ''; msg.className = 'note'; msg.textContent = 'Importing 1 of ' + good.length + '…';
+    var ok = 0, failed = [];
+
+    if (k.grouped && k.id === 'bom'){
+      /* several CSV rows become one bill of materials per Part No. */
+      var byPart = {};
+      good.forEach(function(r){
+        (byPart[r.v.partId] = byPart[r.v.partId] || { partId:r.v.partId, partNo:r.v.partNo,
+          partName:r.v.partName, lines:[] }).lines.push(
+          { materialId:r.v.materialId, qtyPer:r.v.qtyPer, scrapPct:r.v.scrapPct||0 });
+      });
+      var parts = Object.keys(byPart);
+      for (var i = 0; i < parts.length; i++){
+        msg.textContent = 'Importing bill ' + (i+1) + ' of ' + parts.length + '…';
+        var b = byPart[parts[i]];
+        try {
+          await C.idms.saveDoc({ kind:'bom', partId:b.partId, docNo: await C.docNumber('bom'), status:'Active',
+            data:{ partId:b.partId, partNo:b.partNo, partName:b.partName, lines:b.lines } }, 'bulk uploaded');
+          ok++;
+        } catch(e){ failed.push(b.partNo + ': ' + e.message); }
+      }
+    } else {
+      for (var j = 0; j < good.length; j++){
+        msg.textContent = 'Importing ' + (j+1) + ' of ' + good.length + '…';
+        try { await k.save(good[j].row, ctx, good[j].v); ctx.savedCount++; ok++; }
+        catch(e){ failed.push((good[j].v.summary || ('row ' + (j+1))) + ': ' + e.message); }
+      }
+    }
+
+    msg.className = failed.length ? 'note bad' : 'note good';
+    msg.innerHTML = '<b>' + ok + ' imported.</b>' +
+      (failed.length ? '<br>' + failed.length + ' failed while saving (not while checking):<br>' +
+        failed.map(esc).join('<br>') : '');
+    btn.disabled = false; btn.textContent = 'Import again';
+    if (ok) toast(ok + ' record(s) imported');
+  }
 
   /* ================= CNC SETUP GUIDE =================
      A screen for the person who has to actually make machine monitoring work,
@@ -18696,6 +19267,14 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('dw-dept').addEventListener('change', dwmFillEmployees);
   document.getElementById('dw-emp').addEventListener('change', dwmPreview);
   document.getElementById('dw-open').addEventListener('click', dwmOpen);
+  document.getElementById('dw-savesig').addEventListener('click', async function(){
+    var msg = document.getElementById('dw-sigmsg');
+    var say = noteWriter(msg);
+    dwmDoc.data.signatories = {
+      prepBy: fieldVal('dw-prep'), revBy: fieldVal('dw-rev'), appBy: fieldVal('dw-app') };
+    try { await dwmSave('sign-off recorded'); say('Saved.', true); }
+    catch(e){ say(esc(e.message)); }
+  });
   document.getElementById('dw-back').addEventListener('click', dwmBack);
   document.getElementById('dw-month').addEventListener('change', function(){ dwmFreqChanged(); drawDwm(); });
   document.getElementById('dw-year').addEventListener('change', function(){ dwmFreqChanged(); drawDwm(); });
@@ -18774,7 +19353,32 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     drawOrgChart();
   });
   document.getElementById('oc-dept').addEventListener('change', drawOrgChart);
-  document.getElementById('oc-print').addEventListener('click', printOrgChart);
+  /* View Full / View Dept do exactly what the existing Show selector already
+     did — they are added as explicit buttons because that is the control
+     shape asked for, not a second, competing way to filter the chart. */
+  document.getElementById('oc-viewfull').addEventListener('click', function(){
+    document.getElementById('oc-filter').value = 'all';
+    document.getElementById('oc-filter').dispatchEvent(new Event('change'));
+  });
+  document.getElementById('oc-viewdept').addEventListener('click', function(){
+    document.getElementById('oc-filter').value = 'dept';
+    document.getElementById('oc-filter').dispatchEvent(new Event('change'));
+  });
+  document.getElementById('oc-printfull').addEventListener('click', function(){ printOrgChart(null); });
+  document.getElementById('oc-printdept').addEventListener('click', function(){
+    var d = document.getElementById('oc-dept').value;
+    if (!d) { toast('Choose a department first — under Show, One department.'); return; }
+    printOrgChart(d);
+  });
+  document.getElementById('oc-savesig').addEventListener('click', async function(){
+    var g = fieldVal;
+    try {
+      await C.idms.saveSetting('org_signatories', {
+        prepBy:g('oc-prep-by'), prepDate:g('oc-prep-date'), revBy:g('oc-rev-by'), revDate:g('oc-rev-date'),
+        appBy:g('oc-app-by'), appDate:g('oc-app-date'), docNo:g('oc-docno') });
+      toast('Saved.');
+    } catch(e){ toast(e.message); }
+  });
   document.getElementById('oc-add').addEventListener('click', function(){
     ocEditing = '';
     document.getElementById('oc-formtitle').textContent = 'Add a box';
@@ -19663,6 +20267,18 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     this.disabled = false;
   });
 
+  var pDrawingUpload = null;   // { url, mime, name } once a file is chosen and uploaded
+  document.getElementById('p-drgfile').addEventListener('change', async function(){
+    var f = this.files[0]; if (!f) return;
+    var nameEl = document.getElementById('p-drgname');
+    nameEl.textContent = 'Uploading ' + f.name + '…';
+    try {
+      var up = await C.uploadFile(f);
+      pDrawingUpload = { url: up.url, mime: f.type, name: f.name };
+      nameEl.textContent = 'Attached: ' + f.name;
+    } catch(e){ nameEl.textContent = 'Could not upload: ' + e.message; pDrawingUpload = null; }
+  });
+
   document.getElementById('p-add').addEventListener('click', async function(){
     var msg = document.getElementById('p-msg');
     var say = noteWriter(msg);
@@ -19689,12 +20305,16 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         data:{ drawingNo:g('p-drg'), drawingRev:g('p-rev'),
                uom:document.getElementById('p-uom').value,
                rawMaterial:g('p-rm'), netWeight:C.num(g('p-netwt')),
-               grossWeight:C.num(g('p-grosswt')) }
+               grossWeight:C.num(g('p-grosswt')),
+               drawingFile: pDrawingUpload || null }
       }, 'part created in the IDMS');
       say('Created as <b>'+esc(internal)+'</b>. Open its <b>Customers</b> to add who buys it and ' +
           'at what price.', true);
       ['p-name','p-drg','p-rev','p-rm','p-netwt','p-grosswt']
         .forEach(function(id){ document.getElementById(id).value=''; });
+      document.getElementById('p-drgfile').value = '';
+      document.getElementById('p-drgname').textContent = '';
+      pDrawingUpload = null;
       loadParts();
     } catch(e){ say(esc(e.message)); }
     this.disabled = false;

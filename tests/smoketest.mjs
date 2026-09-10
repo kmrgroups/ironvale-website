@@ -136,11 +136,13 @@ check('signed in — app visible', $('app').style.display === '');
 
 // ---- 3. the menu ----
 const groups = [...window.document.querySelectorAll('#menubar .mgroup > a')].map(b => b.textContent.trim());
-/* 'Live Production' was added between Accounts and Admin after this list was
-   written, so the positional check below reported the whole menu as misordered.
-   The order asked for is otherwise unchanged. */
-const want = ['Home', 'Top Management', 'QMS', 'Marketing', 'NPD', 'Purchase & SCM', 'PPC & MMD',
-  'Production', 'Quality Assurance', 'Maintenance', 'HRM', 'Accounts', 'Live Production', 'Admin'];
+/* 'Live Production' was added between Accounts and Admin, and 'Masters' between
+   QMS and Marketing, after this list was written — the positional check below
+   reported the whole menu as misordered each time. The order asked for is
+   otherwise unchanged. */
+const want = ['Home', 'Top Management', 'QMS', 'Masters', 'Marketing', 'NPD', 'Purchase & SCM',
+  'PPC & MMD', 'Production', 'Quality Assurance', 'Maintenance', 'HRM', 'Accounts',
+  'Live Production', 'Admin'];
 want.forEach(w => check('menu has ' + w, groups.some(g => g.includes(w)), groups.join(' | ')));
 check('menu is in the asked-for order',
   want.slice(1).every((w, i) => groups.findIndex(g => g.includes(w)) > 0 &&

@@ -1612,6 +1612,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <div style="align-self:end;"><button class="btn" id="kd-print">Print</button></div>
         </div>
       </div>
+      <div id="kd-ppc-sales" style="display:none;"></div>
       <div id="kd-body"></div>
     </div>
 
@@ -2179,13 +2180,13 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         <div class="note" id="so-msg" style="display:none;"></div>
       </div>
       <div class="card">
-        <div class="row four" style="margin-bottom:8px;">
-          <div><label>Show</label><select id="so-filter">
-            <option value="open">Open orders</option><option value="">Everything</option>
-            <option value="done">Completed</option></select></div>
-          <div style="align-self:end;"><button class="btn" id="so-print">Print order book</button></div>
+        <div class="tabs-row" style="display:flex;gap:6px;margin-bottom:10px;">
+          <button class="btn so-tab active" data-tab="live">Live</button>
+          <button class="btn so-tab" data-tab="obsolete">Obsolete</button>
+          <button class="btn so-tab" data-tab="closed">Order closed</button>
+          <div style="align-self:end;margin-left:auto;"><button class="btn" id="so-print">Print order book</button></div>
         </div>
-        <h4>Customer PO register</h4>
+        <h4 id="so-list-title">Customer PO register — live</h4>
         <div id="so-list"></div>
       </div>
     </div>
@@ -2237,6 +2238,12 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <div><label>Invoice date</label><input type="date" id="iv-date"></div>
           <div><label>GST %</label><input class="num" id="iv-gst" value="18"></div>
         </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Customer PO No. <span class="hint">(optional)</span></label><input id="iv-custpo"></div>
+          <div><label>PO date <span class="hint">(optional)</span></label><input type="date" id="iv-custpodate"></div>
+          <div><label>Payment terms <span class="hint">(from customer, editable)</span></label><input id="iv-terms"></div>
+          <div><label>Place of supply <span class="hint">(from customer GSTIN)</span></label><input id="iv-pos" disabled></div>
+        </div>
         <div class="note bad" id="iv-msg" style="display:none;margin-top:10px;"></div>
       </div>
 
@@ -2252,6 +2259,12 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <div><label>Currency</label><select id="iv-currency"><option value="INR">INR — ₹</option>
             <option value="USD">USD — $</option></select></div>
           <div style="align-self:end;"><button class="btn gold" id="iv-addline">Add line</button></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Batch / Lot No. <span class="hint">(optional)</span></label><input id="iv-batch"></div>
+          <div><label>Heat No. <span class="hint">(optional)</span></label><input id="iv-heat"></div>
+          <div><label>Material grade <span class="hint">(optional)</span></label><input id="iv-material"></div>
+          <div><label>Delivery challan no. <span class="hint">(optional)</span></label><input id="iv-challan"></div>
         </div>
         <div class="note bad" id="iv-linemsg" style="display:none;margin-top:10px;"></div>
         <div id="iv-lines" style="margin-top:12px;"></div>
@@ -9650,7 +9663,166 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     fillFy('kd-fy');
     document.getElementById('kd-fy').value = String(kpiFy);
     window.KPIX.refresh();
+    var extra = document.getElementById('kd-ppc-sales');
+    if (dept === 'ppc'){
+      extra.style.display = '';
+      await loadSalesPlan(); /* orders / customers / parts / invoices / plan rows */
+      renderPpcSalesKpis(extra);
+    } else {
+      extra.style.display = 'none';
+      extra.innerHTML = '';
+      delete extra.dataset.wired;
+    }
     await window.KPIX.renderDashboard(dept, document.getElementById('kd-body'), kpiFy);
+  }
+
+  /* ---------------- PPC & MMD dashboard: Sales value & % widgets ----------------
+     These read straight off the same demand/actual figures the Sales Plan
+     register uses — nothing here is a second, separately-typed number that
+     could disagree with it. Value is in the customer's own invoicing
+     currency only when every line involved shares one; INR is assumed
+     throughout, which matches every other value figure on this dashboard. */
+  function fyMonthKeys(fy){
+    var out = [];
+    for (var i = 0; i < 12; i++){
+      var mo = (3 + i) % 12 + 1, yr = fy + (mo < 4 ? 1 : 0);
+      out.push(yr + '-' + String(mo).padStart(2,'0'));
+    }
+    return out;
+  }
+  function pctOf(part, whole){ return whole > 0 ? (part / whole * 100) : 0; }
+  function pctStr(part, whole){ return whole > 0 ? pctOf(part, whole).toFixed(1) + '%' : '—'; }
+
+  function renderPpcSalesKpis(host){
+    if (!host.dataset.wired){
+      host.dataset.wired = '1';
+      host.innerHTML =
+        '<div class="card"><h4>Sales — Plan vs Actual vs Pending</h4>' +
+        '<div class="hint" style="margin-bottom:10px;">Plan is the demand arrived at from Customer PO ' +
+          'commitments (and forecast where neither exists yet); Actual is what has actually been invoiced. ' +
+          'Nothing here is typed a second time — it reads the same figures as the Sales Plan register.</div>' +
+        '<div class="row four">' +
+          '<div><label>Financial year (cards 1 &amp; 2)</label><select id="kdps-fy"></select></div>' +
+          '<div><label>Month (cards 3, 4 &amp; 5)</label><input type="month" id="kdps-month"></div>' +
+        '</div>' +
+        '<div id="kdps-fysummary" style="margin-top:14px;"></div>' +
+        '<div id="kdps-fytable" style="margin-top:14px;"></div>' +
+        '<div id="kdps-monthsummary" style="margin-top:14px;"></div>' +
+        '<div id="kdps-custtable" style="margin-top:14px;"></div>' +
+        '<div id="kdps-daytable" style="margin-top:14px;"></div>' +
+        '</div>';
+      fillFy('kdps-fy');
+      document.getElementById('kdps-fy').value = String(window.KPIX.fyOf());
+      document.getElementById('kdps-month').value = thisMonthKey();
+      document.getElementById('kdps-fy').addEventListener('change', function(){ renderPpcSalesKpis(host); });
+      document.getElementById('kdps-month').addEventListener('change', function(){ renderPpcSalesKpis(host); });
+    }
+    var fy = C.num(document.getElementById('kdps-fy').value) || window.KPIX.fyOf();
+    var month = document.getElementById('kdps-month').value || thisMonthKey();
+    var months = fyMonthKeys(fy);
+
+    /* Card 1: overall, whole financial year, one figure. */
+    var fyTotal = { demand:0, actual:0 };
+    var perMonth = months.map(function(m){
+      var rows = salesPlanRows(m, '');
+      var demand = rows.reduce(function(t,r){ return t + r.demandValue; }, 0);
+      var actual = rows.reduce(function(t,r){ return t + r.actualValue; }, 0);
+      fyTotal.demand += demand; fyTotal.actual += actual;
+      return { month:m, demand:demand, actual:actual };
+    });
+    var fyPending = Math.max(0, fyTotal.demand - fyTotal.actual);
+    document.getElementById('kdps-fysummary').innerHTML =
+      '<h5 style="margin:0 0 8px;">1. Overall — financial year ' + esc(window.KPIX.fyLabel(fy)) + '</h5>' +
+      '<div class="stat">' +
+        '<div class="b"><b>' + moneyFmt(fyTotal.demand,'INR') + '</b><span>Plan</span></div>' +
+        '<div class="b"><b>' + moneyFmt(fyTotal.actual,'INR') + '</b><span>Actual (' +
+          pctStr(fyTotal.actual, fyTotal.demand) + ' of plan)</span></div>' +
+        '<div class="b"><b>' + moneyFmt(fyPending,'INR') + '</b><span>Pending (' +
+          pctStr(fyPending, fyTotal.demand) + ' of plan)</span></div>' +
+      '</div>';
+
+    /* Card 2: the same, broken out by all 12 months of that financial year. */
+    document.getElementById('kdps-fytable').innerHTML =
+      '<h5 style="margin:0 0 8px;">2. Month by month — financial year ' + esc(window.KPIX.fyLabel(fy)) + '</h5>' +
+      '<table class="t"><thead><tr><th>Month</th><th class="r">Plan</th><th class="r">Actual</th>' +
+        '<th class="r">Actual %</th><th class="r">Pending</th><th class="r">Pending %</th></tr></thead><tbody>' +
+      perMonth.map(function(r){
+        var pending = Math.max(0, r.demand - r.actual);
+        return '<tr><td>' + esc(monthLabel(r.month)) + '</td>' +
+          '<td class="r">' + moneyFmt(r.demand,'INR') + '</td>' +
+          '<td class="r">' + moneyFmt(r.actual,'INR') + '</td>' +
+          '<td class="r">' + pctStr(r.actual, r.demand) + '</td>' +
+          '<td class="r">' + moneyFmt(pending,'INR') + '</td>' +
+          '<td class="r">' + pctStr(pending, r.demand) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+
+    /* Card 3: overall, one month only. */
+    var mRows = salesPlanRows(month, '');
+    var mDemand = mRows.reduce(function(t,r){ return t + r.demandValue; }, 0);
+    var mActual = mRows.reduce(function(t,r){ return t + r.actualValue; }, 0);
+    var mPending = Math.max(0, mDemand - mActual);
+    document.getElementById('kdps-monthsummary').innerHTML =
+      '<h5 style="margin:0 0 8px;">3. Overall — ' + esc(monthLabel(month)) + '</h5>' +
+      '<div class="stat">' +
+        '<div class="b"><b>' + moneyFmt(mDemand,'INR') + '</b><span>Plan</span></div>' +
+        '<div class="b"><b>' + moneyFmt(mActual,'INR') + '</b><span>Actual (' +
+          pctStr(mActual, mDemand) + ' of plan)</span></div>' +
+        '<div class="b"><b>' + moneyFmt(mPending,'INR') + '</b><span>Pending (' +
+          pctStr(mPending, mDemand) + ' of plan)</span></div>' +
+      '</div>';
+
+    /* Card 4: the same month, broken out by customer. */
+    var byCust = {};
+    mRows.forEach(function(r){
+      var k = r.customerId || '—';
+      if (!byCust[k]) byCust[k] = { name:r.customerName||'—', demand:0, actual:0 };
+      byCust[k].demand += r.demandValue; byCust[k].actual += r.actualValue;
+    });
+    var custList = Object.keys(byCust).map(function(k){ return byCust[k]; })
+      .sort(function(a,b){ return b.demand - a.demand; });
+    document.getElementById('kdps-custtable').innerHTML =
+      '<h5 style="margin:0 0 8px;">4. Customer-wise — ' + esc(monthLabel(month)) + '</h5>' +
+      (custList.length ? '<table class="t"><thead><tr><th>Customer</th><th class="r">Plan</th>' +
+        '<th class="r">Actual</th><th class="r">Actual %</th><th class="r">Pending</th>' +
+        '<th class="r">Pending %</th></tr></thead><tbody>' +
+        custList.map(function(c){
+          var pending = Math.max(0, c.demand - c.actual);
+          return '<tr><td>' + esc(c.name) + '</td>' +
+            '<td class="r">' + moneyFmt(c.demand,'INR') + '</td>' +
+            '<td class="r">' + moneyFmt(c.actual,'INR') + '</td>' +
+            '<td class="r">' + pctStr(c.actual, c.demand) + '</td>' +
+            '<td class="r">' + moneyFmt(pending,'INR') + '</td>' +
+            '<td class="r">' + pctStr(pending, c.demand) + '</td></tr>';
+        }).join('') + '</tbody></table>'
+        : '<div class="empty">No demand or invoicing for ' + esc(monthLabel(month)) + '.</div>');
+
+    /* Card 5: customer-wise sales value, day by day, for the same month —
+       taken straight from invoice lines actually raised that day. */
+    var byDay = {}, custIdsSeen = {}, custNames = {};
+    invoiceLines().forEach(function(l){
+      if (String(l.invoiceDate||'').slice(0,7) !== month) return;
+      var day = l.invoiceDate.slice(8,10);
+      custIdsSeen[l.customerId] = 1; custNames[l.customerId] = l.customerName;
+      byDay[day] = byDay[day] || {};
+      byDay[day][l.customerId] = (byDay[day][l.customerId] || 0) + l.value;
+    });
+    var custIds = Object.keys(custIdsSeen).sort(function(a,b){
+      return (custNames[a]||'').localeCompare(custNames[b]||''); });
+    var days = Object.keys(byDay).sort();
+    document.getElementById('kdps-daytable').innerHTML =
+      '<h5 style="margin:0 0 8px;">5. Customer-wise sales value, day by day — ' + esc(monthLabel(month)) + '</h5>' +
+      (days.length ? '<table class="t"><thead><tr><th>Day</th>' +
+        custIds.map(function(c){ return '<th class="r">'+esc(custNames[c])+'</th>'; }).join('') +
+        '<th class="r">Day total</th></tr></thead><tbody>' +
+        days.map(function(day){
+          var rowTotal = 0;
+          var cells = custIds.map(function(c){
+            var v = (byDay[day][c] || 0); rowTotal += v;
+            return '<td class="r">' + (v ? moneyFmt(v,'INR') : '<span class="hint">—</span>') + '</td>';
+          }).join('');
+          return '<tr><td>' + esc(day) + '</td>' + cells + '<td class="r"><b>' + moneyFmt(rowTotal,'INR') + '</b></td></tr>';
+        }).join('') + '</tbody></table>'
+        : '<div class="empty">No invoices raised yet in ' + esc(monthLabel(month)) + '.</div>');
   }
 
   /* A chart with nothing behind it offers the entry screen, and lands on the
@@ -12257,7 +12429,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      The plan is only worth having because the two numbers it compares come from
      somewhere real: made comes from production bookings, despatched from cleared
      lots drawn down by challans. Nothing here asks anybody how it is going. */
-  var orders = [], planRows = [];
+  var orders = [], planRows = [], soTab = 'live';
 
   async function loadOrders(){
     await fetchParts();
@@ -12417,34 +12589,46 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   function drawOrders(){
     var host = document.getElementById('so-list');
-    var f = document.getElementById('so-filter').value;
+    var f = soTab;
     var todayK = new Date().toISOString().slice(0,10);
     var rows = orders.filter(function(o){
       var v = o.data||{};
+      /* An obsolete PO — one superseded by a later revision — only ever
+         shows on the Obsolete tab, whatever its own balance or validity
+         would otherwise say. */
+      if (f === 'obsolete') return !!v.obsolete;
+      if (v.obsolete) return false;
       /* Rate contracts have no quantity to be "open" or "done" against — open
          means still within validity, done means the validity has passed. */
       if (v.poType === 'ratecontract'){
         var stillValid = !v.validTo || v.validTo >= todayK;
-        if (f === 'open') return stillValid;
-        if (f === 'done') return !stillValid;
+        if (f === 'live') return stillValid;
+        if (f === 'closed') return !stillValid;
         return true;
       }
       var pr = orderProgress(o);
-      if (f === 'open') return pr.balance > 0;
-      if (f === 'done') return pr.balance <= 0;
+      if (f === 'live') return pr.balance > 0;
+      if (f === 'closed') return pr.balance <= 0;
       return true;
     });
+    document.getElementById('so-list-title').textContent = 'Customer PO register — ' +
+      (f === 'obsolete' ? 'obsolete (superseded by a later revision)' :
+       f === 'closed' ? 'order closed' : 'live');
     if (!rows.length){
-      host.innerHTML = '<div class="empty"><b>No orders' + (f ? ' matching that' : ' yet') +
-        '</b>The production plan has nothing to plan against until an order exists.</div>';
+      host.innerHTML = '<div class="empty"><b>Nothing here' +
+        (f === 'obsolete' ? ' — no PO has been revised yet' : f === 'closed' ? ' yet' : '') +
+        '</b>' + (f === 'live' ? 'The production plan has nothing to plan against until an order exists.'
+          : '') + '</div>';
       return;
     }
     var typeLabel = { onetime:'One-time', ratecontract:'Rate Contract', schedule:'Schedule' };
     host.innerHTML = '<table class="t"><thead><tr><th>Type</th><th>PO Number</th><th>Customer</th>' +
       '<th>Customer Part</th><th>Internal Part</th>' +
+      '<th class="r">Unit Price</th>' +
       '<th class="r">Ordered</th><th class="r">Made</th><th class="r">Balance</th>' +
       '<th class="r">PO Value</th>' +
-      '<th>Due / Validity</th><th class="c">Days</th><th></th></tr></thead><tbody>' +
+      '<th>Due / Validity</th><th class="c">Days</th>' +
+      (f === 'obsolete' ? '<th>Superseded by</th>' : '<th></th>') + '</tr></thead><tbody>' +
       rows.map(function(o){
         var v = o.data||{}, isRC = v.poType === 'ratecontract';
         var pr = isRC ? null : orderProgress(o), dl = isRC ? null : daysTo(v.due);
@@ -12454,23 +12638,30 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
               ? esc(C.fmtDate(v.validFrom) || '—') + ' to ' + esc(v.validTo ? C.fmtDate(v.validTo) : 'open')
               : '<span class="hint">no fixed validity</span>')
           : C.fmtDate(v.due);
+        var newer = v.supersededBy ? orders.filter(function(x){ return x.doc_id === v.supersededBy; })[0] : null;
         return '<tr><td class="c hint">'+esc(typeLabel[v.poType]||'One-time')+
-          (v.scheduleAgainstPo ? '<div class="hint">against '+esc(v.scheduleAgainstPo)+'</div>' : '')+'</td>'+
+          (v.scheduleAgainstPo ? '<div class="hint">against '+esc(v.scheduleAgainstPo)+'</div>' : '')+
+          (v.revisionNo > 1 ? '<div class="hint">rev '+esc(v.revisionNo)+'</div>' : '')+'</td>'+
           '<td><b>'+esc(v.po||o.doc_no||'')+'</b></td>' +
           '<td>'+esc(v.customerName||'—')+'</td>' +
           '<td>'+esc(v.custPartNo||'—')+'<div class="hint">'+esc(v.custPartName||'')+'</div></td>' +
           '<td>'+esc(v.partNo||'')+'<div class="hint">'+esc(v.partName||'')+'</div></td>' +
+          '<td class="r">'+moneyFmt(v.price, v.currency)+'</td>' +
           '<td class="r">'+(isRC?'<span class="hint">—</span>':C.qty(v.qty))+'</td>' +
           '<td class="r">'+(isRC?'<span class="hint">—</span>':C.qty(pr.made))+'</td>' +
           '<td class="r">'+(isRC?'<span class="hint">—</span>':'<b>'+C.qty(pr.balance)+'</b>')+'</td>' +
-          '<td class="r">'+(isRC?'<span class="hint">rate: '+moneyFmt(v.price,v.currency)+'</span>'
+          '<td class="r">'+(isRC?'<span class="hint">no value — rate only</span>'
             :moneyFmt(v.poValue||(C.num(v.qty)*C.num(v.price)), v.currency))+'</td>' +
           '<td class="hint">'+dueCell+'</td>' +
-          '<td class="c">'+(isRC?'—':dl===null?'—':late
-            ? '<span class="badge ab">'+Math.abs(dl)+' late</span>'
-            : pr.balance<=0 ? '<span class="badge series">done</span>' : dl)+'</td>' +
-          '<td><button class="btn so-edit" data-id="'+esc(o.doc_id)+'">Edit</button> ' +
-          '<button class="btn del so-del" data-id="'+esc(o.doc_id)+'">Remove</button></td></tr>';
+          (f === 'obsolete'
+            ? '<td class="hint">'+(newer ? '<b>'+esc(newer.data.po||newer.doc_no||'')+'</b>' : '—')+
+              (v.obsoleteReason ? '<div class="hint">'+esc(v.obsoleteReason)+'</div>' : '')+'</td>'
+            : '<td class="c">'+(isRC?'—':dl===null?'—':late
+              ? '<span class="badge ab">'+Math.abs(dl)+' late</span>'
+              : pr.balance<=0 ? '<span class="badge series">done</span>' : dl)+'</td>' +
+              '<td><button class="btn so-edit" data-id="'+esc(o.doc_id)+'">Edit</button> ' +
+              '<button class="btn del so-del" data-id="'+esc(o.doc_id)+'">Remove</button></td>')+
+          '</tr>';
       }).join('') + '</tbody></table>';
     host.querySelectorAll('.so-edit').forEach(function(b){
       b.addEventListener('click', function(){ editOrder(b.dataset.id); });
@@ -12603,10 +12794,17 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var custPartName = contract ? (contract.data||{}).custPartName || '' : g('so-custpartname');
 
     var editingExisting = orders.filter(function(o){ return o.doc_id === soEditing; })[0];
+    /* Editing a live PO is a revision, not a silent overwrite — the old entry
+       is kept, marked obsolete and linked forward to the new one, so a price
+       amendment or any other change to a PO already on file leaves a trail
+       instead of erasing what the PO used to say. A brand-new PO (nothing
+       being edited) just gets added as normal. */
+    var isRevision = !!(soEditing && editingExisting);
     try {
-      await C.idms.saveDoc({ docId: soEditing || '', kind:'order', partId:partId,
-        status: editingExisting ? editingExisting.data.status || 'Open' : 'Open',
-        docNo: soEditing ? (editingExisting ? editingExisting.doc_no : await C.docNumber('so')) : await C.docNumber('so'),
+      var newDocNo = await C.docNumber('so');
+      var res = await C.idms.saveDoc({ docId: isRevision ? '' : (soEditing || ''), kind:'order', partId:partId,
+        status: 'Open',
+        docNo: newDocNo,
         data:{ partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
                customerId:custId, customerName:(cust.data||{}).name||'',
                poType:poType, custPartNo:custPartNo, custPartName:custPartName,
@@ -12620,15 +12818,28 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
                      poType === 'ratecontract' ? '' : 'Firm order',
                tent1: poType === 'ratecontract' ? 0 : C.num(g('so-t1')),
                tent2: poType === 'ratecontract' ? 0 : C.num(g('so-t2')),
+               revisionOf: isRevision ? soEditing : '',
+               revisionNo: isRevision ? (C.num((editingExisting.data||{}).revisionNo)||1)+1 : 1,
                poFile: soPoUpload || (editingExisting ? (editingExisting.data||{}).poFile || null : null) } },
-        soEditing ? 'customer PO edited' :
+        isRevision ? 'customer PO revised' :
         poType === 'schedule' ? 'schedule added against a rate contract' :
         poType === 'ratecontract' ? 'rate contract PO added' : 'customer PO added');
+      if (isRevision){
+        await C.idms.patchDoc({ docId: soEditing,
+          patch: Object.assign({}, editingExisting.data, {
+            obsolete: true, obsoleteReason: 'revised: '+(g('so-po')||''),
+            supersededBy: res.docId }),
+          reason: 'superseded by revision '+newDocNo });
+      }
       say(soEditing ? 'Updated.'
         : poType === 'ratecontract' ? 'Rate contract added. Schedules can now be raised against it.'
         : 'Added.', true);
-      ['so-po','so-qty','so-price','so-due','so-custpartno','so-custpartname','so-validfrom','so-validto']
+      ['so-po','so-qty','so-price','so-due','so-custpartno','so-custpartname','so-validfrom','so-validto',
+       'so-t1','so-t2']
         .forEach(function(id){ document.getElementById(id).value=''; });
+      soPoUpload = null;
+      document.getElementById('so-pofilename').textContent = '';
+      document.getElementById('so-pofile').value = '';
       updateSoValue();
       soCancelEdit();
       await loadOrders();
@@ -12641,13 +12852,15 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       title:'Customer PO Register', kind:'Sales', landscape:true,
       subtitle:orders.length + ' order(s)',
       sections:[{ type:'table', title:'Orders',
-        columns:[{label:'PO Number'},{label:'Customer'},{label:'Part'},{label:'Ordered',align:'r'},
+        columns:[{label:'PO Number'},{label:'Customer'},{label:'Part'},{label:'Unit Price',align:'r'},
+          {label:'Ordered',align:'r'},
           {label:'Made',align:'r'},{label:'Balance',align:'r'},{label:'PO Value',align:'r'},
           {label:'Due'},{label:'Days',align:'c'},
           {label:'Type'}],
         rows: orders.map(function(o){
           var v = o.data||{}, pr = orderProgress(o), dl = daysTo(v.due);
           return [esc(v.po||o.doc_no||''), esc(v.customerName||''), esc(v.partNo||''),
+            moneyFmt(v.price, v.currency),
             C.qty(v.qty), C.qty(pr.made), C.qty(pr.balance),
             moneyFmt(v.poValue||(C.num(v.qty)*C.num(v.price)), v.currency), C.fmtDate(v.due),
             (pr.balance>0 && dl!==null && dl<0) ? { v:'<b>'+Math.abs(dl)+' late</b>', cls:'ab' }
@@ -12689,6 +12902,41 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     return link ? { price:C.num((link.data||{}).price), currency:(link.data||{}).currency||'INR',
                      custPartNo:(link.data||{}).custPartNo||'', custPartName:(link.data||{}).custPartName||'' }
                 : { price:0, currency:'INR', custPartNo:'', custPartName:'' };
+  }
+
+  /* The rate actually agreed for what's being billed. A Customer PO can carry
+     its own negotiated price that differs from the customer/part master link
+     (the master link is the general list price; a specific PO can be quoted
+     differently) — invoicing against the master link's price rather than the
+     PO's own price is how a bill ends up at a rate the customer never agreed
+     to. Preference order: an open one-time PO or schedule for this part with
+     a balance still owing (the one this invoice is most likely settling,
+     earliest due first) — then the most recently dated order of any kind for
+     this customer/part — then an open rate contract's rate — and only when
+     none of those exist, the master price link. */
+  function orderPriceFor(customerId, partId){
+    var mine = orders.filter(function(o){
+      var v = o.data||{}; return v.customerId === customerId && v.partId === partId; });
+    var owing = mine.filter(function(o){
+      var v = o.data||{};
+      return v.poType !== 'ratecontract' && orderProgress(o).balance > 0;
+    }).sort(function(a,b){ return String((a.data||{}).due||'').localeCompare(String((b.data||{}).due||'')); });
+    var pick = owing[0];
+    if (!pick){
+      var dated = mine.filter(function(o){ return (o.data||{}).poType !== 'ratecontract'; })
+        .sort(function(a,b){ return String((b.data||{}).orderedOn||'').localeCompare(String((a.data||{}).orderedOn||'')); });
+      pick = dated[0];
+    }
+    if (!pick){
+      var rc = soOpenContracts(customerId).filter(function(o){ return (o.data||{}).partId === partId; })[0];
+      pick = rc;
+    }
+    if (pick){
+      var v = pick.data||{};
+      return { price:C.num(v.price), currency:v.currency||'INR',
+        custPartNo:v.custPartNo||'', custPartName:v.custPartName||'' };
+    }
+    return priceFor(customerId, partId);
   }
   function partOptionsForCustomer(customerId, selected){
     if (!customerId) return '<option value="">— choose the customer first —</option>';
@@ -12940,7 +13188,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
             : '<span class="hint">no plan</span>')+'</td>' +
           '<td>'+(interactive && ((r.orderIds&&r.orderIds.length)||r.forecastDocId)
             ? '<button class="btn spm-manage" data-t="'+rid+'">Manage</button>' : '')+'</td></tr>' +
-          '<tr id="'+rid+'" class="spm-managerow" style="display:none;"><td colspan="13">'+
+          '<tr id="'+rid+'" class="spm-managerow" style="display:none;"><td colspan="14">'+
             spmManageHtml(r)+'</td></tr>';
       }).join('') + '</tbody></table>';
     host.querySelectorAll('.spm-manage').forEach(function(b){
@@ -13040,6 +13288,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   async function loadSalesInvoice(){
     await fetchParts(); await fetchCustomers();
     try { custParts = await C.idms.docs('cust_part'); } catch(e){ custParts = []; }
+    try { orders = await C.idms.docs('order'); } catch(e){ orders = []; }
+    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    allocateProduction();
     document.getElementById('iv-cust').innerHTML = customerOptions('');
     document.getElementById('iv-part').innerHTML = partOptionsForCustomer('');
     var dt = document.getElementById('iv-date');
@@ -13165,14 +13416,19 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (ivWorkingLines.some(function(l){ return l.partId === partId; }))
       return ivLineMsg('That part is already a line on this invoice — remove it below to change the quantity, rather than adding it twice.');
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var pd = p.data || {};
     var pr = priceFor(custId, partId);
     ivWorkingLines.push({ partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
       custPartNo: document.getElementById('iv-custpartno').value || pr.custPartNo || '',
       custPartName: pr.custPartName || '',
+      hsn: pd.hsn || '', drawingNo: pd.drawingNo || '', drawingRev: pd.drawingRev || '',
+      batch: fieldVal('iv-batch'), heat: fieldVal('iv-heat'), material: fieldVal('iv-material'),
+      challan: fieldVal('iv-challan'),
       qty:qty, rate:rate, currency:document.getElementById('iv-currency').value || 'INR',
       value: qty*rate });
     document.getElementById('iv-part').value = '';
-    ['iv-custpartno','iv-qty','iv-rate'].forEach(function(id){ document.getElementById(id).value=''; });
+    ['iv-custpartno','iv-qty','iv-rate','iv-batch','iv-heat','iv-material','iv-challan']
+      .forEach(function(id){ document.getElementById(id).value=''; });
     ivDrawLines();
   });
 
@@ -13225,9 +13481,24 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var gstPct = C.num(g('iv-gst'));
     var gstValue = subtotal * gstPct / 100;
     var currency = ivWorkingLines[0].currency || 'INR';
+    var profile = await C.loadProfile();
+    /* Same state as the company → CGST + SGST, split evenly. Different state,
+       or either side has no GSTIN to tell from → IGST, the whole amount. This
+       is the ordinary GST rule, worked out from the GSTIN state codes already
+       on file rather than a state having to be typed anywhere a second time. */
+    var sameState = profile.stateCode && C.gstStateCode(cv.gstin||'') &&
+      profile.stateCode === C.gstStateCode(cv.gstin||'');
+    var cgstValue = sameState ? gstValue/2 : 0, sgstValue = sameState ? gstValue/2 : 0;
+    var igstValue = sameState ? 0 : gstValue;
     var data = { customerId:custId, customerName:cv.name||'', billingAddress:cv.billing||'',
-      gstin:cv.gstin||'', invoiceNo:invoiceNo, invoiceDate:g('iv-date'), currency:currency,
+      despatchAddress:cv.despatch||'', contact:cv.contact||'', phone:cv.phone||'', email:cv.email||'',
+      gstin:cv.gstin||'', customerState:C.gstStateName(cv.gstin||''),
+      invoiceNo:invoiceNo, invoiceDate:g('iv-date'), currency:currency,
+      custPo:g('iv-custpo'), custPoDate:g('iv-custpodate'), paymentTerms:g('iv-terms'),
+      placeOfSupply:C.gstStateName(cv.gstin||''), sameState:sameState,
       lines: ivWorkingLines.slice(), subtotal:subtotal, taxPct:gstPct, taxValue:gstValue,
+      cgstPct: sameState ? gstPct/2 : 0, sgstPct: sameState ? gstPct/2 : 0, igstPct: sameState ? 0 : gstPct,
+      cgstValue:cgstValue, sgstValue:sgstValue, igstValue:igstValue,
       totalValue: subtotal+gstValue };
     try {
       var res = await C.idms.saveDoc({ kind:'invoice', status:'Active', docNo: invoiceNo, data:data },
@@ -13244,31 +13515,77 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var savedDoc = { doc_id: res.docId, doc_no: invoiceNo, data: data };
       printInvoiceDoc(savedDoc);
       document.getElementById('iv-no').value = '';
+      ['iv-custpo','iv-custpodate','iv-terms'].forEach(function(id){ document.getElementById(id).value=''; });
+      document.getElementById('iv-pos').value = '';
       ivResetLines();
       drawInvoiceRegister();
     } catch(e){ say(esc(e.message)); }
   }
 
-  /* The real, printable tax invoice — letterhead, Bill To, line items, GST
-     summary — built on the same report engine every other printed document
-     in the IDMS uses, not a bespoke one just for this. */
-  function printInvoiceDoc(iv){
+  /* The real, printable tax invoice — letterhead, Bill To/Ship To, GST split,
+     line items with HSN, manufacturing/traceability, bank details and the
+     declaration — built on the same report engine every other printed
+     document in the IDMS uses, not a bespoke one just for this. Matches the
+     statutory tax-invoice layout: nothing here is invented — a field with
+     nothing on file prints as '—' rather than a guessed value. */
+  async function printInvoiceDoc(iv){
     var v = iv.data || {};
-    C.openReport({ title:'Tax Invoice', kind:'Sales', subtitle:v.invoiceNo,
-      sections:[
-        { type:'pairs', title:'Bill To', rows:[
-          ['Customer', v.customerName||'—'], ['Address', v.billingAddress||'—'],
-          ['GSTIN', v.gstin||'—'], ['Invoice No.', v.invoiceNo||''],
-          ['Invoice Date', v.invoiceDate ? C.fmtDate(v.invoiceDate) : '—'] ] },
-        { type:'table', title:'Items', columns:[{label:'Part'},{label:'Customer Part No.'},
-            {label:'Qty',align:'r'},{label:'Rate',align:'r'},{label:'Value',align:'r'}],
-          rows:(v.lines||[]).map(function(l){
-            return [esc(l.partNo)+' — '+esc(l.partName), esc(l.custPartNo||'—'),
-              C.qty(l.qty), C.rate(l.rate), moneyFmt(l.value, v.currency)]; }) },
-        { type:'pairs', title:'Summary', rows:[
-          ['Subtotal', moneyFmt(v.subtotal, v.currency)],
-          ['GST @ '+ (v.taxPct||0) + '%', moneyFmt(v.taxValue, v.currency)],
-          ['Total', '<b>'+moneyFmt(v.totalValue, v.currency)+'</b>'] ] } ] });
+    var p = await C.loadProfile();
+    var sections = [];
+    sections.push({ type:'pairs', title:'Invoice Details', rows:[
+      ['Invoice No.', '<b>'+esc(v.invoiceNo||'')+'</b>'],
+      ['Invoice Date', v.invoiceDate ? C.fmtDate(v.invoiceDate) : '—'],
+      ['Customer PO No.', esc(v.custPo||'—')], ['PO Date', v.custPoDate ? C.fmtDate(v.custPoDate) : '—'],
+      ['Payment Terms', esc(v.paymentTerms||'—')],
+      ['Place of Supply', esc(v.placeOfSupply||'—')],
+      ['Reverse Charge', 'No'], ['Currency', esc(v.currency||'INR')] ] });
+    sections.push({ type:'pairs', title:'Bill To', rows:[
+      ['Customer Name', esc(v.customerName||'—')], ['GSTIN', esc(v.gstin||'—')],
+      ['Address', esc(v.billingAddress||'—')], ['State', esc(v.customerState||'—')],
+      ['Contact', [v.contact, v.phone, v.email].filter(Boolean).map(esc).join(' · ') || '—'] ] });
+    if (v.despatchAddress) sections.push({ type:'pairs', title:'Ship To', rows:[
+      ['Delivery Address', esc(v.despatchAddress)] ] });
+    sections.push({ type:'table', title:'Item / Product Details',
+      columns:[{label:'Part'},{label:'Customer Part No.'},{label:'Drawing No. / Rev'},{label:'HSN/SAC'},
+        {label:'Qty',align:'r'},{label:'Rate',align:'r'},{label:'Taxable Value',align:'r'}],
+      rows:(v.lines||[]).map(function(l){
+        return [esc(l.partNo)+' — '+esc(l.partName), esc(l.custPartNo||'—'),
+          (l.drawingNo ? esc(l.drawingNo)+(l.drawingRev?' Rev '+esc(l.drawingRev):'') : '—'),
+          esc(l.hsn||'—'), C.qty(l.qty), C.rate(l.rate), moneyFmt(l.value, v.currency)]; }) });
+    var taxRows = [['Taxable Value', moneyFmt(v.subtotal, v.currency)]];
+    if (v.sameState){
+      taxRows.push(['CGST @ '+(v.cgstPct||0)+'%', moneyFmt(v.cgstValue, v.currency)]);
+      taxRows.push(['SGST @ '+(v.sgstPct||0)+'%', moneyFmt(v.sgstValue, v.currency)]);
+    } else {
+      taxRows.push(['IGST @ '+(v.igstPct||0)+'%', moneyFmt(v.igstValue, v.currency)]);
+    }
+    taxRows.push(['Grand Total', '<b>'+moneyFmt(v.totalValue, v.currency)+'</b>']);
+    taxRows.push(['Amount in Words', esc(C.numberToWords(v.totalValue))]);
+    sections.push({ type:'pairs', title:'Tax Details & Totals', rows:taxRows });
+    /* Manufacturing/traceability is only shown when at least one line carries
+       something in it — an invoice with none of these on file should not
+       print a table of em dashes. */
+    var hasTrace = (v.lines||[]).some(function(l){ return l.batch||l.heat||l.material||l.challan; });
+    if (hasTrace) sections.push({ type:'table', title:'Manufacturing / Traceability Details',
+      columns:[{label:'Part'},{label:'Batch / Lot No.'},{label:'Heat No.'},{label:'Material Grade'},
+        {label:'Delivery Challan No.'}],
+      rows:(v.lines||[]).map(function(l){
+        return [esc(l.partNo), esc(l.batch||'—'), esc(l.heat||'—'), esc(l.material||'—'), esc(l.challan||'—')]; }) });
+    if (p.bankShow) sections.push({ type:'pairs', title:'Bank / Payment Details', rows:[
+      ['Account Name', esc(p.bankAccName||p.name||'—')], ['Bank Name', esc(p.bankName||'—')],
+      ['Branch', esc(p.bankBranch||'—')], ['Account No.', esc(p.bankAccNo||'—')],
+      ['IFSC', esc(p.bankIfsc||'—')] ] });
+    sections.push({ type:'text', title:'Terms & Conditions',
+      body:'Payment shall be made as per agreed payment terms. Goods once supplied are subject to the ' +
+        'agreed quality and commercial conditions. Any discrepancy in quantity or damage must be reported ' +
+        'within the agreed period. Taxes are charged as applicable under prevailing GST regulations. ' +
+        'Interest on delayed payment is applicable as per agreed commercial terms.' });
+    sections.push({ type:'text', title:'Declaration',
+      body:'We declare that this invoice shows the actual price of the goods described and that all ' +
+        'particulars stated herein are true and correct.' +
+        (p.signatoryName ? '  For ' + p.name + ' — ' + p.signatoryName +
+          (p.signatoryTitle ? ', ' + p.signatoryTitle : '') + '.' : '') });
+    C.openReport({ title:'Tax Invoice', kind:'Sales', subtitle:v.invoiceNo, sections:sections });
   }
 
   function printInvoiceRegister(){
@@ -20375,9 +20692,13 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('so-currency').addEventListener('change', updateSoValue);
   document.getElementById('so-save').addEventListener('click', saveOrder);
   document.getElementById('so-clear').addEventListener('click', function(){
-    ['so-po','so-qty','so-price','so-due','so-custpartno','so-custpartname','so-validfrom','so-validto']
+    ['so-po','so-qty','so-price','so-due','so-custpartno','so-custpartname','so-validfrom','so-validto',
+     'so-t1','so-t2']
       .forEach(function(id){ document.getElementById(id).value=''; });
     document.getElementById('so-currency').value = 'INR';
+    soPoUpload = null;
+    document.getElementById('so-pofilename').textContent = '';
+    document.getElementById('so-pofile').value = '';
     updateSoValue();
     document.getElementById('so-msg').style.display='none';
     soCancelEdit();
@@ -20385,7 +20706,13 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('so-cancel-edit').addEventListener('click', function(){
     document.getElementById('so-clear').click();
   });
-  document.getElementById('so-filter').addEventListener('change', drawOrders);
+  document.querySelectorAll('.so-tab').forEach(function(b){
+    b.addEventListener('click', function(){
+      soTab = b.dataset.tab;
+      document.querySelectorAll('.so-tab').forEach(function(x){ x.classList.toggle('active', x===b); });
+      drawOrders();
+    });
+  });
   document.getElementById('so-print').addEventListener('click', printOrderBook);
 
   document.getElementById('spm-refresh').addEventListener('click', drawSalesPlanRegister);
@@ -20398,10 +20725,15 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      Customer Part No.) — only the customer-change part stays here. */
   document.getElementById('iv-cust').addEventListener('change', function(){
     document.getElementById('iv-part').innerHTML = partOptionsForCustomer(this.value);
+    var cust = customers.filter(function(c){ return c.doc_id === this.value; }, this)[0];
+    var cv = (cust && cust.data) || {};
+    if (!fieldVal('iv-terms')) document.getElementById('iv-terms').value = cv.terms || '';
+    document.getElementById('iv-pos').value = C.gstStateName(cv.gstin || '') || '—';
   });
   document.getElementById('iv-save').addEventListener('click', saveSalesInvoice);
   document.getElementById('iv-clear').addEventListener('click', function(){
     document.getElementById('iv-no').value = '';
+    ['iv-custpo','iv-custpodate','iv-terms'].forEach(function(id){ document.getElementById(id).value=''; });
     ivResetLines();
     document.getElementById('iv-msg').style.display='none';
   });

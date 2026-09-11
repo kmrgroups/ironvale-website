@@ -94,6 +94,7 @@ table.t td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:mi
 table.t td.r,table.t th.r{text-align:right;font-family:var(--mono);}
 table.t td.c,table.t th.c{text-align:center;}
 table.t tr:hover td{background:var(--paper);}
+.so-tab.active{background:var(--navy);border-color:var(--navy);color:#fff;}
 
 /* ---- state badges ---- */
 .badge{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;

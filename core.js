@@ -34,6 +34,40 @@
   const money = n => '₹' + num(n).toLocaleString('en-IN',
     { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  /* Amount in words, Indian numbering (crore/lakh) — for the statutory
+     "Amount in Words" line on a tax invoice. Whole rupees only; paise are
+     printed separately when present, the way a tax invoice states them. */
+  const ONES = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
+    'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const TENS = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function twoDigitWords(n) {
+    if (n < 20) return ONES[n];
+    return TENS[Math.floor(n / 10)] + (n % 10 ? ' ' + ONES[n % 10] : '');
+  }
+  function threeDigitWords(n) {
+    var out = '';
+    if (n >= 100) { out += ONES[Math.floor(n / 100)] + ' Hundred'; n %= 100; if (n) out += ' '; }
+    if (n) out += twoDigitWords(n);
+    return out;
+  }
+  function numberToWords(n) {
+    n = Math.round(num(n) * 100) / 100;
+    const rupees = Math.floor(n), paise = Math.round((n - rupees) * 100);
+    if (rupees === 0 && paise === 0) return 'Indian Rupees Zero Only';
+    var r = rupees, parts = [];
+    const crore = Math.floor(r / 10000000); r %= 10000000;
+    const lakh = Math.floor(r / 100000); r %= 100000;
+    const thousand = Math.floor(r / 1000); r %= 1000;
+    const hundred = r;
+    if (crore) parts.push(threeDigitWords(crore) + ' Crore');
+    if (lakh) parts.push(threeDigitWords(lakh) + ' Lakh');
+    if (thousand) parts.push(threeDigitWords(thousand) + ' Thousand');
+    if (hundred) parts.push(threeDigitWords(hundred));
+    var out = 'Indian Rupees ' + (parts.join(' ') || 'Zero');
+    if (paise) out += ' and ' + threeDigitWords(paise) + ' Paise';
+    return out + ' Only';
+  }
+
   const fmtDate = d => {
     if (!d) return '—';
     const x = new Date(d);
@@ -298,17 +332,41 @@
   /* ---------------- the company profile ----------------
      Read once from the site content. Nothing in this file, or any screen that
      uses it, may hard-code a company name, address, GSTIN or document prefix. */
+  /* GST state codes — the first two digits of any GSTIN, standard nationwide.
+     Used to work out a state name from a GSTIN, and to tell same-state
+     (CGST+SGST) apart from inter-state (IGST) without a separate state field
+     having to be typed anywhere a GSTIN already exists. */
+  const GST_STATE = { '01':'Jammu and Kashmir','02':'Himachal Pradesh','03':'Punjab','04':'Chandigarh',
+    '05':'Uttarakhand','06':'Haryana','07':'Delhi','08':'Rajasthan','09':'Uttar Pradesh','10':'Bihar',
+    '11':'Sikkim','12':'Arunachal Pradesh','13':'Nagaland','14':'Manipur','15':'Mizoram','16':'Tripura',
+    '17':'Meghalaya','18':'Assam','19':'West Bengal','20':'Jharkhand','21':'Odisha','22':'Chhattisgarh',
+    '23':'Madhya Pradesh','24':'Gujarat','25':'Daman and Diu','26':'Dadra and Nagar Haveli','27':'Maharashtra',
+    '28':'Andhra Pradesh (old)','29':'Karnataka','30':'Goa','31':'Lakshadweep','32':'Kerala','33':'Tamil Nadu',
+    '34':'Puducherry','35':'Andaman and Nicobar Islands','36':'Telangana','37':'Andhra Pradesh',
+    '38':'Ladakh','97':'Other Territory' };
+  function gstStateCode(gstin){ return /^[0-9]{2}/.test(gstin||'') ? String(gstin).slice(0,2) : ''; }
+  function gstStateName(gstin){ return GST_STATE[gstStateCode(gstin)] || ''; }
+
   let profile = null;
   async function loadProfile() {
     if (profile) return profile;
     let d = {};
     try { d = (await api('/api/content')).data || {}; } catch (e) { d = {}; }
     const co = d.company || {};
+    const gstin = co.taxNumber || co.gstin || '';
     profile = {
       name: co.legalName || co.displayName || d.brandName || '',
-      address: [co.addressLine, co.city, co.state, co.country].filter(Boolean).join(', '),
-      pin: co.pin || '',
-      gstin: co.gstin || '',
+      addr1: co.addr1 || '', addr2: co.addr2 || '', city: co.city || '',
+      state: co.state || '', country: co.country || '', pin: co.pin || '',
+      address: [co.addr1, co.addr2, co.city, co.state, co.country].filter(Boolean).join(', '),
+      gstin: gstin, taxLabel: co.taxLabel || 'GSTIN',
+      stateCode: gstStateCode(gstin), stateName: co.state || gstStateName(gstin),
+      pan: co.panNumber || '', panLabel: co.panLabel || 'PAN',
+      iec: co.iec || '', cin: co.cin || '',
+      phone: co.phone || co.mobile || '', email: co.email || '', website: co.website || '',
+      bankShow: !!co.bankShow, bankName: co.bankName || '', bankBranch: co.bankBranch || '',
+      bankAccName: co.bankAccName || '', bankAccNo: co.bankAccNo || '', bankIfsc: co.bankIfsc || '',
+      signatoryName: co.signatoryName || '', signatoryTitle: co.signatoryTitle || '',
       logo: d.logoDataUrl || '',
       /* the prefix that used to be hard-coded into every document number */
       docPrefix: (co.docPrefix || co.shortName ||
@@ -391,7 +449,10 @@
       (p.logo ? '<img src="' + p.logo + '">' : '<div class="co">' + esc(p.name) + '</div>') +
       '<div class="rt">' + (p.logo ? '<b>' + esc(p.name) + '</b><br>' : '') +
       esc(p.address) + (p.pin ? ' - ' + esc(p.pin) : '') +
-      (p.gstin ? '<br>GSTIN: ' + esc(p.gstin) : '') + '</div></div>' +
+      (p.gstin ? '<br>' + esc(p.taxLabel || 'GSTIN') + ': ' + esc(p.gstin) : '') +
+      (p.pan ? ' &nbsp; ' + esc(p.panLabel || 'PAN') + ': ' + esc(p.pan) : '') +
+      ((p.phone || p.email) ? '<br>' + [p.phone, p.email].filter(Boolean).map(esc).join(' · ') : '') +
+      '</div></div>' +
       '<h1>' + esc(report.title || '') + '</h1>' +
       '<div class="sub">' + esc(report.subtitle || '') + '</div>' +
       sections +
@@ -847,7 +908,7 @@
   }
 
   root.Core = {
-    esc: esc, num: num, inr: inr, qty: qty, rate: rate, money: money,
+    esc: esc, num: num, inr: inr, qty: qty, rate: rate, money: money, numberToWords: numberToWords,
     fmtDate: fmtDate, dayKey: dayKey,
     newId: newId, toast: toast,
     api: api, signIn: signIn, verifyCode: verifyCode, setToken: setToken, getToken: getToken,
@@ -855,6 +916,7 @@
     otpRequest: otpRequest, forgotStart: forgotStart, forgotReset: forgotReset,
     faceLogin: faceLogin, faceEnroll: faceEnroll, faceForget: faceForget,
     idms: idms, loadProfile: loadProfile, getProfile: getProfile, docNumber: docNumber,
+    gstStateCode: gstStateCode, gstStateName: gstStateName,
     openReport: openReport, callAI: callAI, uploadFile: uploadFile,
     parseAiJson: parseAiJson, stripMarkup: stripMarkup,
     setFavicon: setFavicon,

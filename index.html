@@ -677,6 +677,7 @@
   body.embedded .staff-bar #staff-admin, body.embedded .staff-bar #staff-back, body.embedded .staff-bar #staff-logout,
   body.embedded .staff-bar #hr-admin, body.embedded .staff-bar #hr-back, body.embedded .staff-bar #hr-logout,
   body.embedded .staff-bar .t-micro{display:none !important;}
+  body.embed-onetab #hr-groups, body.embed-onetab .hr-tabbar{display:none !important;}
   body.embedded .staff-bar{position:static;background:transparent;color:var(--ink);
     padding:0 0 10px;height:auto;border-bottom:1px solid var(--line);}
   body.embedded .staff-actions button{color:var(--navy);border-color:var(--line);}
@@ -12395,7 +12396,15 @@ company-specific policies, salary figures or reporting lines.`;
         const m=location.hash.match(/id=([A-Za-z0-9_-]+)/);
         openMe(m?m[1].toUpperCase():'');
       } else {
-        openTarget(embed);
+        await openTarget(embed);
+        /* The IDMS's HR & Payroll workspace opens one HR screen at a time
+           (?embed=hr&tab=payroll). That screen is shown on its own: the group
+           buttons and tab bar are hidden, because the IDMS tiles are the menu. */
+        const one=new URLSearchParams(location.search).get('tab');
+        if(embed==='hr'&&one){
+          const tab=[...document.querySelectorAll('.hr-tab')].find(t=>t.dataset.hrtab===one);
+          if(tab){ document.body.classList.add('embed-onetab'); tab.click(); }
+        }
       }
       return;
     }

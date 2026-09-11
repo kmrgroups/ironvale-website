@@ -408,6 +408,60 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   overflow:hidden;text-overflow:ellipsis}
 .bu-t tr.bad td{background:#fdf1ef}
 .bu-row-err{color:#B03A2E;font-size:11px}
+/* ---- bulk upload: one square tile per category ---- */
+.bu-group{font-family:var(--mono,monospace);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:#6d7480;margin:16px 0 8px}
+.bu-group:first-child{margin-top:0}
+.bu-tilegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
+.bu-tile{aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;padding:14px 12px;border:1px solid var(--line,#d8dde6);border-radius:14px;background:#fff;
+  cursor:pointer;text-align:center;font-family:inherit;color:var(--navy,#0b2a5b);
+  transition:border-color .15s,box-shadow .15s,transform .15s}
+.bu-tile:hover,.bu-tile:focus-visible{border-color:var(--gold,#c8962e);box-shadow:0 6px 18px rgba(11,42,91,.10);
+  transform:translateY(-2px);outline:none}
+.bu-tile b{font-size:13.5px;line-height:1.25}
+.bu-tile .bu-tdesc{font-size:11px;line-height:1.35;color:#6d7480}
+.bu-tile .bu-tdest{font-size:10px;color:#8a93a0;font-family:var(--mono,monospace)}
+.bu-ico{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:14px;
+  background:#eef3fa;color:var(--navy,#0b2a5b)}
+.bu-ico svg{width:30px;height:30px}
+.bu-ico.big{width:46px;height:46px;border-radius:12px}
+.bu-ico.big svg{width:26px;height:26px}
+.bu-workhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+/* ---- HR & Payroll workspace ---- */
+.hp-status{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.hp-status .st{border:1px solid var(--line,#d8dde6);border-radius:12px;padding:10px 12px;background:#fafcff}
+.hp-status .st b{display:block;font-size:20px;color:var(--navy)}
+.hp-status .st span{font-size:11px;color:#6d7480}
+.hp-status .st.warn b{color:#b7791f}
+.hp-status .st.bad b{color:#B03A2E}
+.hp-frame{width:100%;height:calc(100vh - 210px);min-height:560px;border:0;border-radius:10px;display:block;background:#fff}
+table.ha-t{border-collapse:collapse;font-size:11.5px;table-layout:fixed}
+table.ha-t th,table.ha-t td{border:1px solid #d7dde6;padding:0;text-align:center;height:26px}
+table.ha-t th{background:#eef2f7;color:#41567E;font-size:10.5px;font-weight:700;width:28px}
+table.ha-t th.nm,table.ha-t td.nm{width:180px;text-align:left;padding:3px 6px;position:sticky;left:0;background:#fff;z-index:1}
+table.ha-t th.nm{background:#eef2f7}
+table.ha-t th.sum,table.ha-t td.sum{width:52px;font-weight:700}
+table.ha-t th.wkend{background:#e6e9ef}
+.ha-c{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;border-radius:5px;
+  font-weight:700;font-size:11px;position:relative;padding:0 2px}
+button.ha-c{border:0;cursor:pointer;font-family:inherit}
+.ha-c.p.dev{background:#dff3ea;color:#1b7a52}
+.ha-c.p.man{background:#e4ecfb;color:#274b8f}
+.ha-c.h{background:#fff2cc;color:#8a6200}
+.ha-c.a{background:#fde3e0;color:#B03A2E}
+.ha-c.lv{background:#efe6fb;color:#6b3fa0;font-size:9.5px}
+.ha-c.w{color:#8a93a0;background:#f1f3f6}
+.ha-c.hol{color:#8a6200;background:#fbf3dc}
+.ha-c.none{color:#b5bcc6}
+.ha-c.late::after{content:"";position:absolute;top:0;right:0;border-top:7px solid #d64545;border-left:7px solid transparent;border-top-right-radius:5px}
+.ha-c.miss::before{content:"";position:absolute;top:0;left:0;border-top:7px solid #e0a030;border-right:7px solid transparent;border-top-left-radius:5px}
+.ha-ot{display:block;font-size:8.5px;color:#b7791f;line-height:1;margin-top:-1px}
+.ha-sel{outline:2px solid var(--gold,#c8962e);outline-offset:1px}
+.hd-howto{border:1px dashed #c9d1dc;border-radius:12px;padding:12px 14px;background:#fbfcfe;font-size:12.5px;line-height:1.55}
+.hd-howto code{background:#eef2f7;padding:1px 5px;border-radius:4px;word-break:break-all}
+.hd-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.hd-dot.on{background:#1F9D6B}.hd-dot.off{background:#c0c6cf}.hd-dot.wait{background:#e0a030}
 /* ---- sales invoice ---- */
 .iv-sec{margin:16px 0 6px;padding-top:10px;border-top:1px solid var(--line,#d8dde6);font-weight:700;font-size:12px;color:var(--navy)}
 .iv-sec .hint{font-weight:400}
@@ -3235,6 +3289,128 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       </div>
     </div>
 
+    <div class="panel" data-panel="hr_payroll">
+      <div class="card" id="hp-home">
+        <h4>HR &amp; Payroll</h4>
+        <div class="hint" style="margin-bottom:12px;">Everything about people, attendance and pay, in one place.
+          Attendance is marked automatically by the fingerprint or face-recognition devices registered under
+          <b>Attendance Devices</b>, and every screen here reads and writes the same employee, attendance,
+          leave and pay records.</div>
+        <div id="hp-status" class="hp-status"></div>
+        <div id="hp-tiles"></div>
+      </div>
+
+      <div class="card" id="hp-work" style="display:none;">
+        <div class="bu-workhead">
+          <button class="btn" id="hp-back">← HR &amp; Payroll</button>
+          <span class="bu-ico big" id="hp-workico"></span>
+          <div style="flex:1;min-width:200px;"><h4 id="hp-worktitle" style="margin:0;">HR &amp; Payroll</h4>
+            <div class="hint" id="hp-worknote"></div></div>
+          <button class="btn" id="hp-reload" style="display:none;">Reload</button>
+        </div>
+
+        <!-- ============ Attendance Register ============ -->
+        <div class="hp-view" id="hp-v-att" style="display:none;margin-top:14px;">
+          <div class="row four">
+            <div><label>Month</label><input type="month" id="ha-month"></div>
+            <div><label>Department</label><select id="ha-dept"><option value="">All departments</option></select></div>
+            <div><label>Search</label><input id="ha-q" placeholder="name or employee ID"></div>
+            <div style="align-self:end;"><button class="btn gold" id="ha-load">Show</button>
+              <button class="btn" id="ha-print" style="margin-left:6px;">Print</button></div>
+          </div>
+          <div class="hint" id="ha-legend" style="margin-top:10px;">
+            <span class="ha-c p dev">P</span> present (device) · <span class="ha-c p man">P</span> marked or corrected by hand ·
+            <span class="ha-c h">½</span> half day · <span class="ha-c a">A</span> absent · <span class="ha-c lv">CL</span> approved leave ·
+            <span class="ha-c w">W</span> weekly off · <span class="ha-c hol">H</span> holiday · <span class="ha-c none">–</span> no punch and no mark
+            (payroll counts it as absent) · a red corner is late, an amber corner a missed punch, <b>+h</b> overtime waiting for approval.
+            Press any day to see its punches and correct it.</div>
+          <div id="ha-grid" style="margin-top:12px;"></div>
+          <div id="ha-detail" style="display:none;margin-top:14px;"></div>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button class="btn" id="ha-reprocess">Mark this month again from punches</button>
+            <span class="hint">Use it after adding a Biometric ID to someone, changing a shift, or changing the late /
+              half-day rules. Days marked by hand are left as they are.</span>
+          </div>
+          <div class="note" id="ha-msg" style="display:none;margin-top:10px;"></div>
+        </div>
+
+        <!-- ============ Attendance Devices ============ -->
+        <div class="hp-view" id="hp-v-dev" style="display:none;margin-top:14px;">
+          <div class="iv-sec" style="margin-top:0;border-top:0;padding-top:0;">Your attendance equipment</div>
+          <div class="row four">
+            <div><label>Equipment in use</label><select id="hd-equip">
+              <option value="biometric">Fingerprint (biometric) devices</option>
+              <option value="face">Face-recognition devices</option>
+              <option value="both">Both</option></select></div>
+            <div><label>Plant time zone</label><select id="hd-tz">
+              <option value="330">India (UTC +05:30)</option><option value="345">Nepal (UTC +05:45)</option>
+              <option value="360">Bangladesh (UTC +06:00)</option><option value="240">UAE (UTC +04:00)</option>
+              <option value="180">Saudi Arabia (UTC +03:00)</option><option value="480">Singapore / Malaysia (UTC +08:00)</option>
+              <option value="0">UTC</option></select></div>
+            <div><label>Shift when a record names none</label><select id="hd-shift"></select></div>
+            <div><label>Overtime from punches</label><select id="hd-autoot">
+              <option value="no">Waits for approval before payroll sees it</option>
+              <option value="yes">Counted automatically</option></select></div>
+          </div>
+          <div class="row four" style="margin-top:9px;">
+            <div><label>A day with only one punch</label><select id="hd-missed">
+              <option value="present">Present, flagged as a missed punch</option>
+              <option value="half">Half day</option></select></div>
+            <div><label>Overtime shorter than (min) is ignored</label><input class="num" id="hd-otmin" value="30"></div>
+            <div><label>A repeat scan within (min) is one punch</label><input class="num" id="hd-dedupe" value="2"></div>
+            <div style="align-self:end;"><button class="btn gold" id="hd-savecfg">Save</button></div>
+          </div>
+          <div class="hint" style="margin-top:6px;">Late grace and the half-day limit come from the leave policy, and
+            shift times from the shift master, both under Statutory &amp; Masters — one set of rules for devices
+            and payroll alike.</div>
+          <div class="note" id="hd-cfgmsg" style="display:none;margin-top:10px;"></div>
+
+          <div class="iv-sec">Register a device</div>
+          <div class="row four">
+            <div><label>Name</label><input id="hd-name" placeholder="e.g. Main gate"></div>
+            <div><label>Type</label><select id="hd-type">
+              <option value="biometric">Fingerprint</option><option value="face">Face recognition</option>
+              <option value="both">Fingerprint and face</option></select></div>
+            <div><label>Make</label><select id="hd-make">
+              <option value="ZKTeco">ZKTeco</option><option value="eSSL">eSSL</option><option value="Identix">Identix</option>
+              <option value="Realtime">Realtime</option><option value="Hikvision">Hikvision</option>
+              <option value="Matrix COSEC">Matrix COSEC</option><option value="Suprema BioStar">Suprema BioStar</option>
+              <option value="Other">Other</option></select></div>
+            <div><label>How it sends punches</label><select id="hd-proto">
+              <option value="adms">Push to server (ADMS / iclock)</option>
+              <option value="hik">Hikvision HTTP event push</option>
+              <option value="json">Webhook / middleware (JSON)</option></select></div>
+          </div>
+          <div class="row four" style="margin-top:9px;">
+            <div><label>Serial number <span class="hint">(on the device's System Info)</span></label><input id="hd-sn"></div>
+            <div><label>Location</label><input id="hd-loc"></div>
+            <div><label>Allowed internet address <span class="hint">(optional)</span></label><input id="hd-ip" placeholder="the works' public IP"></div>
+            <div style="align-self:end;"><button class="btn gold" id="hd-save">Register device</button>
+              <button class="btn" id="hd-clear" style="margin-left:6px;">Clear</button></div>
+          </div>
+          <div class="note" id="hd-msg" style="display:none;margin-top:10px;"></div>
+          <div id="hd-howto" class="hd-howto" style="margin-top:12px;"></div>
+
+          <div class="iv-sec">Devices</div>
+          <div id="hd-list"></div>
+
+          <div class="iv-sec">Punch log</div>
+          <div class="row four">
+            <div><label>From</label><input type="date" id="hd-pfrom"></div>
+            <div><label>To</label><input type="date" id="hd-pto"></div>
+            <div style="align-self:end;"><button class="btn" id="hd-pload">Show punches</button></div>
+          </div>
+          <div id="hd-unmatched" style="margin-top:10px;"></div>
+          <div id="hd-punches" style="margin-top:10px;"></div>
+        </div>
+
+        <!-- ============ screens still served by the HR engine ============ -->
+        <div class="hp-view" id="hp-v-frame" style="display:none;margin-top:12px;">
+          <iframe class="embed-frame hp-frame" id="hp-frame" title="HR &amp; Payroll"></iframe>
+        </div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="hrm">
       <div class="card">
         <div class="stat" id="hr-stats"></div>
@@ -3247,7 +3423,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           <div><label>Show</label><select id="hr-filter">
             <option value="">Everyone</option><option>Active</option><option>Probation</option>
             <option>Notice</option><option>Exited</option></select></div>
-          <div style="align-self:end;"><button class="btn" id="hr-refresh">Refresh</button></div>
+          <div style="align-self:end;"><button class="btn" id="hr-refresh">Refresh</button>
+            <button class="btn" id="hr-bulk" style="margin-left:6px;">Bulk upload employees</button></div>
         </div>
         <div id="hr-list"></div>
       </div>
@@ -3266,6 +3443,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <option>Exited</option></select></div>
           <div><label>Reports to</label><input id="he-reports"></div>
           <div><label>Shift</label><input id="he-shift"></div>
+          <div><label>Biometric / Face ID <span class="hint">(the user ID enrolled on the attendance device; blank = Employee ID)</span></label><input id="he-bio"></div>
         </div>
         <div class="row four" style="margin-top:9px;">
           <div><label>Phone</label><input id="he-phone"></div>
@@ -3403,19 +3581,31 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     </div>
 
     <div class="panel" data-panel="bulk_upload">
-      <div class="card">
+      <div class="card" id="bu-home">
         <h4>Bulk Upload</h4>
-        <div class="hint" style="margin-bottom:10px;">Add many records at once from a spreadsheet,
-          instead of one at a time. Choose what you're adding, download the template so the columns
-          are right, fill it in, and upload it back. Nothing is saved until you check the preview and
-          press Import — a bad row is reported, not silently skipped or silently saved wrong.</div>
-        <div class="row four">
-          <div style="grid-column:span 2;"><label>What are you adding</label>
-            <select id="bu-kind"></select></div>
-          <div style="align-self:end;"><button class="btn" id="bu-template">Download CSV template</button></div>
-          <div style="align-self:end;"><input type="file" id="bu-file" accept=".csv"></div>
+        <div class="hint" style="margin-bottom:12px;">Add many records at once from a spreadsheet instead
+          of one at a time. Choose what you are adding. Each one opens its own upload: download the
+          template so the columns are right, fill it in, upload it back, check the preview, then Import.
+          Nothing is saved until Import — a bad row is reported, never silently skipped or saved wrong —
+          and every imported record lands in the same database table as the screen named on its tile.</div>
+        <div id="bu-tiles"></div>
+      </div>
+      <div class="card" id="bu-work" style="display:none;">
+        <div class="bu-workhead">
+          <button class="btn" id="bu-back">← All uploads</button>
+          <span class="bu-ico big" id="bu-workico"></span>
+          <div style="flex:1;min-width:200px;"><h4 id="bu-worktitle" style="margin:0;">Bulk Upload</h4>
+            <div class="hint" id="bu-workdest"></div></div>
+          <button class="btn" id="bu-open">Open screen</button>
         </div>
-        <div class="hint" id="bu-kindhint" style="margin-top:8px;"></div>
+        <!-- the chosen category; kept as a (hidden) select so every existing
+             handler and test that reads bu-kind keeps working unchanged -->
+        <select id="bu-kind" style="display:none;" aria-hidden="true" tabindex="-1"></select>
+        <div class="row four" style="margin-top:12px;">
+          <div style="align-self:end;"><button class="btn" id="bu-template">Download CSV template</button></div>
+          <div style="grid-column:span 3;align-self:end;"><label>Filled-in file (.csv)</label><input type="file" id="bu-file" accept=".csv"></div>
+        </div>
+        <div class="hint" id="bu-kindhint" style="margin-top:10px;"></div>
         <div class="note bad" id="bu-msg" style="display:none;margin-top:10px;"></div>
       </div>
       <div id="bu-preview"></div>
@@ -3788,12 +3978,10 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
          Report, because a gauge without a calibration due date is not usable —
          so adding one and scheduling its calibration are one screen, not two. */
       ['report_calibration','📏','Equipment / Instruments / Gauges (Calibration Report)',1],
-      ['bulk_upload','⬆','Bulk Upload',1],
-      /* Both open the one Bulk Upload screen with the category already chosen —
-         the same engine, the same preview and the same row-by-row refusals,
-         not two more upload screens. */
-      ['bulk_po','⬆','Customer PO Bulk Upload',1],
-      ['bulk_salesplan','⬆','Sales Plan Bulk Upload',1]]],
+      /* Customer PO, Sales Plan and Employee uploads are tiles on this one
+         screen, not menu entries of their own: one engine, one preview, one
+         set of row-by-row refusals. */
+      ['bulk_upload','⬆','Bulk Upload',1]]],
     ['marketing','📣','Marketing','Enquiry to order',[
       ['dash_marketing','📊','Marketing Dashboard',1],
       ['emb_pipeline','📨','RFQ Pipeline',1]]],
@@ -3852,7 +4040,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     ['hrm','👥','HRM','People',[
       ['dash_hrm','📊','HR Dashboard',1],
       ['hrm','👥','People — HR records',1],
-      ['emb_hr','💼','HR & Payroll',1],
+      /* native since v120; emb_hr (the framed website page) now redirects here */
+      ['hr_payroll','💼','HR & Payroll',1],
       ['attendance_lookup','🪪','My Attendance',1],
       ['skill_matrix','📊','Skill Matrix',1],
       ['org_chart','🏗','Organisation Chart',1],
@@ -3889,8 +4078,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     doc_master_pfd: 'masterlist', doc_master_pfmea: 'masterlist', doc_master_cp: 'masterlist',
     kpi_entry: 'kpi_entry', admin_banner: 'admin_banner',
     admin_backup: 'admin_backup', admin_sample: 'admin_sample',
-    admin_site: 'embed', emb_pipeline: 'embed', emb_hr: 'embed',
-    bulk_po: 'bulk_upload', bulk_salesplan: 'bulk_upload'
+    admin_site: 'embed', emb_pipeline: 'embed', emb_hr: 'embed'
   };
   (window.KPIX ? window.KPIX.DEPTS : []).forEach(function (d) { PANEL_OF['dash_' + d.key] = 'kpidash'; });
 
@@ -3994,10 +4182,15 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'home') return true;
     if (me.role === 'developer') return true;
     if (!me.restrictAccess) return true;
+    /* a user given "HR & Payroll" before it became native keeps it */
+    if (s === 'hr_payroll' && (me.permissions || []).indexOf('emb_hr') !== -1) return true;
     return (me.permissions || []).indexOf(s) !== -1;
   }
 
   function go(s){
+    /* old bookmarks and saved permissions for the framed HR page land on the
+       native HR & Payroll workspace */
+    if (s === 'emb_hr') s = 'hr_payroll';
     if (!isPermitted(s)){
       toast('You do not have access to that screen. Ask your administrator.');
       s = 'home';
@@ -4021,6 +4214,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'grn')     { loadGrn(); fillGrnSuppliers(); }
     if (s === 'dc')      loadDc();
     if (s === 'hrm')     loadHrm();
+    if (s === 'hr_payroll') loadHrPayroll();
     if (s === 'entry_customer') loadCustomers();
     if (s === 'process_master') loadProcesses();
     if (s === 'dim_entry')      loadDimensions();
@@ -4032,8 +4226,6 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'cnc_setup')      loadCncSetup();
     if (s === 'attendance_lookup') loadAttendanceLookup();
     if (s === 'bulk_upload') loadBulkUpload('');
-    if (s === 'bulk_po') loadBulkUpload('order');
-    if (s === 'bulk_salesplan') loadBulkUpload('salesplan');
     if (s === 'legal_docs') loadLegalDocs();
     if (s === 'ppap')           loadPpap();
     if (s === 'report_setup_approval') loadSetup();
@@ -9993,6 +10185,570 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     await drawKpiForm();
     await drawKpiGaps();
   }
+
+  /* ================= HR & PAYROLL — the workspace =================
+     A tile screen, like Bulk Upload. Attendance Register and Attendance
+     Devices are built here. Employees, DWM, competency and training open the
+     IDMS screens that already exist. The rest (leave, payroll, statutory,
+     recruitment, exit, policies, audit) still run on the website's HR engine —
+     payslips, statutory forms and the tax calculation live there — and open
+     one at a time inside this workspace, that engine's own header and tab bar
+     hidden, until each is rebuilt here and proven against live payroll. */
+  var HP_ICONS = {
+    att:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M8.5 15l2.3 2.3 4.7-4.8"/>',
+    dev:'bu:punches',
+    face:'<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10v1M15 10v1M12 10v3h-1M9.5 16c1.5 1 3.5 1 5 0"/>',
+    leave:'<path d="M12 21c-4.5-3-8-6.5-8-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 3.5c0 4-3.5 7.5-8 10.5z"/>',
+    tower:'<path d="M3 20h18"/><path d="M6 20V10M10 20V6M14 20v-8M18 20V4"/>',
+    people:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-5.6 6-5.6s6 2.1 6 5.6"/><path d="M16 5.2a3 3 0 0 1 0 5.6M18 14.6c1.8.7 3 2.5 3 5.4"/>',
+    upload:'<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
+    recruit:'<circle cx="10" cy="10" r="6"/><path d="M20 20l-5.6-5.6M10 7.5v5M7.5 10h5"/>',
+    engage:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/>',
+    exit:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>',
+    pay:'<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="2.6"/><path d="M6 9.5v.01M18 15.5v.01"/>',
+    statutory:'<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="M8.5 12l2.4 2.4 4.6-4.8"/>',
+    dwm:'bu:bom', skills:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
+    training:'<path d="M2 8l10-5 10 5-10 5z"/><path d="M6 10.5V16c2.5 2 9.5 2 12 0v-5.5"/>',
+    kpi:'bu:salesplan', policies:'bu:order',
+    auditready:'<path d="M9 3h6l1 2h3v16H5V5h3z"/><path d="M9 13l2 2 4-4"/>', audit:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+  };
+  /* some pictures are shared with Bulk Upload; that table is defined further
+     down the file, so it is looked up when drawn, not when this one is built */
+  function hpPath(k){
+    var v = HP_ICONS[k] || HP_ICONS.att;
+    return v.indexOf('bu:') === 0 ? BU_ICONS[v.slice(3)] : v;
+  }
+  function hpIcon(k){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" ' +
+      'stroke-linejoin="round" aria-hidden="true">' + hpPath(k) + '</svg>';
+  }
+  /* [key, icon, title, description, how it opens] — how: 'v:<view>' built here,
+     's:<screen>' an IDMS screen, 'b:<kind>' a Bulk Upload tile, 'e:<tab>' the HR engine */
+  var HP_TILES = [
+    ['Attendance', [
+      ['att','att','Attendance Register','The month for everyone, marked from the devices','v:att'],
+      ['dev','face','Attendance Devices','Fingerprint and face devices, rules and the punch log','v:dev'],
+      ['leave','leave','Leave & Permission','Apply, approve and see balances','e:leave'],
+      ['tower','tower','Control Tower','Today across attendance, leave and tasks','e:tower'] ]],
+    ['People', [
+      ['emp','people','Employees','The employee master','s:hrm'],
+      ['empbulk','upload','Employee Bulk Upload','Add many employees from a spreadsheet','b:employee'],
+      ['punchbulk','dev','Import Device Log','Punches exported from a device that cannot send them','b:punches'],
+      ['recruit','recruit','Recruitment','Requisitions, candidates, offers','e:recruit'],
+      ['engage','engage','Engagement','Surveys, recognition, grievances','e:engage'],
+      ['exit','exit','Exit & Full and Final','Resignations, clearance and settlement','e:exit'] ]],
+    ['Pay', [
+      ['payroll','pay','Payroll','Pay runs, payslips and approval','e:payroll'],
+      ['statutory','statutory','Statutory & Masters','PF, ESI, PT, TDS, shifts, holidays, leave rules','e:statutory'] ]],
+    ['Capability & compliance', [
+      ['dwm','dwm','DWM & Tasks','Daily work management boards','s:dwm'],
+      ['skills','skills','Competency','Competency mapping','s:competency_map'],
+      ['training','training','Training','Training plan against actual','s:training_plan_actual'],
+      ['kpi','kpi','KPI & Appraisal','Goals and appraisal cycles','e:kpi'],
+      ['policies','policies','Policies','HR policies and acknowledgements','e:policies'],
+      ['auditready','auditready','Audit Readiness','What an auditor will ask for','e:audit-ready'],
+      ['audit','audit','Audit Trail','Every HR change, who and why','e:audit'] ]]
+  ];
+  var hpState = { view:'', content:null, employees:[], att:{}, leave:[], month:'', sel:null };
+  function hpTile(key){
+    var found = null;
+    HP_TILES.forEach(function(g){ g[1].forEach(function(t){ if (t[0] === key) found = t; }); });
+    return found;
+  }
+
+  async function loadHrPayroll(){
+    document.getElementById('hp-tiles').innerHTML = HP_TILES.map(function(g){
+      return '<div class="bu-group">' + esc(g[0]) + '</div><div class="bu-tilegrid">' + g[1].map(function(t){
+        return '<button type="button" class="bu-tile hp-tile" data-key="' + t[0] + '">' +
+          '<span class="bu-ico">' + hpIcon(t[1]) + '</span><b>' + esc(t[2]) + '</b>' +
+          '<span class="bu-tdesc">' + esc(t[3]) + '</span></button>';
+      }).join('') + '</div>';
+    }).join('');
+    document.querySelectorAll('.hp-tile').forEach(function(b){
+      b.addEventListener('click', function(){ hpOpen(b.dataset.key); });
+    });
+    hpHome();
+    hpDrawStatus();
+  }
+
+  /* Today at a glance: whether the devices are reaching the IDMS at all is the
+     first thing to know, because a silent device means nobody is marked. */
+  async function hpDrawStatus(){
+    var host = document.getElementById('hp-status');
+    var today = C.dayKey(new Date());
+    try {
+      var got = await Promise.all([
+        C.api('/api/device?what=devices').catch(function(){ return { devices:[] }; }),
+        C.api('/api/device?what=punches&from=' + today + '&to=' + today).catch(function(){ return { punches:[], unmatched:[] }; }),
+        C.api('/api/hr?what=attendance&from=' + today + '&to=' + today).catch(function(){ return { attendance:[] }; })
+      ]);
+      var devs = got[0].devices || [], reg = devs.filter(function(d){ return d.registered; });
+      var online = reg.filter(function(d){ return d.lastSeen && (Date.now() - new Date(d.lastSeen).getTime()) < 15*60000; });
+      var waiting = devs.filter(function(d){ return !d.registered; });
+      var att = got[2].attendance || [];
+      var otWait = att.filter(function(a){ return C.num(a.otPendingHours) > 0; }).length;
+      var st = function(v, label, cls){ return '<div class="st ' + (cls||'') + '"><b>' + v + '</b><span>' + label + '</span></div>'; };
+      host.innerHTML =
+        st(online.length + ' / ' + reg.length, 'devices reporting (last 15 min)', reg.length && online.length < reg.length ? 'warn' : '') +
+        st((got[1].punches || []).length, 'punches today') +
+        st(att.filter(function(a){ return a.source === 'device'; }).length, 'people marked by device today') +
+        st((got[1].unmatched || []).length, 'device user IDs matched to nobody', (got[1].unmatched || []).length ? 'bad' : '') +
+        st(otWait, 'overtime waiting for approval today', otWait ? 'warn' : '') +
+        (waiting.length ? st(waiting.length, 'device(s) calling in, not registered', 'bad') : '');
+    } catch(e){ host.innerHTML = ''; }
+  }
+
+  function hpHome(){
+    document.getElementById('hp-home').style.display = '';
+    document.getElementById('hp-work').style.display = 'none';
+    document.getElementById('hp-frame').removeAttribute('src');
+    hpState.view = '';
+  }
+  function hpOpen(key){
+    var t = hpTile(key); if (!t) return;
+    var how = t[4], kind = how.slice(0,1), arg = how.slice(2);
+    if (kind === 's') return navigate(arg);
+    if (kind === 'b') return openBulkUpload(arg);
+    document.getElementById('hp-home').style.display = 'none';
+    document.getElementById('hp-work').style.display = '';
+    document.getElementById('hp-workico').innerHTML = hpIcon(t[1]);
+    document.getElementById('hp-worktitle').textContent = t[2];
+    document.getElementById('hp-worknote').textContent = t[3];
+    ['att','dev','frame'].forEach(function(v){ document.getElementById('hp-v-' + v).style.display = 'none'; });
+    document.getElementById('hp-reload').style.display = kind === 'e' ? '' : 'none';
+    hpState.view = key;
+    if (kind === 'e'){
+      document.getElementById('hp-v-frame').style.display = '';
+      /* the engine opens on this one tab with its own tab bar and header hidden */
+      document.getElementById('hp-frame').src = '/?embed=hr&tab=' + encodeURIComponent(arg);
+      return;
+    }
+    document.getElementById('hp-v-' + arg).style.display = '';
+    if (arg === 'att') haOpen();
+    if (arg === 'dev') hdOpen();
+  }
+  document.getElementById('hp-back').addEventListener('click', function(){ hpHome(); hpDrawStatus(); });
+  document.getElementById('hp-reload').addEventListener('click', function(){
+    var f = document.getElementById('hp-frame'); if (f.src) f.src = f.src;
+  });
+
+  async function hpContent(){
+    if (hpState.content) return hpState.content;
+    try { hpState.content = (await C.api('/api/content')).data || {}; } catch(e){ hpState.content = {}; }
+    return hpState.content;
+  }
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function hpNextDay(day){ var d = new Date(day + 'T00:00:00'); d.setDate(d.getDate() + 1); return C.dayKey(d); }
+
+  /* ---------------- Attendance Register ---------------- */
+  async function haOpen(){
+    var m = document.getElementById('ha-month');
+    if (!m.value) m.value = C.dayKey(new Date()).slice(0,7);
+    await haLoad();
+  }
+  async function haLoad(){
+    var month = document.getElementById('ha-month').value;
+    if (!month) return;
+    var host = document.getElementById('ha-grid');
+    host.innerHTML = '<div class="hint">Loading…</div>';
+    document.getElementById('ha-detail').style.display = 'none';
+    var p = month.split('-').map(Number), last = new Date(p[0], p[1], 0).getDate();
+    var from = month + '-01', to = month + '-' + pad2(last);
+    try {
+      var got = await Promise.all([
+        C.api('/api/hr?what=employees'),
+        C.api('/api/hr?what=attendance&from=' + from + '&to=' + to),
+        C.api('/api/hr?what=leave').catch(function(){ return { leave:[] }; }),
+        hpContent()
+      ]);
+      hpState.employees = got[0].employees || [];
+      hpState.att = {};
+      (got[1].attendance || []).forEach(function(a){ hpState.att[a.empId + '|' + String(a.day).slice(0,10)] = a; });
+      hpState.leave = got[2].leave || [];
+      hpState.month = month;
+    } catch(e){ host.innerHTML = '<div class="note bad">' + esc(e.message) + '</div>'; return; }
+    var dsel = document.getElementById('ha-dept'), keep = dsel.value;
+    var depts = [];
+    hpState.employees.forEach(function(e){ if (e.department && depts.indexOf(e.department) < 0) depts.push(e.department); });
+    dsel.innerHTML = '<option value="">All departments</option>' + depts.sort().map(function(d){
+      return '<option' + (d === keep ? ' selected' : '') + '>' + esc(d) + '</option>'; }).join('');
+    haDraw();
+  }
+  function haLeaveMap(empId){
+    var map = {};
+    hpState.leave.forEach(function(l){
+      var d = l.data || l;
+      if (l.emp_id !== empId || l.status !== 'Approved') return;
+      if (d.kind === 'permission' || d.type === 'PERM') return;
+      var cur = new Date(String(d.from).slice(0,10) + 'T00:00:00'), end = new Date(String(d.to).slice(0,10) + 'T00:00:00');
+      for (var guard = 0; cur <= end && guard < 400; guard++){ map[C.dayKey(cur)] = d.type || 'CL'; cur.setDate(cur.getDate() + 1); }
+    });
+    return map;
+  }
+  /* The same order payroll uses: a Present or Absent mark first, then approved
+     leave, then holiday, then weekly off; anything else is unmarked. */
+  function haCell(emp, day, lmap){
+    var c = hpState.content || {}, lp = c.leavePolicy || {};
+    var weekOff = lp.weekOff || [0];
+    var rec = hpState.att[emp.empId + '|' + day];
+    var hol = (c.holidays || []).filter(function(h){ return h.date === day; })[0];
+    var dow = new Date(day + 'T00:00:00').getDay();
+    if (rec && rec.status === 'Present') return { code: C.num(rec.dayFraction || 1) === 0.5 ? '½' : 'P',
+      cls: (C.num(rec.dayFraction || 1) === 0.5 ? 'h' : 'p ' + (rec.source === 'device' ? 'dev' : 'man')) +
+        (rec.late ? ' late' : '') + (rec.missedPunch ? ' miss' : ''), rec: rec };
+    if (rec && rec.status === 'Absent') return { code:'A', cls:'a' + (rec.source === 'device' ? '' : ''), rec: rec };
+    if (lmap[day]) return { code: lmap[day], cls:'lv' };
+    if (hol) return { code:'H', cls:'hol', title: hol.name };
+    if (weekOff.indexOf(dow) >= 0) return { code:'W', cls:'w' };
+    if (day > C.dayKey(new Date())) return { code:'', cls:'none' };
+    return { code:'–', cls:'none', rec:null };
+  }
+  function haRows(){
+    var q = (document.getElementById('ha-q').value || '').toLowerCase(), dept = document.getElementById('ha-dept').value;
+    return hpState.employees.filter(function(e){
+      if (e.status === 'Exited') return false;
+      if (dept && e.department !== dept) return false;
+      return !q || (String(e.name) + ' ' + String(e.empId)).toLowerCase().indexOf(q) >= 0;
+    }).sort(function(a, b){ return String(a.name).localeCompare(String(b.name)); });
+  }
+  function haDays(){
+    var p = hpState.month.split('-').map(Number), n = new Date(p[0], p[1], 0).getDate(), out = [];
+    for (var d = 1; d <= n; d++) out.push(hpState.month + '-' + pad2(d));
+    return out;
+  }
+  function haDraw(){
+    var host = document.getElementById('ha-grid');
+    var rows = haRows(), days = haDays();
+    if (!hpState.employees.length){
+      host.innerHTML = '<div class="empty"><b>No employees yet</b>Add them on Employees, or with Employee Bulk Upload.</div>'; return; }
+    if (!rows.length){ host.innerHTML = '<div class="empty"><b>Nobody matches</b>Change the department or search.</div>'; return; }
+    var weekOff = ((hpState.content || {}).leavePolicy || {}).weekOff || [0];
+    var head = '<tr><th class="nm">Employee</th>' + days.map(function(d){
+      var dow = new Date(d + 'T00:00:00').getDay();
+      return '<th' + (weekOff.indexOf(dow) >= 0 ? ' class="wkend"' : '') + '>' + Number(d.slice(8)) + '</th>'; }).join('') +
+      '<th class="sum" title="Days present (half days count half)">Pres.</th><th class="sum">Late</th>' +
+      '<th class="sum" title="Days with one punch only">Missed</th><th class="sum" title="Overtime hours approved">OT</th>' +
+      '<th class="sum" title="Overtime hours waiting for approval">OT wait</th></tr>';
+    var body = rows.map(function(e){
+      var lmap = haLeaveMap(e.empId), pres = 0, late = 0, miss = 0, ot = 0, otw = 0;
+      var cells = days.map(function(d){
+        var c = haCell(e, d, lmap), r = c.rec;
+        if (r && r.status === 'Present'){ pres += C.num(r.dayFraction || 1); if (r.late) late++; if (r.missedPunch) miss++;
+          ot += C.num(r.otHours); otw += C.num(r.otPendingHours); }
+        var tip = r ? [r.inTime ? 'In ' + r.inTime : '', r.outTime ? 'Out ' + r.outTime : '', r.late ? 'late ' + r.lateMin + ' min' : '',
+          r.missedPunch ? 'missed punch' : '', r.source === 'device' ? 'from device' : 'marked by hand'].filter(Boolean).join(' · ') : (c.title || '');
+        var clickable = c.code !== '' && c.cls !== 'w' && c.cls !== 'hol' && c.cls !== 'lv';
+        var inner = (clickable ? '<button type="button" class="ha-c ' + c.cls + ' ha-day" data-emp="' + esc(e.empId) + '" data-day="' + d + '"' :
+          '<span class="ha-c ' + c.cls + '"') + (tip ? ' title="' + esc(tip) + '"' : '') + '>' + esc(c.code) +
+          (clickable ? '</button>' : '</span>') +
+          (r && C.num(r.otPendingHours) ? '<span class="ha-ot">+' + C.num(r.otPendingHours) + '</span>' : '');
+        return '<td>' + inner + '</td>';
+      }).join('');
+      return '<tr><td class="nm"><b>' + esc(e.name) + '</b><div class="hint">' + esc(e.empId) +
+        (e.shift ? ' · ' + esc(e.shift) : '') + '</div></td>' + cells +
+        '<td class="sum">' + pres + '</td><td class="sum">' + (late || '') + '</td><td class="sum">' + (miss || '') + '</td>' +
+        '<td class="sum">' + (ot || '') + '</td><td class="sum">' + (otw || '') + '</td></tr>';
+    }).join('');
+    host.innerHTML = '<div style="overflow-x:auto;"><table class="ha-t"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>';
+    host.querySelectorAll('.ha-day').forEach(function(b){
+      b.addEventListener('click', function(){
+        host.querySelectorAll('.ha-sel').forEach(function(x){ x.classList.remove('ha-sel'); });
+        b.classList.add('ha-sel');
+        haDetail(b.dataset.emp, b.dataset.day);
+      });
+    });
+  }
+
+  async function haDetail(empId, day){
+    var box = document.getElementById('ha-detail');
+    var emp = hpState.employees.filter(function(e){ return e.empId === empId; })[0] || {};
+    var rec = hpState.att[empId + '|' + day] || null;
+    box.style.display = '';
+    box.innerHTML = '<div class="hint">Loading punches…</div>';
+    var punches = [];
+    try { punches = (await C.api('/api/device?what=punches&empId=' + encodeURIComponent(empId) + '&from=' + day + '&to=' + hpNextDay(day))).punches || []; }
+    catch(e){ punches = []; }
+    var pairs = function(rows){ return '<table class="iv-grid" style="max-width:520px;"><tbody>' + rows.map(function(r){
+      return '<tr><th style="width:42%;">' + r[0] + '</th><td>' + r[1] + '</td></tr>'; }).join('') + '</tbody></table>'; };
+    var admin = me.role === 'developer';
+    var otPending = rec ? C.num(rec.otPendingHours) : 0;
+    box.innerHTML =
+      '<div class="iv-sec" style="margin-top:0;">' + esc(emp.name || empId) + ' — ' + C.fmtDate(day) + '</div>' +
+      '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">' +
+      '<div style="flex:1;min-width:280px;">' + pairs([
+        ['Mark', rec ? esc(rec.status) + (C.num(rec.dayFraction || 1) === 0.5 ? ' — half day' : '') : 'Not marked (payroll counts it as absent)'],
+        ['Marked by', rec ? (rec.source === 'device' ? 'Device' + (rec.devices && rec.devices.length ? ' (' + esc(rec.devices.join(', ')) + ')' : '')
+          : 'Hand' + (rec.correctedBy ? ' — ' + esc(rec.correctedBy) : '')) : '—'],
+        ['In / out', rec && (rec.inTime || rec.deviceIn) ? esc(rec.inTime || rec.deviceIn) + ' / ' + esc(rec.outTime || rec.deviceOut || 'no out punch') : '—'],
+        ['Worked', rec && (rec.workedHours != null || rec.deviceWorkedHours != null) ? C.num(rec.workedHours != null ? rec.workedHours : rec.deviceWorkedHours) + ' h' : '—'],
+        ['Shift', esc((rec && rec.shift) || emp.shift || '—')],
+        ['Late', rec && rec.late ? rec.lateMin + ' min' : '—'],
+        ['Flags', rec ? [rec.missedPunch ? 'missed punch' : '', rec.halfDayReason || '', rec.correction ? 'corrected: ' + rec.correction : ''].filter(Boolean).map(esc).join('; ') || '—' : '—'],
+        ['Overtime', rec ? (C.num(rec.otHours) ? C.num(rec.otHours) + ' h approved' + (rec.otApprovedBy ? ' by ' + esc(rec.otApprovedBy) : '') : '') +
+          (otPending ? (C.num(rec.otHours) ? ' · ' : '') + otPending + ' h waiting' : '') || '—' : '—']
+      ]) + '</div>' +
+      '<div style="flex:1;min-width:260px;"><b style="font-size:12px;">Punches</b>' +
+        (punches.length ? '<table class="iv-grid" style="margin-top:6px;"><thead><tr><th>Time</th><th>Device</th><th>How</th></tr></thead><tbody>' +
+          punches.slice().reverse().map(function(p){ return '<tr><td>' + esc(String(p.punch_at).slice(0,16)) + '</td><td>' + esc(p.device_sn) +
+            '</td><td>' + esc(p.method || '') + (p.direction ? ' · ' + esc(p.direction) : '') + '</td></tr>'; }).join('') + '</tbody></table>'
+          : '<div class="hint" style="margin-top:6px;">No punches for this day.</div>') + '</div></div>' +
+      (admin ? '<div class="row four" style="margin-top:12px;">' +
+        (otPending ? '<div><label>Approve overtime (hours)</label><input class="num" id="ha-othours" value="' + otPending + '"></div>' +
+          '<div style="align-self:end;"><button class="btn gold" id="ha-otok">Approve overtime</button></div>' : '') +
+        '<div><label>Correct this day</label><select id="ha-fix"><option value="">— no change —</option>' +
+          '<option value="P">Present</option><option value="H">Half day</option><option value="A">Absent</option></select></div>' +
+        '<div><label>Why</label><input id="ha-why" placeholder="the reason is kept in the audit trail"></div>' +
+        '<div style="align-self:end;"><button class="btn" id="ha-fixok">Save correction</button>' +
+        (rec && rec.source && rec.source !== 'device' && punches.length ? ' <button class="btn" id="ha-toDevice">Use the punches again</button>' : '') +
+        '</div></div>' : '<div class="hint" style="margin-top:10px;">Corrections and overtime approval need the administrator login.</div>');
+    if (!admin) return;
+    var ok = document.getElementById('ha-otok');
+    if (ok) ok.addEventListener('click', async function(){
+      try {
+        await C.api('/api/device?what=approveOt', { method:'POST', body: JSON.stringify({ empId:empId, day:day,
+          hours: C.num(fieldVal('ha-othours')), reason:'overtime approved on the attendance register' }) });
+        toast('Overtime approved'); await haLoad(); haDetail(empId, day);
+      } catch(e){ toast(e.message); }
+    });
+    document.getElementById('ha-fixok').addEventListener('click', async function(){
+      var v = document.getElementById('ha-fix').value, why = fieldVal('ha-why');
+      if (!v) return toast('Choose Present, Half day or Absent.');
+      if (!why) return toast('Say why — a corrected attendance day is a pay record.');
+      var next = Object.assign({}, rec || {}, { empId:empId, day:day, status: v === 'A' ? 'Absent' : 'Present',
+        dayFraction: v === 'H' ? 0.5 : 1, otHours: rec ? C.num(rec.otHours) : 0,
+        source:'manual', correctedBy: me.user, correction: why });
+      try {
+        await C.api('/api/hr', { method:'POST', body: JSON.stringify({ what:'attendance', records:[next], manual:true,
+          reason: 'attendance corrected: ' + why }) });
+        toast('Day corrected'); await haLoad(); haDetail(empId, day);
+      } catch(e){ toast(e.message); }
+    });
+    var back = document.getElementById('ha-toDevice');
+    if (back) back.addEventListener('click', async function(){
+      /* hand the day back to the device: mark it device-owned, then work it out again */
+      try {
+        await C.api('/api/hr', { method:'POST', body: JSON.stringify({ what:'attendance', manual:true,
+          records:[Object.assign({}, rec, { source:'device', correction:'' })], reason:'attendance handed back to the device punches' }) });
+        await C.api('/api/device?what=reprocess', { method:'POST', body: JSON.stringify({ from:day, to:day }) });
+        toast('Marked again from the punches'); await haLoad(); haDetail(empId, day);
+      } catch(e){ toast(e.message); }
+    });
+  }
+  document.getElementById('ha-load').addEventListener('click', haLoad);
+  document.getElementById('ha-month').addEventListener('change', haLoad);
+  document.getElementById('ha-dept').addEventListener('change', haDraw);
+  document.getElementById('ha-q').addEventListener('input', haDraw);
+  document.getElementById('ha-reprocess').addEventListener('click', async function(){
+    var say = noteWriter(document.getElementById('ha-msg'));
+    if (me.role !== 'developer') return say('Marking a month again needs the administrator login.');
+    var month = document.getElementById('ha-month').value; if (!month) return;
+    var p = month.split('-').map(Number), last = new Date(p[0], p[1], 0).getDate();
+    this.disabled = true;
+    try {
+      var j = await C.api('/api/device?what=reprocess', { method:'POST', body: JSON.stringify({
+        from: month + '-01', to: month + '-' + pad2(last), reason:'month marked again from punches' }) });
+      say('Marked again: ' + j.marked + ' day(s) from punches' + (j.rematched ? ', ' + j.rematched + ' punch(es) newly matched to an employee' : '') +
+        (j.keptManual ? ', ' + j.keptManual + ' hand-marked day(s) left as they are' : '') + '.', true);
+      await haLoad();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+  document.getElementById('ha-print').addEventListener('click', function(){
+    if (!hpState.month) return;
+    var days = haDays(), rows = haRows();
+    C.openReport({ title:'Attendance Register — ' + hpState.month, landscape:true, sections:[
+      { type:'table', title:'Attendance', dense:true,
+        columns:[{ label:'Employee' }].concat(days.map(function(d){ return { label: String(Number(d.slice(8))) }; }))
+          .concat([{ label:'Present' }, { label:'Late' }, { label:'OT h' }]),
+        rows: rows.map(function(e){
+          var lmap = haLeaveMap(e.empId), pres = 0, late = 0, ot = 0;
+          return [esc(e.name) + ' (' + esc(e.empId) + ')'].concat(days.map(function(d){
+            var c = haCell(e, d, lmap);
+            if (c.rec && c.rec.status === 'Present'){ pres += C.num(c.rec.dayFraction || 1); if (c.rec.late) late++; ot += C.num(c.rec.otHours); }
+            return esc(c.code);
+          })).concat([pres, late, ot]);
+        }) },
+      { type:'text', title:'Key', text:'P present · ½ half day · A absent · W weekly off · H holiday · leave codes are approved leave · – no punch and no mark.' }
+    ] });
+  });
+
+  /* ---------------- Attendance Devices ---------------- */
+  var HD_PROTO_OF = { ZKTeco:'adms', eSSL:'adms', Identix:'adms', Realtime:'adms', Hikvision:'hik',
+    'Matrix COSEC':'json', 'Suprema BioStar':'json', Other:'adms' };
+  async function hdOpen(){
+    var c = await hpContent();
+    var cfg = (settings && settings.attendance_devices) || {};
+    var pol = cfg.policy || {};
+    var shifts = c.shifts || [];
+    document.getElementById('hd-shift').innerHTML = '<option value="">The first shift on the master</option>' +
+      shifts.map(function(s){ return '<option value="' + esc(s.code || s.name) + '">' + esc((s.name || s.code) + ' ' + (s.start || '') + '–' + (s.end || '')) + '</option>'; }).join('');
+    var setSel = function(id, v){ var el = document.getElementById(id);
+      if (Array.prototype.some.call(el.options, function(o){ return o.value === String(v); })) el.value = String(v); };
+    setSel('hd-equip', cfg.equipment || 'biometric');
+    setSel('hd-tz', cfg.tzOffsetMin != null ? cfg.tzOffsetMin : 330);
+    setSel('hd-shift', cfg.defaultShift || '');
+    setSel('hd-autoot', pol.autoOt ? 'yes' : 'no');
+    setSel('hd-missed', pol.missedPunch || 'present');
+    document.getElementById('hd-otmin').value = pol.otMinMinutes != null ? pol.otMinMinutes : 30;
+    document.getElementById('hd-dedupe').value = pol.dedupeMinutes != null ? pol.dedupeMinutes : 2;
+    setSel('hd-type', cfg.equipment === 'face' ? 'face' : cfg.equipment === 'both' ? 'both' : 'biometric');
+    var today = C.dayKey(new Date());
+    if (!fieldVal('hd-pfrom')) document.getElementById('hd-pfrom').value = today;
+    if (!fieldVal('hd-pto')) document.getElementById('hd-pto').value = today;
+    hdHowTo('', '');
+    await hdList();
+    await hdPunches();
+  }
+  document.getElementById('hd-equip').addEventListener('change', function(){
+    document.getElementById('hd-type').value = this.value === 'face' ? 'face' : this.value === 'both' ? 'both' : 'biometric';
+  });
+  document.getElementById('hd-make').addEventListener('change', function(){
+    document.getElementById('hd-proto').value = HD_PROTO_OF[this.value] || 'adms';
+    hdHowTo('', '');
+  });
+  document.getElementById('hd-proto').addEventListener('change', function(){ hdHowTo('', ''); });
+
+  document.getElementById('hd-savecfg').addEventListener('click', async function(){
+    var say = noteWriter(document.getElementById('hd-cfgmsg'));
+    var otmin = C.num(fieldVal('hd-otmin')), dd = C.num(fieldVal('hd-dedupe'));
+    if (otmin < 0 || otmin > 240) return say('Minimum overtime should be between 0 and 240 minutes.');
+    if (dd < 0 || dd > 30) return say('The repeat-scan window should be between 0 and 30 minutes.');
+    var data = { equipment: document.getElementById('hd-equip').value,
+      tzOffsetMin: C.num(document.getElementById('hd-tz').value), defaultShift: document.getElementById('hd-shift').value,
+      policy: { autoOt: document.getElementById('hd-autoot').value === 'yes', missedPunch: document.getElementById('hd-missed').value,
+        otMinMinutes: otmin, dedupeMinutes: dd } };
+    try { await C.idms.saveSetting('attendance_devices', data); settings.attendance_devices = data;
+      say('Saved. Punches from now on are marked with these rules; use "Mark this month again" on the register for days already marked.', true); }
+    catch(e){ say(esc(e.message)); }
+  });
+
+  /* What to type into the device, for the connection chosen — the address is
+     this site's own, so it is right on whichever domain the IDMS runs. */
+  function hdHowTo(key, sn){
+    var proto = document.getElementById('hd-proto').value, host = location.host, origin = location.origin;
+    var box = document.getElementById('hd-howto');
+    if (proto === 'adms') box.innerHTML = '<b>On the device</b> (Menu → Communication / Comm. → Cloud Server or ADMS):' +
+      '<br>Server address <code>' + esc(host) + '</code> · Port <code>443</code> · HTTPS <b>on</b> · Domain name mode <b>on</b>' +
+      '<br>The device calls <code>' + esc(origin) + '/iclock/cdata</code> by itself. Register its serial number here ' +
+      '<i>before</i> pointing it at the IDMS; until then it is refused and keeps its punches. ' +
+      'A device that calls in first appears under Devices as <i>waiting</i> — press Register there.' +
+      '<br><span class="hint">The device must support HTTPS for server push. An older model that can only use plain HTTP ' +
+      'cannot reach a secure site; export its log to a USB stick and use Import Device Log instead.</span>';
+    else if (proto === 'hik') box.innerHTML = '<b>On the terminal</b> (Configuration → Network → Advanced → HTTP Listening, or Event → Alarm Server):' +
+      '<br>URL <code>' + esc(origin) + '/api/device?proto=hik&amp;key=' + (key ? esc(key) : '&lt;device key&gt;') + '</code> · ' +
+      'Protocol <code>HTTPS</code> · Port <code>443</code>' +
+      '<br>Set the terminal to upload access-control / attendance events. ' +
+      (key ? '<b>Copy the key now — it is shown only once.</b>' : 'Registering the device creates its key.');
+    else box.innerHTML = '<b>From the vendor software or middleware</b> (webhook / HTTP push):' +
+      '<br><code>POST ' + esc(origin) + '/api/device?proto=json</code> with header <code>X-Device-Key: ' + (key ? esc(key) : '&lt;device key&gt;') + '</code>' +
+      '<br>Body <code>{"punches":[{"userId":"1001","time":"2026-09-10 08:58:00"}]}</code> — time in plant time, or ISO with its zone. ' +
+      (key ? '<b>Copy the key now — it is shown only once.</b>' : 'Registering the device creates its key.');
+  }
+
+  async function hdList(){
+    var host = document.getElementById('hd-list');
+    var devs = [];
+    try { devs = (await C.api('/api/device?what=devices')).devices || []; }
+    catch(e){ host.innerHTML = '<div class="note bad">' + esc(e.message) + '</div>'; return; }
+    if (!devs.length){ host.innerHTML = '<div class="empty"><b>No devices yet</b>Register the first one above.</div>'; return; }
+    var typeName = { biometric:'Fingerprint', face:'Face', both:'Fingerprint + face' };
+    var protoName = { adms:'Push (ADMS)', hik:'Hikvision push', json:'Webhook' };
+    host.innerHTML = '<table class="iv-grid"><thead><tr><th>Device</th><th>Type</th><th>Serial</th><th>Connection</th>' +
+      '<th>Status</th><th class="r">Punches</th><th></th></tr></thead><tbody>' + devs.map(function(d){
+        var v = d.data || {};
+        var fresh = d.lastSeen && (Date.now() - new Date(d.lastSeen).getTime()) < 15*60000;
+        var status = !d.registered ? '<span class="hd-dot wait"></span>Calling in — not registered'
+          : v.active === false ? '<span class="hd-dot off"></span>Switched off'
+          : fresh ? '<span class="hd-dot on"></span>Reporting' : d.lastSeen
+            ? '<span class="hd-dot off"></span>Last seen ' + esc(new Date(d.lastSeen).toLocaleString('en-GB'))
+            : '<span class="hd-dot off"></span>Never called in';
+        return '<tr><td><b>' + esc(v.name || '(unnamed)') + '</b><div class="hint">' + esc([v.vendor, v.location].filter(Boolean).join(' · ')) + '</div></td>' +
+          '<td>' + esc(typeName[v.type] || '—') + '</td><td>' + esc(d.sn) + '</td><td>' + esc(protoName[v.protocol] || '—') + '</td>' +
+          '<td>' + status + (d.lastIp ? '<div class="hint">' + esc(d.lastIp) + '</div>' : '') + '</td>' +
+          '<td class="r">' + C.qty(d.punches) + '</td><td>' +
+          (!d.registered ? '<button class="btn gold hd-reg" data-sn="' + esc(d.sn) + '">Register</button>'
+            : (v.protocol !== 'adms' ? '<button class="btn hd-key" data-sn="' + esc(d.sn) + '">New key</button> ' : '') +
+              '<button class="btn hd-edit" data-sn="' + esc(d.sn) + '">Edit</button> ') +
+          ' <button class="btn del hd-del" data-sn="' + esc(d.sn) + '">Remove</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    var bySn = {}; devs.forEach(function(d){ bySn[d.sn] = d; });
+    var fill = function(d){
+      var v = d.data || {};
+      document.getElementById('hd-sn').value = d.sn;
+      document.getElementById('hd-name').value = v.name || '';
+      document.getElementById('hd-loc').value = v.location || '';
+      document.getElementById('hd-ip').value = v.allowIp || '';
+      if (v.type) document.getElementById('hd-type').value = v.type;
+      if (v.vendor && HD_PROTO_OF[v.vendor]) document.getElementById('hd-make').value = v.vendor;
+      document.getElementById('hd-proto').value = v.protocol || 'adms';
+      hdHowTo('', d.sn);
+      document.getElementById('hd-name').focus();
+    };
+    host.querySelectorAll('.hd-reg,.hd-edit').forEach(function(b){ b.addEventListener('click', function(){ fill(bySn[b.dataset.sn]); }); });
+    host.querySelectorAll('.hd-key').forEach(function(b){ b.addEventListener('click', function(){
+      if (!confirm('Make a new key? The device stops being accepted until the new key is entered on it.')) return;
+      hdSave(bySn[b.dataset.sn], true);
+    }); });
+    host.querySelectorAll('.hd-del').forEach(function(b){ b.addEventListener('click', async function(){
+      if (!confirm('Remove device ' + b.dataset.sn + '? Its punches already received stay; new ones are refused.')) return;
+      try { await C.api('/api/device?what=devices', { method:'PATCH', body: JSON.stringify({ sn:b.dataset.sn, reason:'attendance device removed' }) });
+        toast('Device removed'); hdList(); } catch(e){ toast(e.message); }
+    }); });
+  }
+  async function hdSave(existing, newKey){
+    var say = noteWriter(document.getElementById('hd-msg'));
+    var v = existing ? (existing.data || {}) : null;
+    var device = existing ? { sn:existing.sn, name:v.name, type:v.type, vendor:v.vendor, protocol:v.protocol,
+        location:v.location, allowIp:v.allowIp, active:v.active !== false }
+      : { sn: fieldVal('hd-sn'), name: fieldVal('hd-name'), type: document.getElementById('hd-type').value,
+        vendor: document.getElementById('hd-make').value, protocol: document.getElementById('hd-proto').value,
+        location: fieldVal('hd-loc'), allowIp: fieldVal('hd-ip'), active:true };
+    if (!existing){
+      if (!device.name) return say('Give the device a name — "Main gate", "Canteen".');
+      if (device.protocol === 'adms' && !device.sn) return say('The serial number is needed for a push device — it is how the device identifies itself.');
+      if (device.allowIp && !/^[\d.:a-fA-F,\s]+$/.test(device.allowIp)) return say('The allowed address should be an IP address, or several separated by commas.');
+    }
+    try {
+      var j = await C.api('/api/device?what=devices', { method:'POST', body: JSON.stringify({ device:device, newKey:!!newKey,
+        reason: existing ? 'device key replaced' : 'attendance device registered' }) });
+      say('Device <b>' + esc(j.sn) + '</b> registered.' + (j.key ? ' Its key is below — copy it now, it is not shown again.' : ''), true);
+      document.getElementById('hd-proto').value = device.protocol;
+      hdHowTo(j.key || '', j.sn);
+      if (!existing) ['hd-sn','hd-name','hd-loc','hd-ip'].forEach(function(id){ document.getElementById(id).value = ''; });
+      hdList();
+    } catch(e){ say(esc(e.message)); }
+  }
+  document.getElementById('hd-save').addEventListener('click', function(){ hdSave(null, false); });
+  document.getElementById('hd-clear').addEventListener('click', function(){
+    ['hd-sn','hd-name','hd-loc','hd-ip'].forEach(function(id){ document.getElementById(id).value = ''; });
+    document.getElementById('hd-msg').style.display = 'none'; hdHowTo('', '');
+  });
+
+  async function hdPunches(){
+    var from = fieldVal('hd-pfrom'), to = fieldVal('hd-pto');
+    var host = document.getElementById('hd-punches'), um = document.getElementById('hd-unmatched');
+    if (!from || !to) return;
+    var j;
+    try { j = await C.api('/api/device?what=punches&from=' + from + '&to=' + to); }
+    catch(e){ host.innerHTML = '<div class="note bad">' + esc(e.message) + '</div>'; return; }
+    var emps = [];
+    try { emps = (await C.api('/api/hr?what=employees')).employees || []; } catch(e){ emps = []; }
+    var name = {}; emps.forEach(function(e){ name[e.empId] = e.name; });
+    um.innerHTML = (j.unmatched || []).length ? '<div class="note bad"><b>Device user IDs matched to nobody:</b> ' +
+      j.unmatched.map(function(u){ return esc(u.user_id) + ' (' + esc(u.device_sn) + ', ' + u.n + ')'; }).join(', ') +
+      '<br>Put each one in the <b>Biometric / Face ID</b> box on that person\'s record on Employees, then use ' +
+      '"Mark this month again" on the Attendance Register — their earlier punches are matched then.</div>' : '';
+    var list = j.punches || [];
+    host.innerHTML = list.length ? '<table class="iv-grid"><thead><tr><th>Time</th><th>Employee</th><th>Device user ID</th>' +
+      '<th>Device</th><th>How</th></tr></thead><tbody>' + list.slice(0, 500).map(function(p){
+        return '<tr><td>' + esc(String(p.punch_at).slice(0,16)) + '</td><td>' + (p.emp_id ? '<b>' + esc(name[p.emp_id] || p.emp_id) + '</b> ' +
+          '<span class="hint">' + esc(p.emp_id) + '</span>' : '<span class="hint">not matched</span>') + '</td>' +
+          '<td>' + esc(p.user_id) + '</td><td>' + esc(p.device_sn) + '</td><td>' + esc(p.method || '') +
+          (p.direction ? ' · ' + esc(p.direction) : '') + (p.source === 'import' ? ' · imported' : '') + '</td></tr>';
+      }).join('') + '</tbody></table>' + (list.length > 500 ? '<div class="hint">Showing the latest 500.</div>' : '')
+      : '<div class="empty"><b>No punches in these dates</b>A registered device that is reporting sends them within a minute of each scan.</div>';
+  }
+  document.getElementById('hd-pload').addEventListener('click', hdPunches);
 
   /* ---------------- screens served by the website ---------------- */
   var EMBEDS = {
@@ -18631,7 +19387,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   }
 
   var BULK_KINDS = [
-    { id:'customer', label:'Customers',
+    { id:'customer', short:'Customers', desc:'Customer names, codes, GSTIN, addresses', group:'masters', screen:'entry_customer', screenLabel:'Customer Addition', label:'Customers',
       cols:['Name*','Code','GSTIN','PaymentTerms','BillingAddress','DespatchAddress','ContactPerson','Phone','Email'],
       example:{ 'Name*':'Acme Auto Components', Code:'', GSTIN:'29ABCDE1234F1Z5', PaymentTerms:'45 days',
         BillingAddress:'Plot 12, Industrial Area, Pune', DespatchAddress:'Same as billing',
@@ -18653,7 +19409,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
                  contact:r.ContactPerson||'', phone:r.Phone||'', email:r.Email||'' } }, 'bulk uploaded');
       } },
 
-    { id:'supplier', label:'Suppliers',
+    { id:'supplier', short:'Suppliers', desc:'Supplier master with contacts and GSTIN', group:'masters', screen:'entry_supplier', screenLabel:'Supplier Master', label:'Suppliers',
       cols:['Name*','Code','Category','Status','GSTIN','ContactPerson','Phone','Email','LeadTimeDays','Address'],
       colHint:{ Category:'Raw material / Consumables / Tools & fixtures / Sub-contract processing / Services',
                 Status:'Under evaluation / Approved / Conditionally approved / On hold' },
@@ -18684,7 +19440,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           'bulk uploaded');
       } },
 
-    { id:'parts', label:'Parts',
+    { id:'parts', short:'Parts', desc:'Internal part numbers, drawings, weights', group:'masters', screen:'parts', screenLabel:'Parts Addition', label:'Parts',
       cols:['PartName*','DrawingNumber','DrawingRevision','RawMaterial','NetWeightKg','GrossWeightKg','UOM'],
       colHint:{ UOM:'Nos / Kg / Set / Metre — defaults to Nos' },
       example:{ 'PartName*':'Flange Coupling 40mm', DrawingNumber:'DWG-4021', DrawingRevision:'02',
@@ -18707,7 +19463,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
                  netWeight:C.num(r.NetWeightKg), grossWeight:C.num(r.GrossWeightKg) } }, 'bulk uploaded');
       } },
 
-    { id:'machine', label:'Machines',
+    { id:'machine', short:'Machines', desc:'Machine register with maintenance frequency', group:'masters', screen:'entry_machine', screenLabel:'Machine Addition', label:'Machines',
       cols:['Name*','Code','MakeModel','Location','Type','Criticality','MaintenanceFrequencyDays','LastMaintained'],
       colHint:{ Type:'CNC turning centre / CNC machining centre / Conventional lathe / Milling machine / Grinder / Drilling machine / Press / Inspection / Other',
                 Criticality:'Critical — no alternative / Important — one alternative / General',
@@ -18731,7 +19487,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           'bulk uploaded');
       } },
 
-    { id:'tool', label:'Tools',
+    { id:'tool', short:'Tools', desc:'Cutting tools and their life', group:'masters', screen:'report_tool_history', screenLabel:'Tool History Card', label:'Tools',
       cols:['Description*','Number','PartNo','Type','Machine','ExpectedLife','LifeUnit'],
       colHint:{ Type:'Cutting insert / Drill / Reamer / Tap / End mill / Grinding wheel / Fixture / Form tool / Other',
                 LifeUnit:'pieces / regrinds / hours', PartNo:'The internal part number it runs on, optional' },
@@ -18758,7 +19514,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             lifeUnit:r.LifeUnit||'pieces', history:[] } }, 'bulk uploaded');
       } },
 
-    { id:'consumable', label:'Consumables (Raw Material Master, Type = Consumable)',
+    { id:'consumable', short:'Consumables', desc:'Consumable materials with codes', group:'masters', screen:'entry_rawmat', screenLabel:'Raw Material Master', label:'Consumables (Raw Material Master, Type = Consumable)',
       cols:['Description*','Code','Form','Spec','Standard','Size','UOM','Rate','ReorderLevel','ShelfLifeDays'],
       colHint:{ Form:'Bar / Tube / Sheet / Plate / Casting / Forging / Component',
                 UOM:'Kg / Nos / Metre / Litre / Set' },
@@ -18780,7 +19536,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
                  reorder:C.num(r.ReorderLevel), shelfDays:C.num(r.ShelfLifeDays) } }, 'bulk uploaded');
       } },
 
-    { id:'bom', label:'Bill of Materials (one row per line — several rows can share a Part No.)',
+    { id:'bom', short:'Bill of Materials', desc:'Material lines for each part', group:'masters', screen:'bom', screenLabel:'Bill of Materials', label:'Bill of Materials (one row per line — several rows can share a Part No.)',
       cols:['PartNo*','MaterialCode*','QtyPerPiece*','ScrapPercent'],
       colHint:{ PartNo:'The internal part number (Parts screen), must already exist',
                 MaterialCode:'The material code (Raw Material Master), must already exist' },
@@ -18802,7 +19558,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           materialId:m.doc_id, qtyPer:qty, scrapPct:C.num(r.ScrapPercent) };
       } },
 
-    { id:'gauge', label:'Equipment / Instruments / Gauges',
+    { id:'gauge', short:'Gauges & Instruments', desc:'Equipment with calibration due dates', group:'masters', screen:'report_calibration', screenLabel:'Calibration Report', label:'Equipment / Instruments / Gauges',
       cols:['Description*','Number','Type','Range','LeastCount','Location','FrequencyMonths','LastCalibrated'],
       colHint:{ Type:'Micrometer / Vernier / Bore gauge / Dial gauge / Height gauge / Plug gauge / Snap gauge / Air gauge / CMM / Surface roughness tester / Hardness tester / Torque wrench / Weighing scale / Other',
                 LastCalibrated:'YYYY-MM-DD, optional — leave blank if never calibrated' },
@@ -18823,7 +19579,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             lastCalibrated:r.LastCalibrated||'', agency:'', certificate:'' } }, 'bulk uploaded');
       } },
 
-    { id:'order', label:'Customer PO (one-time POs, rate contracts and schedules)',
+    { id:'order', short:'Customer PO', desc:'One-time POs, rate contracts and schedules', group:'sales', screen:'sales_plan', screenLabel:'Customer PO', label:'Customer PO (one-time POs, rate contracts and schedules)',
       intro:'Each row is checked by the same rules as the Customer PO screen. A schedule can be ' +
         'raised against a rate contract already on file, or one earlier in this same file — rows are ' +
         'imported top to bottom, so put the contract first.',
@@ -18975,7 +19731,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         }
       } },
 
-    { id:'salesplan', label:'Sales Plan forecasts (customer / part / month quantities)',
+    { id:'salesplan', short:'Sales Plan', desc:'Forecast quantities by customer, part and month', group:'sales', screen:'sales_monthly_plan', screenLabel:'Sales Plan', label:'Sales Plan forecasts (customer / part / month quantities)',
       intro:'The Sales Plan is worked out from Customer POs. A forecast uploaded here is used only for a ' +
         'month that no real PO, schedule or tentative quantity covers — and it steps aside by itself the ' +
         'moment one arrives. A month that is already covered is refused rather than added on top.',
@@ -19025,20 +19781,266 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             partName:v.partName, custPartNo:v.custPartNo, custPartName:v.custPartName,
             month:v.month, firmQty:v.qty, source:'bulk upload' } }, 'bulk uploaded');
       } },
+
+    { id:'employee', short:'Employees', desc:'Employee master: joining details, shift, statutory IDs, bank, pay',
+      group:'people', screen:'hrm', screenLabel:'People — HR records',
+      label:'Employees (the HR employee master)',
+      intro:'Adds new employees to the same employee master HR & Payroll, People, Organisation Chart and ' +
+        'attendance read. It never overwrites an employee already on file — edit those on People. Put the ' +
+        'user ID enrolled on the fingerprint or face device in <b>BiometricId</b> so attendance is marked automatically.',
+      cols:['EmpId','Name*','Designation','Department','DateOfJoining','DateOfBirth','Gender','Status','EmploymentType',
+            'Shift','BiometricId','Phone','Email','ReportsTo','Grade','Location','AnnualCTC','Basic','DA','HRA',
+            'Conveyance','Special','OtherAllowance','UAN','PFNumber','ESINumber','PAN','BankName','BankAccount','IFSC',
+            'PFApplicable','ESIApplicable','PTApplicable','TaxRegime'],
+      colHint:{ EmpId:'Blank = the next number from the HR employee ID series',
+        Name:'Full name', Department:'Must be on the Department Master when that list is in use',
+        Designation:'Must be on the Designation Master when that list is in use',
+        DateOfJoining:'DD-MM-YYYY or YYYY-MM-DD', DateOfBirth:'DD-MM-YYYY or YYYY-MM-DD',
+        Gender:'Male / Female / Other', Status:'Active / Probation / Notice (blank = Active)',
+        EmploymentType:'Permanent / Contract / Trainee / Apprentice (blank = Permanent)',
+        Shift:'A shift code or name from the HR shift master (blank = General)',
+        BiometricId:'The user ID on the attendance device (blank = the Employee ID). Must be unique',
+        AnnualCTC:'Used to build the monthly structure from the salary template when Basic etc. are blank',
+        Basic:'Monthly amounts; leave all blank to build them from AnnualCTC',
+        UAN:'12 digits', PAN:'ABCDE1234F', IFSC:'ABCD0123456',
+        PFApplicable:'Yes / No (blank = Yes)', ESIApplicable:'Yes / No (blank = Yes)', PTApplicable:'Yes / No (blank = Yes)',
+        TaxRegime:'New / Old (blank = New)' },
+      example:{ EmpId:'', 'Name*':'Ravi Kumar', Designation:'CNC Operator', Department:'Production',
+        DateOfJoining:'01-09-2026', DateOfBirth:'14-02-1996', Gender:'Male', Status:'Probation', EmploymentType:'Permanent',
+        Shift:'General', BiometricId:'1001', Phone:'9876543210', Email:'', ReportsTo:'', Grade:'W2', Location:'Plant 1',
+        AnnualCTC:'300000', Basic:'', DA:'', HRA:'', Conveyance:'', Special:'', OtherAllowance:'',
+        UAN:'', PFNumber:'', ESINumber:'', PAN:'', BankName:'', BankAccount:'', IFSC:'',
+        PFApplicable:'Yes', ESIApplicable:'Yes', PTApplicable:'Yes', TaxRegime:'New' },
+      async validate(r, ctx){
+        var errors = [], t = function(k){ return String(r[k] == null ? '' : r[k]).trim(); };
+        var name = t('Name*');
+        if (!name) errors.push('Name is required');
+        var hm = (ctx.hrContent || {}).hrMasters || {};
+        var used = {};
+        ctx.employees.forEach(function(e){ used[String(e.empId||'').toUpperCase()] = e; });
+        (ctx.newEmpIds || []).forEach(function(id){ used[id.toUpperCase()] = { empId:id, name:'an earlier row in this file' }; });
+        var empId = t('EmpId');
+        if (empId){
+          if (!/^[A-Za-z0-9._\-\/]{1,30}$/.test(empId)) errors.push('Employee ID "'+empId+'" may only have letters, digits and . _ - /');
+          else if (used[empId.toUpperCase()]) errors.push('Employee ID '+empId+' is already '+(used[empId.toUpperCase()].name||'on file')+' — bulk upload never overwrites an employee; edit them on People');
+        } else {
+          var n = C.num(hm.empIdNextSeq) || 1;
+          do { empId = (hm.empIdPrefix || 'EMP') + String(n).padStart(C.num(hm.empIdPad) || 3, '0'); n++; }
+          while (used[empId.toUpperCase()]);
+        }
+        var doj = buDate(t('DateOfJoining')), dob = buDate(t('DateOfBirth'));
+        if (doj === null) errors.push('Date of joining "'+t('DateOfJoining')+'" is not a date — use DD-MM-YYYY');
+        if (dob === null) errors.push('Date of birth "'+t('DateOfBirth')+'" is not a date — use DD-MM-YYYY');
+        var today = new Date().toISOString().slice(0,10);
+        if (dob && dob >= today) errors.push('Date of birth is not in the past');
+        if (dob && doj){
+          var age = (new Date(doj) - new Date(dob)) / (365.25 * 86400000);
+          if (age < 14) errors.push('Would be under 14 on the joining date — a child cannot be employed');
+        }
+        var gender = t('Gender');
+        if (gender && ['male','female','other'].indexOf(gender.toLowerCase()) < 0) errors.push('Gender must be Male, Female or Other');
+        var status = t('Status') || 'Active';
+        if (['Active','Probation','Notice'].indexOf(status) < 0) errors.push('Status must be Active, Probation or Notice — a new employee cannot arrive already Exited');
+        var etype = t('EmploymentType') || 'Permanent';
+        if (['Permanent','Contract','Trainee','Apprentice'].indexOf(etype) < 0) errors.push('Employment type must be Permanent, Contract, Trainee or Apprentice');
+
+        /* department / designation against the masters, when those lists are used */
+        var orgNames = function(type){ return (ctx.orgRows || []).filter(function(o){ return (o.data||{}).type === type; })
+          .map(function(o){ return String((o.data||{}).name||'').trim(); }).filter(Boolean); };
+        var depts = orgNames('department'), desigs = orgNames('designation');
+        var fit = function(list, v){ return list.filter(function(x){ return x.toLowerCase() === v.toLowerCase(); })[0]; };
+        var dept = t('Department'), desig = t('Designation');
+        if (dept && depts.length){ var dd = fit(depts, dept); if (!dd) errors.push('Department "'+dept+'" is not on the Department Master'); else dept = dd; }
+        if (desig && desigs.length){ var gg = fit(desigs, desig); if (!gg) errors.push('Designation "'+desig+'" is not on the Designation Master'); else desig = gg; }
+
+        var shifts = (ctx.hrContent || {}).shifts || [];
+        var shift = t('Shift') || 'General';
+        if (shifts.length){
+          var sh = shifts.filter(function(x){ return String(x.code||'').toLowerCase() === shift.toLowerCase() ||
+            String(x.name||'').toLowerCase() === shift.toLowerCase(); })[0];
+          if (!sh) errors.push('Shift "'+shift+'" is not on the HR shift master (' + shifts.map(function(x){ return x.name || x.code; }).join(', ') + ')');
+          else shift = sh.name || sh.code;
+        }
+
+        var bio = t('BiometricId') || empId;
+        var bioKey = bio.toUpperCase();
+        var bioOwner = ctx.employees.filter(function(e){ return String(e.biometricId || e.empId || '').toUpperCase() === bioKey; })[0];
+        if (bioOwner) errors.push('Biometric ID '+bio+' already belongs to '+bioOwner.name+' ('+bioOwner.empId+') — one person per device ID, or attendance lands on the wrong person');
+        if ((ctx.newBio || []).indexOf(bioKey) >= 0) errors.push('Biometric ID '+bio+' is used by an earlier row in this file');
+
+        var phone = t('Phone').replace(/[\s\-]/g,''), email = t('Email');
+        if (phone && !/^(\+?91)?[6-9]\d{9}$/.test(phone) && !/^\+?\d{8,15}$/.test(phone)) errors.push('Phone "'+t('Phone')+'" is not a phone number');
+        if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errors.push('Email "'+email+'" is not an email address');
+        var uan = t('UAN'), pan = t('PAN').toUpperCase(), ifsc = t('IFSC').toUpperCase(), esi = t('ESINumber');
+        if (uan && !/^\d{12}$/.test(uan)) errors.push('UAN must be 12 digits');
+        if (pan && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) errors.push('PAN "'+pan+'" is not in the form ABCDE1234F');
+        if (ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) errors.push('IFSC "'+ifsc+'" is not in the form ABCD0123456');
+        if (esi && !/^\d{10,17}$/.test(esi)) errors.push('ESI number should be digits only');
+        var yn = function(k){ var v = t(k).toLowerCase(); return v === '' ? true : v === 'yes' || v === 'y' ? true : v === 'no' || v === 'n' ? false : null; };
+        ['PFApplicable','ESIApplicable','PTApplicable'].forEach(function(k){ if (yn(k) === null) errors.push(k+' must be Yes or No'); });
+        var regime = t('TaxRegime') || 'New';
+        if (['New','Old'].indexOf(regime) < 0) errors.push('Tax regime must be New or Old');
+
+        var amounts = ['Basic','DA','HRA','Conveyance','Special','OtherAllowance'];
+        var anyPay = amounts.some(function(k){ return t(k) !== ''; });
+        amounts.concat(['AnnualCTC']).forEach(function(k){ if (t(k) !== '' && !(C.num(t(k)) >= 0 && /^[\d.,]+$/.test(t(k)))) errors.push(k+' must be an amount'); });
+        if (errors.length) return { errors:errors };
+
+        var structure;
+        if (anyPay) structure = { basic:C.num(t('Basic')), da:C.num(t('DA')), hra:C.num(t('HRA')), conveyance:C.num(t('Conveyance')),
+          special:C.num(t('Special')), otherAllow:C.num(t('OtherAllowance')) };
+        else {
+          /* the same template the website's HR screen uses to build a structure from CTC */
+          var tpl = (ctx.hrContent || {}).salaryStructure || {}, m = C.num(t('AnnualCTC')) / 12;
+          var basic = Math.round(m * C.num(tpl.basicPct) / 100), da = Math.round(m * C.num(tpl.daPct) / 100),
+              hra = Math.round(m * C.num(tpl.hraPct) / 100), conv = m ? C.num(tpl.conveyance) : 0;
+          structure = { basic:basic, da:da, hra:hra, conveyance:conv, special:Math.max(0, Math.round(m - basic - da - hra - conv)), otherAllow:0 };
+        }
+        (ctx.newEmpIds = ctx.newEmpIds || []).push(empId);
+        (ctx.newBio = ctx.newBio || []).push(bioKey);
+        return { errors:[], summary:'emp|' + empId.toUpperCase(), label: empId + ' ' + name,
+          employee:{ empId:empId, name:name, photo:'', doj:doj||'', dob:dob||'',
+            gender: gender ? gender.charAt(0).toUpperCase() + gender.slice(1).toLowerCase() : '', bloodGroup:'',
+            department:dept, designation:desig, grade:t('Grade'), location:t('Location'), reportsTo:t('ReportsTo'),
+            employmentType:etype, shift:shift, status:status, biometricId: t('BiometricId'),
+            phone:t('Phone'), altPhone:'', email:email, personalEmail:'',
+            addressLine:'', addressCity:'', addressState:'', addressPin:'', references:[],
+            pfNumber:t('PFNumber'), uan:uan, esiNumber:esi, pan:pan, aadhaarLast4:'',
+            bankName:t('BankName'), bankAcc:t('BankAccount'), ifsc:ifsc,
+            ctcAnnual:C.num(t('AnnualCTC')), structure:structure,
+            pfApplicable:yn('PFApplicable'), esiApplicable:yn('ESIApplicable'), ptApplicable:yn('PTApplicable'),
+            taxRegime:regime, declaredDeductions:0, monthlyTds:0, otherDeduction:0,
+            competencies:[], trainings:[], notes:'Added by bulk upload' } };
+      },
+      async save(r, ctx, v){
+        await C.api('/api/hr', { method:'POST', body: JSON.stringify({ what:'employees', employee:v.employee,
+          reason:'bulk uploaded' }) });
+      } },
+
+    { id:'punches', short:'Attendance punches', desc:'Exported device logs, for devices that cannot send them',
+      group:'people', screen:'hr_payroll', screenLabel:'HR & Payroll',
+      label:'Attendance punches (a device\'s exported log)',
+      intro:'For a device that cannot send punches to the IDMS by itself, or to fill a gap after a network outage. ' +
+        'The punches go through the same engine as a connected device: first in, last out, late, half day and ' +
+        'overtime from the employee\'s shift. A day already marked by hand is not changed, and a punch already ' +
+        'received is not counted twice.',
+      cols:['BiometricId*','DateTime*','Direction','DeviceSerial'],
+      colHint:{ BiometricId:'The user ID on the device (or the Employee ID)',
+        DateTime:'DD-MM-YYYY HH:MM or YYYY-MM-DD HH:MM, the plant\'s local time', Direction:'In / Out (optional — first and last punch decide)',
+        DeviceSerial:'Optional — which device it came from' },
+      example:{ 'BiometricId*':'1001', 'DateTime*':'10-09-2026 08:58', Direction:'In', DeviceSerial:'' },
+      async validate(r, ctx){
+        var errors = [], id = String(r['BiometricId*']||'').trim(), dt = String(r['DateTime*']||'').trim();
+        if (!id) errors.push('Biometric ID is required');
+        var m = dt.match(/^(\S+)\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/), day = m ? buDate(m[1]) : null;
+        if (!m || !day || +m[2] > 23 || +m[3] > 59) errors.push('Date and time "'+dt+'" is not DD-MM-YYYY HH:MM');
+        if (errors.length) return { errors:errors };
+        var emp = ctx.employees.filter(function(e){ return String(e.biometricId||'').toUpperCase() === id.toUpperCase(); })[0] ||
+          ctx.employees.filter(function(e){ return String(e.empId||'').toUpperCase() === id.toUpperCase(); })[0];
+        if (!emp) return { errors:['No employee has Biometric ID or Employee ID "'+id+'" — add it on People first, or the punch marks nobody'] };
+        if (emp.status === 'Exited') return { errors:[emp.name+' ('+emp.empId+') has exited — their attendance is not marked'] };
+        var time = day + ' ' + String(m[2]).padStart(2,'0') + ':' + m[3] + ':' + (m[4] || '00');
+        if (time.slice(0,10) > new Date().toISOString().slice(0,10)) return { errors:['That punch is in the future'] };
+        return { errors:[], summary:'p|' + id.toUpperCase() + '|' + time, label: emp.name + ' ' + time,
+          punch:{ userId:id, time:time, direction:String(r.Direction||'').toLowerCase(), method:'import',
+            deviceSn:String(r.DeviceSerial||'').trim() || 'IMPORT' } };
+      },
+      async saveAll(good, ctx){
+        var ok = 0, failed = [], list = good.map(function(g){ return g.v.punch; });
+        for (var i = 0; i < list.length; i += 500){
+          try {
+            var j = await C.api('/api/device?what=import', { method:'POST',
+              body: JSON.stringify({ punches: list.slice(i, i + 500), reason:'device log bulk uploaded' }) });
+            ok += list.slice(i, i + 500).length;
+            if (j.unmatched && j.unmatched.length) failed.push('Not matched to anyone: ' + j.unmatched.join(', '));
+          } catch(e){ failed.push('Rows ' + (i+1) + '–' + Math.min(list.length, i + 500) + ': ' + e.message); }
+        }
+        return { ok:ok, failed:failed };
+      } },
   ];
   function buKind(id){ return BULK_KINDS.filter(function(k){ return k.id === id; })[0]; }
 
   var buRows = null, buValidated = null;
 
+  /* ---- the tile screen ----
+     Each category is a square tile with its own picture. Pressing one opens
+     that category's upload with everything it always had — template, column
+     notes, preview, row refusals, Import — plus where the records go and a
+     button to that screen. Other screens (Customer PO, Sales Plan, People)
+     open a category directly with openBulkUpload(kind). */
+  var BU_ICONS = {
+    customer:'<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/>',
+    supplier:'<path d="M3 21V10l5 3V10l5 3V6l8 4v11z"/><path d="M7 17h2M12 17h2M17 17h2"/>',
+    parts:'<path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/>',
+    machine:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+    tool:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+    consumable:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7.5 14h9"/>',
+    bom:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+    gauge:'<path d="M3 16a9 9 0 0 1 18 0"/><path d="M12 16l4-5"/><circle cx="12" cy="16" r="1.4"/>',
+    order:'<path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h6M9 17h6"/>',
+    salesplan:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 18v-4M12 18v-6M16 18v-3"/>',
+    employee:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7.5 18c.8-2.2 2.5-3.3 4.5-3.3s3.7 1.1 4.5 3.3"/>',
+    punches:'<path d="M12 4a7 7 0 0 1 7 7v2M5 13v-2a7 7 0 0 1 3-5.7"/><path d="M9 20c1-2 1.5-4.5 1.5-7a1.5 1.5 0 0 1 3 0c0 3-.6 5.8-1.8 8"/><path d="M6.5 18c.8-1.6 1-3.3 1-5a4.5 4.5 0 0 1 9 0c0 1.5-.1 3-.4 4.4"/>'
+  };
+  function buIcon(id){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" ' +
+      'stroke-linejoin="round" aria-hidden="true">' + (BU_ICONS[id] || BU_ICONS.bom) + '</svg>';
+  }
+  var BU_GROUPS = [['masters','Masters'], ['sales','Sales'], ['people','People & attendance']];
+  var buPendingKind = '';
+  function openBulkUpload(kind){ buPendingKind = kind || ''; navigate('bulk_upload'); }
+
+  function buDrawTiles(){
+    document.getElementById('bu-tiles').innerHTML = BU_GROUPS.map(function(g){
+      var ks = BULK_KINDS.filter(function(k){ return (k.group || 'masters') === g[0]; });
+      if (!ks.length) return '';
+      return '<div class="bu-group">' + esc(g[1]) + '</div><div class="bu-tilegrid">' + ks.map(function(k){
+        return '<button type="button" class="bu-tile" data-kind="' + esc(k.id) + '" title="' + esc(k.label) + '">' +
+          '<span class="bu-ico">' + buIcon(k.id) + '</span><b>' + esc(k.short || k.label) + '</b>' +
+          (k.desc ? '<span class="bu-tdesc">' + esc(k.desc) + '</span>' : '') +
+          (k.screenLabel ? '<span class="bu-tdest">→ ' + esc(k.screenLabel) + '</span>' : '') + '</button>';
+      }).join('') + '</div>';
+    }).join('');
+    document.querySelectorAll('#bu-tiles .bu-tile').forEach(function(t){
+      t.addEventListener('click', function(){ buOpenKind(t.dataset.kind); });
+    });
+  }
+  function buShowHome(){
+    document.getElementById('bu-home').style.display = '';
+    document.getElementById('bu-work').style.display = 'none';
+    document.getElementById('bu-preview').innerHTML = '';
+    document.getElementById('bu-file').value = '';
+    buRows = null; buValidated = null;
+  }
+  function buOpenKind(id){
+    var k = buKind(id); if (!k) return buShowHome();
+    var sel = document.getElementById('bu-kind');
+    sel.value = id;
+    sel.dispatchEvent(new Event('change'));
+    document.getElementById('bu-home').style.display = 'none';
+    document.getElementById('bu-work').style.display = '';
+    document.getElementById('bu-workico').innerHTML = buIcon(id);
+    document.getElementById('bu-worktitle').textContent = 'Bulk Upload — ' + (k.short || k.label);
+    document.getElementById('bu-workdest').textContent = k.screenLabel
+      ? 'Imported records are saved to the database and appear on ' + k.screenLabel + '.' : '';
+    var open = document.getElementById('bu-open');
+    open.style.display = k.screen ? '' : 'none';
+    open.textContent = k.screenLabel ? 'Open ' + k.screenLabel : 'Open screen';
+    open.dataset.screen = k.screen || '';
+  }
+  document.getElementById('bu-back').addEventListener('click', buShowHome);
+  document.getElementById('bu-open').addEventListener('click', function(){
+    if (this.dataset.screen) navigate(this.dataset.screen);
+  });
+
   async function loadBulkUpload(preset){
     var sel = document.getElementById('bu-kind');
     if (!sel.options.length)
       sel.innerHTML = BULK_KINDS.map(function(k){ return '<option value="'+k.id+'">'+esc(k.label)+'</option>'; }).join('');
-    if (preset && buKind(preset)) sel.value = preset;
-    buShowHint();
-    document.getElementById('bu-preview').innerHTML = '';
-    document.getElementById('bu-file').value = '';
-    buRows = null; buValidated = null;
+    buDrawTiles();
+    var want = preset || buPendingKind;
+    buPendingKind = '';
+    if (want && buKind(want)) buOpenKind(want); else buShowHome();
   }
   function buShowHint(){
     var k = buKind(document.getElementById('bu-kind').value);
@@ -19054,6 +20056,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('bu-kind').addEventListener('change', function(){
     buShowHint(); document.getElementById('bu-preview').innerHTML = '';
     document.getElementById('bu-file').value = ''; buRows = null; buValidated = null;
+    document.getElementById('bu-msg').style.display = 'none';
   });
 
   document.getElementById('bu-template').addEventListener('click', function(){
@@ -19089,6 +20092,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       var need = { customer:['customers'], supplier:['suppliers'], parts:['parts'], machine:['machines'],
         tool:['tools','parts'], consumable:['rawmats'], bom:['parts','rawmats','boms'], gauge:['gauges'],
         order:['customers','parts','custParts','orders'],
+        employee:['employees','hrContent','orgRows'],
+        punches:['employees'],
         salesplan:['customers','parts','custParts','orders','salesplans'] };
       var fetchers = {
         customers: function(){ return C.idms.docs('customer'); },
@@ -19101,7 +20106,10 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         gauges: function(){ return C.idms.docs('gauge'); },
         custParts: function(){ return C.idms.docs('cust_part'); },
         orders: function(){ return C.idms.docs('order'); },
-        salesplans: function(){ return C.idms.docs('salesplan'); }
+        salesplans: function(){ return C.idms.docs('salesplan'); },
+        employees: function(){ return C.api('/api/hr?what=employees').then(function(j){ return j.employees || []; }); },
+        hrContent: function(){ return C.api('/api/content').then(function(j){ return j.data || {}; }); },
+        orgRows: function(){ return C.idms.docs('orgmaster'); }
       };
       var keys = need[k.id] || [];
       var got = await Promise.all(keys.map(function(x){ return fetchers[x](); }));
@@ -19158,7 +20166,15 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     msg.style.display = ''; msg.className = 'note'; msg.textContent = 'Importing 1 of ' + good.length + '…';
     var ok = 0, failed = [];
 
-    if (k.grouped && k.id === 'bom'){
+    if (k.saveAll){
+      /* a category that imports its rows in one call (attendance punches: the
+         server groups them by person and day itself) */
+      msg.textContent = 'Importing ' + good.length + ' row(s)…';
+      try {
+        var res = await k.saveAll(good, ctx);
+        ok = res.ok; (res.failed || []).forEach(function(f){ failed.push(f); });
+      } catch(e){ failed.push(e.message); }
+    } else if (k.grouped && k.id === 'bom'){
       /* several CSV rows become one bill of materials per Part No. */
       var byPart = {};
       good.forEach(function(r){
@@ -19189,6 +20205,14 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       (failed.length ? '<br>' + failed.length + ' failed while saving (not while checking):<br>' +
         failed.map(esc).join('<br>') : '');
     btn.disabled = false; btn.textContent = 'Import again';
+    if (ok && k.screen){
+      /* straight to where the records now are */
+      var go2 = document.createElement('button');
+      go2.className = 'btn'; go2.style.marginLeft = '8px';
+      go2.textContent = 'Open ' + k.screenLabel;
+      go2.addEventListener('click', function(){ navigate(k.screen); });
+      msg.appendChild(document.createElement('br')); msg.appendChild(go2);
+    }
     if (ok) toast(ok + ' record(s) imported');
   }
 
@@ -20952,7 +21976,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     var set = function(id,v){ document.getElementById(id).value = v == null ? '' : v; };
     set('he-id',p.empId); set('he-name',p.name); set('he-desig',p.designation);
     set('he-dept',p.department); set('he-doj',p.doj?String(p.doj).slice(0,10):'');
-    set('he-reports',p.reportsTo); set('he-shift',p.shift); set('he-phone',p.phone);
+    set('he-reports',p.reportsTo); set('he-shift',p.shift); set('he-bio',p.biometricId); set('he-phone',p.phone);
     set('he-email',p.email); set('he-loc',p.location); set('he-grade',p.grade);
     set('he-gross',gross?C.inr(gross):''); set('he-basic',st.basic?C.inr(st.basic):'');
     set('he-regime',p.taxRegime||'');
@@ -21691,7 +22715,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('so-qty').addEventListener('input', updateSoValue);
   document.getElementById('so-due').addEventListener('change', soTentLabels);
   document.getElementById('so-due').addEventListener('input', soTentLabels);
-  document.getElementById('so-bulk').addEventListener('click', function(){ navigate('bulk_po'); });
+  document.getElementById('so-bulk').addEventListener('click', function(){ openBulkUpload('order'); });
   document.getElementById('so-price').addEventListener('input', updateSoValue);
   document.getElementById('so-currency').addEventListener('change', updateSoValue);
   document.getElementById('so-save').addEventListener('click', saveOrder);
@@ -21724,7 +22748,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('spm-filter-month').addEventListener('change', drawSalesPlanRegister);
   document.getElementById('spm-filter-cust').addEventListener('change', drawSalesPlanRegister);
   document.getElementById('spm-print').addEventListener('click', printSalesPlan);
-  document.getElementById('spm-bulk').addEventListener('click', function(){ navigate('bulk_salesplan'); });
+  document.getElementById('spm-bulk').addEventListener('click', function(){ openBulkUpload('salesplan'); });
 
   document.getElementById('iv-save').addEventListener('click', saveSalesInvoice);
   document.getElementById('iv-clear').addEventListener('click', function(){
@@ -22105,6 +23129,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('hr-q').addEventListener('input', drawHrList);
   document.getElementById('hr-filter').addEventListener('change', drawHrList);
   document.getElementById('hr-refresh').addEventListener('click', loadHrm);
+  document.getElementById('hr-bulk').addEventListener('click', function(){ openBulkUpload('employee'); });
   document.getElementById('he-close').addEventListener('click', function(){
     document.getElementById('hr-record').style.display='none'; hrOpen=null;
   });
@@ -22120,10 +23145,19 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     /* Only the fields on this screen are changed. The record is sent back whole,
        so pay structure and statutory identifiers edited on the website are not
        wiped by saving here. */
+    /* The device user ID is how a punch finds its person. Two people with one
+       ID would have one person's attendance marked for both. */
+    var bio = g('he-bio');
+    if (bio){
+      var clash = hrPeople.filter(function(x){ return x.empId !== hrOpen.empId &&
+        String(x.biometricId || x.empId || '').toUpperCase() === bio.toUpperCase(); })[0];
+      if (clash){ msg.style.display=''; msg.className='note bad';
+        msg.textContent='Biometric ID ' + bio + ' is already ' + clash.name + ' (' + clash.empId + ') — each person needs their own.'; return; }
+    }
     var next = Object.assign({}, hrOpen, {
       name:g('he-name'), designation:g('he-desig'), department:g('he-dept'),
       doj:g('he-doj'), status:document.getElementById('he-status').value,
-      reportsTo:g('he-reports'), shift:g('he-shift'),
+      reportsTo:g('he-reports'), shift:g('he-shift'), biometricId:bio,
       phone:g('he-phone'), email:g('he-email'), location:g('he-loc'), grade:g('he-grade')
     });
     this.disabled = true;

@@ -1,3 +1,52 @@
+# v120 — HR & Payroll in the IDMS, automatic attendance, Bulk Upload tiles
+
+No manual database step: the two new tables (`hr_punches`, `hr_devices`) are
+created automatically on first use. No new environment variable, no new
+dependency.
+
+## Files to copy across
+
+| File | Why |
+|---|---|
+| `idms.html` | HR & Payroll workspace, Attendance Register, Attendance Devices, Bulk Upload tiles, employee and device-log uploads, Biometric ID on People |
+| `index.html` | opens one HR screen at a time inside the IDMS |
+| `api/device.js`, `api/_attendance.js` | **new** — receives punches and marks attendance |
+| `api/_db.js` | creates the two new tables |
+| `vercel.json` | **new** — sends `/iclock/…` (fingerprint / face push devices) to the device endpoint |
+| `CLAUDE.md`, `CHANGES.md`, `tests/` | records and tests |
+
+## After deploying, check these
+
+1. **HRM → HR & Payroll** opens as tiles, not the old framed page. Payroll opens
+   inside it without the website's tab bar.
+2. **Masters → Bulk Upload** shows tiles. Customer PO and Sales Plan are tiles
+   there (no longer separate menu items). Try **Employees**: download the
+   template, add two rows, upload, check the preview, Import, then open People.
+3. **HR & Payroll → Attendance Devices:** choose your equipment, save the rules,
+   register one device (serial number for ZKTeco/eSSL, or Hikvision for a face
+   terminal — copy its key, it is shown once).
+4. On the device, enter the settings shown under the form. Within a minute of a
+   scan the device should show **Reporting** and the punch in **Punch log**.
+5. Put each person's device user ID in **Biometric / Face ID** on People (or in
+   the upload). Any ID matched to nobody is listed under Punch log.
+6. **Attendance Register:** today's punches appear as P; press a day to see its
+   punches, approve overtime, or correct it with a reason.
+
+Before buying or setting up devices: the device must support **HTTPS** for
+server push. A plain-HTTP-only unit cannot connect; use **Import Device Log**
+for it.
+
+## Run the tests
+
+```bash
+npm install jsdom --no-save
+npm test
+```
+
+Expect every suite clean except `smoketest`'s 2 known sign-in branding failures.
+
+---
+
 # v119 — what changed and how to check it
 
 Drop-in replacements. **No database migration, no new environment variable, no

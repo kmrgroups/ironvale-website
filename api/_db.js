@@ -202,6 +202,35 @@ export async function ensureTables() {
       value BIGINT NOT NULL DEFAULT 0,
       updated_at TIMESTAMPTZ DEFAULT now()
     )`,
+    /* Punches from biometric and face-recognition terminals. The id is
+       device|person|time, so a device re-sending its log (they do, after any
+       network drop) cannot double a punch. punch_at is the plant's wall-clock
+       time as text — a working day is decided on the plant's clock, never UTC. */
+    sql`CREATE TABLE IF NOT EXISTS hr_punches (
+      id TEXT PRIMARY KEY,
+      emp_id TEXT NOT NULL DEFAULT '',
+      user_id TEXT NOT NULL,
+      device_sn TEXT NOT NULL DEFAULT '',
+      punch_at TEXT NOT NULL,
+      method TEXT DEFAULT '',
+      direction TEXT DEFAULT '',
+      source TEXT DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`,
+    sql`CREATE INDEX IF NOT EXISTS hr_punches_emp_at ON hr_punches (emp_id, punch_at)`,
+    sql`CREATE INDEX IF NOT EXISTS hr_punches_user ON hr_punches (user_id)`,
+    /* Attendance terminals. A device that calls in before it is registered is
+       kept with registered=false so it can be approved from the IDMS — its
+       punches are refused (and so kept on the device) until then. */
+    sql`CREATE TABLE IF NOT EXISTS hr_devices (
+      sn TEXT PRIMARY KEY,
+      registered BOOLEAN NOT NULL DEFAULT false,
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      last_seen TIMESTAMPTZ,
+      last_ip TEXT DEFAULT '',
+      punches BIGINT NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`,
     sql`CREATE TABLE IF NOT EXISTS idms_settings (
       key TEXT PRIMARY KEY,
       data JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -324,7 +353,7 @@ export async function checkRole(token, roles) {
 export function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Auth-Token');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Auth-Token, X-Device-Key');
 }
 
 export function readBody(req) {

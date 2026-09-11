@@ -92,12 +92,19 @@ await wait(150);
 $('g-user').value = 'tester'; $('g-pass').value = 'password1';
 click($('g-go')); await wait(300);
 
+/* v120: the two uploads are tiles on the Bulk Upload screen, not menu entries */
 const masters = [...window.document.querySelectorAll('.mgroup')].find(g => /Masters/.test(g.textContent));
-check('Masters has a Customer PO bulk upload entry', !!masters && !!masters.querySelector('a[data-s="bulk_po"]'));
-check('Masters has a Sales Plan bulk upload entry', !!masters && !!masters.querySelector('a[data-s="bulk_salesplan"]'));
-
-go('bulk_po'); await wait(200);
+check('Masters no longer carries separate Customer PO / Sales Plan upload entries',
+  !!masters && !masters.querySelector('a[data-s="bulk_po"]') && !masters.querySelector('a[data-s="bulk_salesplan"]'));
+go('bulk_upload'); await wait(200);
+const tile = k => window.document.querySelector('#bu-tiles .bu-tile[data-kind="' + k + '"]');
+check('the Bulk Upload screen has a Customer PO tile and a Sales Plan tile', !!tile('order') && !!tile('salesplan'));
+check('tiles are grouped (Masters / Sales / People)', /Sales/.test($('bu-tiles').textContent) && /People/.test($('bu-tiles').textContent));
+check('no dropdown is shown to choose the category', $('bu-kind').style.display === 'none');
+click(tile('order')); await wait(150);
 check('it opens the Bulk Upload screen', window.document.querySelector('.panel.on') && window.document.querySelector('.panel.on').dataset.panel === 'bulk_upload');
+check('the tile opens its own upload view, with the tiles hidden', $('bu-work').style.display === '' && $('bu-home').style.display === 'none');
+check('the view names where the records go and offers that screen', /Customer PO/.test($('bu-workdest').textContent) && $('bu-open').dataset.screen === 'sales_plan');
 check('with Customer PO already chosen', $('bu-kind').value === 'order', $('bu-kind').value);
 check('the column notes are shown (dates are DD-MM-YYYY)', /DD-MM-YYYY/.test($('bu-kindhint').textContent));
 
@@ -142,7 +149,9 @@ check('value and tentatives are saved like the screen saves them', ot && ot.data
 check('found by internal part number, it still records the customer part number', ot && ot.data.custPartNo === 'AL-BR-9');
 
 /* ---- Sales Plan forecasts ---- */
-go('bulk_salesplan'); await wait(200);
+click($('bu-back')); await wait(80);
+check('back returns to the tiles', $('bu-home').style.display === '' && $('bu-work').style.display === 'none');
+click(tile('salesplan')); await wait(200);
 check('Sales Plan bulk upload opens with its category chosen', $('bu-kind').value === 'salesplan');
 const fcsv = [
   'Customer*,PartNo*,Month*,ForecastQty*',

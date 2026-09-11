@@ -17,7 +17,8 @@ database:
 | `kpi.js` | The KPI dashboards: chart engine, KPI registry, and the derivations that compute figures from records | IDMS |
 | `drawing-convert.js` | Turns a customer's PDF/DXF/PNG into the JPEG the drawing reader can read, in their browser, before upload | Website |
 | `core.js` / `core.css` | Shared plumbing and design system used by both | Both |
-| `api/*.js` | Vercel serverless functions | Both |
+| `api/*.js` | Vercel serverless functions — **12 routes, the Hobby-plan limit** (`_*.js` are helpers, not routes) | Both |
+| `vercel.json` | Only a rewrite: `/iclock/*` → `/api/device?proto=adms` for push attendance devices | — |
 
 The same code is deployed twice, once per customer company, each with **its own
 Neon database**. Elixir Tec (elixirtec.com) and Devasya Udyoga
@@ -1828,6 +1829,127 @@ are now displayed with an optional `intro`.
 `editdeletetest.mjs` corrected (22). Set `STRESS=1` when running
 `invoicetest.mjs` to also write `/tmp/invoice-stress.html` for the render check.
 
+## v120 — HR & Payroll native workspace, automatic attendance from devices, tile Bulk Upload
+
+### HR & Payroll is a tile workspace in the IDMS (`hr_payroll`), not the framed page
+
+The menu entry `emb_hr` (the website HR page in an iframe, which read as a remote
+desktop) is replaced by `hr_payroll`. `go('emb_hr')` redirects to it and a user
+whose saved permissions name `emb_hr` keeps access (`isPermitted`). The
+workspace is tiles (`HP_TILES`), each opening one of four ways:
+
+- `v:` a view built in this panel — **Attendance Register** and **Attendance Devices**;
+- `s:` an IDMS screen that already exists — Employees (`hrm`), DWM, Competency, Training;
+- `b:` a Bulk Upload category — Employee Bulk Upload, Import Device Log;
+- `e:` **one tab of the website HR engine**, framed inside the workspace with
+  `/?embed=hr&tab=<tab>`: Leave, Control Tower, Recruitment, Engagement, Exit &
+  F&F, Payroll, Statutory & Masters, KPI, Policies, Audit Readiness, Audit Trail.
+  `index.html` clicks that tab after `openTarget('hr')` and adds
+  `body.embed-onetab`, which hides its group buttons and tab bar.
+
+**Still on the website engine, deliberately:** payroll (the tax slabs, 87A,
+marginal relief, PF/ESI/PT/LWF, payslip PDFs, statutory forms), leave,
+statutory masters, recruitment, exit/F&F, policies, audit. They are rebuilt here
+one at a time and the website copy removed only after the IDMS copy is proven on
+live payroll figures — the plan in "Suggested next work" is unchanged, it has
+simply started with attendance.
+
+A status strip on the workspace shows devices reporting in the last 15
+minutes, punches today, people marked by device, unmatched device user IDs,
+overtime waiting, and devices calling in unregistered.
+
+### Automatic attendance: `api/device.js` + `api/_attendance.js`
+
+`_attendance.js` is pure (no DB) so the rules are tested exactly as they run;
+`device.js` stores. Tables `hr_punches` (id `device|user|time`, so a re-sent log
+cannot double) and `hr_devices` (serial, registered flag, data with `keyHash`,
+last seen/IP, punch count) are created by `ensureTables`.
+
+Three device protocols, because the company's equipment decides:
+
+| Equipment | Protocol | Identified by |
+|---|---|---|
+| ZKTeco, eSSL, Identix, Realtime (fingerprint or face) | ADMS push: `/iclock/cdata`, rewritten to `/api/device?proto=adms` by **`vercel.json`** | serial number, which must be registered |
+| Hikvision face terminals | HTTP listening event push (JSON or multipart), `?proto=hik&key=` | device key (only its SHA-256 is stored; shown once) |
+| Anything else (BioStar, COSEC, middleware) | `POST ?proto=json`, `X-Device-Key`, `{punches:[{userId,time}]}` | device key |
+
+An **unregistered ADMS device is refused with 403** — a refused device keeps its
+punches and retries, so nothing is lost — and is recorded with
+`registered=false` so HR registers it from the list instead of typing the
+serial. Optional allowed-IP list and an off switch per device.
+
+**Matching:** `employee.biometricId`, else `empId` (new field on People and in
+the employee upload; duplicates refused in both). Unmatched punches are stored
+with `emp_id=''` and listed; after the ID is added, **Mark this month again**
+(`what=reprocess`) re-matches them.
+
+**Marking a day** (`summariseDay`) from all of that person's punches for the
+working day: repeat scans within `dedupeMinutes` are one punch; first in, last
+out; worked = span − break (break only if span > 5 h); late beyond
+`leavePolicy.lateGraceMin`; half day when arriving later than
+`leavePolicy.halfDayAfterMin` or working under half the shift; a single punch is
+Present + `missedPunch` (or half day by policy); overtime beyond the shift in
+`otStepMinutes` steps, ignored under `otMinMinutes`. **Overtime waits for
+approval by default** (`otPendingHours`), because payroll pays `otHours`;
+`autoOt` counts it straight away. **Night shifts** (`end <= start`): a punch
+within 4 h after shift end belongs to the previous day (`workDayFor`). Shifts
+come from `site_content.shifts` by code or name; the late/half-day limits from
+`leavePolicy`; device rules, time zone and default shift from `idms_settings`
+key `attendance_devices`. Hikvision times carrying a zone are moved onto the
+plant's wall clock; all day arithmetic is wall-clock, never UTC.
+
+**The record written is the shape the HR sheet already writes** —
+`{empId, day, status, dayFraction, otHours, late}` plus detail — so the website
+payroll's `attendanceSummary()` counts device days unchanged. **A day with no
+`source`, or `source:'manual'`, is never overwritten** (`attendanceRecord`
+returns null); the device's in/out is noted on it instead. Approved overtime
+survives re-marking. Corrections on the register write `source:'manual'` with a
+required reason; "Use the punches again" hands a day back to the device.
+
+Staff routes (session): `what=devices` GET/POST/PATCH, `punches`, `import` (the
+Bulk Upload device log, same engine), `reprocess`, `approveOt`. Registering,
+removing, reprocessing and approving overtime need the developer role and are
+written to `hr_audit`.
+
+**Known limits, stated to the user:** (1) the IDMS is HTTPS-only, so a push
+device must support HTTPS; plain-HTTP-only units need the log import. (2)
+`api/device.js` is the **12th serverless function — the Vercel Hobby limit.**
+A 13th route must be merged into an existing file or needs a paid plan. (3)
+Devices that can only be *pulled* over the LAN (no push) are not reachable from
+the cloud; the CNC-gateway pattern could host a relay later.
+
+`tests/devicetest.mjs` drives the parsers and rules, then the **real handler**
+against `tests/fake-db.mjs`, swapped in for `_db.js` with a Node module hook.
+The fake throws on any SQL it does not recognise, so a new query must be added
+to it deliberately.
+
+### Bulk Upload is tiles
+
+`#bu-home` holds grouped square tiles (Masters / Sales / People & attendance),
+each with its own inline SVG (`BU_ICONS`); pressing one shows `#bu-work` with
+the category's template, column notes, preview, refusals and Import, plus where
+the records go (`screen`/`screenLabel` on each kind) and an Open button — also
+offered after a successful import. **`#bu-kind` is still a `<select>`, hidden,**
+so every existing handler and test that sets it keeps working; tiles set it and
+dispatch `change`. `openBulkUpload(kind)` opens a category from anywhere
+(Customer PO, Sales Plan, People, HR & Payroll). The Masters menu entries
+`bulk_po`/`bulk_salesplan` are gone. A kind may define `saveAll(goodRows, ctx)`
+to import in one call (device punches, 500 per request).
+
+New categories:
+- **Employees** → `/api/hr` employees. Never overwrites an ID on file; blank ID
+  takes the next in `hrMasters.empIdPrefix/Pad/NextSeq`; department and
+  designation checked against the org masters when those are in use, shift
+  against the shift master; unique Biometric ID; PAN/IFSC/UAN/phone/email forms;
+  refuses a joining age under 14; pay structure from the columns, or from
+  AnnualCTC with `salaryStructure` percentages (the website's `structureFromCtc`).
+- **Attendance punches** → `/api/device?what=import`.
+
+### Tests
+
+`devicetest.mjs` (56), `hrpayrolltest.mjs` (66); `bulkpotest.mjs` updated for
+tiles (38).
+
 ---
 
 ## Conventions
@@ -1930,8 +2052,9 @@ Useful smoke checks after any change:
 
 ## Suggested next work, in dependency order
 
-1. **Finish moving HR into `idms.html`** — People is done and reads the same
-   `/api/hr`. Attendance, leave and payroll remain on the website. Note that HR
+1. **Finish moving HR into `idms.html`** — People, the Attendance Register and
+   device attendance are done and read the same `/api/hr`. Leave and payroll
+   remain on the website engine, opened tab by tab inside HR & Payroll. Note that HR
    code in `index.html` is **not contiguous**: 48 HR functions are interleaved
    with 263 unrelated ones across ~8,000 lines, so a mechanical lift is not
    possible. Rebuild each screen against the shared API instead, one at a time,

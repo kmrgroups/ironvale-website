@@ -50,7 +50,8 @@
     if (n) out += twoDigitWords(n);
     return out;
   }
-  function numberToWords(n) {
+  function numberToWords(n, currency) {
+    if (currency === 'USD') return dollarsToWords(n);
     n = Math.round(num(n) * 100) / 100;
     const rupees = Math.floor(n), paise = Math.round((n - rupees) * 100);
     if (rupees === 0 && paise === 0) return 'Indian Rupees Zero Only';
@@ -65,6 +66,24 @@
     if (hundred) parts.push(threeDigitWords(hundred));
     var out = 'Indian Rupees ' + (parts.join(' ') || 'Zero');
     if (paise) out += ' and ' + threeDigitWords(paise) + ' Paise';
+    return out + ' Only';
+  }
+  /* A dollar invoice is read in the international scale — million, not lakh.
+     Writing "Ten Lakh US Dollars" on an export invoice is the kind of thing a
+     customer's accounts department sends back. */
+  function dollarsToWords(n) {
+    n = Math.round(num(n) * 100) / 100;
+    const whole = Math.floor(n), cents = Math.round((n - whole) * 100);
+    var r = whole, parts = [];
+    const billion = Math.floor(r / 1000000000); r %= 1000000000;
+    const million = Math.floor(r / 1000000); r %= 1000000;
+    const thousand = Math.floor(r / 1000); r %= 1000;
+    if (billion) parts.push(threeDigitWords(billion) + ' Billion');
+    if (million) parts.push(threeDigitWords(million) + ' Million');
+    if (thousand) parts.push(threeDigitWords(thousand) + ' Thousand');
+    if (r) parts.push(threeDigitWords(r));
+    var out = 'US Dollars ' + (parts.join(' ') || 'Zero');
+    if (cents) out += ' and ' + twoDigitWords(cents) + ' Cents';
     return out + ' Only';
   }
 
@@ -99,27 +118,25 @@
   }
 
   /* ---------------- session ----------------
-     sessionStorage, deliberately, so a session belongs to ONE tab. Opening a
-     menu link in a new tab or window (right-click → Open Link in New Tab)
-     starts a fresh top-level browsing context with its own, empty
-     sessionStorage, so that tab asks for a sign-in of its own even though it
-     is the same person in the same browser.
+     The token lives in sessionStorage, so it dies with the browser and is
+     never written anywhere a closed-and-reopened browser could find it.
 
-     This reverses an earlier choice of localStorage, which was made so a
-     token would survive exactly that. It was changed on an explicit
-     requirement: a second tab must not inherit the first tab's session. It
-     also matches the standing requirement that the sign-in is never saved by
-     the browser and never auto-logs-in on opening.
+     A tab opened from a tab that is already signed in (right-click → Open
+     Link in New Tab / New Window, ctrl-click, middle-click) does NOT ask for
+     a second sign-in — that was an explicit requirement, and it reverses the
+     earlier one-sign-in-per-tab rule. It works by asking, not by storing:
+     the new tab calls out on a same-origin BroadcastChannel and any tab of
+     this system that is signed in answers with its token (see shareSession()
+     and askOpenTabs() below). If no signed-in tab is open, nobody answers and
+     the sign-in screen stands exactly as before.
 
-     Consequence worth knowing: closing and reopening the tab now signs the
-     person out, and so does a browser restart. That is the intended trade.
-     checkSession() still asks the server whether the token is good, so a
-     revoked or expired session is caught either way — this only changes where
-     the token lives, not whether it is trusted blindly.
+     So the two standing rules still hold: the browser never saves or refills
+     the sign-in, and opening the system with no signed-in tab already open
+     signs nobody in. Closing the last tab is still signing out.
 
-     The website (index.html) keeps its own token under this same key name in
-     localStorage; the two no longer collide, because they are now different
-     storage areas entirely. */
+     checkSession() still asks the server whether a token is good, so a token
+     handed over by another tab is checked before it is used, never trusted
+     blindly. */
   const TOKEN_KEY = 'app_token';
   let token = '';
   try { token = sessionStorage.getItem(TOKEN_KEY) || ''; } catch (e) { token = ''; }
@@ -178,10 +195,71 @@
   }
 
   async function signOut() {
+    const was = token;
     try {
       await api('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'logout' }) });
     } catch (e) { /* the local token goes either way */ }
     setToken('');
+    /* Every tab using this session is now holding a dead token. Tell them,
+       so they return to the sign-in screen at once instead of failing on
+       their next save with "your session has ended". */
+    if (was) tabPost({ type: 'signed-out', token: was });
+  }
+
+  /* ---------------- sharing a session with tabs opened from this one -------
+     One channel, same-origin only (the browser enforces that). Three messages:
+       ask        a new tab asking whether anybody here is signed in
+       answer     a signed-in tab replying, with its token, to that ask
+       signed-out a tab that signed out, naming the token that is now dead
+     A tab only answers while it is actually signed in to the app — a tab
+     sitting on the sign-in screen has nothing to give. */
+  const TAB_CHANNEL = 'idms-session';
+  let tabChannel = null;
+  try { tabChannel = typeof BroadcastChannel === 'function' ? new BroadcastChannel(TAB_CHANNEL) : null; }
+  catch (e) { tabChannel = null; }
+  let shareWhile = null;             // () => boolean — is this tab signed in right now?
+  let onSignedOutElsewhere = null;   // called when another tab ends the session we share
+  function tabPost(msg) {
+    try { if (tabChannel) tabChannel.postMessage(msg); } catch (e) { /* nothing to tell */ }
+  }
+  if (tabChannel) {
+    tabChannel.addEventListener('message', ev => {
+      const m = ev.data || {};
+      if (m.type === 'ask' && token && shareWhile && shareWhile()) {
+        tabPost({ type: 'answer', nonce: m.nonce, token: token });
+      }
+      if (m.type === 'signed-out' && m.token && m.token === token) {
+        setToken('');
+        if (onSignedOutElsewhere) onSignedOutElsewhere();
+      }
+    });
+  }
+  /* Called by a signed-in page: answer asks while isSignedIn() says so. */
+  function shareSession(isSignedIn, signedOutElsewhere) {
+    shareWhile = isSignedIn;
+    onSignedOutElsewhere = signedOutElsewhere || null;
+  }
+  /* Called by a page as it opens: resolves with a token from an open,
+     signed-in tab, or '' if none answers within waitMs. The first answer
+     wins; every answer carries the same shared session anyway. */
+  function askOpenTabs(waitMs) {
+    return new Promise(resolve => {
+      if (!tabChannel) return resolve('');
+      const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      let done = false;
+      const finish = t => {
+        if (done) return; done = true;
+        try { tabChannel.removeEventListener('message', hear); } catch (e) {}
+        resolve(t || '');
+      };
+      const hear = ev => {
+        const m = ev.data || {};
+        if (m.type === 'answer' && m.nonce === nonce && m.token) finish(m.token);
+      };
+      tabChannel.addEventListener('message', hear);
+      tabPost({ type: 'ask', nonce: nonce });
+      setTimeout(() => finish(''), waitMs || 600);
+    });
   }
 
   async function signIn(user, pass) {
@@ -318,12 +396,18 @@
   async function uploadFile(file) {
     if (file.size > 6 * 1024 * 1024)
       throw new Error('That file is ' + Math.round(file.size / 1048576) + 'MB. The limit is 6MB.');
-    const dataUrl = await new Promise((ok, no) => {
+    let dataUrl = await new Promise((ok, no) => {
       const r = new FileReader();
       r.onload = () => ok(r.result);
       r.onerror = () => no(new Error('The file could not be read.'));
       r.readAsDataURL(file);
     });
+    /* Some files arrive with no type at all (a .docx saved by certain tools,
+       a .csv on some Windows set-ups), which makes the data URL read
+       "data:;base64," — the store refuses that, and the upload failed with a
+       message about data URLs nobody could act on. Store it as a plain file. */
+    if (/^data:;base64,/.test(String(dataUrl)))
+      dataUrl = 'data:application/octet-stream;base64,' + String(dataUrl).slice(13);
     const j = await api('/api/assets', { method:'POST', body: JSON.stringify({ dataUrl: dataUrl }) });
     return { url: j.url || j.src || ('/api/assets?id=' + j.id), id: j.id,
              name: file.name, size: file.size, mime: file.type };
@@ -907,16 +991,229 @@
     });
   }
 
+  /* ---------------- QR codes, drawn here ----------------
+     Invoices carry two: the e-invoice QR (the signed string the GST portal
+     returns) and a UPI payment QR. Both hold figures that must not be sent to
+     a third-party image service — an invoice value, two GSTINs, a bank's UPI
+     handle — so the code is generated in the browser. This is the standard
+     ISO/IEC 18004 construction in byte mode (the same algorithm as Project
+     Nayuki's reference encoder): versions 1–40, Reed–Solomon error correction,
+     all eight masks tried and the lowest-penalty one kept. Returns SVG markup
+     with a four-module quiet zone, or '' if the text is too long for any
+     version. */
+  const QR_ECC_PER_BLOCK = [
+    [-1,7,10,15,20,26,18,20,24,30,18,20,24,26,30,22,24,28,30,28,28,28,28,30,30,26,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+    [-1,10,16,26,18,24,16,18,22,22,26,30,22,22,24,24,28,28,26,26,26,26,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28],
+    [-1,13,22,18,26,18,24,18,22,20,24,28,26,24,20,30,24,28,28,26,30,28,30,30,30,30,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+    [-1,17,28,22,16,22,28,26,26,24,28,24,28,22,24,24,30,28,28,26,28,30,24,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]];
+  const QR_NUM_BLOCKS = [
+    [-1,1,1,1,1,1,2,2,2,2,4,4,4,4,4,6,6,6,6,7,8,8,9,9,10,12,12,12,13,14,15,16,17,18,19,19,20,21,22,24,25],
+    [-1,1,1,1,2,2,4,4,4,5,5,5,8,9,9,10,10,11,13,14,16,17,17,18,20,21,23,25,26,28,29,31,33,35,37,38,40,43,45,47,49],
+    [-1,1,1,2,2,4,4,6,6,8,8,8,10,12,16,12,17,16,18,21,20,23,23,25,27,29,34,34,35,38,40,43,45,48,51,53,56,59,62,65,68],
+    [-1,1,1,2,4,4,4,5,6,8,8,11,11,16,16,18,16,19,21,25,25,25,34,30,32,35,37,40,42,45,48,51,54,57,60,63,66,70,74,77,81]];
+  const QR_FORMAT_ECL = [1, 0, 3, 2];   // L, M, Q, H as written into the format bits
+
+  function qrMatrix(text, eclIndex) {
+    const ecl = eclIndex == null ? 1 : eclIndex;
+    const bytes = Array.from(new TextEncoder().encode(String(text)));
+    const rawModules = v => {
+      let r = (16 * v + 128) * v + 64;
+      if (v >= 2) { const na = Math.floor(v / 7) + 2; r -= (25 * na - 10) * na - 55; if (v >= 7) r -= 36; }
+      return r;
+    };
+    const dataCodewords = v => Math.floor(rawModules(v) / 8) - QR_ECC_PER_BLOCK[ecl][v] * QR_NUM_BLOCKS[ecl][v];
+    let ver = 0;
+    for (let v = 1; v <= 40; v++) {
+      const need = 4 + (v < 10 ? 8 : 16) + bytes.length * 8;
+      if (need <= dataCodewords(v) * 8) { ver = v; break; }
+    }
+    if (!ver) return null;
+
+    /* the bit stream: byte mode, count, data, terminator, padding */
+    const bits = [];
+    const push = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+    push(4, 4); push(bytes.length, ver < 10 ? 8 : 16);
+    bytes.forEach(b => push(b, 8));
+    const cap = dataCodewords(ver) * 8;
+    push(0, Math.min(4, cap - bits.length));
+    push(0, (8 - bits.length % 8) % 8);
+    for (let pad = 0xEC; bits.length < cap; pad ^= 0xEC ^ 0x11) push(pad, 8);
+    const data = [];
+    for (let i = 0; i < bits.length; i += 8) {
+      let b = 0; for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j]; data.push(b);
+    }
+
+    /* Reed–Solomon over GF(256), polynomial 0x11D */
+    const mul = (x, y) => { let z = 0; for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; } return z; };
+    const divisor = deg => {
+      const r = []; for (let i = 0; i < deg - 1; i++) r.push(0); r.push(1);
+      let root = 1;
+      for (let i = 0; i < deg; i++) {
+        for (let j = 0; j < r.length; j++) { r[j] = mul(r[j], root); if (j + 1 < r.length) r[j] ^= r[j + 1]; }
+        root = mul(root, 0x02);
+      }
+      return r;
+    };
+    const remainder = (dat, div) => {
+      const r = div.map(() => 0);
+      dat.forEach(b => { const f = b ^ r.shift(); r.push(0); div.forEach((c, i) => { r[i] ^= mul(c, f); }); });
+      return r;
+    };
+    const numBlocks = QR_NUM_BLOCKS[ecl][ver], eccLen = QR_ECC_PER_BLOCK[ecl][ver];
+    const rawCw = Math.floor(rawModules(ver) / 8);
+    const numShort = numBlocks - rawCw % numBlocks, shortLen = Math.floor(rawCw / numBlocks);
+    const div = divisor(eccLen), blocks = [];
+    for (let i = 0, k = 0; i < numBlocks; i++) {
+      const dat = data.slice(k, k + shortLen - eccLen + (i < numShort ? 0 : 1));
+      k += dat.length;
+      const ecc = remainder(dat, div);
+      if (i < numShort) dat.push(0);
+      blocks.push(dat.concat(ecc));
+    }
+    const all = [];
+    for (let i = 0; i < blocks[0].length; i++)
+      blocks.forEach((blk, j) => { if (i !== shortLen - eccLen || j >= numShort) all.push(blk[i]); });
+
+    /* the grid */
+    const size = ver * 4 + 17;
+    const mod = [], fn = [];
+    for (let y = 0; y < size; y++) { mod.push(new Array(size).fill(false)); fn.push(new Array(size).fill(false)); }
+    const setF = (x, y, dark) => { mod[y][x] = dark; fn[y][x] = true; };
+    const bit = (v, i) => ((v >>> i) & 1) !== 0;
+    for (let i = 0; i < size; i++) { setF(6, i, i % 2 === 0); setF(i, 6, i % 2 === 0); }
+    const finder = (cx, cy) => {
+      for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+        const d = Math.max(Math.abs(dx), Math.abs(dy)), x = cx + dx, y = cy + dy;
+        if (x >= 0 && x < size && y >= 0 && y < size) setF(x, y, d !== 2 && d !== 4);
+      }
+    };
+    finder(3, 3); finder(size - 4, 3); finder(3, size - 4);
+    const align = [];
+    if (ver > 1) {
+      const na = Math.floor(ver / 7) + 2;
+      const step = ver === 32 ? 26 : Math.ceil((ver * 4 + 4) / (na * 2 - 2)) * 2;
+      align.push(6);
+      for (let pos = size - 7; align.length < na; pos -= step) align.splice(1, 0, pos);
+    }
+    align.forEach((ay, i) => align.forEach((ax, j) => {
+      if ((i === 0 && j === 0) || (i === 0 && j === align.length - 1) || (i === align.length - 1 && j === 0)) return;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++)
+        setF(ax + dx, ay + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+    }));
+    const formatBits = mask => {
+      const d = QR_FORMAT_ECL[ecl] << 3 | mask;
+      let rem = d;
+      for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+      const b = (d << 10 | rem) ^ 0x5412;
+      for (let i = 0; i <= 5; i++) setF(8, i, bit(b, i));
+      setF(8, 7, bit(b, 6)); setF(8, 8, bit(b, 7)); setF(7, 8, bit(b, 8));
+      for (let i = 9; i < 15; i++) setF(14 - i, 8, bit(b, i));
+      for (let i = 0; i < 8; i++) setF(size - 1 - i, 8, bit(b, i));
+      for (let i = 8; i < 15; i++) setF(8, size - 15 + i, bit(b, i));
+      setF(8, size - 8, true);
+    };
+    formatBits(0);
+    if (ver >= 7) {
+      let rem = ver;
+      for (let i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1F25);
+      const b = ver << 12 | rem;
+      for (let i = 0; i < 18; i++) {
+        const a = size - 11 + i % 3, c = Math.floor(i / 3);
+        setF(a, c, bit(b, i)); setF(c, a, bit(b, i));
+      }
+    }
+    let n = 0;
+    for (let right = size - 1; right >= 1; right -= 2) {
+      if (right === 6) right = 5;
+      for (let vert = 0; vert < size; vert++) for (let j = 0; j < 2; j++) {
+        const x = right - j, up = ((right + 1) & 2) === 0, y = up ? size - 1 - vert : vert;
+        if (!fn[y][x] && n < all.length * 8) { mod[y][x] = bit(all[n >>> 3], 7 - (n & 7)); n++; }
+      }
+    }
+    const applyMask = m => {
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        let inv;
+        switch (m) {
+          case 0: inv = (x + y) % 2 === 0; break;
+          case 1: inv = y % 2 === 0; break;
+          case 2: inv = x % 3 === 0; break;
+          case 3: inv = (x + y) % 3 === 0; break;
+          case 4: inv = (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0; break;
+          case 5: inv = x * y % 2 + x * y % 3 === 0; break;
+          case 6: inv = (x * y % 2 + x * y % 3) % 2 === 0; break;
+          default: inv = ((x + y) % 2 + x * y % 3) % 2 === 0;
+        }
+        if (inv && !fn[y][x]) mod[y][x] = !mod[y][x];
+      }
+    };
+    const penalty = () => {
+      let score = 0;
+      const addHist = (len, h) => { if (h[0] === 0) len += size; h.pop(); h.unshift(len); };
+      const count = h => {
+        const k = h[1], core = k > 0 && h[2] === k && h[3] === k * 3 && h[4] === k && h[5] === k;
+        return (core && h[0] >= k * 4 && h[6] >= k ? 1 : 0) + (core && h[6] >= k * 4 && h[0] >= k ? 1 : 0);
+      };
+      const terminate = (color, len, h) => { if (color) { addHist(len, h); len = 0; } len += size; addHist(len, h); return count(h); };
+      for (let pass = 0; pass < 2; pass++) {
+        for (let a = 0; a < size; a++) {
+          let color = false, run = 0; const h = [0, 0, 0, 0, 0, 0, 0];
+          for (let b = 0; b < size; b++) {
+            const cell = pass === 0 ? mod[a][b] : mod[b][a];
+            if (cell === color) { run++; if (run === 5) score += 3; else if (run > 5) score++; }
+            else { addHist(run, h); if (!color) score += count(h) * 40; color = cell; run = 1; }
+          }
+          score += terminate(color, run, h) * 40;
+        }
+      }
+      let dark = 0;
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        if (mod[y][x]) dark++;
+        if (y < size - 1 && x < size - 1) {
+          const c = mod[y][x];
+          if (c === mod[y][x + 1] && c === mod[y + 1][x] && c === mod[y + 1][x + 1]) score += 3;
+        }
+      }
+      const total = size * size;
+      score += (Math.ceil(Math.abs(dark * 20 - total * 10) / total) - 1) * 10;
+      return score;
+    };
+    let best = 0, bestScore = Infinity;
+    for (let m = 0; m < 8; m++) {
+      applyMask(m); formatBits(m);
+      const s = penalty();
+      if (s < bestScore) { best = m; bestScore = s; }
+      applyMask(m);
+    }
+    applyMask(best); formatBits(best);
+    return { size: size, version: ver, modules: mod };
+  }
+
+  function qrSvg(text, opts) {
+    opts = opts || {};
+    let q = qrMatrix(text, 1);
+    if (!q) q = qrMatrix(text, 0);          // too long at M — L holds a little more
+    if (!q) return '';
+    const border = 4, dim = q.size + border * 2;
+    let d = '';
+    for (let y = 0; y < q.size; y++) for (let x = 0; x < q.size; x++)
+      if (q.modules[y][x]) d += 'M' + (x + border) + ',' + (y + border) + 'h1v1h-1z';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + dim + ' ' + dim + '"' +
+      ' shape-rendering="crispEdges"' + (opts.size ? ' width="' + opts.size + '" height="' + opts.size + '"' : '') +
+      ' role="img" aria-label="' + esc(opts.label || 'QR code') + '">' +
+      '<rect width="' + dim + '" height="' + dim + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+  }
+
   root.Core = {
     esc: esc, num: num, inr: inr, qty: qty, rate: rate, money: money, numberToWords: numberToWords,
     fmtDate: fmtDate, dayKey: dayKey,
     newId: newId, toast: toast,
     api: api, signIn: signIn, verifyCode: verifyCode, setToken: setToken, getToken: getToken,
     checkSession: checkSession, signOut: signOut,
+    shareSession: shareSession, askOpenTabs: askOpenTabs, qrSvg: qrSvg,
     otpRequest: otpRequest, forgotStart: forgotStart, forgotReset: forgotReset,
     faceLogin: faceLogin, faceEnroll: faceEnroll, faceForget: faceForget,
     idms: idms, loadProfile: loadProfile, getProfile: getProfile, docNumber: docNumber,
-    gstStateCode: gstStateCode, gstStateName: gstStateName,
+    gstStateCode: gstStateCode, gstStateName: gstStateName, gstStates: GST_STATE,
     openReport: openReport, callAI: callAI, uploadFile: uploadFile,
     parseAiJson: parseAiJson, stripMarkup: stripMarkup,
     setFavicon: setFavicon,

@@ -408,6 +408,18 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   overflow:hidden;text-overflow:ellipsis}
 .bu-t tr.bad td{background:#fdf1ef}
 .bu-row-err{color:#B03A2E;font-size:11px}
+/* ---- sales invoice ---- */
+.iv-sec{margin:16px 0 6px;padding-top:10px;border-top:1px solid var(--line,#d8dde6);font-weight:700;font-size:12px;color:var(--navy)}
+.iv-sec .hint{font-weight:400}
+/* the working lines and totals are drawn with full cell borders, like the
+   printed invoice, so what is checked on screen looks like what is printed */
+table.iv-grid{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;margin-top:6px}
+table.iv-grid th,table.iv-grid td{border:1px solid #c9d1dc;padding:5px 6px;vertical-align:top;
+  overflow-wrap:anywhere;word-break:break-word}
+table.iv-grid th{background:#eef2f7;text-align:left;font-size:11px;color:#41567E}
+table.iv-grid .r{text-align:right}
+table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
+#iv-settings summary{cursor:pointer}
 .bu-summary{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px}
 .bu-summary b{font-size:20px;display:block}
 .bu-summary .ok b{color:#1F9D6B}
@@ -2158,9 +2170,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
             <input type="date" id="so-validto"></div>
         </div>
         <div class="row four" id="so-tentwrap" style="margin-top:9px;">
-          <div><label id="so-t1-label">Tentative — next month</label>
+          <div><label id="so-t1-label">Tentative — month after delivery</label>
             <input class="num" id="so-t1"></div>
-          <div><label id="so-t2-label">Tentative — month after</label>
+          <div><label id="so-t2-label">Tentative — two months after delivery</label>
             <input class="num" id="so-t2"></div>
           <div style="grid-column:span 2;align-self:end;"><span class="hint">Quantities the customer
             has indicated but not yet ordered. They become demand in the Sales Plan for those two
@@ -2184,7 +2196,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <button class="btn so-tab active" data-tab="live">Live</button>
           <button class="btn so-tab" data-tab="obsolete">Obsolete</button>
           <button class="btn so-tab" data-tab="closed">Order closed</button>
-          <div style="align-self:end;margin-left:auto;"><button class="btn" id="so-print">Print order book</button></div>
+          <div style="align-self:end;margin-left:auto;"><button class="btn" id="so-bulk">Bulk upload POs</button>
+            <button class="btn" id="so-print" style="margin-left:6px;">Print order book</button></div>
         </div>
         <h4 id="so-list-title">Customer PO register — live</h4>
         <div id="so-list"></div>
@@ -2206,7 +2219,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <div><label>Plan month</label><input type="month" id="spm-filter-month"></div>
           <div><label>Customer</label><select id="spm-filter-cust"><option value="">All customers</option></select></div>
           <div style="align-self:end;"><button class="btn" id="spm-refresh">Show</button></div>
-          <div style="align-self:end;"><button class="btn" id="spm-print">Print register</button></div>
+          <div style="align-self:end;"><button class="btn" id="spm-print">Print register</button>
+            <button class="btn" id="spm-bulk" style="margin-left:6px;">Bulk upload forecasts</button></div>
         </div>
         <h4>Sales Plan register</h4>
         <div class="hint" style="margin-bottom:10px;">Demand quantity is the total of every Customer
@@ -2226,12 +2240,13 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     <div class="panel" data-panel="sales_invoice">
       <div class="card">
         <h4>Sales Invoice</h4>
-        <div class="hint" style="margin-bottom:10px;">Raising this creates a real invoice — one
-          customer, one invoice number, one or more parts on it — and generates the printable document
-          itself. Every line on it becomes dispatched quantity the moment it is saved: Sales Plan and
-          the dashboards read straight from these lines, so nothing is entered twice. If a line takes a
-          customer/part past what was demanded for that month, it is flagged here and on the dashboard
-          as excess, not silently absorbed into the total.</div>
+        <div class="hint" style="margin-bottom:10px;">Raising this creates a real tax invoice — one
+          customer, one invoice number, one or more parts on it — and prints it. Every line becomes
+          dispatched quantity the moment it is saved: Sales Plan and the dashboards read straight from
+          these lines, so nothing is entered twice. Each line is raised against a Customer PO, chosen
+          from the POs on file for that customer and part; the PO number and date on the invoice come
+          from there, never retyped. A line that takes a customer/part past that month's demand is
+          flagged as excess, not silently absorbed into the total.</div>
         <div class="row four">
           <div><label>Customer</label><select id="iv-cust"></select></div>
           <div><label>Invoice number</label><input id="iv-no" placeholder="left blank = generated"></div>
@@ -2239,11 +2254,43 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           <div><label>GST %</label><input class="num" id="iv-gst" value="18"></div>
         </div>
         <div class="row four" style="margin-top:9px;">
-          <div><label>Customer PO No. <span class="hint">(optional)</span></label><input id="iv-custpo"></div>
-          <div><label>PO date <span class="hint">(optional)</span></label><input type="date" id="iv-custpodate"></div>
+          <div><label>Customer PO No. <span class="hint">(from the lines)</span></label><input id="iv-custpo" disabled></div>
+          <div><label>PO date <span class="hint">(from the lines)</span></label><input id="iv-custpodate" disabled></div>
           <div><label>Payment terms <span class="hint">(from customer, editable)</span></label><input id="iv-terms"></div>
-          <div><label>Place of supply <span class="hint">(from customer GSTIN)</span></label><input id="iv-pos" disabled></div>
+          <div><label>Due date <span class="hint">(from the terms, editable)</span></label><input type="date" id="iv-due"></div>
         </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Place of supply</label><select id="iv-pos"></select></div>
+          <div><label>Reverse charge</label><select id="iv-rcm"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+          <div><label>Cess % <span class="hint">(only if applicable)</span></label><input class="num" id="iv-cess"></div>
+          <div><label>Tax split <span class="hint">(worked out)</span></label><input id="iv-taxsplit" disabled></div>
+        </div>
+
+        <div class="iv-sec">Ship to <span class="hint">— filled from the customer; change it when the goods go somewhere else</span></div>
+        <div class="row four">
+          <div><label>Delivery location</label><input id="iv-shipname"></div>
+          <div><label>Delivery address</label><input id="iv-shipaddr"></div>
+          <div><label>GSTIN <span class="hint">(if applicable)</span></label><input id="iv-shipgstin"></div>
+          <div><label>Contact person</label><input id="iv-shipcontact"></div>
+        </div>
+
+        <div class="iv-sec">Charges <span class="hint">— discount and charges go into the taxable value, as GST requires</span></div>
+        <div class="row four">
+          <div><label>Discount</label><input class="num" id="iv-discount"></div>
+          <div><label>Freight</label><input class="num" id="iv-freight"></div>
+          <div><label>Packing / forwarding</label><input class="num" id="iv-packing"></div>
+          <div><label>Other charges</label><input class="num" id="iv-other"></div>
+        </div>
+
+        <div class="iv-sec">E-invoice <span class="hint">— only if applicable: copy these from the e-invoice portal once the IRN is generated</span></div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>IRN</label><input id="iv-irn" maxlength="64"></div>
+          <div><label>Ack. No.</label><input id="iv-ackno"></div>
+          <div><label>Ack. date &amp; time</label><input type="datetime-local" id="iv-ackdate"></div>
+        </div>
+        <div style="margin-top:9px;"><label>Signed QR code text <span class="hint">(paste the signed QR
+          string; the QR code on the invoice is drawn from it)</span></label>
+          <textarea id="iv-einvqr" rows="2"></textarea></div>
         <div class="note bad" id="iv-msg" style="display:none;margin-top:10px;"></div>
       </div>
 
@@ -2251,28 +2298,67 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         <h4>Lines on this invoice</h4>
         <div class="row four">
           <div><label>Part</label><select id="iv-part"></select></div>
+          <div><label>Customer PO</label><select id="iv-po"><option value="">— choose the part first —</option></select></div>
           <div><label>Customer Part No.</label><input id="iv-custpartno" disabled></div>
           <div><label>Qty</label><input class="num" id="iv-qty"></div>
-          <div><label>Rate</label><input class="num" id="iv-rate"></div>
         </div>
+        <div class="hint" id="iv-pohint" style="margin-top:5px;"></div>
         <div class="row four" style="margin-top:9px;">
+          <div><label>Rate</label><input class="num" id="iv-rate"></div>
           <div><label>Currency</label><select id="iv-currency"><option value="INR">INR — ₹</option>
             <option value="USD">USD — $</option></select></div>
+          <div><label>UOM</label><select id="iv-uom"><option value="Nos">Nos</option><option value="Set">Set</option>
+            <option value="Pair">Pair</option><option value="Kg">Kg</option><option value="Metre">Metre</option>
+            <option value="Litre">Litre</option></select></div>
           <div style="align-self:end;"><button class="btn gold" id="iv-addline">Add line</button></div>
         </div>
+        <div class="iv-sec">Manufacturing / traceability <span class="hint">— optional, printed on the invoice for this line</span></div>
+        <div class="row four">
+          <div><label>Batch / Lot No.</label><input id="iv-batch"></div>
+          <div><label>Heat No.</label><input id="iv-heat"></div>
+          <div><label>Material grade</label><input id="iv-material"></div>
+          <div><label>Delivery challan no.</label><input id="iv-challan"></div>
+        </div>
         <div class="row four" style="margin-top:9px;">
-          <div><label>Batch / Lot No. <span class="hint">(optional)</span></label><input id="iv-batch"></div>
-          <div><label>Heat No. <span class="hint">(optional)</span></label><input id="iv-heat"></div>
-          <div><label>Material grade <span class="hint">(optional)</span></label><input id="iv-material"></div>
-          <div><label>Delivery challan no. <span class="hint">(optional)</span></label><input id="iv-challan"></div>
+          <div><label>Manufacturing date</label><input type="date" id="iv-mfgdate"></div>
+          <div><label>Inspection status</label><select id="iv-inspection"><option value="">—</option>
+            <option value="Approved">Approved</option><option value="Accepted under deviation">Accepted under deviation</option>
+            <option value="As applicable">As applicable</option></select></div>
+          <div style="grid-column:span 2;"><label>Packing / box nos.</label><input id="iv-boxes"></div>
         </div>
         <div class="note bad" id="iv-linemsg" style="display:none;margin-top:10px;"></div>
         <div id="iv-lines" style="margin-top:12px;"></div>
-        <div id="iv-totals" class="hint" style="margin-top:10px;"></div>
+        <div id="iv-totals" style="margin-top:10px;"></div>
         <div style="margin-top:12px;">
           <button class="btn gold" id="iv-save">Save &amp; generate invoice</button>
           <button class="btn" id="iv-clear" style="margin-left:6px;">Start over</button>
         </div>
+      </div>
+
+      <div class="card">
+        <details id="iv-settings">
+          <summary><b>Invoice settings</b> <span class="hint">— UPI, terms, jurisdiction and copies, set once for every invoice</span></summary>
+          <div class="hint" style="margin:10px 0;">Company name, address, GSTIN, PAN, phone, email, website and
+            bank account come from the Company Profile. What only the invoice needs is kept here.</div>
+          <div class="row four">
+            <div><label>UPI ID <span class="hint">(prints a payment QR on INR invoices)</span></label><input id="ivs-upi" placeholder="name@bank"></div>
+            <div><label>Jurisdiction <span class="hint">(city for disputes)</span></label><input id="ivs-jur"></div>
+            <div><label>Place <span class="hint">(signature block)</span></label><input id="ivs-place"></div>
+            <div><label>Copies printed</label><select id="ivs-copies">
+              <option value="1">Original only</option>
+              <option value="3">Original, Duplicate and Triplicate</option></select></div>
+          </div>
+          <div class="row four" style="margin-top:9px;">
+            <div><label>Bank details on invoice</label><select id="ivs-bank"><option value="Yes">Show</option><option value="No">Do not show</option></select></div>
+            <div><label>Authorised signatory</label><input id="ivs-signname"></div>
+            <div><label>Designation</label><input id="ivs-signtitle"></div>
+          </div>
+          <div style="margin-top:9px;"><label>Terms &amp; conditions <span class="hint">(one per line; the
+            jurisdiction line is added from the box above)</span></label>
+            <textarea id="ivs-terms" rows="6"></textarea></div>
+          <div style="margin-top:10px;"><button class="btn gold" id="ivs-save">Save invoice settings</button></div>
+          <div class="note" id="ivs-msg" style="display:none;margin-top:10px;"></div>
+        </details>
       </div>
 
       <div class="card">
@@ -3702,7 +3788,12 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
          Report, because a gauge without a calibration due date is not usable —
          so adding one and scheduling its calibration are one screen, not two. */
       ['report_calibration','📏','Equipment / Instruments / Gauges (Calibration Report)',1],
-      ['bulk_upload','⬆','Bulk Upload',1]]],
+      ['bulk_upload','⬆','Bulk Upload',1],
+      /* Both open the one Bulk Upload screen with the category already chosen —
+         the same engine, the same preview and the same row-by-row refusals,
+         not two more upload screens. */
+      ['bulk_po','⬆','Customer PO Bulk Upload',1],
+      ['bulk_salesplan','⬆','Sales Plan Bulk Upload',1]]],
     ['marketing','📣','Marketing','Enquiry to order',[
       ['dash_marketing','📊','Marketing Dashboard',1],
       ['emb_pipeline','📨','RFQ Pipeline',1]]],
@@ -3798,7 +3889,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     doc_master_pfd: 'masterlist', doc_master_pfmea: 'masterlist', doc_master_cp: 'masterlist',
     kpi_entry: 'kpi_entry', admin_banner: 'admin_banner',
     admin_backup: 'admin_backup', admin_sample: 'admin_sample',
-    admin_site: 'embed', emb_pipeline: 'embed', emb_hr: 'embed'
+    admin_site: 'embed', emb_pipeline: 'embed', emb_hr: 'embed',
+    bulk_po: 'bulk_upload', bulk_salesplan: 'bulk_upload'
   };
   (window.KPIX ? window.KPIX.DEPTS : []).forEach(function (d) { PANEL_OF['dash_' + d.key] = 'kpidash'; });
 
@@ -3939,7 +4031,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (s === 'cnc_live')       loadCncLive();
     if (s === 'cnc_setup')      loadCncSetup();
     if (s === 'attendance_lookup') loadAttendanceLookup();
-    if (s === 'bulk_upload') loadBulkUpload();
+    if (s === 'bulk_upload') loadBulkUpload('');
+    if (s === 'bulk_po') loadBulkUpload('order');
+    if (s === 'bulk_salesplan') loadBulkUpload('salesplan');
     if (s === 'legal_docs') loadLegalDocs();
     if (s === 'ppap')           loadPpap();
     if (s === 'report_setup_approval') loadSetup();
@@ -12450,6 +12544,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (keepCust) fillContractDropdown();
     soUpdateType();
     updateSoValue();
+    soTentLabels();
     drawOrders();
   }
 
@@ -12514,7 +12609,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var todayK = new Date().toISOString().slice(0,10);
     return orders.filter(function(o){
       var v = o.data||{};
-      return v.poType === 'ratecontract' && v.customerId === custId &&
+      return v.poType === 'ratecontract' && v.customerId === custId && !v.obsolete &&
         (!v.validTo || v.validTo >= todayK);
     });
   }
@@ -12542,6 +12637,25 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     }
     updateSoValue();
   }
+  /* The two tentative boxes are named after the months they actually fill —
+     "Tentative — October", not "next month" — worked out from the delivery
+     date, because that is what tentativeFor() projects them from. Until a
+     delivery date is typed they are named from this month. The year is added
+     only when it is not this year, so December's POs do not read ambiguously. */
+  var MONTH_NAMES = ['January','February','March','April','May','June','July','August',
+    'September','October','November','December'];
+  function monthName(m){
+    if (!m) return '';
+    var p = m.split('-').map(Number);
+    return MONTH_NAMES[p[1]-1] + (p[0] !== new Date().getFullYear() ? ' ' + p[0] : '');
+  }
+  function soTentLabels(){
+    var due = document.getElementById('so-due').value;
+    var base = due ? due.slice(0,7) : thisMonthKey();
+    document.getElementById('so-t1-label').textContent = 'Tentative — ' + monthName(addMonths(base, 1));
+    document.getElementById('so-t2-label').textContent = 'Tentative — ' + monthName(addMonths(base, 2));
+  }
+
   function updateSoValue(){
     var qty = C.num(document.getElementById('so-qty').value);
     var price = C.num(document.getElementById('so-price').value);
@@ -12561,6 +12675,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var byPart = {};
     orders.forEach(function(o){
       var v = o.data||{};
+      if (v.obsolete) return;        // its revision is the order now — see orderProgress()
       (byPart[v.partId] = byPart[v.partId] || []).push(o);
     });
     Object.keys(byPart).forEach(function(pid){
@@ -12577,6 +12692,11 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     });
   }
   function orderProgress(o){
+    /* A superseded PO has nothing left to make: its revision holds the live
+       quantity. Answering balance 0 here is what keeps every screen that asks
+       "what is still open" — production plan, capacity, loading, the works
+       dashboard — from counting a revised PO twice. */
+    if ((o.data||{}).obsolete) return { made:0, balance:0 };
     return orderAlloc[o.doc_id] || { made:0, balance:C.num((o.data||{}).qty) };
   }
 
@@ -12633,7 +12753,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       '<th class="r">Ordered</th><th class="r">Made</th><th class="r">Balance</th>' +
       '<th class="r">PO Value</th>' +
       '<th>Due / Validity</th><th class="c">Days</th>' +
-      (f === 'obsolete' ? '<th>Superseded by</th>' : '<th></th>') + '</tr></thead><tbody>' +
+      (f === 'obsolete' ? '<th>Superseded by</th><th>PO document</th>' : '<th>PO document</th><th></th>') +
+      '</tr></thead><tbody>' +
       rows.map(function(o){
         var v = o.data||{}, isRC = v.poType === 'ratecontract';
         var pr = isRC ? null : orderProgress(o), dl = isRC ? null : daysTo(v.due);
@@ -12658,18 +12779,24 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           '<td class="r">'+(isRC?'<span class="hint">no value — rate only</span>'
             :moneyFmt(v.poValue||(C.num(v.qty)*C.num(v.price)), v.currency))+'</td>' +
           '<td class="hint">'+dueCell+'</td>' +
+          (f === 'obsolete' ? '<td class="c hint">—</td>' : '') +
           (f === 'obsolete'
             ? '<td class="hint">'+(newer ? '<b>'+esc(newer.data.po||newer.doc_no||'')+'</b>' : '—')+
-              (v.obsoleteReason ? '<div class="hint">'+esc(v.obsoleteReason)+'</div>' : '')+'</td>'
+              (v.obsoleteReason ? '<div class="hint">'+esc(v.obsoleteReason)+'</div>' : '')+'</td>' +
+              '<td class="so-doccell">'+soDocCell(o)+'</td>'
             : '<td class="c">'+(isRC?'—':dl===null?'—':late
               ? '<span class="badge ab">'+Math.abs(dl)+' late</span>'
               : pr.balance<=0 ? '<span class="badge series">done</span>' : dl)+'</td>' +
+              '<td class="so-doccell">'+soDocCell(o)+'</td>' +
               '<td><button class="btn so-edit" data-id="'+esc(o.doc_id)+'">Edit</button> ' +
               '<button class="btn del so-del" data-id="'+esc(o.doc_id)+'">Remove</button></td>')+
           '</tr>';
       }).join('') + '</tbody></table></div>';
     host.querySelectorAll('.so-edit').forEach(function(b){
       b.addEventListener('click', function(){ editOrder(b.dataset.id); });
+    });
+    host.querySelectorAll('.so-attach').forEach(function(b){
+      b.addEventListener('click', function(){ soAttachTo(b.dataset.id, b); });
     });
     host.querySelectorAll('.so-del').forEach(function(b){
       b.addEventListener('click', async function(){
@@ -12705,6 +12832,52 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     } catch(e){ nameEl.textContent = 'Could not upload: ' + e.message; soPoUpload = null; }
   });
 
+  /* View opens the stored file in a new tab (a PDF shows there; Word and
+     Excel files are handed to the browser, which saves them). Download always
+     saves it under the name it was uploaded with. Both are plain links to the
+     same same-origin file, so they work from right-click too. */
+  function soDocLinks(file){
+    if (!file || !file.url) return '';
+    var name = file.name || 'customer-po';
+    return '<a class="btn" href="'+esc(file.url)+'" target="_blank" rel="noopener">View</a> ' +
+      '<a class="btn" href="'+esc(file.url)+'" download="'+esc(name)+'">Download</a>' +
+      '<div class="hint" style="max-width:180px;overflow-wrap:anywhere;">'+esc(name)+'</div>';
+  }
+  function soDocCell(o){
+    var v = o.data || {};
+    if (v.poFile && v.poFile.url) return soDocLinks(v.poFile);
+    if (v.obsolete) return '<span class="hint">none attached</span>';
+    return '<button class="btn so-attach" data-id="'+esc(o.doc_id)+'">Attach</button>' +
+      '<div class="hint">none attached</div>';
+  }
+  function soShowAttached(file){
+    var el = document.getElementById('so-pofilename');
+    el.innerHTML = file && file.url ? 'On file: ' + soDocLinks(file) : '';
+  }
+  /* Attaching the customer's PO document to a PO already on file is not a
+     change to what the PO says, so it does not go through Edit — Edit makes a
+     revision and marks the old one obsolete, which is right for a new price or
+     quantity and wrong for adding the paper it came on. It is still audited. */
+  function soAttachTo(docId, btn){
+    var o = orders.filter(function(x){ return x.doc_id === docId; })[0];
+    if (!o) return;
+    var inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.png,.jpg,.jpeg';
+    inp.addEventListener('change', async function(){
+      var f = inp.files[0]; if (!f) return;
+      btn.disabled = true; btn.textContent = 'Uploading…';
+      try {
+        var up = await C.uploadFile(f);
+        await C.idms.patchDoc({ docId: docId,
+          patch: Object.assign({}, o.data, { poFile: { url: up.url, name: f.name, mime: f.type } }),
+          reason: 'PO document attached: ' + f.name });
+        toast('PO document attached');
+        await loadOrders();
+      } catch(e){ btn.disabled = false; btn.textContent = 'Attach'; toast(e.message); }
+    });
+    inp.click();
+  }
+
   function editOrder(docId){
     var o = orders.filter(function(x){ return x.doc_id === docId; })[0];
     if (!o) return;
@@ -12730,6 +12903,8 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       document.getElementById('so-t1').value = v.tent1 || '';
       document.getElementById('so-t2').value = v.tent2 || '';
       updateSoValue();
+      soTentLabels();
+      soShowAttached(v.poFile);
       var btn = document.getElementById('so-save');
       btn.textContent = 'Update PO'; btn.classList.add('editing');
       document.getElementById('so-cancel-edit').style.display = '';
@@ -12786,7 +12961,10 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (poType !== 'schedule' && g('so-po')){
       var dup = orders.filter(function(o){
         var v = o.data||{};
-        return o.doc_id !== soEditing && v.partId === partId &&
+        /* A superseded copy carries the same PO number as its revision by
+           design. Counting it here refused every second revision of a PO as a
+           duplicate of its own history. */
+        return o.doc_id !== soEditing && v.partId === partId && !v.obsolete &&
           String(v.po||'').toLowerCase() === g('so-po').toLowerCase(); })[0];
       if (dup) return say('PO <b>'+esc(g('so-po'))+'</b> already exists for this part. ' +
                           'Adding it again would double the demand in the plan.');
@@ -12921,7 +13099,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      none of those exist, the master price link. */
   function orderPriceFor(customerId, partId){
     var mine = orders.filter(function(o){
-      var v = o.data||{}; return v.customerId === customerId && v.partId === partId; });
+      var v = o.data||{}; return v.customerId === customerId && v.partId === partId && !v.obsolete; });
     var owing = mine.filter(function(o){
       var v = o.data||{};
       return v.poType !== 'ratecontract' && orderProgress(o).balance > 0;
@@ -12986,7 +13164,10 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      Sales Plan the moment this deploys — the opposite of harmless. Anything
      that is not explicitly a rate contract (which never carries a quantity)
      counts as demand, exactly as it always did. */
-  function isDemandOrder(v){ return v.poType !== 'ratecontract'; }
+  /* An obsolete PO has been superseded by its own revision, which carries the
+     live quantity. Counting both doubled the demand of every revised PO on the
+     Sales Plan, the dashboards and the production plan. */
+  function isDemandOrder(v){ return v.poType !== 'ratecontract' && !v.obsolete; }
 
   function demandOrders(customerId, partId, month){
     return orders.filter(function(o){
@@ -13065,6 +13246,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           currency:v.currency||ln.currency||'INR', lineIndex:idx,
           partId:ln.partId, partNo:ln.partNo||'', partName:ln.partName||'',
           custPartNo:ln.custPartNo||'', custPartName:ln.custPartName||'',
+          poDocId:ln.poDocId||'', po:ln.po||'',
           qty:C.num(ln.qty), rate:C.num(ln.rate), value:C.num(ln.value||(C.num(ln.qty)*C.num(ln.rate))) });
       });
     });
@@ -13290,20 +13472,33 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
 
   /* ---------------- Sales Invoice — the real invoice, interlinked to the plan --- */
+  var ivProfile = {};
   async function loadSalesInvoice(){
     await fetchParts(); await fetchCustomers();
-    try { custParts = await C.idms.docs('cust_part'); } catch(e){ custParts = []; }
-    try { orders = await C.idms.docs('order'); } catch(e){ orders = []; }
-    try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    /* These reads do not depend on one another. Run in parallel: one wait. */
+    var got = await Promise.all([
+      C.idms.docs('cust_part').catch(function(){ return []; }),
+      C.idms.docs('order').catch(function(){ return []; }),
+      C.idms.docs('production').catch(function(){ return []; }),
+      C.idms.docs('salesplan').catch(function(){ return []; }),
+      C.idms.docs('invoice').catch(function(){ return []; }),
+      C.idms.settings().catch(function(){ return null; }),
+      C.loadProfile().catch(function(){ return {}; })
+    ]);
+    custParts = got[0]; orders = got[1]; prodDocs = got[2]; salesPlans = got[3]; salesInvoices = got[4];
+    if (got[5]) settings = got[5];
+    ivProfile = got[6] || {};
     allocateProduction();
     document.getElementById('iv-cust').innerHTML = customerOptions('');
     document.getElementById('iv-part').innerHTML = partOptionsForCustomer('');
+    ivFillPoSelect();
+    ivFillPosSelect('');
     var dt = document.getElementById('iv-date');
     if (!dt.value) dt.value = new Date().toISOString().slice(0,10);
     if (!fieldVal('iv-gst')) document.getElementById('iv-gst').value = '18';
-    try { salesPlans = await C.idms.docs('salesplan'); } catch(e){ salesPlans = []; }
-    try { salesInvoices = await C.idms.docs('invoice'); } catch(e){ salesInvoices = []; }
+    ivFillSettingsForm();
     ivResetLines();
+    ivTaxSplit();
     drawInvoiceRegister();
   }
 
@@ -13389,25 +13584,227 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
 
   /* ---------------- Sales Invoice: a real invoice, not a log line ----------------
-     One customer, one invoice number, one or more parts. ivWorkingLines holds
-     what has been added but not yet saved; nothing reaches the server, and
-     nothing counts as dispatched, until Save & generate invoice is pressed. */
-  var ivWorkingLines = [];
+     One customer, one invoice number, one or more parts, each line raised
+     against a Customer PO. ivWorkingLines holds what has been added but not yet
+     saved; nothing reaches the server, and nothing counts as dispatched, until
+     Save & generate invoice is pressed. */
+  var ivWorkingLines = [], ivDueTouched = false, ivShipTouched = false;
 
-  function ivResetLines(){ ivWorkingLines = []; ivDrawLines(); }
+  var IV_DEFAULT_TERMS = [
+    'Payment shall be made as per agreed payment terms.',
+    'Goods once supplied shall be subject to the agreed customer quality and commercial conditions.',
+    'Any discrepancy in quantity or damage shall be reported within the agreed period.',
+    'Taxes are charged as applicable under prevailing GST regulations.',
+    'Interest on delayed payment shall be applicable as per agreed commercial terms.'
+  ];
+  /* What only the invoice needs — kept in idms_settings, never in the code. */
+  function ivSettings(){
+    var d = (settings && settings.invoice_settings) || {};
+    return { upi: d.upi || '', jurisdiction: d.jurisdiction || '', place: d.place || ivProfile.city || '',
+      copies: d.copies === '3' ? '3' : '1', showBank: d.showBank !== 'No',
+      signName: d.signName || ivProfile.signatoryName || '', signTitle: d.signTitle || ivProfile.signatoryTitle || '',
+      terms: (d.terms && d.terms.length) ? d.terms.slice() : IV_DEFAULT_TERMS.slice() };
+  }
+  function ivFillSettingsForm(){
+    var st = ivSettings();
+    document.getElementById('ivs-upi').value = st.upi;
+    document.getElementById('ivs-jur').value = st.jurisdiction;
+    document.getElementById('ivs-place').value = st.place;
+    document.getElementById('ivs-copies').value = st.copies;
+    document.getElementById('ivs-bank').value = st.showBank ? 'Yes' : 'No';
+    document.getElementById('ivs-signname').value = st.signName;
+    document.getElementById('ivs-signtitle').value = st.signTitle;
+    document.getElementById('ivs-terms').value = st.terms.join('\n');
+  }
+  document.getElementById('ivs-save').addEventListener('click', async function(){
+    var say = noteWriter(document.getElementById('ivs-msg'));
+    var upi = fieldVal('ivs-upi');
+    /* a UPI handle is name@bank; anything else prints a QR no app can pay */
+    if (upi && !/^[A-Za-z0-9._\-]{2,}@[A-Za-z][A-Za-z0-9.\-]{1,}$/.test(upi))
+      return say('"' + esc(upi) + '" is not a UPI ID — it looks like name@bank.');
+    var data = { upi: upi, jurisdiction: fieldVal('ivs-jur'), place: fieldVal('ivs-place'),
+      copies: document.getElementById('ivs-copies').value, showBank: document.getElementById('ivs-bank').value,
+      signName: fieldVal('ivs-signname'), signTitle: fieldVal('ivs-signtitle'),
+      terms: document.getElementById('ivs-terms').value.split('\n')
+        .map(function(t){ return t.replace(/^\s*\d+[.)]\s*/, '').trim(); })
+        .filter(function(t){ return t && !/^All disputes shall be subject to/i.test(t); }) };
+    try {
+      await C.idms.saveSetting('invoice_settings', data);
+      settings.invoice_settings = data;
+      ivFillSettingsForm();
+      say('Saved. Every invoice printed from now on uses these.', true);
+    } catch(e){ say(esc(e.message)); }
+  });
+
+  /* ---- places of supply: the GST state codes, plus exports ---- */
+  function ivFillPosSelect(selected){
+    var map = C.gstStates || {};
+    var codes = Object.keys(map).sort();
+    document.getElementById('iv-pos').innerHTML = '<option value="">— choose —</option>' +
+      codes.map(function(c){
+        return '<option value="'+c+'"'+(selected===c?' selected':'')+'>'+c+' — '+esc(map[c])+'</option>'; }).join('') +
+      '<option value="96"'+(selected==='96'?' selected':'')+'>96 — Other Countries (export)</option>';
+  }
+  function ivPosName(code){
+    if (code === '96') return 'Other Countries';
+    return (C.gstStates || {})[code] || '';
+  }
+  /* Same state as the company → CGST + SGST, split evenly. Any other place of
+     supply → IGST. Worked out from the company GSTIN's state code and the place
+     of supply chosen, never typed. */
+  function ivSameState(pos){
+    return !!(ivProfile.stateCode && pos && pos !== '96' && ivProfile.stateCode === pos);
+  }
+  function ivTaxSplit(){
+    var pos = document.getElementById('iv-pos').value;
+    document.getElementById('iv-taxsplit').value = !pos ? 'choose the place of supply'
+      : !ivProfile.stateCode ? 'IGST — company GSTIN not set'
+      : pos === '96' ? 'IGST — export'
+      : ivSameState(pos) ? 'CGST + SGST — same state' : 'IGST — inter-state';
+    ivDrawLines();
+  }
+
+  function ivCustomer(){
+    var id = document.getElementById('iv-cust').value;
+    return customers.filter(function(c){ return c.doc_id === id; })[0] || null;
+  }
+  function panFromGstin(g){ return /^[0-9]{2}[A-Z0-9]{10}[0-9A-Z]{3}$/i.test(g||'') ? String(g).slice(2,12).toUpperCase() : ''; }
+
+  /* Due date = invoice date + the days in the payment terms ("45 days"), until
+     somebody types a due date of their own; after that it is left alone. */
+  function ivAutoDue(){
+    if (ivDueTouched) return;
+    var d = fieldVal('iv-date'), t = fieldVal('iv-terms'), due = '';
+    if (d && t){
+      var m = t.match(/(\d{1,3})/);
+      if (m){ var x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + Number(m[1])); due = C.dayKey(x); }
+      else if (/immediate|advance|on receipt|against delivery|cash/i.test(t)) due = d;
+    }
+    document.getElementById('iv-due').value = due;
+  }
+
+  /* ---- the Customer PO a line is raised against ----
+     Every PO, schedule and open rate contract on file for this customer and
+     part, live ones only (a superseded PO is history). What is left to invoice
+     on each is ordered quantity less what earlier invoices — and lines already
+     on this one — raised against that same PO. The earliest-due PO with
+     something left is chosen first, which is how a dispatch is normally
+     booked; the dropdown is there because it is not always so. */
+  function ivInvoicedAgainst(poDocId){
+    var saved = invoiceLines().filter(function(l){ return l.poDocId === poDocId; })
+      .reduce(function(t, l){ return t + l.qty; }, 0);
+    var working = ivWorkingLines.filter(function(l){ return l.poDocId === poDocId; })
+      .reduce(function(t, l){ return t + C.num(l.qty); }, 0);
+    return saved + working;
+  }
+  function ivPoCandidates(custId, partId){
+    if (!custId || !partId) return [];
+    var todayK = new Date().toISOString().slice(0,10);
+    return orders.filter(function(o){
+      var v = o.data||{};
+      return v.customerId === custId && v.partId === partId && !v.obsolete &&
+        (v.poType !== 'ratecontract' || !v.validTo || v.validTo >= todayK);
+    }).map(function(o){
+      var v = o.data||{}, rc = v.poType === 'ratecontract';
+      var left = rc ? null : Math.max(0, C.num(v.qty) - ivInvoicedAgainst(o.doc_id));
+      return { o:o, v:v, rc:rc, left:left };
+    }).sort(function(a, b){
+      function rank(x){ return x.rc ? 2 : (x.left > 0 ? 0 : 1); }
+      return rank(a) - rank(b) ||
+        String(a.v.due||a.v.orderedOn||'9999').localeCompare(String(b.v.due||b.v.orderedOn||'9999'));
+    });
+  }
+  /* A schedule is printed with the contract it is released against, because
+     the customer's accounts team matches the invoice to the contract. */
+  function ivPoRef(v){
+    if (v.poType === 'schedule')
+      return (v.scheduleAgainstPo ? v.scheduleAgainstPo + ' / Sch. ' : 'Sch. ') + (v.po || '');
+    return v.po || '';
+  }
+  function ivPoDate(v){
+    if (v.orderedOn) return v.orderedOn;
+    if (v.poType === 'schedule' && v.scheduleAgainst){
+      var c = orders.filter(function(o){ return o.doc_id === v.scheduleAgainst; })[0];
+      return c ? ((c.data||{}).orderedOn || '') : '';
+    }
+    return '';
+  }
+  function ivFillPoSelect(){
+    var custId = document.getElementById('iv-cust').value, partId = document.getElementById('iv-part').value;
+    var sel = document.getElementById('iv-po'), hint = document.getElementById('iv-pohint');
+    if (!custId || !partId){
+      sel.innerHTML = '<option value="">— choose the part first —</option>'; hint.textContent = ''; return;
+    }
+    var list = ivPoCandidates(custId, partId);
+    if (!list.length){
+      sel.innerHTML = '<option value="">— no Customer PO on file for this part —</option>';
+      hint.innerHTML = 'No Customer PO is on file for this customer and part. Add it on <b>Customer PO</b> ' +
+        'so the invoice carries its number and date — or add this line without one (a sample, for instance).';
+      ivFillFromPo();
+      return;
+    }
+    sel.innerHTML = list.map(function(c, i){
+      var v = c.v, dated = ivPoDate(v);
+      var label = (v.poType === 'schedule' ? 'Schedule ' + (v.po||'') + (v.scheduleAgainstPo ? ' (contract ' + v.scheduleAgainstPo + ')' : '')
+          : c.rc ? 'Rate contract ' + (v.po||'') : 'PO ' + (v.po||'')) +
+        ' · ' + (dated ? 'dated ' + C.fmtDate(dated) : 'no PO date') +
+        (c.rc ? ' · open' : ' · due ' + C.fmtDate(v.due) + ' · ' + C.qty(c.left) + ' of ' + C.qty(v.qty) + ' left to invoice');
+      return '<option value="'+esc(c.o.doc_id)+'"'+(i===0?' selected':'')+'>'+esc(label)+'</option>';
+    }).join('') + '<option value="">— no PO for this line —</option>';
+    hint.textContent = list.length === 1
+      ? 'PO number, PO date and rate are taken from the Customer PO on file.'
+      : list.length + ' POs are on file for this customer and part. The earliest-due one with quantity left to ' +
+        'invoice is chosen — pick another if this dispatch is against a different PO.';
+    ivFillFromPo();
+  }
+  /* Rate, currency and the customer's part number follow the chosen PO — the
+     price agreed on that PO, not a list price. Still editable, because an
+     invoice is raised at whatever was actually agreed. */
+  function ivFillFromPo(){
+    var custId = document.getElementById('iv-cust').value, partId = document.getElementById('iv-part').value;
+    var o = orders.filter(function(x){ return x.doc_id === document.getElementById('iv-po').value; })[0];
+    var pr = o ? { price:C.num((o.data||{}).price), currency:(o.data||{}).currency||'INR',
+                   custPartNo:(o.data||{}).custPartNo||'' }
+               : (custId && partId ? priceFor(custId, partId) : { price:0, currency:'INR', custPartNo:'' });
+    document.getElementById('iv-custpartno').value = pr.custPartNo || (partId ? priceFor(custId, partId).custPartNo : '') || '';
+    document.getElementById('iv-rate').value = pr.price || '';
+    document.getElementById('iv-currency').value = pr.currency || 'INR';
+  }
+
+  function ivResetLines(){ ivWorkingLines = []; ivDrawLines(); ivRefreshHeaderPo(); }
 
   function ivLineMsg(t){
     var m = document.getElementById('iv-linemsg');
-    m.style.display = t ? '' : 'none'; m.textContent = t || '';
+    m.style.display = t ? '' : 'none'; m.innerHTML = t || '';
+  }
+
+  /* The invoice header shows the PO the lines were raised against: the one PO
+     and its date when every line shares it, or each PO number when they do
+     not (the dates are then printed against each line). */
+  function ivHeaderPo(lines){
+    var refs = [], dates = [];
+    lines.forEach(function(l){
+      if (l.po && refs.indexOf(l.po) < 0) refs.push(l.po);
+      if (l.po && dates.indexOf(l.poDate||'') < 0) dates.push(l.poDate||'');
+    });
+    return { po: refs.join(', '), poDate: refs.length === 1 ? (dates[0]||'') : '', many: refs.length > 1 };
+  }
+  function ivRefreshHeaderPo(){
+    var h = ivHeaderPo(ivWorkingLines);
+    document.getElementById('iv-custpo').value = h.po || '';
+    document.getElementById('iv-custpodate').value = h.many ? 'per line — see below'
+      : (h.poDate ? C.fmtDate(h.poDate) : (h.po ? 'no PO date on file' : ''));
   }
 
   document.getElementById('iv-part').addEventListener('change', function(){
-    var custId = document.getElementById('iv-cust').value, partId = this.value;
-    var pr = orderPriceFor(custId, partId);
-    document.getElementById('iv-custpartno').value = pr.custPartNo || '';
-    document.getElementById('iv-rate').value = pr.price || '';
-    document.getElementById('iv-currency').value = pr.currency || 'INR';
+    /* the unit of measure follows the part master; only set when that unit is
+       one of the options, or the select would go blank */
+    var p = allParts.filter(function(x){ return x.part_id === document.getElementById('iv-part').value; })[0];
+    var uom = p && p.data && p.data.uom, sel = document.getElementById('iv-uom');
+    if (uom && Array.prototype.some.call(sel.options, function(o){ return o.value === uom; })) sel.value = uom;
+    ivFillPoSelect();
   });
+  document.getElementById('iv-po').addEventListener('change', ivFillFromPo);
 
   document.getElementById('iv-addline').addEventListener('click', function(){
     ivLineMsg('');
@@ -13416,63 +13813,194 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (!custId) return ivLineMsg('Choose the customer first.');
     if (!partId) return ivLineMsg('Choose a part.');
     var qty = C.num(fieldVal('iv-qty')), rate = C.num(fieldVal('iv-rate'));
-    if (!qty) return ivLineMsg('How many are on this line?');
-    if (!rate) return ivLineMsg('A rate is needed — it fills in from an open PO or schedule for this part, or type it.');
-    if (ivWorkingLines.some(function(l){ return l.partId === partId; }))
-      return ivLineMsg('That part is already a line on this invoice — remove it below to change the quantity, rather than adding it twice.');
+    if (!(qty > 0)) return ivLineMsg('How many are on this line?');
+    if (!(rate > 0)) return ivLineMsg('A rate is needed — it fills in from the Customer PO, or type it.');
+    var currency = document.getElementById('iv-currency').value || 'INR';
+    if (ivWorkingLines.length && ivWorkingLines[0].currency !== currency)
+      return ivLineMsg('This invoice is in ' + ivWorkingLines[0].currency + '. An invoice is raised in one currency — ' +
+        'raise the ' + currency + ' line on an invoice of its own.');
+    var poId = document.getElementById('iv-po').value;
+    var o = orders.filter(function(x){ return x.doc_id === poId; })[0] || null;
+    var ov = (o && o.data) || {};
+    /* the same part against two different POs on one invoice is normal (the
+       end of one PO and the start of the next); the same part against the
+       same PO twice is a line typed twice */
+    if (ivWorkingLines.some(function(l){ return l.partId === partId && (l.poDocId||'') === (poId||''); }))
+      return ivLineMsg('That part is already a line against this PO — remove it below to change the quantity, rather than adding it twice.');
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
     var pd = p.data || {};
-    var pr = orderPriceFor(custId, partId);
+    var link = priceFor(custId, partId);
+    var linkDoc = custParts.filter(function(cp){ var v = cp.data||{}; return v.customerId === custId && v.partId === partId; })[0];
+    var lv = (linkDoc && linkDoc.data) || {};
+    var left = o && ov.poType !== 'ratecontract' ? Math.max(0, C.num(ov.qty) - ivInvoicedAgainst(poId)) : null;
     ivWorkingLines.push({ partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
-      custPartNo: document.getElementById('iv-custpartno').value || pr.custPartNo || '',
-      custPartName: pr.custPartName || '',
-      hsn: pd.hsn || '', drawingNo: pd.drawingNo || '', drawingRev: pd.drawingRev || '',
+      custPartNo: document.getElementById('iv-custpartno').value || ov.custPartNo || link.custPartNo || '',
+      custPartName: ov.custPartName || link.custPartName || '',
+      hsn: lv.hsn || pd.hsn || '', drawingNo: lv.custDrawingNo || pd.drawingNo || p.drawing_no || '',
+      drawingRev: pd.drawingRev || pd.revision || '',
+      uom: document.getElementById('iv-uom').value || 'Nos',
+      poDocId: o ? o.doc_id : '', po: o ? ivPoRef(ov) : '', poDate: o ? ivPoDate(ov) : '', poType: o ? (ov.poType||'onetime') : '',
+      overPo: left !== null && qty > left ? qty - left : 0,
       batch: fieldVal('iv-batch'), heat: fieldVal('iv-heat'), material: fieldVal('iv-material'),
-      challan: fieldVal('iv-challan'),
-      qty:qty, rate:rate, currency:document.getElementById('iv-currency').value || 'INR',
-      value: qty*rate });
+      challan: fieldVal('iv-challan'), mfgDate: fieldVal('iv-mfgdate'),
+      inspection: document.getElementById('iv-inspection').value, boxes: fieldVal('iv-boxes'),
+      qty:qty, rate:rate, currency:currency, value: Math.round(qty*rate*100)/100 });
     document.getElementById('iv-part').value = '';
-    ['iv-custpartno','iv-qty','iv-rate','iv-batch','iv-heat','iv-material','iv-challan']
+    ['iv-custpartno','iv-qty','iv-rate','iv-batch','iv-heat','iv-material','iv-challan','iv-mfgdate','iv-boxes']
       .forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('iv-inspection').value = '';
+    ivFillPoSelect();
     ivDrawLines();
+    ivRefreshHeaderPo();
   });
+
+  /* The whole calculation, in one place, used by the screen, the save and the
+     print so the three can never disagree. Discount and charges are part of
+     the taxable value (GST is charged on what the customer actually pays for
+     the supply, freight and packing included). The tax is worked out per HSN
+     code, with the discount and charges shared across the codes in proportion
+     to their value; the last code takes the rounding so the rows add up
+     exactly to the total. */
+  function ivCompute(lines, h){
+    var r2 = function(n){ return Math.round(C.num(n) * 100) / 100; };
+    var items = r2(lines.reduce(function(t, l){ return t + C.num(l.value); }, 0));
+    var qty = lines.reduce(function(t, l){ return t + C.num(l.qty); }, 0);
+    var discount = r2(h.discount), freight = r2(h.freight), packing = r2(h.packing), other = r2(h.other);
+    var taxable = r2(items - discount + freight + packing + other);
+    var gst = C.num(h.gstPct), cessPct = C.num(h.cessPct), same = !!h.sameState;
+    var groups = {}, keys = [];
+    lines.forEach(function(l){
+      var k = l.hsn || '—';
+      if (!groups.hasOwnProperty(k)){ groups[k] = 0; keys.push(k); }
+      groups[k] += C.num(l.value);
+    });
+    var rows = [], used = 0;
+    keys.forEach(function(k, i){
+      var t = i === keys.length - 1 ? r2(taxable - used) : r2(items ? groups[k] / items * taxable : 0);
+      used = r2(used + t);
+      var cg = same ? r2(t * gst / 200) : 0, ig = same ? 0 : r2(t * gst / 100), cs = r2(t * cessPct / 100);
+      rows.push({ hsn:k, taxable:t, cgstPct: same ? gst/2 : 0, cgst:cg, sgstPct: same ? gst/2 : 0, sgst:cg,
+        igstPct: same ? 0 : gst, igst:ig, cessPct:cessPct, cess:cs, total: r2(t + cg + cg + ig + cs) });
+    });
+    var sum = function(f){ return r2(rows.reduce(function(t, r){ return t + r[f]; }, 0)); };
+    var cgst = sum('cgst'), sgst = sum('sgst'), igst = sum('igst'), cess = sum('cess');
+    var tax = r2(cgst + sgst + igst);
+    /* Under reverse charge the recipient pays the tax to the government, so it
+       is stated on the invoice but not collected in its total. */
+    var total = h.reverseCharge ? taxable : r2(taxable + tax + cess);
+    return { qty:qty, itemsTotal:items, discount:discount, freight:freight, packing:packing, otherCharges:other,
+      taxable:taxable, rows:rows, cgst:cgst, sgst:sgst, igst:igst, cess:cess, tax:tax, total:total,
+      gstPct:gst, cessPct:cessPct, sameState:same, reverseCharge:!!h.reverseCharge };
+  }
+  function ivHeaderInputs(){
+    var pos = document.getElementById('iv-pos').value;
+    return { gstPct: C.num(fieldVal('iv-gst')), cessPct: C.num(fieldVal('iv-cess')),
+      discount: C.num(fieldVal('iv-discount')), freight: C.num(fieldVal('iv-freight')),
+      packing: C.num(fieldVal('iv-packing')), other: C.num(fieldVal('iv-other')),
+      sameState: ivSameState(pos), reverseCharge: document.getElementById('iv-rcm').value === 'Yes' };
+  }
 
   function ivDrawLines(){
     var host = document.getElementById('iv-lines');
+    var tot = document.getElementById('iv-totals');
     if (!ivWorkingLines.length){
       host.innerHTML = '<div class="empty"><b>No lines yet</b>Add at least one part above.</div>';
-      document.getElementById('iv-totals').textContent = '';
+      tot.innerHTML = '';
       return;
     }
-    host.innerHTML = '<table class="t"><thead><tr><th>Part</th><th>Customer Part No.</th>' +
+    var cur = ivWorkingLines[0].currency;
+    host.innerHTML = '<table class="iv-grid"><colgroup><col style="width:4%"><col style="width:20%"><col style="width:17%">' +
+      '<col style="width:17%"><col style="width:9%"><col style="width:10%"><col style="width:13%"><col style="width:10%"></colgroup>' +
+      '<thead><tr><th>#</th><th>Part</th><th>Customer part no.</th><th>Customer PO</th>' +
       '<th class="r">Qty</th><th class="r">Rate</th><th class="r">Value</th><th></th></tr></thead><tbody>' +
       ivWorkingLines.map(function(l, i){
-        return '<tr><td><b>'+esc(l.partNo)+'</b><div class="hint">'+esc(l.partName)+'</div></td>' +
-          '<td>'+esc(l.custPartNo||'—')+'</td><td class="r">'+C.qty(l.qty)+'</td>' +
+        return '<tr><td>'+(i+1)+'</td><td><b>'+esc(l.partNo)+'</b><div class="hint">'+esc(l.partName)+'</div></td>' +
+          '<td>'+esc(l.custPartNo||'—')+'</td>' +
+          '<td>'+(l.po ? esc(l.po)+'<div class="hint">'+(l.poDate ? C.fmtDate(l.poDate) : 'no PO date')+'</div>'
+            : '<span class="hint">no PO</span>') +
+          (l.overPo ? '<div class="badge ab" title="More than is left to invoice on this PO">over PO by '+C.qty(l.overPo)+'</div>' : '') +
+          '</td><td class="r">'+C.qty(l.qty)+' '+esc(l.uom||'')+'</td>' +
           '<td class="r">'+C.rate(l.rate)+'</td><td class="r">'+C.rate(l.value)+'</td>' +
           '<td><button class="btn del iv-rmline" data-i="'+i+'">Remove</button></td></tr>';
       }).join('') + '</tbody></table>';
     host.querySelectorAll('.iv-rmline').forEach(function(b){
-      b.addEventListener('click', function(){ ivWorkingLines.splice(C.num(b.dataset.i),1); ivDrawLines(); });
+      b.addEventListener('click', function(){
+        ivWorkingLines.splice(C.num(b.dataset.i),1); ivDrawLines(); ivRefreshHeaderPo(); ivFillPoSelect(); });
     });
-    var subtotal = ivWorkingLines.reduce(function(t,l){ return t+l.value; }, 0);
-    var gstPct = C.num(fieldVal('iv-gst'));
-    var gstValue = subtotal * gstPct / 100;
-    var currency = ivWorkingLines[0].currency;
-    document.getElementById('iv-totals').innerHTML =
-      'Subtotal <b>'+moneyFmt(subtotal, currency)+'</b> &nbsp;+&nbsp; GST '+gstPct+'% <b>'+
-      moneyFmt(gstValue, currency)+'</b> &nbsp;=&nbsp; Total <b>'+moneyFmt(subtotal+gstValue, currency)+'</b>';
+    var t = ivCompute(ivWorkingLines, ivHeaderInputs());
+    var row = function(label, val, cls){ return '<tr'+(cls?' class="'+cls+'"':'')+'><td>'+label+'</td><td class="r">'+val+'</td></tr>'; };
+    tot.innerHTML = '<table class="iv-grid" style="max-width:420px;margin-left:auto;"><tbody>' +
+      row('Goods value', moneyFmt(t.itemsTotal, cur)) +
+      (t.discount ? row('Less discount', '−' + moneyFmt(t.discount, cur)) : '') +
+      (t.freight ? row('Freight', moneyFmt(t.freight, cur)) : '') +
+      (t.packing ? row('Packing / forwarding', moneyFmt(t.packing, cur)) : '') +
+      (t.otherCharges ? row('Other charges', moneyFmt(t.otherCharges, cur)) : '') +
+      row('Taxable value', moneyFmt(t.taxable, cur)) +
+      (t.sameState ? row('CGST ' + t.gstPct/2 + '%', moneyFmt(t.cgst, cur)) + row('SGST ' + t.gstPct/2 + '%', moneyFmt(t.sgst, cur))
+                   : row('IGST ' + t.gstPct + '%', moneyFmt(t.igst, cur))) +
+      (t.cess ? row('Cess ' + t.cessPct + '%', moneyFmt(t.cess, cur)) : '') +
+      row('Grand total' + (t.reverseCharge ? ' <span class="hint">(tax payable by recipient)</span>' : ''), moneyFmt(t.total, cur), 'tot') +
+      '</tbody></table>';
   }
-  document.getElementById('iv-gst').addEventListener('input', ivDrawLines);
+  ['iv-gst','iv-cess','iv-discount','iv-freight','iv-packing','iv-other'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', ivDrawLines);
+  });
+  document.getElementById('iv-rcm').addEventListener('change', ivDrawLines);
+  document.getElementById('iv-pos').addEventListener('change', ivTaxSplit);
+  document.getElementById('iv-date').addEventListener('change', ivAutoDue);
+  document.getElementById('iv-terms').addEventListener('input', ivAutoDue);
+  document.getElementById('iv-due').addEventListener('input', function(){ ivDueTouched = !!this.value; });
+  ['iv-shipname','iv-shipaddr','iv-shipgstin','iv-shipcontact'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){ ivShipTouched = true; });
+  });
+  /* A ship-to GSTIN names its own state, which is where the goods go — so it
+     moves the place of supply with it. */
+  document.getElementById('iv-shipgstin').addEventListener('change', function(){
+    var code = C.gstStateCode(this.value.trim());
+    if (code){ ivFillPosSelect(code); ivTaxSplit(); }
+  });
+
+  document.getElementById('iv-cust').addEventListener('change', function(){
+    document.getElementById('iv-part').innerHTML = partOptionsForCustomer(this.value);
+    ivFillPoSelect();
+    var cust = ivCustomer(), cv = (cust && cust.data) || {};
+    document.getElementById('iv-terms').value = cv.terms || '';
+    ivAutoDue();
+    if (!ivShipTouched){
+      document.getElementById('iv-shipname').value = cv.name || '';
+      document.getElementById('iv-shipaddr').value = cv.despatch && !/^same as billing/i.test(cv.despatch) ? cv.despatch : (cv.billing || '');
+      document.getElementById('iv-shipgstin').value = cv.gstin || '';
+      document.getElementById('iv-shipcontact').value = cv.contact || '';
+    }
+    ivFillPosSelect(C.gstStateCode(fieldVal('iv-shipgstin')) || C.gstStateCode(cv.gstin || ''));
+    ivTaxSplit();
+  });
 
   async function saveSalesInvoice(){
     var msg = document.getElementById('iv-msg');
     var say = noteWriter(msg);
     var g = fieldVal;
-    var custId = document.getElementById('iv-cust').value;
-    if (!custId) return say('Choose the customer.');
+    var cust = ivCustomer();
+    if (!cust) return say('Choose the customer.');
     if (!g('iv-date')) return say('The invoice date is needed.');
     if (!ivWorkingLines.length) return say('Add at least one line before saving.');
+    var pos = document.getElementById('iv-pos').value;
+    if (!pos) return say('Choose the place of supply — it decides whether this is CGST + SGST or IGST.');
+    if (g('iv-due') && g('iv-due') < g('iv-date')) return say('The due date is before the invoice date.');
+    var h = ivHeaderInputs();
+    if ([h.discount, h.freight, h.packing, h.other, h.gstPct, h.cessPct].some(function(n){ return n < 0; }))
+      return say('Discount, charges and tax rates cannot be negative.');
+    var itemsTotal = ivWorkingLines.reduce(function(t, l){ return t + C.num(l.value); }, 0);
+    if (h.discount > itemsTotal)
+      return say('The discount (' + C.rate(h.discount) + ') is more than the goods are worth (' + C.rate(itemsTotal) + ').');
+    var shipGstin = g('iv-shipgstin').toUpperCase();
+    if (shipGstin && !/^[0-9]{2}[A-Z0-9]{13}$/.test(shipGstin))
+      return say('The ship-to GSTIN "' + esc(shipGstin) + '" is not 15 characters starting with the state code.');
+    var irn = g('iv-irn'), ackNo = g('iv-ackno'), ackDate = g('iv-ackdate'), signedQr = document.getElementById('iv-einvqr').value.trim();
+    if ((ackNo || ackDate || signedQr) && !irn)
+      return say('The e-invoice Ack. No., date or QR is filled in without its IRN — an acknowledgement cannot be checked without the IRN.');
+    if (irn && !/^[0-9a-f]{64}$/i.test(irn))
+      return say('An IRN is 64 letters and numbers (0–9, a–f). The one entered is ' + irn.length + ' long — copy it again from the portal.');
 
     var invoiceNo = g('iv-no') || await C.docNumber('inv');
     var dup = salesInvoices.filter(function(iv){
@@ -13480,117 +14008,306 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (dup) return say('Invoice <b>'+esc(invoiceNo)+'</b> is already on file. ' +
                         'Adding it again would double-count the despatch.');
 
-    var cust = customers.filter(function(c){ return c.doc_id === custId; })[0] || {};
     var cv = cust.data || {};
-    var subtotal = ivWorkingLines.reduce(function(t,l){ return t+l.value; }, 0);
-    var gstPct = C.num(g('iv-gst'));
-    var gstValue = subtotal * gstPct / 100;
     var currency = ivWorkingLines[0].currency || 'INR';
-    var profile = await C.loadProfile();
-    /* Same state as the company → CGST + SGST, split evenly. Different state,
-       or either side has no GSTIN to tell from → IGST, the whole amount. This
-       is the ordinary GST rule, worked out from the GSTIN state codes already
-       on file rather than a state having to be typed anywhere a second time. */
-    var sameState = profile.stateCode && C.gstStateCode(cv.gstin||'') &&
-      profile.stateCode === C.gstStateCode(cv.gstin||'');
-    var cgstValue = sameState ? gstValue/2 : 0, sgstValue = sameState ? gstValue/2 : 0;
-    var igstValue = sameState ? 0 : gstValue;
-    var data = { customerId:custId, customerName:cv.name||'', billingAddress:cv.billing||'',
-      despatchAddress:cv.despatch||'', contact:cv.contact||'', phone:cv.phone||'', email:cv.email||'',
-      gstin:cv.gstin||'', customerState:C.gstStateName(cv.gstin||''),
-      invoiceNo:invoiceNo, invoiceDate:g('iv-date'), currency:currency,
-      custPo:g('iv-custpo'), custPoDate:g('iv-custpodate'), paymentTerms:g('iv-terms'),
-      placeOfSupply:C.gstStateName(cv.gstin||''), sameState:sameState,
-      lines: ivWorkingLines.slice(), subtotal:subtotal, taxPct:gstPct, taxValue:gstValue,
-      cgstPct: sameState ? gstPct/2 : 0, sgstPct: sameState ? gstPct/2 : 0, igstPct: sameState ? 0 : gstPct,
-      cgstValue:cgstValue, sgstValue:sgstValue, igstValue:igstValue,
-      totalValue: subtotal+gstValue };
+    var t = ivCompute(ivWorkingLines, h);
+    var hp = ivHeaderPo(ivWorkingLines);
+    var data = { customerId:cust.doc_id, customerName:cv.name||'', customerCode:cv.code||cust.doc_no||'',
+      billingAddress:cv.billing||'', contact:cv.contact||'', phone:cv.phone||'', email:cv.email||'',
+      gstin:cv.gstin||'', pan:panFromGstin(cv.gstin), customerState:C.gstStateName(cv.gstin||''),
+      customerStateCode:C.gstStateCode(cv.gstin||''),
+      despatchAddress: g('iv-shipaddr'),
+      ship:{ name:g('iv-shipname'), address:g('iv-shipaddr'), gstin:shipGstin,
+        state: C.gstStateName(shipGstin) || '', stateCode: C.gstStateCode(shipGstin) || '', contact:g('iv-shipcontact') },
+      invoiceNo:invoiceNo, invoiceDate:g('iv-date'), dueDate:g('iv-due'), currency:currency,
+      custPo:hp.po, custPoDate:hp.poDate, paymentTerms:g('iv-terms'),
+      placeOfSupply:ivPosName(pos), placeOfSupplyCode:pos, reverseCharge: h.reverseCharge ? 'Yes' : 'No',
+      einvoice: irn ? { irn:irn.toLowerCase(), ackNo:ackNo, ackDate:ackDate, signedQr:signedQr } : null,
+      sameState:t.sameState, lines: ivWorkingLines.slice(),
+      qtyTotal:t.qty, itemsTotal:t.itemsTotal, discount:t.discount, freight:t.freight, packing:t.packing,
+      otherCharges:t.otherCharges, subtotal:t.taxable, taxPct:t.gstPct, cessPct:t.cessPct,
+      cgstPct: t.sameState ? t.gstPct/2 : 0, sgstPct: t.sameState ? t.gstPct/2 : 0, igstPct: t.sameState ? 0 : t.gstPct,
+      cgstValue:t.cgst, sgstValue:t.sgst, igstValue:t.igst, cessValue:t.cess, taxValue:t.tax,
+      hsnSummary:t.rows, totalValue:t.total };
     try {
       var res = await C.idms.saveDoc({ kind:'invoice', status:'Active', docNo: invoiceNo, data:data },
         'sales invoice raised');
       salesInvoices = await C.idms.docs('invoice');
-      var month = g('iv-date').slice(0,7);
-      var overLines = ivWorkingLines.filter(function(l){
-        var line = { customerId:custId, partId:l.partId, invoiceDate:g('iv-date'),
-          invoiceDocId:res.docId, lineIndex:ivWorkingLines.indexOf(l), qty:l.qty };
-        return excessForLine(line) > 0;
+      var overLines = ivWorkingLines.filter(function(l, idx){
+        return excessForLine({ customerId:cust.doc_id, partId:l.partId, invoiceDate:g('iv-date'),
+          invoiceDocId:res.docId, lineIndex:idx, qty:l.qty }) > 0;
       });
       say('Invoice <b>'+esc(invoiceNo)+'</b> saved and dispatched quantity updated.' +
-        (overLines.length ? ' '+overLines.length+' line(s) go over this month\'s plan and are shown as excess sales.' : ''), true);
-      var savedDoc = { doc_id: res.docId, doc_no: invoiceNo, data: data };
-      printInvoiceDoc(savedDoc);
+        (overLines.length ? ' '+overLines.length+" line(s) go over this month's plan and are shown as excess sales." : ''), true);
+      printInvoiceDoc({ doc_id: res.docId, doc_no: invoiceNo, data: data });
       document.getElementById('iv-no').value = '';
-      ['iv-custpo','iv-custpodate','iv-terms'].forEach(function(id){ document.getElementById(id).value=''; });
-      document.getElementById('iv-pos').value = '';
+      ['iv-irn','iv-ackno','iv-ackdate','iv-einvqr','iv-discount','iv-freight','iv-packing','iv-other','iv-cess']
+        .forEach(function(id){ document.getElementById(id).value=''; });
+      document.getElementById('iv-rcm').value = 'No';
       ivResetLines();
+      ivFillPoSelect();
       drawInvoiceRegister();
     } catch(e){ say(esc(e.message)); }
   }
 
-  /* The real, printable tax invoice — letterhead, Bill To/Ship To, GST split,
-     line items with HSN, manufacturing/traceability, bank details and the
-     declaration — built on the same report engine every other printed
-     document in the IDMS uses, not a bespoke one just for this. Matches the
-     statutory tax-invoice layout: nothing here is invented — a field with
-     nothing on file prints as '—' rather than a guessed value. */
+  /* ---------------- the printed tax invoice ----------------
+     Laid out section by section in the order of the tax-invoice format the
+     works uses: letterhead, invoice details, e-invoice, bill to, ship to,
+     items, tax, totals, amount in words, traceability, bank, terms,
+     declaration and signature. Every cell has a border, the table layout is
+     fixed so a long value wraps inside its own box instead of pushing the
+     table off the page, and money columns are sized for eleven-figure rupee
+     amounts. A field with nothing on file prints as a dash — nothing is
+     guessed. An invoice saved before these fields existed still prints: what
+     it lacks is worked out from its lines or shown as a dash. */
+  var IV_COPIES = ['Original for Recipient', 'Duplicate for Transporter', 'Triplicate for Supplier'];
+
+  function invoiceDocHtml(v, p, st, copyLabel){
+    var e = esc, cur = v.currency || 'INR', sym = cur === 'USD' ? '$' : '₹';
+    var dash = function(x){ return (x === undefined || x === null || String(x).trim() === '') ? '—' : e(x); };
+    /* a dollar invoice is grouped the international way (12,193,263.11), a
+       rupee one in lakhs and crores — the reader of each expects their own */
+    var num = cur === 'USD'
+      ? function(n){ return C.num(n).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
+      : function(n){ return C.rate(n); };
+    var qtyf = cur === 'USD'
+      ? function(n){ return C.num(n).toLocaleString('en-US', { maximumFractionDigits:3 }); }
+      : function(n){ return C.qty(n); };
+    var lines = v.lines || [];
+    /* invoices from before the full layout carry no computed summary */
+    var t = v.hsnSummary ? {
+        qty: v.qtyTotal != null ? v.qtyTotal : lines.reduce(function(a, l){ return a + C.num(l.qty); }, 0),
+        itemsTotal: v.itemsTotal != null ? v.itemsTotal : v.subtotal, discount:v.discount||0, freight:v.freight||0,
+        packing:v.packing||0, otherCharges:v.otherCharges||0, taxable:v.subtotal, rows:v.hsnSummary,
+        cgst:v.cgstValue||0, sgst:v.sgstValue||0, igst:v.igstValue||0, cess:v.cessValue||0, total:v.totalValue,
+        sameState:!!v.sameState, reverseCharge: v.reverseCharge === 'Yes' }
+      : ivCompute(lines, { gstPct:v.taxPct, cessPct:0, sameState:!!v.sameState });
+    var ship = v.ship || { name: v.customerName, address: v.despatchAddress || v.billingAddress, gstin:'', contact: v.contact };
+    var ein = v.einvoice || null;
+    var pairs = function(rows, labelW){
+      return '<table class="kv"><colgroup><col style="width:'+(labelW||34)+'%"><col></colgroup><tbody>' +
+        rows.map(function(r){ return '<tr><th>'+e(r[0])+'</th><td'+(r[2]?' class="'+r[2]+'"':'')+'>'+r[1]+'</td></tr>'; }).join('') +
+        '</tbody></table>';
+    };
+    var cityLine = [p.city, p.state].filter(Boolean).join(', ') + (p.pin ? ' – ' + p.pin : '');
+
+    var h = '<div class="copy">';
+    /* letterhead */
+    h += '<table class="head"><colgroup>' + (p.logo ? '<col style="width:22%">' : '') +
+      '<col><col style="width:27%"></colgroup><tr>' +
+      (p.logo ? '<td class="logo"><img src="'+p.logo+'" alt=""></td>' : '') +
+      '<td class="co"><div class="coname">'+dash(p.name)+'</div>' +
+        [p.addr1, p.addr2].filter(Boolean).map(e).join('<br>') + (cityLine ? '<br>' + e(cityLine) : '') +
+        '<div>'+e(p.taxLabel||'GSTIN')+': <b>'+dash(p.gstin)+'</b> &nbsp;|&nbsp; '+e(p.panLabel||'PAN')+': <b>'+dash(p.pan || panFromGstin(p.gstin))+'</b></div>' +
+        '<div>State: '+dash(p.stateName)+' &nbsp;|&nbsp; State Code: '+dash(p.stateCode)+'</div>' +
+        '<div>'+[p.phone ? 'Phone: '+e(p.phone) : '', p.email ? 'Email: '+e(p.email) : '', p.website ? 'Website: '+e(p.website) : '']
+          .filter(Boolean).join(' &nbsp;|&nbsp; ')+'</div></td>' +
+      '<td class="title"><div class="big">TAX INVOICE</div><div class="copylbl">'+e(copyLabel)+'</div></td></tr></table>';
+
+    /* invoice details, with the e-invoice block beside it when there is one */
+    var det = '<table class="grid4"><colgroup><col style="width:22%"><col style="width:28%"><col style="width:20%"><col style="width:30%"></colgroup>' +
+      '<tr><th colspan="4" class="sec">Invoice Details</th></tr>' +
+      '<tr><th>Invoice No.</th><td><b>'+dash(v.invoiceNo)+'</b></td><th>Invoice Date</th><td>'+(v.invoiceDate?C.fmtDate(v.invoiceDate):'—')+'</td></tr>' +
+      '<tr><th>Customer PO No.</th><td>'+dash(v.custPo)+'</td><th>PO Date</th><td>'+(v.custPoDate?C.fmtDate(v.custPoDate):(ivHeaderPo(lines).many?'per line':'—'))+'</td></tr>' +
+      '<tr><th>Payment Terms</th><td>'+dash(v.paymentTerms)+'</td><th>Due Date</th><td>'+(v.dueDate?C.fmtDate(v.dueDate):'—')+'</td></tr>' +
+      '<tr><th>Place of Supply</th><td>'+dash(v.placeOfSupply)+'</td><th>State Code</th><td>'+dash(v.placeOfSupplyCode||v.customerStateCode)+'</td></tr>' +
+      '<tr><th>Reverse Charge</th><td>'+dash(v.reverseCharge||'No')+'</td><th>Currency</th><td>'+e(cur)+'</td></tr></table>';
+    if (ein && ein.irn){
+      var qr = ein.signedQr ? C.qrSvg(ein.signedQr, { label:'e-invoice QR code' }) : '';
+      h += '<table class="duo"><colgroup><col style="width:58%"><col></colgroup><tr><td class="bare">'+det+'</td><td class="bare">' +
+        '<table class="kv"><colgroup><col style="width:26%"><col></colgroup>' +
+        '<tr><th colspan="2" class="sec">E-Invoice Details</th></tr>' +
+        '<tr><th>IRN</th><td class="mono">'+e(ein.irn)+'</td></tr>' +
+        '<tr><th>Ack. No.</th><td>'+dash(ein.ackNo)+'</td></tr>' +
+        '<tr><th>Ack. Date</th><td>'+(ein.ackDate ? e(new Date(ein.ackDate).toLocaleString('en-GB')) : '—')+'</td></tr>' +
+        '<tr><th>QR Code</th><td class="qr">'+(qr ? '<div class="qrbox big">'+qr+'</div>' : '—')+'</td></tr></table>' +
+        '</td></tr></table>';
+    } else h += det;
+
+    /* bill to / ship to */
+    h += '<table class="duo"><colgroup><col style="width:50%"><col></colgroup><tr><td class="bare">' +
+      '<table class="kv"><colgroup><col style="width:30%"><col></colgroup><tr><th colspan="2" class="sec">Bill To</th></tr>' +
+      '<tr><th>Customer Name</th><td><b>'+dash(v.customerName)+'</b></td></tr>' +
+      '<tr><th>Customer Code</th><td>'+dash(v.customerCode)+'</td></tr>' +
+      '<tr><th>GSTIN</th><td>'+dash(v.gstin)+'</td></tr>' +
+      '<tr><th>PAN</th><td>'+dash(v.pan || panFromGstin(v.gstin))+'</td></tr>' +
+      '<tr><th>Address</th><td>'+dash(v.billingAddress)+'</td></tr>' +
+      '<tr><th>State / Code</th><td>'+dash(v.customerState)+' / '+dash(v.customerStateCode || C.gstStateCode(v.gstin||''))+'</td></tr>' +
+      '<tr><th>Contact</th><td>'+dash(v.contact)+'</td></tr>' +
+      '<tr><th>Phone / Email</th><td>'+([v.phone, v.email].filter(Boolean).map(e).join(' / ') || '—')+'</td></tr></table>' +
+      '</td><td class="bare">' +
+      '<table class="kv"><colgroup><col style="width:30%"><col></colgroup><tr><th colspan="2" class="sec">Ship To</th></tr>' +
+      '<tr><th>Delivery Location</th><td><b>'+dash(ship.name)+'</b></td></tr>' +
+      '<tr><th>Address</th><td>'+dash(ship.address)+'</td></tr>' +
+      '<tr><th>GSTIN</th><td>'+dash(ship.gstin)+'</td></tr>' +
+      '<tr><th>State / Code</th><td>'+dash(ship.state || (ship.gstin ? C.gstStateName(ship.gstin) : v.placeOfSupply))+' / '+
+        dash(ship.stateCode || (ship.gstin ? C.gstStateCode(ship.gstin) : v.placeOfSupplyCode))+'</td></tr>' +
+      '<tr><th>Contact</th><td>'+dash(ship.contact)+'</td></tr></table>' +
+      '</td></tr></table>';
+
+    /* items */
+    var manyPo = ivHeaderPo(lines).many;
+    h += '<table class="items"><colgroup><col style="width:4.5%"><col style="width:14%"><col><col style="width:12%">' +
+      '<col style="width:9%"><col style="width:10%"><col style="width:5.5%"><col style="width:11%"><col style="width:13.5%"></colgroup>' +
+      '<thead><tr><th colspan="9" class="sec">Item / Product Details</th></tr>' +
+      '<tr><th class="c">Sl.</th><th>Part No.</th><th>Description</th><th>Drawing No. / Rev.</th><th>HSN/SAC</th>' +
+      '<th class="r">Qty</th><th>UOM</th><th class="r">Rate ('+sym+')</th><th class="r">Taxable Value ('+sym+')</th></tr></thead><tbody>' +
+      lines.map(function(l, i){
+        return '<tr><td class="c">'+(i+1)+'</td><td>'+dash(l.custPartNo || l.partNo)+
+            (l.custPartNo && l.partNo ? '<div class="sm">Our no. '+e(l.partNo)+'</div>' : '')+'</td>' +
+          '<td>'+dash(l.custPartName || l.partName)+
+            (manyPo && l.po ? '<div class="sm">PO '+e(l.po)+(l.poDate ? ' dt. '+C.fmtDate(l.poDate) : '')+'</div>' : '')+'</td>' +
+          '<td>'+(l.drawingNo ? e(l.drawingNo)+(l.drawingRev ? ' / Rev. '+e(l.drawingRev) : '') : '—')+'</td>' +
+          '<td>'+dash(l.hsn)+'</td><td class="r n">'+qtyf(l.qty)+'</td><td>'+dash(l.uom||'Nos')+'</td>' +
+          '<td class="r n">'+num(l.rate)+'</td><td class="r n">'+num(l.value)+'</td></tr>';
+      }).join('') + '</tbody></table>';
+
+    /* tax details, one row per HSN code */
+    var rc = t.reverseCharge;
+    h += '<table class="tax"><colgroup><col style="width:10%"><col style="width:13%"><col style="width:6.5%"><col style="width:11%">' +
+      '<col style="width:6.5%"><col style="width:11%"><col style="width:6.5%"><col style="width:11%"><col style="width:10.5%"><col></colgroup>' +
+      '<thead><tr><th colspan="10" class="sec">Tax Details'+(rc ? ' — tax payable by the recipient under reverse charge' : '')+'</th></tr>' +
+      '<tr><th>HSN/SAC</th><th class="r">Taxable Value</th><th class="r">CGST %</th><th class="r">CGST Amount</th>' +
+      '<th class="r">SGST %</th><th class="r">SGST Amount</th><th class="r">IGST %</th><th class="r">IGST Amount</th>' +
+      '<th class="r">Cess</th><th class="r">Total</th></tr></thead><tbody>' +
+      t.rows.map(function(r){
+        return '<tr><td>'+dash(r.hsn)+'</td><td class="r n">'+num(r.taxable)+'</td>' +
+          '<td class="r n">'+C.qty(r.cgstPct)+'</td><td class="r n">'+num(r.cgst)+'</td>' +
+          '<td class="r n">'+C.qty(r.sgstPct)+'</td><td class="r n">'+num(r.sgst)+'</td>' +
+          '<td class="r n">'+C.qty(r.igstPct)+'</td><td class="r n">'+num(r.igst)+'</td>' +
+          '<td class="r n">'+num(r.cess)+'</td><td class="r n">'+num(r.total)+'</td></tr>';
+      }).join('') +
+      (t.rows.length > 1 ? '<tr class="tot"><td>Total</td><td class="r n">'+num(t.taxable)+'</td><td></td><td class="r n">'+num(t.cgst)+
+        '</td><td></td><td class="r n">'+num(t.sgst)+'</td><td></td><td class="r n">'+num(t.igst)+'</td><td class="r n">'+num(t.cess)+
+        '</td><td class="r n">'+num(t.taxable + t.cgst + t.sgst + t.igst + t.cess)+'</td></tr>' : '') +
+      '</tbody></table>';
+
+    /* totals beside amount in words and payment details */
+    var bankBits = [p.bankAccName, p.bankName, p.bankBranch, p.bankAccNo, p.bankIfsc, st.upi].some(Boolean);
+    var upiQr = (st.showBank && st.upi && cur === 'INR' && !rc && t.total > 0)
+      ? C.qrSvg('upi://pay?pa=' + st.upi + '&pn=' + encodeURIComponent(p.name || '') + '&am=' + C.num(t.total).toFixed(2) +
+          '&cu=INR&tn=' + encodeURIComponent('Invoice ' + (v.invoiceNo || '')), { label:'UPI payment QR code' }) : '';
+    var left = '<table class="kv"><colgroup><col style="width:30%"><col></colgroup>' +
+      '<tr><th colspan="2" class="sec">Amount in Words</th></tr>' +
+      '<tr><td colspan="2"><b>'+e(C.numberToWords(t.total, cur))+'</b></td></tr>';
+    if (st.showBank){
+      left += '<tr><th colspan="2" class="sec">Bank / Payment Details</th></tr>' +
+        (bankBits ? '<tr><th>Account Name</th><td>'+dash(p.bankAccName || p.name)+'</td></tr>' +
+          '<tr><th>Bank Name</th><td>'+dash(p.bankName)+'</td></tr>' +
+          '<tr><th>Branch</th><td>'+dash(p.bankBranch)+'</td></tr>' +
+          '<tr><th>Account No.</th><td>'+dash(p.bankAccNo)+'</td></tr>' +
+          '<tr><th>IFSC</th><td>'+dash(p.bankIfsc)+'</td></tr>' +
+          '<tr><th>UPI ID</th><td>'+dash(st.upi)+(upiQr ? '<div class="qrbox">'+upiQr+'</div><div class="sm">Scan to pay '+sym+num(t.total)+'</div>' : '')+'</td></tr>'
+          : '<tr><td colspan="2" class="sm">No bank details are set in the Company Profile.</td></tr>');
+    }
+    left += '</table>';
+    var trow = function(label, val, cls){ return '<tr'+(cls?' class="'+cls+'"':'')+'><th>'+label+'</th><td class="r n">'+val+'</td></tr>'; };
+    var right = '<table class="kv totals"><colgroup><col style="width:56%"><col></colgroup>' +
+      '<tr><th colspan="2" class="sec">Totals ('+sym+')</th></tr>' +
+      trow('Total Quantity', qtyf(t.qty)) +
+      trow('Subtotal (goods)', num(t.itemsTotal)) +
+      trow('Total Discount', num(t.discount)) +
+      trow('Freight', num(t.freight)) +
+      trow('Packing / Forwarding', num(t.packing)) +
+      trow('Other Charges', num(t.otherCharges)) +
+      trow('Taxable Value', num(t.taxable), 'sub') +
+      trow('CGST', num(t.cgst)) + trow('SGST / UTGST', num(t.sgst)) + trow('IGST', num(t.igst)) + trow('Cess', num(t.cess)) +
+      (rc ? '<tr><td colspan="2" class="sm">GST shown above is payable by the recipient and is not included in the grand total.</td></tr>' : '') +
+      trow('GRAND TOTAL', sym + num(t.total), 'grand') + '</table>';
+    h += '<table class="duo"><colgroup><col style="width:56%"><col></colgroup><tr><td class="bare">'+left+'</td><td class="bare">'+right+'</td></tr></table>';
+
+    /* manufacturing / traceability — the template's Field / Details layout,
+       one Details column per line, four lines to a table */
+    var fields = [['Customer Part No.', function(l){ return l.custPartNo; }], ['Internal Part No.', function(l){ return l.partNo; }],
+      ['Drawing No.', function(l){ return l.drawingNo; }], ['Drawing Revision', function(l){ return l.drawingRev; }],
+      ['Batch / Lot No.', function(l){ return l.batch; }], ['Heat No.', function(l){ return l.heat; }],
+      ['Material Grade', function(l){ return l.material; }],
+      ['Manufacturing Date', function(l){ return l.mfgDate ? C.fmtDate(l.mfgDate) : ''; }],
+      ['Inspection Status', function(l){ return l.inspection; }], ['Packing / Box No.', function(l){ return l.boxes; }],
+      ['Delivery Challan No.', function(l){ return l.challan; }]];
+    for (var ci = 0; ci < Math.max(1, lines.length); ci += 4){
+      var chunk = lines.slice(ci, ci + 4);
+      var w = chunk.length ? (72 / chunk.length) : 72;
+      h += '<table class="trace"><colgroup><col style="width:28%">' + chunk.map(function(){ return '<col style="width:'+w+'%">'; }).join('') +
+        '</colgroup><thead><tr><th colspan="'+(chunk.length+1)+'" class="sec">Manufacturing / Traceability Details' +
+        (lines.length > 4 ? ' (lines '+(ci+1)+'–'+(ci+chunk.length)+')' : '')+'</th></tr>' +
+        '<tr><th>Field</th>' + chunk.map(function(l, k){ return '<th>'+(chunk.length > 1 || lines.length > 1 ? 'Line '+(ci+k+1) : 'Details')+'</th>'; }).join('') +
+        '</tr></thead><tbody>' +
+        fields.map(function(f){
+          return '<tr><th>'+e(f[0])+'</th>' + chunk.map(function(l){ return '<td>'+dash(f[1](l))+'</td>'; }).join('') + '</tr>';
+        }).join('') + '</tbody></table>';
+    }
+
+    /* terms, declaration, signature */
+    var terms = st.terms.slice();
+    if (st.jurisdiction) terms.push('All disputes shall be subject to the jurisdiction of ' + st.jurisdiction + '.');
+    h += '<table class="duo foot"><colgroup><col style="width:62%"><col></colgroup><tr><td class="bare">' +
+      '<table class="kv"><tr><th class="sec">Terms &amp; Conditions</th></tr><tr><td><ol>' +
+        terms.map(function(x){ return '<li>'+e(x)+'</li>'; }).join('') + '</ol></td></tr>' +
+      '<tr><th class="sec">Declaration</th></tr><tr><td>We declare that this invoice shows the actual price of the ' +
+        'goods/services described and that all particulars stated herein are true and correct.</td></tr></table>' +
+      '</td><td class="bare"><table class="kv sign"><tr><td>' +
+        '<div class="for">For '+dash(p.name)+'</div><div class="space"></div>' +
+        '<div class="auth">Authorised Signatory</div>' +
+        '<div>Name: '+dash(st.signName)+'</div><div>Designation: '+dash(st.signTitle)+'</div>' +
+        '<div>Date: '+(v.invoiceDate ? C.fmtDate(v.invoiceDate) : '—')+'</div><div>Place: '+dash(st.place)+'</div>' +
+      '</td></tr></table></td></tr></table>';
+    h += '<div class="note">This is a computer-generated Tax Invoice and does not require a physical signature where legally permitted.' +
+      '<br><b>Thank you for your business.</b></div></div>';
+    return h;
+  }
+
+  var IV_PRINT_CSS =
+    '@page{size:A4 portrait;margin:8mm;}' +
+    '*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+    'body{font-family:Arial,Helvetica,sans-serif;font-size:7.6pt;color:#000;line-height:1.28;}' +
+    '.copy{page-break-after:always;}.copy:last-child{page-break-after:auto;}' +
+    'table{width:100%;border-collapse:collapse;table-layout:fixed;}' +
+    'th,td{border:.7pt solid #000;padding:2.2pt 3pt;vertical-align:top;text-align:left;' +
+      'overflow-wrap:anywhere;word-wrap:break-word;word-break:break-word;}' +
+    'th{background:#eef1f6;font-weight:700;}' +
+    'th.sec{background:#1f2f4a;color:#fff;font-size:7.8pt;letter-spacing:.2pt;padding:2.6pt 4pt;}' +
+    '.r{text-align:right;} .c{text-align:center;}' +
+    'td.n{white-space:nowrap;overflow-wrap:normal;word-break:normal;}' +
+    '.mono{font-family:"Courier New",Courier,monospace;font-size:7pt;word-break:break-all;overflow-wrap:anywhere;}' +
+    '.sm{font-size:6.6pt;color:#333;margin-top:1pt;}' +
+    'table+table,.duo+table,table+.duo{margin-top:3pt;}' +
+    'td.bare{border:0;padding:0;}' +
+    '.duo>tbody>tr>td.bare:first-child{padding-right:3pt;}' +
+    '.head td{vertical-align:middle;}' +
+    '.head .logo{text-align:center;} .head .logo img{max-width:100%;max-height:18mm;object-fit:contain;}' +
+    '.head .co{font-size:7.6pt;line-height:1.4;} .coname{font-size:12.5pt;font-weight:800;margin-bottom:1pt;}' +
+    '.head .title{text-align:center;} .big{font-size:14pt;font-weight:800;letter-spacing:1pt;}' +
+    '.copylbl{margin-top:3pt;font-size:7pt;font-weight:700;border:.7pt solid #000;display:inline-block;padding:1pt 4pt;}' +
+    '.items thead,.tax thead,.trace thead{display:table-header-group;}' +
+    'tr{page-break-inside:avoid;}' +
+    /* the side-by-side wrappers may split across a page, or a two-line invoice
+       leaves half of page one blank waiting for the whole totals block to fit */
+    '.duo>tbody>tr{page-break-inside:auto;}' +
+    '.tot td{font-weight:700;background:#f5f7fa;}' +
+    '.totals tr.sub th,.totals tr.sub td{border-top:1.2pt solid #000;}' +
+    '.totals tr.grand th,.totals tr.grand td{font-size:9.5pt;font-weight:800;background:#e4e9f1;border-top:1.4pt solid #000;}' +
+    '.qrbox{width:24mm;height:24mm;margin:2pt 0;} .qrbox.big{width:34mm;height:34mm;}' +
+    '.qrbox svg{width:100%;height:100%;display:block;}' +
+    'ol{padding-left:12pt;} li{margin-bottom:1pt;}' +
+    '.sign td{height:100%;} .sign .for{font-weight:700;} .sign .space{height:16mm;}' +
+    '.sign .auth{font-weight:700;border-top:.7pt solid #000;padding-top:2pt;margin-bottom:3pt;}' +
+    '.foot .kv,.foot .sign{height:100%;}' +
+    '.note{margin-top:4pt;text-align:center;font-size:7pt;}';
+
   async function printInvoiceDoc(iv){
     var v = iv.data || {};
     var p = await C.loadProfile();
-    var sections = [];
-    sections.push({ type:'pairs', title:'Invoice Details', rows:[
-      ['Invoice No.', '<b>'+esc(v.invoiceNo||'')+'</b>'],
-      ['Invoice Date', v.invoiceDate ? C.fmtDate(v.invoiceDate) : '—'],
-      ['Customer PO No.', esc(v.custPo||'—')], ['PO Date', v.custPoDate ? C.fmtDate(v.custPoDate) : '—'],
-      ['Payment Terms', esc(v.paymentTerms||'—')],
-      ['Place of Supply', esc(v.placeOfSupply||'—')],
-      ['Reverse Charge', 'No'], ['Currency', esc(v.currency||'INR')] ] });
-    sections.push({ type:'pairs', title:'Bill To', rows:[
-      ['Customer Name', esc(v.customerName||'—')], ['GSTIN', esc(v.gstin||'—')],
-      ['Address', esc(v.billingAddress||'—')], ['State', esc(v.customerState||'—')],
-      ['Contact', [v.contact, v.phone, v.email].filter(Boolean).map(esc).join(' · ') || '—'] ] });
-    if (v.despatchAddress) sections.push({ type:'pairs', title:'Ship To', rows:[
-      ['Delivery Address', esc(v.despatchAddress)] ] });
-    sections.push({ type:'table', title:'Item / Product Details',
-      columns:[{label:'Part'},{label:'Customer Part No.'},{label:'Drawing No. / Rev'},{label:'HSN/SAC'},
-        {label:'Qty',align:'r'},{label:'Rate',align:'r'},{label:'Taxable Value',align:'r'}],
-      rows:(v.lines||[]).map(function(l){
-        return [esc(l.partNo)+' — '+esc(l.partName), esc(l.custPartNo||'—'),
-          (l.drawingNo ? esc(l.drawingNo)+(l.drawingRev?' Rev '+esc(l.drawingRev):'') : '—'),
-          esc(l.hsn||'—'), C.qty(l.qty), C.rate(l.rate), moneyFmt(l.value, v.currency)]; }) });
-    var taxRows = [['Taxable Value', moneyFmt(v.subtotal, v.currency)]];
-    if (v.sameState){
-      taxRows.push(['CGST @ '+(v.cgstPct||0)+'%', moneyFmt(v.cgstValue, v.currency)]);
-      taxRows.push(['SGST @ '+(v.sgstPct||0)+'%', moneyFmt(v.sgstValue, v.currency)]);
-    } else {
-      taxRows.push(['IGST @ '+(v.igstPct||0)+'%', moneyFmt(v.igstValue, v.currency)]);
-    }
-    taxRows.push(['Grand Total', '<b>'+moneyFmt(v.totalValue, v.currency)+'</b>']);
-    taxRows.push(['Amount in Words', esc(C.numberToWords(v.totalValue))]);
-    sections.push({ type:'pairs', title:'Tax Details & Totals', rows:taxRows });
-    /* Manufacturing/traceability is only shown when at least one line carries
-       something in it — an invoice with none of these on file should not
-       print a table of em dashes. */
-    var hasTrace = (v.lines||[]).some(function(l){ return l.batch||l.heat||l.material||l.challan; });
-    if (hasTrace) sections.push({ type:'table', title:'Manufacturing / Traceability Details',
-      columns:[{label:'Part'},{label:'Batch / Lot No.'},{label:'Heat No.'},{label:'Material Grade'},
-        {label:'Delivery Challan No.'}],
-      rows:(v.lines||[]).map(function(l){
-        return [esc(l.partNo), esc(l.batch||'—'), esc(l.heat||'—'), esc(l.material||'—'), esc(l.challan||'—')]; }) });
-    if (p.bankShow) sections.push({ type:'pairs', title:'Bank / Payment Details', rows:[
-      ['Account Name', esc(p.bankAccName||p.name||'—')], ['Bank Name', esc(p.bankName||'—')],
-      ['Branch', esc(p.bankBranch||'—')], ['Account No.', esc(p.bankAccNo||'—')],
-      ['IFSC', esc(p.bankIfsc||'—')] ] });
-    sections.push({ type:'text', title:'Terms & Conditions',
-      body:'Payment shall be made as per agreed payment terms. Goods once supplied are subject to the ' +
-        'agreed quality and commercial conditions. Any discrepancy in quantity or damage must be reported ' +
-        'within the agreed period. Taxes are charged as applicable under prevailing GST regulations. ' +
-        'Interest on delayed payment is applicable as per agreed commercial terms.' });
-    sections.push({ type:'text', title:'Declaration',
-      body:'We declare that this invoice shows the actual price of the goods described and that all ' +
-        'particulars stated herein are true and correct.' +
-        (p.signatoryName ? '  For ' + p.name + ' — ' + p.signatoryName +
-          (p.signatoryTitle ? ', ' + p.signatoryTitle : '') + '.' : '') });
-    C.openReport({ title:'Tax Invoice', kind:'Sales', subtitle:v.invoiceNo, sections:sections });
+    if (!ivProfile || !ivProfile.name) ivProfile = p;
+    var st = ivSettings();
+    var copies = st.copies === '3' ? IV_COPIES : IV_COPIES.slice(0,1);
+    var body = copies.map(function(label){ return invoiceDocHtml(v, p, st, label); }).join('');
+    var w = window.open('', '_blank');
+    if (!w) { toast('Allow pop-ups for this site to print the invoice.'); return; }
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc('Tax Invoice ' + (v.invoiceNo || '')) +
+      '</title><style>' + IV_PRINT_CSS + '</style></head><body>' + body + '</body></html>');
+    w.document.close();
+    setTimeout(function(){ try { w.print(); } catch(e){ /* the user can print from the window */ } }, 400);
   }
 
   function printInvoiceRegister(){
@@ -15234,7 +15951,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       });
 
       /* orders that will not be met, judged from what has actually been booked */
-      var ords = await C.idms.docs('order');
+      var ords = (await C.idms.docs('order')).filter(function(o){ return !(o.data||{}).obsolete; });
       looked.orders = ords.length;
       /* allocated the same way as the plan screen, earliest due first — two
          places computing a balance differently is worse than not showing it */
@@ -17849,6 +18566,70 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       rows.map(function(r){ return headers.map(function(h){ return buCsvCell(r[h] || ''); }).join(','); }).join('\n');
   }
 
+  /* ---- readers shared by the Customer PO and Sales Plan categories ----
+     Dates in a spreadsheet arrive the way the person's Excel writes them. In
+     India that is day first, so DD-MM-YYYY (with - / or .) is read as day,
+     month, year; YYYY-MM-DD is also accepted. A date that does not exist
+     (31-02-2026) is refused rather than rolled into March. '' means blank;
+     null means something was there and it was not a date. */
+  function buDate(v){
+    var t = String(v == null ? '' : v).trim(), m, y, mo, d;
+    if (!t) return '';
+    if ((m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+    else if ((m = t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/))) { d = +m[1]; mo = +m[2]; y = +m[3]; }
+    else if ((m = t.match(/^(\d{1,2})[\s\-]([A-Za-z]{3,})[\s\-,]*(\d{4})$/))) {
+      d = +m[1]; y = +m[3]; mo = buMonthIndex(m[2]); if (!mo) return null;
+    } else return null;
+    var dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+    return y + '-' + String(mo).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+  }
+  function buMonthIndex(name){
+    var k = String(name||'').slice(0,3).toLowerCase();
+    return ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(k) + 1;
+  }
+  function buMonth(v){
+    var t = String(v == null ? '' : v).trim(), m, y, mo;
+    if (!t) return '';
+    if ((m = t.match(/^(\d{4})[\-\/](\d{1,2})$/))) { y = +m[1]; mo = +m[2]; }
+    else if ((m = t.match(/^(\d{1,2})[\-\/](\d{4})$/))) { mo = +m[1]; y = +m[2]; }
+    else if ((m = t.match(/^([A-Za-z]{3,})[\s\-,']*(\d{2}|\d{4})$/))) {
+      mo = buMonthIndex(m[1]); y = +m[2]; if (y < 100) y += 2000;
+    } else return '';
+    if (!(mo >= 1 && mo <= 12) || y < 2000) return '';
+    return y + '-' + String(mo).padStart(2,'0');
+  }
+  function buPoType(v){
+    var k = String(v||'').toLowerCase().replace(/[^a-z]/g,'');
+    if (k === 'onetime' || k === 'onetimepo' || k === 'po' || k === 'firm') return 'onetime';
+    if (k === 'ratecontract' || k === 'ratecontractpo' || k === 'rc' || k === 'openpo') return 'ratecontract';
+    if (k === 'schedule' || k === 'schedulerelease' || k === 'release') return 'schedule';
+    return '';
+  }
+  function buFindCustomer(ctx, v){
+    var t = String(v||'').trim().toLowerCase();
+    if (!t) return null;
+    return ctx.customers.filter(function(c){ return String((c.data||{}).name||'').trim().toLowerCase() === t; })[0] ||
+      ctx.customers.filter(function(c){ return String((c.data||{}).code||c.doc_no||'').trim().toLowerCase() === t; })[0] || null;
+  }
+  /* The part is found through the customer's own link to it, exactly as the
+     Customer PO screen only offers parts linked to the chosen customer — so a
+     row cannot put a PO against a part that customer never bought. Either our
+     number or theirs will do. */
+  function buFindLink(ctx, customerId, pno){
+    var t = String(pno||'').trim().toLowerCase();
+    return ctx.custParts.filter(function(cp){
+      var v = cp.data||{};
+      if (v.customerId !== customerId) return false;
+      var p = ctx.parts.filter(function(x){ return x.part_id === v.partId; })[0] || {};
+      return String(p.part_no||v.internalNo||'').toLowerCase() === t || String(v.custPartNo||'').toLowerCase() === t;
+    })[0] || null;
+  }
+  function buFindLinkById(ctx, customerId, partId){
+    return ctx.custParts.filter(function(cp){ var v = cp.data||{};
+      return v.customerId === customerId && v.partId === partId; })[0] || { data:{ partId:partId } };
+  }
+
   var BULK_KINDS = [
     { id:'customer', label:'Customers',
       cols:['Name*','Code','GSTIN','PaymentTerms','BillingAddress','DespatchAddress','ContactPerson','Phone','Email'],
@@ -18040,16 +18821,220 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           data:{ description:r['Description*'].trim(), type:r.Type||'Other', range:r.Range||'',
             leastCount:r.LeastCount||'', location:r.Location||'', frequencyMonths:C.num(r.FrequencyMonths)||12,
             lastCalibrated:r.LastCalibrated||'', agency:'', certificate:'' } }, 'bulk uploaded');
-      } }
+      } },
+
+    { id:'order', label:'Customer PO (one-time POs, rate contracts and schedules)',
+      intro:'Each row is checked by the same rules as the Customer PO screen. A schedule can be ' +
+        'raised against a rate contract already on file, or one earlier in this same file — rows are ' +
+        'imported top to bottom, so put the contract first.',
+      cols:['POType*','Customer*','PartNo','PONumber*','PODate','Quantity','Price','Currency','DeliveryDate',
+            'ValidFrom','ValidTo','AgainstRateContract','TentativeQty1','TentativeQty2'],
+      colHint:{ POType:'One-time / Rate Contract / Schedule',
+        Customer:'The customer name or code, exactly as on Customer Addition',
+        PartNo:'The internal part number or the customer\'s own part number; it must already be linked to that customer. May be left blank on a schedule — it comes from the contract',
+        PONumber:'The PO number; on a schedule, the schedule / release number',
+        PODate:'DD-MM-YYYY or YYYY-MM-DD',
+        Quantity:'Required on one-time POs and schedules; leave blank on a rate contract',
+        Price:'Required on one-time POs and rate contracts; leave blank on a schedule — it takes the contract\'s price',
+        Currency:'INR or USD (blank = INR; a schedule takes the contract\'s)',
+        DeliveryDate:'Required on one-time POs and schedules. DD-MM-YYYY or YYYY-MM-DD',
+        ValidFrom:'Rate contracts only, optional', ValidTo:'Rate contracts only, optional — blank means no fixed end',
+        AgainstRateContract:'Schedules only: the PO number of the rate contract it is released against',
+        TentativeQty1:'Optional: quantity indicated for the month after the delivery month',
+        TentativeQty2:'Optional: quantity indicated for two months after the delivery month' },
+      example:{ 'POType*':'One-time', 'Customer*':'Acme Auto Components', PartNo:'PART-0001', 'PONumber*':'4500012345',
+        PODate:'01-09-2026', Quantity:'500', Price:'82.50', Currency:'INR', DeliveryDate:'30-09-2026',
+        ValidFrom:'', ValidTo:'', AgainstRateContract:'', TentativeQty1:'400', TentativeQty2:'450' },
+      async validate(r, ctx){
+        var errors = [];
+        var type = buPoType(r['POType*']);
+        if (!type) return { errors:['PO Type must be One-time, Rate Contract or Schedule'] };
+        var cust = buFindCustomer(ctx, r['Customer*']);
+        if (!cust) return { errors:[(r['Customer*']||'').trim() ? 'No customer named or coded "'+r['Customer*'].trim()+'"' : 'Customer is required'] };
+        var cv = cust.data || {};
+        var po = (r['PONumber*']||'').trim();
+        if (!po) errors.push(type === 'schedule' ? 'A schedule / release number is required' : 'A PO number is required');
+        var poDate = buDate(r.PODate), due = buDate(r.DeliveryDate);
+        if (poDate === null) errors.push('PO date "'+r.PODate+'" is not a date — use DD-MM-YYYY');
+        if (due === null) errors.push('Delivery date "'+r.DeliveryDate+'" is not a date — use DD-MM-YYYY');
+        var cur = String(r.Currency||'').trim().toUpperCase() || 'INR';
+        if (cur !== 'INR' && cur !== 'USD') errors.push('Currency must be INR or USD');
+        var t1 = C.num(r.TentativeQty1), t2 = C.num(r.TentativeQty2);
+        var link = null, contract = null, fileContract = null, price = C.num(r.Price);
+        var pno = (r.PartNo||'').trim();
+        if (pno){
+          link = buFindLink(ctx, cust.doc_id, pno);
+          if (!link) errors.push('Part "'+pno+'" is not linked to '+(cv.name||'this customer')+' — link it on the Parts screen first');
+        }
+
+        if (type === 'schedule'){
+          var against = (r.AgainstRateContract||'').trim();
+          if (!against) errors.push('A schedule needs the rate contract PO number it is against');
+          else {
+            var todayK = new Date().toISOString().slice(0,10);
+            contract = ctx.orders.filter(function(o){
+              var v = o.data||{};
+              return v.poType === 'ratecontract' && !v.obsolete && v.customerId === cust.doc_id &&
+                String(v.po||'').toLowerCase() === against.toLowerCase() &&
+                (!link || v.partId === (link.data||{}).partId);
+            })[0] || null;
+            if (contract){
+              var cvd = contract.data||{};
+              if (cvd.validTo && cvd.validTo < todayK)
+                errors.push('Rate contract '+against+' ended on '+C.fmtDate(cvd.validTo)+' — a schedule cannot be raised on it');
+            } else {
+              fileContract = (ctx.fileContracts||[]).filter(function(fc){
+                return fc.customerId === cust.doc_id && fc.po.toLowerCase() === against.toLowerCase() &&
+                  (!link || fc.partId === (link.data||{}).partId);
+              })[0] || null;
+              if (!fileContract) errors.push('No open rate contract '+against+' for '+(cv.name||'this customer')+
+                (link ? ' and this part' : '')+' — on file or earlier in this upload');
+            }
+          }
+          var src = contract ? contract.data : fileContract;
+          if (src){
+            if (price && Math.abs(price - C.num(src.price)) > 0.0001)
+              errors.push('A schedule takes its price from the contract ('+C.rate(src.price)+') — leave Price blank');
+            price = C.num(src.price); cur = src.currency || 'INR';
+            if (!link) link = buFindLinkById(ctx, cust.doc_id, src.partId);
+            /* the same release number twice against one contract is a file uploaded twice */
+            if (po && contract && ctx.orders.some(function(o){
+                var v = o.data||{}; return v.poType === 'schedule' && !v.obsolete &&
+                  v.scheduleAgainst === contract.doc_id && String(v.po||'').toLowerCase() === po.toLowerCase(); }))
+              errors.push('Schedule '+po+' is already on file against '+against);
+          }
+        } else {
+          if (!pno) errors.push('Part No. is required');
+          if (!(price > 0)) errors.push(type === 'ratecontract' ? 'The price is required — that is the point of a rate contract'
+            : 'The price is required to work out the PO value');
+        }
+
+        if (type === 'ratecontract'){
+          var vf = buDate(r.ValidFrom), vt = buDate(r.ValidTo);
+          if (vf === null) errors.push('Valid from "'+r.ValidFrom+'" is not a date');
+          if (vt === null) errors.push('Valid to "'+r.ValidTo+'" is not a date');
+          if (vf && vt && vt < vf) errors.push('Valid to is before Valid from');
+          if (C.num(r.Quantity)) errors.push('A rate contract carries no quantity — schedules do');
+          if (t1 || t2) errors.push('A rate contract carries no tentative quantity — put it on the schedules');
+        } else {
+          if (!(C.num(r.Quantity) > 0)) errors.push('Quantity is required');
+          if (!due) { if (due !== null) errors.push('A delivery date is required, or there is nothing to plan against'); }
+          else if (poDate && due < poDate) errors.push('The delivery date is before the PO date');
+        }
+
+        if (type !== 'schedule' && po && link){
+          var partId = (link.data||{}).partId;
+          if (ctx.orders.some(function(o){ var v = o.data||{};
+              return !v.obsolete && v.partId === partId && String(v.po||'').toLowerCase() === po.toLowerCase(); }))
+            errors.push('PO '+po+' already exists for this part — importing it again would double the demand');
+        }
+        if (errors.length) return { errors:errors };
+
+        var lv = link.data || {};
+        var p = ctx.parts.filter(function(x){ return x.part_id === lv.partId; })[0] || {};
+        if (type === 'ratecontract'){
+          (ctx.fileContracts = ctx.fileContracts || []).push({ key: cust.doc_id+'|'+lv.partId+'|'+po.toLowerCase(),
+            customerId:cust.doc_id, partId:lv.partId, po:po, price:price, currency:cur,
+            custPartNo: lv.custPartNo||'', custPartName: lv.custPartName||'' });
+        }
+        var srcData = contract ? contract.data : fileContract;
+        return { errors:[],
+          summary: type + '|' + cust.doc_id + '|' + lv.partId + '|' + po.toLowerCase() +
+            (type === 'schedule' ? '|' + String(r.AgainstRateContract||'').trim().toLowerCase() : ''),
+          label: po + ' — ' + (p.part_no||'') + ' (' + (cv.name||'') + ')',
+          type:type, customerId:cust.doc_id, customerName:cv.name||'', partId:lv.partId,
+          partNo:p.part_no||lv.internalNo||'', partName:p.part_name||'',
+          custPartNo: srcData ? (srcData.custPartNo||'') : (lv.custPartNo||''),
+          custPartName: srcData ? (srcData.custPartName||'') : (lv.custPartName||''),
+          po:po, poDate:poDate||'', due:due||'', qty: type === 'ratecontract' ? 0 : C.num(r.Quantity),
+          price:price, currency:cur, validFrom: type === 'ratecontract' ? (buDate(r.ValidFrom)||'') : '',
+          validTo: type === 'ratecontract' ? (buDate(r.ValidTo)||'') : '',
+          contractDocId: contract ? contract.doc_id : '', contractPo: type === 'schedule' ? String(r.AgainstRateContract||'').trim() : '',
+          fileContractKey: fileContract ? fileContract.key : '', tent1: t1, tent2: t2 };
+      },
+      async save(r, ctx, v){
+        var contractId = v.contractDocId;
+        if (v.type === 'schedule' && !contractId){
+          contractId = (ctx.savedContracts||{})[v.fileContractKey];
+          if (!contractId) throw new Error('its rate contract '+v.contractPo+' did not import, so there is nothing to schedule against');
+        }
+        var res = await C.idms.saveDoc({ kind:'order', partId:v.partId, status:'Open', docNo: await C.docNumber('so'),
+          data:{ partId:v.partId, partNo:v.partNo, partName:v.partName,
+            customerId:v.customerId, customerName:v.customerName,
+            poType:v.type, custPartNo:v.custPartNo, custPartName:v.custPartName,
+            po:v.po, qty:v.qty, price:v.price, currency:v.currency, poValue:v.qty*v.price,
+            due: v.type === 'ratecontract' ? '' : v.due, orderedOn:v.poDate,
+            validFrom:v.validFrom, validTo:v.validTo,
+            scheduleAgainst: v.type === 'schedule' ? contractId : '',
+            scheduleAgainstPo: v.type === 'schedule' ? v.contractPo : '',
+            kind: v.type === 'schedule' ? 'Schedule release' : v.type === 'ratecontract' ? '' : 'Firm order',
+            tent1: v.type === 'ratecontract' ? 0 : v.tent1, tent2: v.type === 'ratecontract' ? 0 : v.tent2,
+            revisionOf:'', revisionNo:1, poFile:null } }, 'bulk uploaded');
+        if (v.type === 'ratecontract'){
+          (ctx.savedContracts = ctx.savedContracts || {})[v.customerId+'|'+v.partId+'|'+v.po.toLowerCase()] = res.docId;
+        }
+      } },
+
+    { id:'salesplan', label:'Sales Plan forecasts (customer / part / month quantities)',
+      intro:'The Sales Plan is worked out from Customer POs. A forecast uploaded here is used only for a ' +
+        'month that no real PO, schedule or tentative quantity covers — and it steps aside by itself the ' +
+        'moment one arrives. A month that is already covered is refused rather than added on top.',
+      cols:['Customer*','PartNo*','Month*','ForecastQty*'],
+      colHint:{ Customer:'The customer name or code, exactly as on Customer Addition',
+        PartNo:'The internal part number or the customer\'s own part number; must be linked to that customer',
+        Month:'YYYY-MM, MM-YYYY or a month name with the year, e.g. October 2026',
+        ForecastQty:'The quantity expected in that month' },
+      example:{ 'Customer*':'Acme Auto Components', 'PartNo*':'PART-0001', 'Month*':'October 2026', 'ForecastQty*':'600' },
+      async validate(r, ctx){
+        var cust = buFindCustomer(ctx, r['Customer*']);
+        if (!cust) return { errors:[(r['Customer*']||'').trim() ? 'No customer named or coded "'+r['Customer*'].trim()+'"' : 'Customer is required'] };
+        var cv = cust.data || {}, errors = [];
+        var pno = (r['PartNo*']||'').trim();
+        var link = pno ? buFindLink(ctx, cust.doc_id, pno) : null;
+        if (!pno) errors.push('Part No. is required');
+        else if (!link) errors.push('Part "'+pno+'" is not linked to '+(cv.name||'this customer')+' — link it on the Parts screen first');
+        var month = buMonth(r['Month*']);
+        if (!month) errors.push((r['Month*']||'').trim() ? 'Month "'+r['Month*']+'" is not a month — use YYYY-MM or October 2026' : 'Month is required');
+        else if (month < thisMonthKey()) errors.push(monthName(month)+' is already over — a forecast for it plans nothing');
+        var qty = C.num(r['ForecastQty*']);
+        if (!(qty > 0)) errors.push('Forecast quantity must be above zero');
+        if (errors.length) return { errors:errors };
+        var lv = link.data || {}, partId = lv.partId;
+        var mine = ctx.orders.filter(function(o){ var v = o.data||{};
+          return v.customerId === cust.doc_id && v.partId === partId && v.poType !== 'ratecontract' && !v.obsolete; });
+        var real = mine.filter(function(o){ return String((o.data||{}).due||'').slice(0,7) === month; })[0];
+        if (real) return { errors:['PO '+((real.data||{}).po||'')+' is due for this part in '+monthName(month)+
+          ' — the Sales Plan already takes that month from it'] };
+        var tent = mine.filter(function(o){ var v = o.data||{}, d = String(v.due||'').slice(0,7);
+          return d && ((C.num(v.tent1) && addMonths(d,1) === month) || (C.num(v.tent2) && addMonths(d,2) === month)); })[0];
+        if (tent) return { errors:['PO '+((tent.data||{}).po||'')+' already carries a tentative quantity for '+monthName(month)+
+          ' — change it there rather than forecasting the same month twice'] };
+        if (ctx.salesplans.some(function(sp){ var v = sp.data||{};
+            return v.customerId === cust.doc_id && v.partId === partId && v.month === month; }))
+          return { errors:['A forecast for this part in '+monthName(month)+' is already on file — remove it on the Sales Plan screen first'] };
+        var p = ctx.parts.filter(function(x){ return x.part_id === partId; })[0] || {};
+        return { errors:[], summary: cust.doc_id+'|'+partId+'|'+month,
+          label:(p.part_no||'')+' '+monthName(month)+' ('+(cv.name||'')+')',
+          customerId:cust.doc_id, customerName:cv.name||'', partId:partId, partNo:p.part_no||lv.internalNo||'',
+          partName:p.part_name||'', custPartNo:lv.custPartNo||'', custPartName:lv.custPartName||'',
+          month:month, qty:qty };
+      },
+      async save(r, ctx, v){
+        await C.idms.saveDoc({ kind:'salesplan', partId:v.partId, status:'Active', docNo: await C.docNumber('sp'),
+          data:{ customerId:v.customerId, customerName:v.customerName, partId:v.partId, partNo:v.partNo,
+            partName:v.partName, custPartNo:v.custPartNo, custPartName:v.custPartName,
+            month:v.month, firmQty:v.qty, source:'bulk upload' } }, 'bulk uploaded');
+      } },
   ];
   function buKind(id){ return BULK_KINDS.filter(function(k){ return k.id === id; })[0]; }
 
   var buRows = null, buValidated = null;
 
-  async function loadBulkUpload(){
+  async function loadBulkUpload(preset){
     var sel = document.getElementById('bu-kind');
     if (!sel.options.length)
       sel.innerHTML = BULK_KINDS.map(function(k){ return '<option value="'+k.id+'">'+esc(k.label)+'</option>'; }).join('');
+    if (preset && buKind(preset)) sel.value = preset;
     buShowHint();
     document.getElementById('bu-preview').innerHTML = '';
     document.getElementById('bu-file').value = '';
@@ -18057,8 +19042,14 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   }
   function buShowHint(){
     var k = buKind(document.getElementById('bu-kind').value);
+    /* The column notes were written for every category but never shown, so
+       the only way to learn that a date is DD-MM-YYYY was to get it refused. */
+    var hints = k && k.colHint ? Object.keys(k.colHint).map(function(c){
+      return '<div><code>' + esc(c) + '</code> — ' + esc(k.colHint[c]) + '</div>'; }).join('') : '';
     document.getElementById('bu-kindhint').innerHTML = k ?
-      'Columns: <code>' + k.cols.join('</code>, <code>') + '</code>. Columns marked * are required.' : '';
+      (k.intro ? '<div style="margin-bottom:6px;">' + k.intro + '</div>' : '') +
+      'Columns: <code>' + k.cols.join('</code>, <code>') + '</code>. Columns marked * are required.' +
+      (hints ? '<div style="margin-top:6px;">' + hints + '</div>' : '') : '';
   }
   document.getElementById('bu-kind').addEventListener('change', function(){
     buShowHint(); document.getElementById('bu-preview').innerHTML = '';
@@ -18096,7 +19087,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var ctx = { savedCount:0 };
     try {
       var need = { customer:['customers'], supplier:['suppliers'], parts:['parts'], machine:['machines'],
-        tool:['tools','parts'], consumable:['rawmats'], bom:['parts','rawmats','boms'], gauge:['gauges'] };
+        tool:['tools','parts'], consumable:['rawmats'], bom:['parts','rawmats','boms'], gauge:['gauges'],
+        order:['customers','parts','custParts','orders'],
+        salesplan:['customers','parts','custParts','orders','salesplans'] };
       var fetchers = {
         customers: function(){ return C.idms.docs('customer'); },
         suppliers: function(){ return C.idms.docs('supplier'); },
@@ -18105,7 +19098,10 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         tools: function(){ return C.idms.docs('tool'); },
         rawmats: function(){ return C.idms.docs('rawmat'); },
         boms: function(){ return C.idms.docs('bom'); },
-        gauges: function(){ return C.idms.docs('gauge'); }
+        gauges: function(){ return C.idms.docs('gauge'); },
+        custParts: function(){ return C.idms.docs('cust_part'); },
+        orders: function(){ return C.idms.docs('order'); },
+        salesplans: function(){ return C.idms.docs('salesplan'); }
       };
       var keys = need[k.id] || [];
       var got = await Promise.all(keys.map(function(x){ return fetchers[x](); }));
@@ -18184,7 +19180,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       for (var j = 0; j < good.length; j++){
         msg.textContent = 'Importing ' + (j+1) + ' of ' + good.length + '…';
         try { await k.save(good[j].row, ctx, good[j].v); ctx.savedCount++; ok++; }
-        catch(e){ failed.push((good[j].v.summary || ('row ' + (j+1))) + ': ' + e.message); }
+        catch(e){ failed.push((good[j].v.label || good[j].v.summary || ('row ' + (j+1))) + ': ' + e.message); }
       }
     }
 
@@ -20693,6 +21689,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('so-potype').addEventListener('change', soUpdateType);
   document.getElementById('so-contract').addEventListener('change', fillScheduleFromContract);
   document.getElementById('so-qty').addEventListener('input', updateSoValue);
+  document.getElementById('so-due').addEventListener('change', soTentLabels);
+  document.getElementById('so-due').addEventListener('input', soTentLabels);
+  document.getElementById('so-bulk').addEventListener('click', function(){ navigate('bulk_po'); });
   document.getElementById('so-price').addEventListener('input', updateSoValue);
   document.getElementById('so-currency').addEventListener('change', updateSoValue);
   document.getElementById('so-save').addEventListener('click', saveOrder);
@@ -20705,6 +21704,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     document.getElementById('so-pofilename').textContent = '';
     document.getElementById('so-pofile').value = '';
     updateSoValue();
+    soTentLabels();
     document.getElementById('so-msg').style.display='none';
     soCancelEdit();
   });
@@ -20724,22 +21724,19 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   document.getElementById('spm-filter-month').addEventListener('change', drawSalesPlanRegister);
   document.getElementById('spm-filter-cust').addEventListener('change', drawSalesPlanRegister);
   document.getElementById('spm-print').addEventListener('click', printSalesPlan);
+  document.getElementById('spm-bulk').addEventListener('click', function(){ navigate('bulk_salesplan'); });
 
-  /* Filling the rate from the customer/part link on part-choice is now done
-     by the listener registered where ivWorkingLines lives (it also fills
-     Customer Part No.) — only the customer-change part stays here. */
-  document.getElementById('iv-cust').addEventListener('change', function(){
-    document.getElementById('iv-part').innerHTML = partOptionsForCustomer(this.value);
-    var cust = customers.filter(function(c){ return c.doc_id === this.value; }, this)[0];
-    var cv = (cust && cust.data) || {};
-    if (!fieldVal('iv-terms')) document.getElementById('iv-terms').value = cv.terms || '';
-    document.getElementById('iv-pos').value = C.gstStateName(cv.gstin || '') || '—';
-  });
   document.getElementById('iv-save').addEventListener('click', saveSalesInvoice);
   document.getElementById('iv-clear').addEventListener('click', function(){
-    document.getElementById('iv-no').value = '';
-    ['iv-custpo','iv-custpodate','iv-terms'].forEach(function(id){ document.getElementById(id).value=''; });
-    ivResetLines();
+    ['iv-no','iv-irn','iv-ackno','iv-ackdate','iv-einvqr','iv-discount','iv-freight','iv-packing','iv-other','iv-cess',
+     'iv-shipname','iv-shipaddr','iv-shipgstin','iv-shipcontact','iv-terms','iv-due']
+      .forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('iv-rcm').value = 'No';
+    document.getElementById('iv-cust').value = '';
+    document.getElementById('iv-part').innerHTML = partOptionsForCustomer('');
+    ivDueTouched = false; ivShipTouched = false;
+    ivFillPosSelect(''); ivTaxSplit();
+    ivResetLines(); ivFillPoSelect();
     document.getElementById('iv-msg').style.display='none';
   });
   document.getElementById('iv-filter').addEventListener('change', drawInvoiceRegister);
@@ -21457,22 +22454,52 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
   });
 
   /* ---------------- opening the system ----------------
-     Opening this page signs nobody in. Any token left in the tab is discarded
-     first, so the sign-in screen always stands and the browser has nothing to
-     re-use: a shared works PC must not walk somebody into live quality records
-     because the last person closed the lid.
+     Opening this page on its own signs nobody in: with no signed-in tab of
+     this system open, any token left in the tab is revoked and the sign-in
+     screen stands, so a shared works PC never walks the next person into live
+     quality records.
 
-     The session still lasts while the tab is open — the staff screens that run
-     in a frame read the same token — but it does not survive re-opening the
-     page, which is exactly what was asked for. */
+     The one exception, asked for directly: a tab opened FROM a signed-in tab
+     (right-click → Open Link in New Tab / New Window) carries on in the same
+     session instead of asking again. It asks the open tabs over a same-origin
+     channel (Core.askOpenTabs); a signed-in tab answers with its token, which
+     is checked with the server before anything is shown. Nothing is stored to
+     make this work — if every tab has been closed, nobody answers. */
+  C.shareSession(function(){ return !!me.user && document.getElementById('app').style.display !== 'none'; },
+    function(){ location.reload(); });
+
+  async function adoptOpenSession(){
+    var leftover = C.getToken();
+    var handed = await C.askOpenTabs(600);
+    if (me.user) return true;                 // signed in by hand while we were asking
+    if (handed){
+      C.setToken(handed);
+      try {
+        var j = await C.api('/api/auth', { method:'POST', body: JSON.stringify({ action:'session' }) });
+        if (j && j.ok && j.user){
+          applyAccess(j); start();
+          if (leftover && leftover !== handed) revokeLeftover(leftover);
+          return true;
+        }
+      } catch(e){ /* the other tab's session has just ended — fall through to sign-in */ }
+      C.setToken('');
+    }
+    /* No signed-in tab is open. A token still in this tab is from before a
+       reload or a restored tab: end it on the server rather than re-use it. */
+    if (leftover) revokeLeftover(leftover);
+    return false;
+  }
+  function revokeLeftover(t){
+    fetch('/api/auth', { method:'POST',
+      headers:{ 'Content-Type':'application/json', 'X-Auth-Token': t },
+      body: JSON.stringify({ action:'logout' }) }).catch(function(){});
+  }
+
   (async function(){
-    /* Revoking a leftover token still matters (a shared works PC must not
-       leave a live session sitting around), but it does not need to block
-       the sign-in screen from appearing — nothing below depends on it having
-       finished. Firing it without awaiting removes one full API round trip
-       from the critical path of every page open. */
-    if (C.getToken()) { C.signOut().catch(function(){}); C.setToken(''); }
-    else C.setToken('');
+    /* The token is taken out of the tab before anything else can use it; it
+       is only put back if an open, signed-in tab vouches for the session. */
+    var adoptP = adoptOpenSession();
+    C.setToken('');
 
     /* loadProfile() (branding) and loadGateContent() used to run one after
        another; they don't depend on each other, so run them together —
@@ -21493,8 +22520,9 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
        before. */
     C.preloadFaceApi && C.preloadFaceApi().catch(function(){});
 
+    var adopted = await adoptP;
     await Promise.all([brandingP, contentP]);
-    document.getElementById('g-user').focus();
+    if (!adopted && !me.user) document.getElementById('g-user').focus();
   })();
 })();
 </script>

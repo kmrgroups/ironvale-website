@@ -62,6 +62,11 @@ window.fetch = async (path, opts = {}) => {
       if (body.remove) {
         orders = orders.filter(o => o.doc_id !== body.docId);
         salesPlans = salesPlans.filter(p => p.doc_id !== body.docId);
+      } else if (body.patch !== undefined) {
+        /* the real endpoint replaces data with the patch; a stub that ignored
+           it hid every "marked obsolete" write from these checks */
+        const o = orders.find(x => x.doc_id === body.docId);
+        if (o) o.data = body.patch;
       }
       return ok({});
     }
@@ -107,9 +112,23 @@ check('a Cancel edit button appears', $('so-cancel-edit').style.display !== 'non
 
 $('so-qty').value = '250';
 click($('so-save')); await wait(250);
-check('the same order was updated, not duplicated', orders.length === 1);
-check('with the new quantity', orders[0].data.qty === 250);
+/* Editing a PO is a revision: the new figures become the live PO and the old
+   entry is kept, marked obsolete and pointing forward — never overwritten. */
+const liveOrders = () => orders.filter(o => !o.data.obsolete);
+check('editing leaves exactly one live PO (the revision), not two', liveOrders().length === 1, orders.length);
+check('with the new quantity', liveOrders()[0] && liveOrders()[0].data.qty === 250);
+check('and the original kept as obsolete, pointing at its revision',
+  orders.some(o => o.doc_id === 'o1' && o.data.obsolete && o.data.supersededBy === (liveOrders()[0] || {}).doc_id));
 check('the save button reverts after saving', $('so-save').textContent === 'Add PO');
+
+// a PO can be revised a second time under the same PO number — its own
+// superseded copy is history, not a duplicate
+click(window.document.querySelector('.so-edit'));
+await wait(250);
+$('so-qty').value = '275';
+click($('so-save')); await wait(250);
+check('a second revision of the same PO number is accepted, not refused as a duplicate',
+  liveOrders().length === 1 && liveOrders()[0].data.qty === 275 && orders.length === 3, $('so-msg').textContent);
 
 // Cancel edit works too
 click(window.document.querySelector('.so-edit'));
@@ -136,7 +155,9 @@ check('a Remove link is offered for that PO', !!manageRow.querySelector('.spm-de
 
 click(manageRow.querySelector('.spm-delorder'));
 await wait(250);
-check('removing the order from Sales Plan actually removes it', orders.length === 0);
+check('Sales Plan manages the live revision only, not its superseded copy',
+  manageRow.querySelectorAll('.spm-delorder').length === 1);
+check('removing the order from Sales Plan actually removes it', liveOrders().length === 0, orders.length);
 check('with a reason recorded', patched.some(p => p.remove && /order removed/.test(p.reason || '')));
 
 // ================= Sales Plan: a forecast-backed row can be removed too =================

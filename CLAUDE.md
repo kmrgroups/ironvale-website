@@ -171,15 +171,33 @@ It now works like this, and none of it should be reverted:
   `users.pass_hash`.**
 - Changing a password, an administrator setting one, deleting a login, or
   running recovery all **end the relevant sessions immediately**.
-- The browser keeps the token in `sessionStorage` (per-tab, dies with the tab).
-- **Opening `idms.html` signs nobody in.** Any token left in the tab is signed
-  out on the server and discarded before the page draws, so the sign-in screen
-  always stands. This was asked for directly: a shared works PC must not walk
-  the next person into live quality records because the last one closed the lid.
-  The session still lasts while the tab is open — that is what lets the framed
-  website screens run without a second sign-in — it simply does not survive
-  re-opening the page. The login fields carry `autocomplete="new-password"` and
-  neutral names so the browser does not offer to save or refill them.
+- The browser keeps the token in `sessionStorage` (per-tab, dies with the
+  browser). **Never in localStorage** — that would survive closing the browser.
+- **Opening `idms.html` with no signed-in IDMS tab open signs nobody in.** Any
+  token left in the tab is signed out on the server and discarded, so the
+  sign-in screen stands. This was asked for directly: a shared works PC must not
+  walk the next person into live quality records because the last one closed
+  the lid. The login fields carry `autocomplete="new-password"` and neutral
+  names so the browser does not offer to save or refill them.
+- **A tab opened from a signed-in tab joins its session (v119).** Right-click →
+  Open Link in New Tab / Window on any menu item no longer asks for a second
+  sign-in — an explicit requirement, reversing the earlier one-sign-in-per-tab
+  rule. It works by *asking*, not storing: on opening, `Core.askOpenTabs()`
+  posts on the same-origin `BroadcastChannel('idms-session')`; any tab that is
+  signed in (`Core.shareSession()` is told how to tell) answers with its token;
+  the new tab checks it with `action:'session'` before drawing anything. No tab
+  open, nobody answers, sign-in screen. **Signing out broadcasts `signed-out`**
+  with the dead token, and every tab holding it reloads to the sign-in screen.
+  A browser without BroadcastChannel simply asks for a sign-in, as before.
+  Known and accepted: any same-origin page can ask the channel, which is only
+  our own two pages; it does not widen what a script already running on this
+  origin could do. `sessionsharetest.mjs` covers it with several jsdom "tabs".
+- **The framed website screens read the tab's session.** `index.html` kept its
+  token in localStorage while core.js had moved to sessionStorage, so RFQ
+  Pipeline, HR and Site Admin inside the IDMS had no token and asked for a
+  second login. In `?embed=` mode it now reads (and writes) sessionStorage,
+  which a same-origin frame shares with its tab; outside embed mode (`#me`) it is
+  unchanged.
 - The sign-in screen shows the company logo, name and address from the site
   profile (readable without a session, which is why it can be shown before one
   exists) and carries **Powered by — KMR Groups of Companies**.
@@ -1680,6 +1698,135 @@ to sidestep the escaping entirely, or verify the raw byte content with
 PO and Manage/Edit/Remove on both PO-backed and forecast-backed Sales Plan
 rows. `tests/salesdashboardtest.mjs` was updated for the new multi-line
 invoice shape. Whole suite: 623 passing.
+
+## v119 — invoice against PO, the full tax invoice, bulk PO upload, sessions
+
+### Sales Invoice lines are raised against a Customer PO
+
+Choosing customer and part fills a **Customer PO dropdown** from `ivPoCandidates()`:
+every live one-time PO, schedule and open rate contract for that pair. **Never
+an obsolete one.** What is "left to invoice" on each is ordered quantity less
+what invoice lines already raised against that PO — saved ones (`invoiceLines()`
+now carries `poDocId`/`po`) *and* lines already on the invoice being built. The
+earliest-due PO with something left is pre-selected (schedules and POs before
+rate contracts); the dropdown exists because it is not always that one, and the
+hint says how many are on file. Rate, currency and customer part number follow
+the chosen PO. A "no PO for this line" choice is kept for samples.
+
+A schedule prints as `<contract PO> / Sch. <release>` and its date falls back to
+the contract's PO date, because the customer matches invoices to the contract.
+The header **Customer PO No. / PO Date are read-only and derived from the lines**
+(`ivHeaderPo`): one PO → its number and date; several → each number and "per
+line", and the document then prints PO and date under each line's description.
+
+Refusals: a second currency on one invoice; the same part against the same PO
+twice (the same part against two POs is allowed — end of one PO, start of the
+next); no place of supply; due date before invoice date; discount larger than
+the goods; negative charges; a ship-to GSTIN that is not 15 characters; Ack No.
+or QR without an IRN; an IRN that is not 64 hex characters.
+
+### One calculation: `ivCompute(lines, header)`
+
+Used by the screen totals, the save and the print — never three versions.
+Taxable value = goods − discount + freight + packing + other (GST is charged on
+the consideration including those). Tax is computed **per HSN code** with the
+discount and charges shared in proportion to value; the last HSN row takes the
+rounding so the rows add up exactly. Same state as the company GSTIN's code →
+CGST+SGST, anything else (including `96` export) → IGST. Reverse charge "Yes"
+states the tax but leaves it out of the grand total. Due date comes from the
+digits in the payment terms until somebody types one.
+
+### The printed tax invoice: `invoiceDocHtml()` + `IV_PRINT_CSS`
+
+Built to the works' tax-invoice template, every section in order: letterhead
+(logo, legal name, address, GSTIN, PAN, state and state code, phone, email,
+website), invoice details, e-invoice (IRN, Ack, QR — only when an IRN exists),
+bill to (with customer code, PAN from the GSTIN, state code), ship to, items
+(part no., description, drawing/rev, HSN, qty, UOM, rate, taxable), tax details
+by HSN, totals, amount in words, bank and UPI, traceability (the template's
+Field/Details layout, one Details column per line, four lines to a table),
+terms, declaration, signatory, and the computer-generated note.
+
+It is its own print window, not `C.openReport`, because the generic report has
+no cell borders. **Every cell is bordered, `table-layout:fixed`, and text uses
+`overflow-wrap:anywhere`** so a long value wraps inside its box. Money cells are
+`nowrap` and the columns are sized for them. This was checked by rendering a
+worst case in headless Chromium (six lines, 100-character names, 1,219-crore
+values, 64-character IRN) and asserting no cell's `scrollWidth` exceeds its
+width: only a 123,456.789 quantity overflowed, by 2px, and the Qty column was
+widened. If columns are changed, repeat that check. USD invoices group numbers
+the international way and read the amount in words in US dollars/millions.
+
+Invoices saved before v119 carry no `hsnSummary`; the print recomputes from
+their lines rather than failing.
+
+Company-level invoice settings that the website profile does not hold — UPI
+ID, jurisdiction, place, signatory override, terms, copies (1 or
+Original/Duplicate/Triplicate), show bank — live in `idms_settings` key
+`invoice_settings`, edited on the Sales Invoice screen. **Not in code.**
+
+### QR codes are drawn locally: `Core.qrSvg(text)`
+
+The e-invoice signed QR and the UPI QR carry invoice values, GSTINs and a
+payment handle; they must not go to a third-party image service (the website's
+ID cards still use one — a separate decision). `qrSvg` is a byte-mode ISO 18004
+encoder (versions 1–40, Reed–Solomon, all 8 masks scored). It was verified by
+decoding its output with jsQR at 20 lengths up to 2,300 bytes. **Do not tune the
+tables in it without re-running that decode.**
+
+### Customer PO
+
+- **PO documents:** a *PO document* column with **View** (new tab) and
+  **Download** (original file name) for any PO with `poFile`, and **Attach** for
+  one without. Attaching patches `poFile` directly with an audit reason — it is
+  *not* an Edit, because Edit makes a revision, which is right for a new price
+  and wrong for adding the paper. The Obsolete tab had one fewer body cell than
+  header cells; fixed while adding the column.
+- **Tentative labels name the month** ("Tentative — October"), from the
+  delivery date the tentatives project from (`tentativeFor` uses due+1, due+2),
+  or from this month until a date is typed. The year is added when it is not
+  this year.
+- `Core.uploadFile` now stores a file with no browser MIME type as
+  `application/octet-stream`; such files were refused by the asset store.
+
+### A revised PO was counted twice — fixed
+
+Editing a PO keeps the old record marked `obsolete`, but only the register's
+tabs knew that. `isDemandOrder`, `allocateProduction`, `orderProgress` (obsolete
+→ balance 0, which removes it from production plan, capacity, loading and the
+works dashboard in one place), `soOpenContracts`, `orderPriceFor`, the audit
+agent's order read and the invoice PO list now skip obsolete POs. The duplicate
+PO-number check also skipped nothing, so a PO could only ever be revised once —
+its own superseded copy was "a duplicate". `editdeletetest.mjs` had five
+failures that were this: its stub ignored `patch`, so the obsolete mark never
+landed, and it still expected an in-place update. The stub now behaves like the
+API and the checks assert revision behaviour, including a second revision.
+
+### Bulk upload: Customer PO and Sales Plan
+
+Two `BULK_KINDS` entries, `order` and `salesplan`, plus Masters menu items
+`bulk_po` / `bulk_salesplan` that open the same panel with the category chosen
+(`loadBulkUpload(preset)`), and shortcut buttons on Customer PO and Sales Plan.
+Column notes (`colHint`, written for every category but never shown)
+are now displayed with an optional `intro`.
+
+- **Customer PO** rows apply the screen's rules. The customer is found by name or
+  code; the part by our number *or* theirs, but only through that customer's
+  `cust_part` link. A schedule may name a rate contract on file **or an earlier
+  row of the same file** (`ctx.fileContracts` at validation, `ctx.savedContracts`
+  at import — rows import top to bottom); it takes the contract's price and
+  refuses one of its own. Dates are **DD-MM-YYYY** (day first, as Indian Excel
+  writes them) or YYYY-MM-DD; an impossible date is refused, not rolled over.
+- **Sales Plan** rows create `salesplan` forecasts, the fallback `demandFor()`
+  already reads. A month a real PO or a tentative already covers is refused, as
+  is a month already over and a forecast already on file — a forecast never sits
+  on top of demand.
+
+### Tests
+
+`invoicetest.mjs` (59), `bulkpotest.mjs` (33), `sessionsharetest.mjs` (17);
+`editdeletetest.mjs` corrected (22). Set `STRESS=1` when running
+`invoicetest.mjs` to also write `/tmp/invoice-stress.html` for the render check.
 
 ---
 

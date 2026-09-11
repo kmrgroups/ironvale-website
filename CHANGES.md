@@ -1,3 +1,54 @@
+# v119 — what changed and how to check it
+
+Drop-in replacements. **No database migration, no new environment variable, no
+new dependency** (`package.json` still has exactly one). New settings are stored
+in the existing `idms_settings` table the first time they are saved.
+
+## Files to copy across
+
+| File | Why |
+|---|---|
+| `idms.html` | invoice against PO, full tax invoice, PO documents, tentative month names, bulk PO / Sales Plan upload, revised-PO double count, tab session sharing |
+| `core.js` | tab session sharing, local QR codes, USD amount in words, upload type fix |
+| `index.html` | framed staff screens use the IDMS session (no second sign-in) |
+| `CLAUDE.md`, `CHANGES.md` | records this pass |
+| `tests/` | `invoicetest`, `bulkpotest`, `sessionsharetest` new; `editdeletetest` corrected |
+
+## After deploying, check these
+
+1. **New tab.** Sign in, right-click any menu item → *Open link in new tab*. It
+   opens on that screen without asking to sign in. Close every IDMS tab, open
+   the IDMS again: the sign-in screen must appear. Sign out in one tab: the other
+   tabs return to the sign-in screen.
+2. **RFQ Pipeline / HR & Payroll** from the IDMS menu open without a sign-in box.
+3. **Sales Invoice → Invoice settings** (bottom of the screen): enter UPI ID,
+   jurisdiction, place, copies. Save.
+4. **Sales Invoice.** Choose a customer and a part with two POs on file. The
+   *Customer PO* dropdown lists both; the earliest due is chosen; PO No. and PO
+   date at the top fill in when the line is added. Save — the invoice opens with
+   borders on every box and every section of the format. Print preview should
+   show nothing running outside its box.
+5. **Customer PO register:** *View* / *Download* on a PO with a document,
+   *Attach* on one without. Type a delivery date: the tentative boxes read
+   *Tentative — <month>*.
+6. **Masters → Customer PO Bulk Upload / Sales Plan Bulk Upload:** download the
+   template, fill two rows, upload, check the preview, Import.
+7. **Revise a PO twice** (Edit → change quantity → Update, then again). Both
+   saves are accepted, and Sales Plan shows the quantity once.
+
+## Run the tests
+
+```bash
+npm install jsdom --no-save     # throwaway; do NOT commit it to package.json
+npm test
+```
+
+Expect every suite clean except `smoketest`, which still reports its **2 known
+failures** (company name on the sign-in screen — left for a decision, see
+CLAUDE.md).
+
+---
+
 # What changed — deployment checklist
 
 Every file below is a drop-in replacement. No database migration, no new

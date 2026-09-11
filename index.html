@@ -2696,10 +2696,23 @@ I would recommend this company as a place to work</textarea></div></div>
      the server can still end it at any time regardless of where it is kept. */
   const TOKEN_KEY='app_token';
   let token=null, currentUser='', rfqs=[], dirty=false, cloudOK=false, expandedRfq=null;
-  try{ token=localStorage.getItem(TOKEN_KEY)||null; }catch(e){ token=null; }
+  /* Framed inside the IDMS (?embed=…), this page must use the IDMS's own
+     session, which core.js keeps in sessionStorage. A same-origin frame shares
+     its tab's sessionStorage, so reading it here is what makes the RFQ
+     Pipeline, HR and admin screens open without a second sign-in. Reading only
+     localStorage (as before) meant the frame had no token at all and asked
+     for credentials again. Framed, the token is written back to
+     sessionStorage only, never to localStorage, so it still dies with the
+     browser as the IDMS sign-in rules require. */
+  const EMBED_MODE=/[?&]embed=/.test(location.search);
+  try{ token=(EMBED_MODE&&sessionStorage.getItem(TOKEN_KEY))||localStorage.getItem(TOKEN_KEY)||null; }catch(e){ token=null; }
   function keepToken(t){
     token=t||null;
-    try{ t?localStorage.setItem(TOKEN_KEY,t):localStorage.removeItem(TOKEN_KEY); }catch(e){}
+    try{
+      if(EMBED_MODE){ t?sessionStorage.setItem(TOKEN_KEY,t):sessionStorage.removeItem(TOKEN_KEY); }
+      if(!EMBED_MODE&&t) localStorage.setItem(TOKEN_KEY,t);
+      if(!t) localStorage.removeItem(TOKEN_KEY);
+    }catch(e){}
   }
   let poOrders=[], expandedOrder=null;
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

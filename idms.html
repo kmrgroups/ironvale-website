@@ -9744,7 +9744,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     /* Card 2: the same, broken out by all 12 months of that financial year. */
     document.getElementById('kdps-fytable').innerHTML =
       '<h5 style="margin:0 0 8px;">2. Month by month — financial year ' + esc(window.KPIX.fyLabel(fy)) + '</h5>' +
-      '<table class="t"><thead><tr><th>Month</th><th class="r">Plan</th><th class="r">Actual</th>' +
+      '<div style="overflow-x:auto;"><table class="t"><thead><tr><th>Month</th><th class="r">Plan</th><th class="r">Actual</th>' +
         '<th class="r">Actual %</th><th class="r">Pending</th><th class="r">Pending %</th></tr></thead><tbody>' +
       perMonth.map(function(r){
         var pending = Math.max(0, r.demand - r.actual);
@@ -9754,7 +9754,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
           '<td class="r">' + pctStr(r.actual, r.demand) + '</td>' +
           '<td class="r">' + moneyFmt(pending,'INR') + '</td>' +
           '<td class="r">' + pctStr(pending, r.demand) + '</td></tr>';
-      }).join('') + '</tbody></table>';
+      }).join('') + '</tbody></table></div>';
 
     /* Card 3: overall, one month only. */
     var mRows = salesPlanRows(month, '');
@@ -9782,7 +9782,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       .sort(function(a,b){ return b.demand - a.demand; });
     document.getElementById('kdps-custtable').innerHTML =
       '<h5 style="margin:0 0 8px;">4. Customer-wise — ' + esc(monthLabel(month)) + '</h5>' +
-      (custList.length ? '<table class="t"><thead><tr><th>Customer</th><th class="r">Plan</th>' +
+      (custList.length ? '<div style="overflow-x:auto;"><table class="t"><thead><tr><th>Customer</th><th class="r">Plan</th>' +
         '<th class="r">Actual</th><th class="r">Actual %</th><th class="r">Pending</th>' +
         '<th class="r">Pending %</th></tr></thead><tbody>' +
         custList.map(function(c){
@@ -9793,7 +9793,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
             '<td class="r">' + pctStr(c.actual, c.demand) + '</td>' +
             '<td class="r">' + moneyFmt(pending,'INR') + '</td>' +
             '<td class="r">' + pctStr(pending, c.demand) + '</td></tr>';
-        }).join('') + '</tbody></table>'
+        }).join('') + '</tbody></table></div>'
         : '<div class="empty">No demand or invoicing for ' + esc(monthLabel(month)) + '.</div>');
 
     /* Card 5: customer-wise sales value, day by day, for the same month —
@@ -9811,7 +9811,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     var days = Object.keys(byDay).sort();
     document.getElementById('kdps-daytable').innerHTML =
       '<h5 style="margin:0 0 8px;">5. Customer-wise sales value, day by day — ' + esc(monthLabel(month)) + '</h5>' +
-      (days.length ? '<table class="t"><thead><tr><th>Day</th>' +
+      (days.length ? '<div style="overflow-x:auto;"><table class="t"><thead><tr><th>Day</th>' +
         custIds.map(function(c){ return '<th class="r">'+esc(custNames[c])+'</th>'; }).join('') +
         '<th class="r">Day total</th></tr></thead><tbody>' +
         days.map(function(day){
@@ -9821,7 +9821,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
             return '<td class="r">' + (v ? moneyFmt(v,'INR') : '<span class="hint">—</span>') + '</td>';
           }).join('');
           return '<tr><td>' + esc(day) + '</td>' + cells + '<td class="r"><b>' + moneyFmt(rowTotal,'INR') + '</b></td></tr>';
-        }).join('') + '</tbody></table>'
+        }).join('') + '</tbody></table></div>'
         : '<div class="empty">No invoices raised yet in ' + esc(monthLabel(month)) + '.</div>');
   }
 
@@ -12458,6 +12458,13 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
      priced differently from what was actually quoted. Still editable: a
      specific PO can carry its own negotiated rate. Customer Part No. and Name
      fill in the same way, from the same link. */
+  /* Reference fields only — never the price. The price a customer will
+     actually pay on THIS PO is what has to be typed and checked, every time;
+     quietly filling it from the customer/part master link is exactly how a
+     stale or generic list price ends up on a live PO — and from there into
+     the Sales Plan and, eventually, an invoice — without anyone having
+     looked at it. Customer's part number/name are just reference text, so
+     carrying those forward here is a convenience, not a financial figure. */
   function fillSoPriceFromLink(){
     var custId = document.getElementById('so-cust').value;
     var partId = document.getElementById('so-part').value;
@@ -12465,8 +12472,6 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       var v = cp.data||{}; return v.customerId === custId && v.partId === partId; })[0];
     if (link){
       var v = link.data||{};
-      document.getElementById('so-price').value = C.num(v.price) || '';
-      document.getElementById('so-currency').value = v.currency || 'INR';
       if (!document.getElementById('so-custpartno').value) document.getElementById('so-custpartno').value = v.custPartNo || '';
       if (!document.getElementById('so-custpartname').value) document.getElementById('so-custpartname').value = v.custPartName || '';
     }
@@ -12622,7 +12627,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       return;
     }
     var typeLabel = { onetime:'One-time', ratecontract:'Rate Contract', schedule:'Schedule' };
-    host.innerHTML = '<table class="t"><thead><tr><th>Type</th><th>PO Number</th><th>Customer</th>' +
+    host.innerHTML = '<div style="overflow-x:auto;"><table class="t"><thead><tr><th>Type</th><th>PO Number</th><th>Customer</th>' +
       '<th>Customer Part</th><th>Internal Part</th>' +
       '<th class="r">Unit Price</th>' +
       '<th class="r">Ordered</th><th class="r">Made</th><th class="r">Balance</th>' +
@@ -12662,7 +12667,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
               '<td><button class="btn so-edit" data-id="'+esc(o.doc_id)+'">Edit</button> ' +
               '<button class="btn del so-del" data-id="'+esc(o.doc_id)+'">Remove</button></td>')+
           '</tr>';
-      }).join('') + '</tbody></table>';
+      }).join('') + '</tbody></table></div>';
     host.querySelectorAll('.so-edit').forEach(function(b){
       b.addEventListener('click', function(){ editOrder(b.dataset.id); });
     });
@@ -12759,7 +12764,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
       : 'A PO number is needed — that is what this record is.');
     if (!C.num(g('so-price')))
       return say('The part price is needed' + (poType === 'ratecontract' ? ' — that is the point of a rate contract.' :
-        ' to work out the PO value — it fills in from the customer/part link, or type it here.'));
+        ' to work out the PO value — type what this PO actually charges.'));
 
     if (poType !== 'ratecontract'){
       if (!C.num(g('so-qty'))) return say('How many are they ordering?');
@@ -13163,7 +13168,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
         'Nothing is due to any customer in this month yet.</div>';
       return;
     }
-    host.innerHTML = '<table class="t"><thead><tr><th>Sl</th><th>Customer</th>' +
+    host.innerHTML = '<div style="overflow-x:auto;"><table class="t"><thead><tr><th>Sl</th><th>Customer</th>' +
       '<th>Customer Part No.</th><th>Customer Part Name</th><th>Internal Part No.</th>' +
       '<th class="r">Unit Price</th><th class="r">Demand Qty</th><th class="r">Actual Qty</th>' +
       '<th class="r">Pending Qty</th><th class="r">Demand Value</th><th class="r">Actual Value</th>' +
@@ -13190,7 +13195,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
             ? '<button class="btn spm-manage" data-t="'+rid+'">Manage</button>' : '')+'</td></tr>' +
           '<tr id="'+rid+'" class="spm-managerow" style="display:none;"><td colspan="14">'+
             spmManageHtml(r)+'</td></tr>';
-      }).join('') + '</tbody></table>';
+      }).join('') + '</tbody></table></div>';
     host.querySelectorAll('.spm-manage').forEach(function(b){
       b.addEventListener('click', function(){
         var row = document.getElementById(b.dataset.t);
@@ -13398,7 +13403,7 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 
   document.getElementById('iv-part').addEventListener('change', function(){
     var custId = document.getElementById('iv-cust').value, partId = this.value;
-    var pr = priceFor(custId, partId);
+    var pr = orderPriceFor(custId, partId);
     document.getElementById('iv-custpartno').value = pr.custPartNo || '';
     document.getElementById('iv-rate').value = pr.price || '';
     document.getElementById('iv-currency').value = pr.currency || 'INR';
@@ -13412,12 +13417,12 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
     if (!partId) return ivLineMsg('Choose a part.');
     var qty = C.num(fieldVal('iv-qty')), rate = C.num(fieldVal('iv-rate'));
     if (!qty) return ivLineMsg('How many are on this line?');
-    if (!rate) return ivLineMsg('A rate is needed — it fills in from the price link, or type it.');
+    if (!rate) return ivLineMsg('A rate is needed — it fills in from an open PO or schedule for this part, or type it.');
     if (ivWorkingLines.some(function(l){ return l.partId === partId; }))
       return ivLineMsg('That part is already a line on this invoice — remove it below to change the quantity, rather than adding it twice.');
     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
     var pd = p.data || {};
-    var pr = priceFor(custId, partId);
+    var pr = orderPriceFor(custId, partId);
     ivWorkingLines.push({ partId:partId, partNo:p.part_no||'', partName:p.part_name||'',
       custPartNo: document.getElementById('iv-custpartno').value || pr.custPartNo || '',
       custPartName: pr.custPartName || '',

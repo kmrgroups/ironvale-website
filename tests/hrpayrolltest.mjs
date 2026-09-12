@@ -234,6 +234,22 @@ check('the push instructions name this host, port 443 and HTTPS, and the plain-H
   /works\.example/.test($('hd-howto').textContent) && /443/.test($('hd-howto').textContent) && /HTTPS/.test($('hd-howto').textContent) &&
   /Import Device Log/.test($('hd-howto').textContent));
 
+/* ---------------- the step-by-step connect guide ---------------- */
+const hdGuide = window.document.getElementById('hd-guide');
+check('the guide is laid out as six numbered steps',
+  hdGuide.querySelectorAll('.cs-step').length === 6, String(hdGuide.querySelectorAll('.cs-step').length));
+check('step 1 is open by default',
+  hdGuide.querySelector('.cs-step[data-hdstep="1"]').classList.contains('open'));
+click(hdGuide.querySelector('.cs-step[data-hdstep="2"] .h'));
+check('clicking a step heading opens it',
+  hdGuide.querySelector('.cs-step[data-hdstep="2"]').classList.contains('open'));
+click(hdGuide.querySelector('[data-hdnext="1"]'));
+check('the "next" button on step 1 marks it done and opens step 2',
+  hdGuide.querySelector('.cs-step[data-hdstep="1"]').classList.contains('done') &&
+  hdGuide.querySelector('.cs-step[data-hdstep="2"]').classList.contains('open'));
+check('the guide\'s own "next" buttons do not touch the CNC setup guide\'s steps',
+  !window.document.querySelector('.panel[data-panel="cnc_setup"] .cs-step[data-step="1"]').classList.contains('done'));
+
 /* ---------------- People: Biometric ID ---------------- */
 go('hrm'); await wait(400);
 check('People has a Bulk upload employees button', !!$('hr-bulk'));

@@ -3449,7 +3449,144 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 
         <!-- ============ Attendance Devices ============ -->
         <div class="hp-view" id="hp-v-dev" style="display:none;margin-top:14px;">
-          <div class="iv-sec" style="margin-top:0;border-top:0;padding-top:0;">Your attendance equipment</div>
+          <div class="iv-sec" style="margin-top:0;border-top:0;padding-top:0;">Connect a biometric device — step by step</div>
+          <div class="hint" style="margin-bottom:4px;">Follow the six steps below in order, once per device. Most
+            fingerprint and face terminals sold in India work the same way — the device calls this site on its own
+            (called "ADMS" or "push to server" on the device's menu); these steps cover that case. If your device
+            only offers a Hikvision-style HTTP Listening setting, or a vendor's own middleware/webhook, do Steps 1,
+            2 and 3 the same way, then use the box under "Register a device" below instead of Step 4 — it shows the
+            exact address for whichever connection type you choose there.</div>
+          <div id="hd-guide">
+            <!-- 1 -->
+            <div class="cs-step open" data-hdstep="1">
+              <div class="h"><div class="cs-num"><span>1</span></div>
+                <div><div class="cs-ttl">Check what you have</div>
+                  <div class="cs-sub">Two things, before you start</div></div>
+                <span class="cs-ar">▼</span></div>
+              <div class="b">
+                <div class="cs-sub" style="font-size:13px;">
+                  <p style="margin:0 0 9px;"><b>1. The device's serial number.</b> On most fingerprint and face
+                    terminals this is under <b>Menu → System → System Info → Device Info</b> (wording varies by
+                    make — look for "Serial Number" or "SN"). Write it down; you will need it in Step 3.</p>
+                  <p style="margin:0;"><b>2. The device connected to your factory network</b>, by network cable
+                    or Wi-Fi, with a working internet connection out of that network. The device does not need a
+                    fixed IP address or any port opened on your firewall for the common case in Step 4 — it calls
+                    out to this site itself, the same way a phone app does.</p>
+                </div>
+                <div class="cs-why"><b>Why no firewall changes?</b> The device is never reached from outside — it
+                  reaches out to this site's address on its own, the same direction a web browser works in. Nothing
+                  needs to be opened inward on your network for this.</div>
+                <button class="btn gold" data-hdnext="1">I have these — next</button>
+              </div>
+            </div>
+
+            <!-- 2 -->
+            <div class="cs-step" data-hdstep="2">
+              <div class="h"><div class="cs-num"><span>2</span></div>
+                <div><div class="cs-ttl">Set your attendance rules</div>
+                  <div class="cs-sub">Plant time zone, shift and overtime — done once, in the section just below this guide</div></div>
+                <span class="cs-ar">▼</span></div>
+              <div class="b">
+                <div class="cs-sub" style="font-size:13px;">Scroll down to <b>Your attendance equipment</b> and set
+                  your plant's time zone, which shift a punch counts against when none is named, how overtime from
+                  punches is treated, and how a single punch in a day should be read. Press <b>Save</b> there before
+                  going on. Late grace and the half-day cut-off come from the leave policy under Statutory &amp;
+                  Masters, not from this screen — one set of rules, used by devices and payroll alike.</div>
+                <button class="btn gold" data-hdnext="2">Done — next</button>
+              </div>
+            </div>
+
+            <!-- 3 -->
+            <div class="cs-step" data-hdstep="3">
+              <div class="h"><div class="cs-num"><span>3</span></div>
+                <div><div class="cs-ttl">Register the device in the IDMS</div>
+                  <div class="cs-sub">In the "Register a device" section below this guide</div></div>
+                <span class="cs-ar">▼</span></div>
+              <div class="b">
+                <div class="cs-sub" style="font-size:13px;">
+                  <p style="margin:0 0 7px;">1. Give it a <b>Name</b> you will recognise later (e.g. "Main gate" or
+                    "Shop floor south").</p>
+                  <p style="margin:0 0 7px;">2. Set <b>Type</b> to Fingerprint, Face recognition, or both, and
+                    <b>Make</b> to your device's brand — this only fills in the right connection type for you.</p>
+                  <p style="margin:0 0 7px;">3. Leave <b>How it sends punches</b> on <i>Push to server (ADMS /
+                    iclock)</i> for a fingerprint or face terminal that calls out on its own — the common case.</p>
+                  <p style="margin:0 0 7px;">4. Type in the <b>Serial number</b> from Step 1, and the device's
+                    <b>Location</b>.</p>
+                  <p style="margin:0;">5. Press <b>Register device</b>.</p>
+                </div>
+                <div class="cs-why"><b>Didn't catch the serial number in Step 1?</b> You can register the device
+                  first without one — point it at this site using Step 4 below, and it will appear in the
+                  <b>Devices</b> list further down as <i>"Calling in — not registered"</i> with its serial number
+                  already filled in from what it sent. Press <b>Register</b> next to it there instead.</div>
+                <button class="btn gold" data-hdnext="3">Done — next</button>
+              </div>
+            </div>
+
+            <!-- 4 -->
+            <div class="cs-step" data-hdstep="4">
+              <div class="h"><div class="cs-num"><span>4</span></div>
+                <div><div class="cs-ttl">Point the device at this site</div>
+                  <div class="cs-sub">On the device itself, using the exact address shown under the registration form</div></div>
+                <span class="cs-ar">▼</span></div>
+              <div class="b">
+                <div class="cs-sub" style="font-size:13px;">
+                  <p style="margin:0 0 7px;">On the device's own screen, go to <b>Menu → Comm. (Communication) →
+                    Cloud Server Setting</b> — some makes call this <b>ADMS</b> instead of "Cloud Server".</p>
+                  <p style="margin:0 0 7px;">Turn <b>Enable Domain Name</b> (or "Domain Name Mode") <b>ON</b>, and
+                    fill in the <b>Server Address</b> and <b>Server Port</b> exactly as shown in the box under
+                    "Register a device" below, once you have chosen this device's connection type there — it is
+                    this site's own address, so it is always right whichever domain your IDMS runs on. Turn
+                    <b>HTTPS</b> on if the device offers the option.</p>
+                  <p style="margin:0;">Save the settings on the device. It will now call this site by itself, on
+                    its own schedule — there is nothing further to press here.</p>
+                </div>
+                <div class="cs-why"><b>An older device that only offers plain HTTP, not HTTPS?</b> It cannot reach
+                  a secure site directly. Export its log to a USB stick instead and use <b>Import Device Log</b> on
+                  the Employee Bulk Upload screen — the punches are read the same way either way once they arrive.</div>
+                <button class="btn gold" data-hdnext="4">Done — next</button>
+              </div>
+            </div>
+
+            <!-- 5 -->
+            <div class="cs-step" data-hdstep="5">
+              <div class="h"><div class="cs-num"><span>5</span></div>
+                <div><div class="cs-ttl">Test it</div>
+                  <div class="cs-sub">One punch, and a look at the Punch log below</div></div>
+                <span class="cs-ar">▼</span></div>
+              <div class="b">
+                <div class="cs-sub" style="font-size:13px;">Scan a fingerprint or face on the device. Wait about a
+                  minute — the device reports in on a short delay, not instantly — then scroll down to
+                  <b>Punch log</b>, set From and To to today, and press <b>Show punches</b>. Your test scan should
+                  appear there, against the device's own internal user number for whoever scanned. If nothing
+                  appears after a few minutes, open the <b>Devices</b> list below and check the device's status —
+                  it should say "Reporting" if it has called in at all.</div>
+                <button class="btn gold" data-hdnext="5">It's showing up — next</button>
+              </div>
+            </div>
+
+            <!-- 6 -->
+            <div class="cs-step" data-hdstep="6">
+              <div class="h"><div class="cs-num"><span>6</span></div>
+                <div><div class="cs-ttl">Match punches to people</div>
+                  <div class="cs-sub">One field on each employee record — done once per person, not per punch</div></div>
+                <span class="cs-ar">▼</span></div>
+              <div class="b">
+                <div class="cs-sub" style="font-size:13px;">A punch is matched to a person by the <b>Biometric
+                  ID</b> field on their employee record, under HRM → People. Set it to the same user number the
+                  device itself gave that person when their fingerprint or face was enrolled (this is what showed
+                  up next to your test punch in Step 5). If it is left blank, their Employee ID is tried instead —
+                  so a device enrolled with the same numbers as your Employee IDs needs nothing set here at all.
+                  A punch that matches nobody is not lost: it is listed under <b>Punch log → unmatched</b> below,
+                  so you can see exactly which device user numbers still need a person attached.</div>
+                <div class="cs-why">Once everyone is matched, use <b>Mark this month again from punches</b> on the
+                  Attendance Register for anyone whose earlier scans were sitting unmatched — it works out their
+                  attendance from the punches now that they can be identified, without touching any day already
+                  marked by hand.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="iv-sec">Your attendance equipment</div>
           <div class="row four">
             <div><label>Equipment in use</label><select id="hd-equip">
               <option value="biometric">Fingerprint (biometric) devices</option>
@@ -11116,6 +11253,29 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       say('Saved. Punches from now on are marked with these rules; use "Mark this month again" on the register for days already marked.', true); }
     catch(e){ say(esc(e.message)); }
   });
+
+  /* The device setup guide's own accordion — kept separate from csBindSteps
+     (the CNC guide's binder) with its own data attributes (data-hdstep /
+     data-hdnext rather than data-step / data-cs-next) and scoped to #hd-guide,
+     so the two guides' steps — both using the same .cs-step visual language —
+     never answer each other's "next" button. */
+  function hdBindGuideSteps(){
+    var root = document.getElementById('hd-guide');
+    if (!root) return;
+    root.querySelectorAll('.cs-step').forEach(function(st){
+      st.querySelector('.h').addEventListener('click', function(){ st.classList.toggle('open'); });
+    });
+    root.querySelectorAll('[data-hdnext]').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        var n = Number(b.getAttribute('data-hdnext'));
+        var cur = root.querySelector('.cs-step[data-hdstep="'+n+'"]');
+        var nxt = root.querySelector('.cs-step[data-hdstep="'+(n+1)+'"]');
+        if (cur){ cur.classList.add('done'); cur.classList.remove('open'); }
+        if (nxt){ nxt.classList.add('open'); nxt.scrollIntoView({behavior:'smooth',block:'center'}); }
+      });
+    });
+  }
 
   /* What to type into the device, for the connection chosen — the address is
      this site's own, so it is right on whichever domain the IDMS runs. */
@@ -21856,6 +22016,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   });
 
   csBindSteps();
+  hdBindGuideSteps();
 
   async function loadCnc(){
     await fetchParts();

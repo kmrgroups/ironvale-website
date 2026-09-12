@@ -2252,3 +2252,33 @@ its "checking…" placeholder. `tests/smoketest.mjs`'s menu-order check was
 also updated — it is a positional check that has needed a one-line update
 every time a menu group was added (Masters, Live Production, now this),
 which is expected and noted in the test's own comment.
+
+## Biometric device setup guide
+
+Attendance Devices (inside HR & Payroll) already had a one-paragraph,
+protocol-aware "what to type into the device" box (`hd-howto`) — accurate,
+but not the walk-a-non-technical-person-through-it guide the CNC screen has.
+Added a proper six-step accordion above it, `#hd-guide`, using the exact same
+`.cs-step` visual language the CNC Setup Guide (`cnc_setup`) already
+established, so the two guides look and behave identically without adding a
+second design language to the app.
+
+Deliberately **not** a second copy of `csBindSteps()` — a new
+`hdBindGuideSteps()`, scoped to `#hd-guide` and keyed on its own
+`data-hdstep`/`data-hdnext` attributes rather than CNC's `data-step`/
+`data-cs-next`, so the two accordions' "next" buttons can never answer each
+other (both exist on the same page at once; CNC's original binder queries
+`document` globally for `data-step`, unscoped by panel — harmless while only
+one guide existed, would have broken the moment a second one did without this
+separation). `tests/hrpayrolltest.mjs` checks that specifically: pressing
+Attendance Devices' step 1 does not mark CNC Setup Guide's step 1 done.
+
+The six steps: what you need (serial number, network) → set attendance rules
+(points at the existing equipment section right below) → register the device
+→ point it at this site (menu path for the Cloud Server / ADMS setting most
+fingerprint and face terminals sold in India use, referring to `hd-howto`'s
+live address rather than duplicating it) → test with one punch → match
+punches to people via the Biometric ID field. Content is static HTML, not
+generated — nothing about the steps themselves depends on data, only the
+existing `hd-howto` box below it still carries the live address/key, exactly
+as before.

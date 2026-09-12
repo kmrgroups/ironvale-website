@@ -4884,6 +4884,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           '</tr></thead><tbody>' + rows.map(function(t){
             var v = t.data||{}, late = !v.closedOn && v.dueOn && v.dueOn < today;
             return '<tr><td><b>'+esc(v.title||'')+'</b>' +
+              (v.aiProposed?' <span class="badge sample">AI proposed</span>'
+                :v.wasAiProposed?' <span class="badge series" title="AI proposed, checked by '+
+                  esc(v.reviewedBy||'')+'">checked</span>':'') +
               (v.closedNote?'<div class="hint">'+esc(v.closedNote)+'</div>':'')+'</td>' +
               '<td>'+esc(v.owner||'')+'</td>' +
               '<td'+(late?' class="bad"':' class="hint"')+'>'+(v.dueOn?C.fmtDate(v.dueOn):'—')+
@@ -7639,11 +7642,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   }
 
   /* ---------------- Skill Gap agent ----------------
-     Suggests a priority order for training only — it never creates a Training
-     Need Identification record itself. That stays a deliberate human step on
-     the TNI screen, the same separation Review Agent Work enforces elsewhere:
-     an AI ranking of a gap that already exists is not the same thing as
-     committing a training budget against it. */
+     Suggests a priority order for training, and can raise a task to arrange
+     it — but it never creates a Training Need Identification record itself.
+     That stays a deliberate human step on the TNI screen: a task on the task
+     list is a reminder to go arrange something, not a commitment of a
+     training budget, which is what a TNI record is. */
   async function explainGapAnalysis(){
     var msg = document.getElementById('ga-msg');
     var say = noteWriter(msg);
@@ -7666,11 +7669,17 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         '\n\nIn no more than 120 words of plain prose, suggest a training priority order. Group ' +
         'people who need the same thing into one training session where that makes sense. Weigh ' +
         'safety/statutory/quality gaps above ordinary ones, and a gap of several levels above a gap ' +
-        'of one. Name who and what you mean. Do not invent a name or a level not given above.',
-        { maxTokens: 400 });
-      gaNarrative = esc(C.stripMarkup(txt));
-      document.getElementById('ga-brief-body').innerHTML = '<div class="note">' + gaNarrative + '</div>';
+        'of one. Name who and what you mean. Do not invent a name or a level not given above.' +
+        TASK_BLOCK_INSTRUCTION, { maxTokens: 500 });
+      gaNarrative = esc(C.stripMarkup(agentStripTasks(txt)));
+      var made = await agentSaveTasks(agentParseTasks(txt), 'Skill Gap agent');
+      document.getElementById('ga-brief-body').innerHTML = '<div class="note">' + gaNarrative + '</div>' +
+        (made ? '<div class="note good" style="margin-top:8px;">' + made + ' task(s) raised on the ' +
+          'Task List, marked AI proposed. <a data-goto="task_list" style="cursor:pointer;' +
+          'color:var(--sky-deep);font-weight:600;">Open Task List →</a></div>' : '');
       document.getElementById('ga-brief-box').style.display = '';
+      document.getElementById('ga-brief-box').querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
       msg.style.display = 'none';
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Suggest a training plan';
@@ -8415,10 +8424,16 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         'what the realistic options are — overtime, an extra shift, sub-contracting the operation, ' +
         'or moving the order\'s date — without recommending one blindly; weigh how far over capacity ' +
         'it is and how soon the month arrives. Name the machines and months you mean. Do not invent ' +
-        'a percentage or figure not given above.', { maxTokens: 400 });
-      cpNarrative = esc(C.stripMarkup(txt));
-      document.getElementById('cp-brief-body').innerHTML = '<div class="note">' + cpNarrative + '</div>';
+        'a percentage or figure not given above.' + TASK_BLOCK_INSTRUCTION, { maxTokens: 500 });
+      cpNarrative = esc(C.stripMarkup(agentStripTasks(txt)));
+      var made = await agentSaveTasks(agentParseTasks(txt), 'Capacity Plan agent');
+      document.getElementById('cp-brief-body').innerHTML = '<div class="note">' + cpNarrative + '</div>' +
+        (made ? '<div class="note good" style="margin-top:8px;">' + made + ' task(s) raised on the ' +
+          'Task List, marked AI proposed. <a data-goto="task_list" style="cursor:pointer;' +
+          'color:var(--sky-deep);font-weight:600;">Open Task List →</a></div>' : '');
       document.getElementById('cp-brief-box').style.display = '';
+      document.getElementById('cp-brief-box').querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
       msg.style.display = 'none';
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'AI risk brief';
@@ -8641,10 +8656,16 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         'which machine is really the bottleneck behind it — an order can be late because of a machine ' +
         'queued behind another order, which is a scheduling problem, not that order\'s own fault. Name ' +
         'the orders and machines you mean. Do not invent a date or figure not given above, and do not ' +
-        'soften it if several orders are badly late.', { maxTokens: 400 });
-      mlNarrative = esc(C.stripMarkup(txt));
-      document.getElementById('ml-brief-body').innerHTML = '<div class="note">' + mlNarrative + '</div>';
+        'soften it if several orders are badly late.' + TASK_BLOCK_INSTRUCTION, { maxTokens: 500 });
+      mlNarrative = esc(C.stripMarkup(agentStripTasks(txt)));
+      var made = await agentSaveTasks(agentParseTasks(txt), 'Machine Loading agent');
+      document.getElementById('ml-brief-body').innerHTML = '<div class="note">' + mlNarrative + '</div>' +
+        (made ? '<div class="note good" style="margin-top:8px;">' + made + ' task(s) raised on the ' +
+          'Task List, marked AI proposed. <a data-goto="task_list" style="cursor:pointer;' +
+          'color:var(--sky-deep);font-weight:600;">Open Task List →</a></div>' : '');
       document.getElementById('ml-brief-box').style.display = '';
+      document.getElementById('ml-brief-box').querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
       msg.style.display = 'none';
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'AI risk brief';
@@ -9338,9 +9359,16 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         'shift, operator or machine worth looking into first, or whether they are too scattered for ' +
         'that. Name only the shift, operator or machine values given above. Do not invent a cause ' +
         '(tooling, material, temperature) that is not evidenced by the data given, and say plainly ' +
-        'if nothing in common stands out.', { maxTokens: 300 });
-      document.getElementById('cc-brief-body').innerHTML = '<div class="note">' + esc(C.stripMarkup(txt)) + '</div>';
+        'if nothing in common stands out.' + TASK_BLOCK_INSTRUCTION, { maxTokens: 400 });
+      var brief = esc(C.stripMarkup(agentStripTasks(txt)));
+      var made = await agentSaveTasks(agentParseTasks(txt), 'Control Chart agent');
+      document.getElementById('cc-brief-body').innerHTML = '<div class="note">' + brief + '</div>' +
+        (made ? '<div class="note good" style="margin-top:8px;">' + made + ' task(s) raised on the ' +
+          'Task List, marked AI proposed. <a data-goto="task_list" style="cursor:pointer;' +
+          'color:var(--sky-deep);font-weight:600;">Open Task List →</a></div>' : '');
       document.getElementById('cc-brief-box').style.display = '';
+      document.getElementById('cc-brief-box').querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
       msg.style.display = 'none';
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'What to investigate';
@@ -12564,9 +12592,19 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         're-checking because of this change — choose from PFMEA, control plan, process flow diagram, ' +
         'CNC programme, PPAP, and re-qualification/first-off inspection — and why, for this specific ' +
         'change. Do not tell the person whether to inform the customer; that is answered above this. ' +
-        'Do not invent detail about the part that was not given.', { maxTokens: 350 });
-      document.getElementById('fm-ai-body').innerHTML = '<div class="note">' + esc(C.stripMarkup(txt)) + '</div>';
+        'Do not invent detail about the part that was not given.' +
+        TASK_BLOCK_INSTRUCTION.replace('a role or person if the facts above name one, otherwise a ' +
+          'sensible role', 'the engineer or department that owns the document needing the re-check'),
+        { maxTokens: 450 });
+      var brief = esc(C.stripMarkup(agentStripTasks(txt)));
+      var made = await agentSaveTasks(agentParseTasks(txt), '4M Change agent');
+      document.getElementById('fm-ai-body').innerHTML = '<div class="note">' + brief + '</div>' +
+        (made ? '<div class="note good" style="margin-top:8px;">' + made + ' task(s) raised on the ' +
+          'Task List, marked AI proposed. <a data-goto="task_list" style="cursor:pointer;' +
+          'color:var(--sky-deep);font-weight:600;">Open Task List →</a></div>' : '');
       document.getElementById('fm-ai-box').style.display = '';
+      document.getElementById('fm-ai-box').querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
       msg.style.display = 'none';
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Draft impact assessment with AI';
@@ -13298,10 +13336,17 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         'you:\n\n' + list + '\n\nIn no more than 120 words of plain prose, say which machine to ' +
         'service first and why, weighing overdue/critical machines against how much breakdown ' +
         'time they have already cost. Name the machines you mean. Do not invent a condition that ' +
-        'is not in the list, do not repeat the list back, and do not soften it.', { maxTokens: 400 });
-      pmNarrative = esc(C.stripMarkup(txt));
-      document.getElementById('pm-brief-body').innerHTML = '<div class="note">' + pmNarrative + '</div>';
+        'is not in the list, do not repeat the list back, and do not soften it.' +
+        TASK_BLOCK_INSTRUCTION, { maxTokens: 500 });
+      pmNarrative = esc(C.stripMarkup(agentStripTasks(txt)));
+      var made = await agentSaveTasks(agentParseTasks(txt), 'Preventive Maintenance agent');
+      document.getElementById('pm-brief-body').innerHTML = '<div class="note">' + pmNarrative + '</div>' +
+        (made ? '<div class="note good" style="margin-top:8px;">' + made + ' task(s) raised on the ' +
+          'Task List, marked AI proposed. <a data-goto="task_list" style="cursor:pointer;' +
+          'color:var(--sky-deep);font-weight:600;">Open Task List →</a></div>' : '');
       document.getElementById('pm-brief-box').style.display = '';
+      document.getElementById('pm-brief-box').querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
       msg.style.display = 'none';
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Ask the AI to prioritise';
@@ -13862,6 +13907,12 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      ncoOpen is exactly what is already drawn on screen, by the same fixed
      sort (most overdue first) — the AI is asked only to say which to chase
      first and why, never to invent a fact about a record it was not given. */
+  /* Deliberately narrative-only — no TASK_BLOCK_INSTRUCTION here. A task
+     saying "chase NCR-123" would be a second record of the same action the
+     NCR's own D-stage already is, which Task List's own design note above
+     warns against: two records of one action get closed at different times
+     and one stays open forever. The NCR already appears on Task List, under
+     "open elsewhere" — that is the one record, and it stays the one record. */
   async function explainOpenActions(){
     var msg = document.getElementById('nco-msg');
     var say = noteWriter(msg);
@@ -16357,10 +16408,16 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         'order, and what it means for the customer in each case. Connect things that are connected ' +
         '— for example an order with no routing cannot be planned at all, which is worse than being ' +
         'merely late. Name the orders you mean. Do not invent anything, and do not reassure — if the ' +
-        'position is bad, say so.', { maxTokens: 400 });
-      ppNarrative = esc(C.stripMarkup(txt));
-      document.getElementById('pp-brief-body').innerHTML = '<div class="note">' + ppNarrative + '</div>';
+        'position is bad, say so.' + TASK_BLOCK_INSTRUCTION, { maxTokens: 500 });
+      ppNarrative = esc(C.stripMarkup(agentStripTasks(txt)));
+      var made = await agentSaveTasks(agentParseTasks(txt), 'Production Plan agent');
+      document.getElementById('pp-brief-body').innerHTML = '<div class="note">' + ppNarrative + '</div>' +
+        (made ? '<div class="note good" style="margin-top:8px;">' + made + ' task(s) raised on the ' +
+          'Task List, marked AI proposed. <a data-goto="task_list" style="cursor:pointer;' +
+          'color:var(--sky-deep);font-weight:600;">Open Task List →</a></div>' : '');
       document.getElementById('pp-brief-box').style.display = '';
+      document.getElementById('pp-brief-box').querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
       msg.style.display = 'none';
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'AI risk brief';
@@ -16658,12 +16715,14 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         C.idms.docs('dimension'),
         C.idms.docs('pfmea'),
         C.idms.docs('control_plan'),
+        C.idms.docs('task'),
       ]);
       rvParts = _b12607[0];
       var procs = _b12607[1];
       var dims = _b12607[2];
       var fms = _b12607[3];
       var cps = _b12607[4];
+      var tasks = _b12607[5];
       var nameOf = function(pid){
         var p = rvParts.filter(function(x){ return x.part_id === pid; })[0];
         return p ? (p.part_no + ' ' + (p.part_name||'')) : pid; };
@@ -16701,6 +16760,19 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             detail:((x.data||{}).rows||[]).length + ' control(s), unapproved',
             check:'Approve it on the Control Plan screen.' });
         });
+      /* actions proposed by the prioritising agents (Maintenance, Open Actions,
+         Skill Gap, Calibration, Production/Capacity/Loading, 4M) — not tied to
+         one part, so grouped together under a general heading rather than
+         forced under a part id that does not apply to them */
+      tasks.filter(function(x){ return (x.data||{}).aiProposed; }).forEach(function(x){
+        var v = x.data||{};
+        rvItems.push({ id:x.doc_id, kind:'task', part:'', partName:'General actions — not tied to one part',
+          title:v.title||'', taskKind:true,
+          detail:(v.owner||'no owner suggested') + ' · by ' + (v.dueOn?C.fmtDate(v.dueOn):'—') +
+                 ' · ' + (v.priority||'Normal') + (v.source ? ' · from ' + v.source : ''),
+          check:'Is this worth doing, and is the owner and date right? Accepting keeps it on the ' +
+                'Task List exactly as proposed — edit it there if the owner or date needs changing.' });
+      });
     } catch(e){
       host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; return;
     }
@@ -17372,6 +17444,57 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      Two: every run is recorded. An agent whose work cannot be audited has no
      place in a quality system. */
   var agentFindings = [], agentRuns = [], agentNarrative = '';
+
+  /* ---------------- shared: any prioritising agent can also propose a task -------
+     The same governance NPD Agent uses for a routing or a dimension, applied
+     to a plain action instead of an engineering record: draft only, flagged
+     aiProposed, visible immediately on its home screen (Task List) and in
+     Review Agent Work, nothing closed or assigned by the agent itself. Every
+     agent on this page that asks the AI to prioritise something can offer
+     this same "TASK" block in its prompt and get real, trackable actions out
+     of it instead of prose nobody follows up. */
+  var TASK_BLOCK_INSTRUCTION =
+    '\n\nThen, for each action actually worth raising as a task — at most 3, and only ones that ' +
+    'genuinely need doing; do not invent a third to fill a quota — add one block per action after ' +
+    'your prose, in exactly this shape and nothing else after it:\n\nTASK\n' +
+    'TITLE: <short imperative title>\nOWNER: <a role or person if the facts above name one, ' +
+    'otherwise a sensible role>\nDUE: <YYYY-MM-DD, realistic against today, ' + C.fmtDate(new Date()) +
+    '>\nPRIORITY: <Normal, High, or Stop the line>\nEND';
+
+  function agentParseTasks(txt){
+    var tasks = [];
+    var blocks = String(txt||'').split(/^\s*TASK\s*$/mi);
+    for (var i = 1; i < blocks.length; i++){
+      var g = fieldFromBlock(blocks[i]);
+      var title = g('TITLE');
+      if (!title) continue;
+      var due = g('DUE');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(due)){
+        var d = new Date(); d.setDate(d.getDate() + 7); due = d.toISOString().slice(0,10);
+      }
+      var pri = g('PRIORITY');
+      if (['Normal','High','Stop the line'].indexOf(pri) < 0) pri = 'Normal';
+      tasks.push({ title:title, owner:g('OWNER')||'Not yet assigned', dueOn:due, priority:pri });
+    }
+    return tasks;
+  }
+  function agentStripTasks(txt){
+    return String(txt||'').split(/^\s*TASK\s*$/mi)[0];
+  }
+  async function agentSaveTasks(tasks, source){
+    var made = 0;
+    for (var i = 0; i < tasks.length; i++){
+      var t = tasks[i];
+      try {
+        await C.idms.saveDoc({ kind:'task', docNo: await C.docNumber('task'), status:'Open',
+          data:{ title:t.title, owner:t.owner, dueOn:t.dueOn, priority:t.priority,
+                 source:source, raisedOn:new Date().toISOString().slice(0,10),
+                 raisedBy:'AI agent', aiProposed:true } }, 'task proposed by ' + source);
+        made++;
+      } catch(e){}
+    }
+    return made;
+  }
 
   var SEV = { high:{ rank:3, label:'Must fix', cls:'ab' },
               med:{ rank:2, label:'Should fix', cls:'sample' },
@@ -18759,11 +18882,17 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         '\n\nIn no more than 120 words of plain prose, say which to send for calibration first and ' +
         'why, weighing how overdue a gauge is against how widely a gauge type like it is usually ' +
         'used on a shop floor. Name the numbers you mean. Do not invent a fact not given above, do ' +
-        'not repeat the list back, and do not soften it if several are badly overdue.',
-        { maxTokens: 400 });
-      calNarrative = esc(C.stripMarkup(txt));
-      document.getElementById('cal-brief-body').innerHTML = '<div class="note">' + calNarrative + '</div>';
+        'not repeat the list back, and do not soften it if several are badly overdue.' +
+        TASK_BLOCK_INSTRUCTION, { maxTokens: 500 });
+      calNarrative = esc(C.stripMarkup(agentStripTasks(txt)));
+      var made = await agentSaveTasks(agentParseTasks(txt), 'Calibration agent');
+      document.getElementById('cal-brief-body').innerHTML = '<div class="note">' + calNarrative + '</div>' +
+        (made ? '<div class="note good" style="margin-top:8px;">' + made + ' task(s) raised on the ' +
+          'Task List, marked AI proposed. <a data-goto="task_list" style="cursor:pointer;' +
+          'color:var(--sky-deep);font-weight:600;">Open Task List →</a></div>' : '');
       document.getElementById('cal-brief-box').style.display = '';
+      document.getElementById('cal-brief-box').querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
       msg.style.display = 'none';
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Ask the AI to prioritise';

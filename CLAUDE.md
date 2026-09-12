@@ -2172,3 +2172,45 @@ the menu is either a plain master/CRUD screen, a report that already states
 its finding in full plain language with nothing further for an AI to add, or
 one of the 6 screens not built yet (`pfmea_master`, `pp_spec_master`,
 `supplier_competency`, `form`, `report_inprocess_inspection`, `accounts_pl`).
+
+## Agentic AI coverage pass, part 3 — every prioritising agent now proposes, not just narrates
+
+The user asked for every agent to work like the NPD Agent: not just explain
+something in prose, but produce a real, reviewable draft artefact — the same
+propose/flag/review shape NPD Agent already uses for routing and dimensions,
+applied to a plain action instead of an engineering record.
+
+**Shared infrastructure**, added once near the existing Agents section:
+- `TASK_BLOCK_INSTRUCTION` — a prompt suffix any agent can append, asking the
+  AI to follow its prose with up to 3 `TASK` blocks (`TITLE`/`OWNER`/`DUE`/
+  `PRIORITY`), reusing the same block-parsing shape `agentProposeRouting` and
+  `agentProposeDimensions` already use for `OP`/`DIM` blocks.
+- `agentParseTasks(txt)` / `agentStripTasks(txt)` — split the reply into the
+  narrative (kept exactly as before) and the structured tasks.
+- `agentSaveTasks(tasks, source)` — writes each as `kind:'task'`,
+  `aiProposed:true`, exactly the same flag NPD Agent puts on a proposed
+  operation or dimension.
+
+**Review Agent Work** now pulls in `aiProposed` tasks alongside routing and
+dimension proposals — same Accept/Reject buttons, grouped under "General
+actions — not tied to one part" since a task has no `partId`. **Task List**
+now shows the same "AI proposed" / "checked" badge routing and dimensions
+already show, so a proposed task is visible on its own home screen
+immediately, not only in the review queue.
+
+**Converted to propose tasks**: Preventive Maintenance, Skill Gap Analysis,
+Calibration Report, Production Plan, Capacity Plan, Machine Loading Plan,
+Control Charts, 4M Change — 8 of the 9 agents from part 1/2.
+
+**Open Actions was deliberately left narrative-only.** A task proposing to
+"chase NCR-123" would be a second record of the exact action the NCR's own
+D-stage already is — precisely the duplication Task List's own design note
+warns against ("two records of one action get closed at different times and
+one stays open forever"). The NCR already surfaces on Task List under "open
+elsewhere"; that stays the one record.
+
+Same discipline throughout: `node --check` after every edit, full suite run
+clean after every conversion (same 2 pre-existing smoketest failures
+throughout, nothing new), and a plain manual sanity check of the TASK block
+parser against a sample AI reply before trusting it in seven functions at
+once.

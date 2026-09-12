@@ -2282,3 +2282,88 @@ punches to people via the Biometric ID field. Content is static HTML, not
 generated — nothing about the steps themselves depends on data, only the
 existing `hd-howto` box below it still carries the live address/key, exactly
 as before.
+
+## Title bar: search, and a tagline
+
+Two small, unrelated additions to `.top`, the navy bar at the very top of
+every screen:
+
+- **Tagline.** "Agentic AI — Intelligent Digital Manufacturing System" now
+  sits under the company name. There was already a `.top .id .tag` CSS rule
+  for exactly this, defined but never used in any markup — filed under
+  `.co`, which is what made it easy to find.
+- **Search.** `SEARCH_INDEX` is built once, straight off `MENU` itself —
+  every live screen, with its icon and department — so a screen can never be
+  searchable and missing from the actual menu, or the other way round.
+  Typing a few letters (`tSearchMatches`) scores label-starts-with above
+  label-contains above department-starts-with/contains, shows up to 8
+  results (`tSearchDraw`) with arrow-key navigation, and a click or Enter
+  calls the same `navigate()` the menu itself uses. Screens without a LIVE
+  flag are left out on purpose — searching one up would only land on the
+  "not built yet" placeholder. `tests/smoketest.mjs` covers both: the
+  tagline text, and that searching "calibration" surfaces Calibration
+  Report grouped under Quality Assurance and actually navigates there.
+
+## SPC — upgrading Control Charts rather than adding a second screen
+
+Asked for directly: an "SPC screen," built to the SPC Manual. Control
+Charts (`report_control_charts`) already did a real, correct slice of
+this — an individuals/moving-range chart with Cp/Cpk, a beyond-limits
+check and a run-of-seven check — because each self-inspection reading is
+one piece, not a subgroup, which rules out X̄–R/X̄–S charts without a
+change to how self-inspection itself records data (out of scope here).
+Building a second, separate "SPC" screen next to it would have been
+exactly the "same thing on the menu twice" this codebase has avoided
+elsewhere (Machine & Process, the MSA/Control-Chart overlap noted
+earlier) — so this extends Control Charts in place instead, and renames
+it to **SPC — Control Charts** in the menu so it is still found under
+that name.
+
+**Added:**
+- **Pp/Ppk** (performance capability, built on the plain standard
+  deviation of every reading — "overall" or long-term sigma) alongside the
+  existing **Cp/Cpk** (potential capability, built on the short-term sigma
+  the control limits themselves use, from the average moving range ÷
+  1.128). The SPC Manual's own distinction: Cp/Cpk says what the process
+  is capable of when it is behaving itself moment to moment; Pp/Ppk says
+  what it has actually delivered, drift included. A Cpk comfortably above
+  1.33 with a Ppk well below it is itself a finding — variation is coming
+  from drift over time, not short-term spread — so the screen says that
+  outright when the gap exceeds 0.2, rather than leaving two numbers on
+  screen for someone to notice the gap between themselves.
+- **Western Electric zone tests**: Zone A (2 of any 3 consecutive
+  readings beyond 2σ, same side) and Zone B (4 of any 5 beyond 1σ, same
+  side) — both built on the same short-term sigma the control limits use,
+  so a Zone A flag and a beyond-limits flag are always talking about the
+  same yardstick. Only the readings that actually qualify are flagged,
+  not every reading in a passing window.
+- **Six-point trend rule**: 6 readings in a row steadily increasing or
+  decreasing (5 consecutive rises or falls) — catches a drift that may
+  never leave the middle of the chart at all, so neither the limits nor
+  the zone tests would catch it.
+- The existing beyond-limits and run-of-seven checks, and the AI
+  investigation agent, are unchanged in their own logic — the agent's
+  flagged-reading list now also includes Zone A/B and trend readings, on
+  top of what it already covered.
+- **Deliberately left at 7, not changed to 8**, for the run rule: sources
+  vary on this (7 is common in AIAG-adjacent training material; strict
+  Western Electric/Nelson uses 8), and this codebase already shipped and
+  presumably relies on 7 — changing already-verified behaviour without
+  being asked risked being a silent regression dressed as an improvement,
+  so the new rules were added instead of touched.
+
+**Tested properly, not just run once:** `tests/spctest.mjs` is new — a
+second self-inspection data set, engineered by running the exact same
+formulas used in `idms.html` against candidate readings until one
+genuinely triggered a beyond-limits point, a Zone A pattern, a Zone B
+pattern and a six-point trend together, so every expected value in the
+test is a hand-checked fact about that data, not a guess at what the
+screen ought to say. Covers the menu/heading rename, all four rule types
+firing (and the loose-tolerance case NOT firing outSpec), both capability
+pairs appearing with their potential/performance framing, the Cpk-vs-Ppk
+gap warning, and that the printed report carries the same new figures.
+`materialtest.mjs`'s own smaller control-chart check (its own data set,
+the one with the wild outlier) was left untouched and still passes
+unmodified — its 22-reading set happens not to trigger any of the three
+new rules, which is a fact about that particular data, not a gap in the
+new logic.

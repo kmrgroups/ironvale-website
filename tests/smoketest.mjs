@@ -259,7 +259,25 @@ check('token is kept in sessionStorage, so it does not cross into a new tab',
   window.sessionStorage.getItem('app_token') === 'TOK', window.sessionStorage.getItem('app_token'));
 check('token is not left in localStorage', !window.localStorage.getItem('app_token'));
 
-// ---- 13. Agentic AI hub ----
+// ---- 13. title bar: tagline and search ----
+check('the tagline sits under the company name',
+  /Agentic AI.*Intelligent Digital Manufacturing System/.test(window.document.querySelector('.top .id .tag').textContent));
+const tSearch = window.document.getElementById('t-search');
+tSearch.value = 'calibration';
+tSearch.dispatchEvent(new window.Event('input', { bubbles: true }));
+await wait(50);
+const tResults = [...window.document.querySelectorAll('#t-search-results .tsr-item')];
+check('typing a few letters suggests the matching screen',
+  tResults.some(r => /Calibration Report/.test(r.textContent)), tResults.map(r => r.textContent).join(' | '));
+check('a result is grouped with its department', tResults.some(r => /Quality Assurance/.test(r.textContent)));
+const calResult = tResults.find(r => r.dataset.screen === 'report_calibration');
+calResult.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true }));
+await wait(150);
+check('clicking a search result opens that screen',
+  window.document.querySelector('[data-panel="report_calibration"]').classList.contains('on'));
+check('the search box clears itself after navigating', tSearch.value === '');
+
+// ---- 14. Agentic AI hub ----
 nav('agentic_ai');
 await wait(150);
 const aaTiles = [...window.document.querySelectorAll('#aa-tiles .aa-tile')];

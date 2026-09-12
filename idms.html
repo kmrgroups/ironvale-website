@@ -2222,6 +2222,163 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       </div>
     </div>
 
+    <div class="panel" data-panel="hr_audit_trail">
+      <div class="card">
+        <h4>HR Audit Trail</h4>
+        <div class="hint" style="margin-bottom:10px;">Nothing to fill in — every add, edit, status
+          change and deletion made anywhere in HR & Payroll, who did it and why, in one place.
+          Restricted to developer and admin logins, the same as the equivalent IDMS-wide Compliance
+          &amp; Audit Trail under QMS.</div>
+        <button class="btn gold" id="hat-refresh">Refresh</button>
+        <div class="note" id="hat-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><div id="hat-body"></div></div>
+    </div>
+
+    <div class="panel" data-panel="hr_policies">
+      <div class="card">
+        <h4>Policies</h4>
+        <div class="hint" style="margin-bottom:10px;">A policy is drafted, then published — publishing
+          starts acknowledgements over from zero and marks anything it supersedes read-only. A
+          published policy's own text cannot be edited; a correction is a new version.</div>
+        <div class="stat" id="pl-kpi"></div>
+      </div>
+      <div class="card">
+        <h4>Draft a policy</h4>
+        <div class="row four">
+          <div><label>Title</label><input id="pl-title"></div>
+          <div><label>Category</label><input id="pl-cat"></div>
+          <div><label>Version</label><input id="pl-ver" placeholder="1.0"></div>
+          <div><label>Effective from</label><input type="date" id="pl-eff"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Applies to</label><input id="pl-applies" placeholder="all employees"></div>
+          <div><label>Owner</label><input id="pl-owner"></div>
+          <div><label>Next review</label><input type="date" id="pl-review"></div>
+          <div><label>Supersedes</label><select id="pl-supersedes"><option value="">Nothing — this is new</option></select></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
+          <label>Policy text</label><textarea id="pl-body" rows="8"></textarea></div></div>
+        <div style="margin-top:12px;"><button class="btn gold" id="pl-create">Save as draft</button></div>
+        <div class="note" id="pl-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>All policies</h4>
+        <div id="pl-list"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="hr_leave">
+      <div class="card">
+        <h4>Leave &amp; Permission</h4>
+        <div class="hint" style="margin-bottom:10px;">Applied, approved or rejected, and the balance
+          it draws down from — leave rules (annual entitlement, carry-forward) are set on Statutory
+          &amp; Masters. Approving or rejecting is a manager or HR decision recorded with a name; the
+          system does not decide for anyone.</div>
+        <div class="stat" id="lv-kpi"></div>
+      </div>
+      <div class="card">
+        <h4>Apply for leave</h4>
+        <div class="row four">
+          <div><label>Employee</label><select id="lv-emp"></select></div>
+          <div><label>Type</label><select id="lv-type">
+            <option>Casual</option><option>Sick</option><option>Earned</option>
+            <option>Unpaid</option><option>Permission</option></select></div>
+          <div><label>From</label><input type="date" id="lv-from"></div>
+          <div><label>To</label><input type="date" id="lv-to"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
+          <label>Reason</label><input id="lv-reason"></div></div>
+        <div style="margin-top:12px;"><button class="btn gold" id="lv-apply">Apply</button></div>
+        <div class="note" id="lv-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Requests</h4>
+        <div class="row four" style="margin-bottom:8px;">
+          <div><label>Show</label><select id="lv-filter">
+            <option value="">Everyone</option><option>Pending</option><option>Approved</option>
+            <option>Rejected</option></select></div>
+        </div>
+        <div id="lv-list"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="hr_engage">
+      <div class="card">
+        <h4>Engagement</h4>
+        <div class="hint" style="margin-bottom:10px;">Recognition and surveys — two different kinds of
+          "how people are doing" evidence, kept in one place because they are the kind an engagement
+          review or an exit interview ends up referring back to.</div>
+        <div class="stat" id="eg-kpi"></div>
+      </div>
+      <div class="card">
+        <h4>Record recognition</h4>
+        <div class="row four">
+          <div><label>Employee</label><select id="eg-rw-emp"></select></div>
+          <div><label>Award</label><input id="eg-rw-type" placeholder="Best Kaizen, Employee of the Month…"></div>
+          <div><label>Period</label><input id="eg-rw-period" placeholder="September 2026"></div>
+          <div><label>Citation / note</label><input id="eg-rw-note"></div>
+        </div>
+        <div style="margin-top:12px;"><button class="btn gold" id="eg-rw-add">Record it</button></div>
+        <div class="note" id="eg-rw-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>Recognition on record</h4><div id="eg-rw-list"></div></div>
+      <div class="card">
+        <h4>Create a survey</h4>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>Title</label><input id="eg-sv-title"></div>
+          <div><label>Responses</label><select id="eg-sv-anon"><option value="no">Named</option><option value="yes">Anonymous</option></select></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
+          <label>Questions — one per line, each answered on a scale of 1 to 5</label>
+          <textarea id="eg-sv-qs" rows="4"></textarea></div></div>
+        <div style="margin-top:12px;"><button class="btn gold" id="eg-sv-add">Create survey</button></div>
+        <div class="note" id="eg-sv-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>Surveys</h4><div id="eg-sv-list"></div></div>
+    </div>
+
+    <div class="panel" data-panel="hr_exit">
+      <div class="card">
+        <h4>Exit &amp; Full and Final</h4>
+        <div class="hint" style="margin-bottom:10px;">A resignation and its clearance across
+          departments — kept together because an unresolved clearance is exactly what holds up a
+          final settlement in real life.
+          <span class="hint" style="display:block;margin-top:6px;">The settlement figure itself
+          (final salary, leave encashment, gratuity) is not calculated here yet — it depends on leave
+          balance rules that have not moved off the website. Enter it by hand for now; open
+          <a data-goto="hr_payroll" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">HR &amp; Payroll</a>
+          for the calculated version until it moves here too.</span></div>
+        <div class="stat" id="ex-kpi"></div>
+      </div>
+      <div class="card">
+        <h4>Record a resignation / exit</h4>
+        <div class="row four">
+          <div><label>Employee</label><select id="ex-emp"></select></div>
+          <div><label>Type</label><select id="ex-type">
+            <option>Resignation</option><option>Termination</option><option>Retirement</option>
+            <option>Contract end</option></select></div>
+          <div><label>Notice date</label><input type="date" id="ex-notice"></div>
+          <div><label>Last working day</label><input type="date" id="ex-lwd"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
+          <label>Reason</label><input id="ex-reason"></div></div>
+        <div style="margin-top:12px;"><button class="btn gold" id="ex-add">Record it</button></div>
+        <div class="note" id="ex-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>Exits in progress</h4><div id="ex-list"></div></div>
+    </div>
+
+    <div class="panel" data-panel="hr_tower">
+      <div class="card">
+        <h4>Control Tower</h4>
+        <div class="hint" style="margin-bottom:10px;">Nothing to fill in — today, across attendance,
+          leave and open HR tasks, read from the same records those screens keep.</div>
+        <button class="btn gold" id="tw-refresh">Refresh</button>
+      </div>
+      <div class="card"><div id="tw-body"></div></div>
+    </div>
+
     <div class="panel" data-panel="entry_machine">
       <div class="card">
         <h4>Machines</h4>
@@ -4444,6 +4601,12 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['attendance_lookup','🪪','My Attendance',1],
       ['skill_matrix','📊','Skill Matrix',1],
       ['recruitment','🧑\u200d💼','Recruitment',1],
+      ['hr_policies','📜','Policies',1],
+      ['hr_leave','🗓','Leave & Permission',1],
+      ['hr_engage','🤝','Engagement',1],
+      ['hr_exit','🚪','Exit & Full and Final',1],
+      ['hr_tower','🗼','Control Tower',1],
+      ['hr_audit_trail','🕵','HR Audit Trail',1],
       ['org_chart','🏗','Organisation Chart',1],
       ['dwm','📊','DWM — Daily Work Management',1],
       ['roles_resp','📋','Roles & Responsibilities',1],
@@ -4709,6 +4872,12 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'machine_process') loadMachineProcess();
     if (s === 'skill_matrix')   loadSkills();
     if (s === 'recruitment')    loadRecruitment();
+    if (s === 'hr_policies')    loadHrPolicies();
+    if (s === 'hr_leave')       loadHrLeave();
+    if (s === 'hr_engage')      loadHrEngage();
+    if (s === 'hr_exit')        loadHrExit();
+    if (s === 'hr_tower')       loadHrTower();
+    if (s === 'hr_audit_trail') loadHrAuditTrail();
     if (s === 'change_4m')      load4M();
     if (s === 'maintenance')    loadMaintenance();
     if (s === 'ncr_open')       loadOpenActions();
@@ -8189,6 +8358,328 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     } catch(e){ toast(e.message); }
   }
 
+  /* ---------------- shared: every new native HR screen below needs the
+     current employee list for a picker; small enough, and changes often
+     enough elsewhere, that a fresh fetch each time a screen opens is
+     simpler and safer than a cache that could go stale mid-session ---- */
+  async function hrAllEmployees(){
+    try { return (await C.api('/api/hr?what=employees')).employees || []; } catch(e){ return []; }
+  }
+  function hrEmpSelectOptions(list, keep){
+    return list.map(function(e){ return '<option value="'+esc(e.empId)+'"'+(e.empId===keep?' selected':'')+'>'+
+      esc(e.name)+' ('+esc(e.empId)+')</option>'; }).join('') || '<option value="">No employees on file</option>';
+  }
+
+  /* ---------------- HR Audit Trail (native) ---------------- */
+  async function loadHrAuditTrail(){
+    var host = document.getElementById('hat-body');
+    host.innerHTML = '<div class="hint">Loading…</div>';
+    try {
+      var j = await C.api('/api/hr?what=audit');
+      var rows = j.audit || [];
+      host.innerHTML = rows.length ? '<table class="t"><thead><tr><th>When</th><th>Who</th>' +
+        '<th>Action</th><th>Record</th><th>Reason</th></tr></thead><tbody>' +
+        rows.map(function(a){
+          return '<tr><td class="hint">'+new Date(a.at).toLocaleString()+'</td><td>'+esc(a.who)+'</td>' +
+            '<td>'+esc(a.what)+'</td><td>'+esc(a.ref)+'</td><td class="hint">'+esc(a.reason||'')+'</td></tr>';
+        }).join('') + '</tbody></table>'
+        : '<div class="empty"><b>No history yet</b></div>';
+    } catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; }
+  }
+
+  /* ---------------- Policies (native) ----------------
+     A policy is drafted, then published; publishing resets every employee's
+     acknowledgement to zero and marks whatever it supersedes read-only.
+     Published text itself is never edited — a correction is a new version,
+     the same discipline QMS's own document levels already use. */
+  var hrPolicies = [], hrEmpForPolicy = [];
+  async function loadHrPolicies(){
+    hrEmpForPolicy = await hrAllEmployees();
+    try {
+      var j = await C.api('/api/hr?what=items&kind=policy');
+      hrPolicies = (j.items || []).map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
+    } catch(e){ hrPolicies = []; }
+    drawPolicies();
+  }
+  function drawPolicies(){
+    var active = hrEmpForPolicy.filter(function(e){ return e.status !== 'Exited'; });
+    var current = hrPolicies.filter(function(p){ return p.status === 'Published'; });
+    var drafts = hrPolicies.filter(function(p){ return p.status === 'Draft'; });
+    var dueReview = current.filter(function(p){ return p.reviewOn && p.reviewOn <= new Date().toISOString().slice(0,10); });
+    var pendingAck = current.reduce(function(t,p){
+      var acks = (p.acknowledgements||[]).length; return t + Math.max(0, active.length - acks); }, 0);
+    document.getElementById('pl-kpi').innerHTML =
+      [['Published', current.length], ['Drafts', drafts.length],
+       ['Acknowledgements pending', pendingAck], ['Due for review', dueReview.length]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('');
+
+    var sel = document.getElementById('pl-supersedes');
+    sel.innerHTML = '<option value="">Nothing — this is new</option>' +
+      current.map(function(p){ return '<option value="'+esc(p.item_id)+'">'+esc(p.title)+' v'+esc(p.version)+'</option>'; }).join('');
+
+    var host = document.getElementById('pl-list');
+    host.innerHTML = hrPolicies.length ? hrPolicies.map(function(p){
+      var acks = (p.acknowledgements||[]).length;
+      var overdue = p.reviewOn && p.reviewOn <= new Date().toISOString().slice(0,10);
+      var badge = p.status === 'Published' ? 'series' : (p.status === 'Superseded' ? '' : 'sample');
+      return '<div class="card" style="margin-bottom:10px;"><h4>'+esc(p.title)+' <span class="hint">v'+esc(p.version)+'</span> ' +
+        '<span class="badge '+badge+'">'+esc(p.status)+'</span></h4>' +
+        '<div class="hint">'+esc(p.category||'')+' · effective '+C.fmtDate(p.effectiveFrom)+' · '+
+        acks+'/'+active.length+' acknowledged'+(overdue?' · <span style="color:var(--bad,#b03a2e);">review overdue</span>':'')+'</div>' +
+        '<div style="white-space:pre-wrap;margin-top:8px;font-size:13px;">'+esc(p.body||'')+'</div>' +
+        '<div class="hint" style="margin-top:6px;">Applies to <b>'+esc(p.appliesTo||'all employees')+'</b> · owner '+esc(p.owner||'—')+
+        (p.reviewOn ? ' · next review '+C.fmtDate(p.reviewOn) : '')+'</div>' +
+        (p.status === 'Published' ? (
+          '<div class="row four" style="margin-top:10px;"><div><label>Record acknowledgement for</label>' +
+          '<select class="pl-ack-emp" data-p="'+esc(p.item_id)+'">' +
+          hrEmpSelectOptions(active.filter(function(e){ return !(p.acknowledgements||[]).some(function(a){ return a.empId===e.empId; }); })) +
+          '</select></div><div style="align-self:end;"><button class="btn pl-ack" data-p="'+esc(p.item_id)+'">Record</button></div></div>'
+        ) : '') +
+        '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' +
+        (p.status === 'Draft' ? '<button class="btn gold pl-pub" data-p="'+esc(p.item_id)+'">Publish</button>' : '') +
+        (p.status !== 'Superseded' ? '<button class="btn del pl-del" data-p="'+esc(p.item_id)+'">Delete</button>' : '') +
+        '</div></div>';
+    }).join('') : '<div class="empty"><b>No policies yet</b></div>';
+
+    host.querySelectorAll('.pl-pub').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var p = hrPolicies.filter(function(x){ return x.item_id === b.dataset.p; })[0];
+        if (!confirm('Publish this version? Any policy it supersedes becomes read-only and acknowledgements start again.')) return;
+        try {
+          if (p.supersedes) await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+            itemId:p.supersedes, status:'Superseded', reason:'superseded by ' + p.version }) });
+          var data = Object.assign({}, p, { acknowledgements: [] }); delete data.item_id; delete data.status;
+          await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:p.item_id,
+            patch:data, status:'Published', reason:'policy published' }) });
+          loadHrPolicies();
+        } catch(e){ toast(e.message); }
+      });
+    });
+    host.querySelectorAll('.pl-ack').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var p = hrPolicies.filter(function(x){ return x.item_id === b.dataset.p; })[0];
+        var empSel = host.querySelector('.pl-ack-emp[data-p="'+b.dataset.p+'"]');
+        if (!empSel || !empSel.value) return;
+        var acks = (p.acknowledgements||[]).slice();
+        acks.push({ empId:empSel.value, on:new Date().toISOString().slice(0,10), by:me.username||'' });
+        var data = Object.assign({}, p, { acknowledgements:acks }); delete data.item_id; delete data.status;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:p.item_id,
+          patch:data, reason:'acknowledgement recorded for ' + empSel.value }) });
+          loadHrPolicies(); } catch(e){ toast(e.message); }
+      });
+    });
+    host.querySelectorAll('.pl-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Deleting this policy. Why?'); if (!why) return;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:b.dataset.p, remove:true, reason:why }) });
+          loadHrPolicies(); } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
+  /* ---------------- Leave & Permission (native) ----------------
+     Balances (how many days a person has left) are not shown here yet —
+     that depends on the leave-rule masters (entitlement, carry-forward),
+     which have not moved off the website. What is native now is the part
+     that was completely unreachable for anyone but the developer login:
+     applying, and a manager or HR actually approving or rejecting. */
+  var hrLeaveList = [], hrEmpForLeave = [];
+  async function loadHrLeave(){
+    hrEmpForLeave = await hrAllEmployees();
+    var sel = document.getElementById('lv-emp'); sel.innerHTML = hrEmpSelectOptions(hrEmpForLeave);
+    try {
+      var j = await C.api('/api/hr?what=items&kind=leave-req');
+      hrLeaveList = (j.items || []).map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
+    } catch(e){ hrLeaveList = []; }
+    drawLeaveList();
+  }
+  function drawLeaveList(){
+    var f = document.getElementById('lv-filter').value;
+    var rows = hrLeaveList.filter(function(l){ return !f || l.status === f; })
+      .sort(function(a,b){ return (b.appliedOn||'').localeCompare(a.appliedOn||''); });
+    var pending = hrLeaveList.filter(function(l){ return l.status === 'Pending'; });
+    document.getElementById('lv-kpi').innerHTML =
+      [['Pending', pending.length], ['Approved', hrLeaveList.filter(function(l){return l.status==='Approved';}).length],
+       ['Rejected', hrLeaveList.filter(function(l){return l.status==='Rejected';}).length],
+       ['Total requests', hrLeaveList.length]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('');
+    var host = document.getElementById('lv-list');
+    if (!rows.length){ host.innerHTML = '<div class="empty"><b>Nothing to show</b></div>'; return; }
+    host.innerHTML = '<table class="t"><thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th>' +
+      '<th>Reason</th><th class="c">Status</th><th></th></tr></thead><tbody>' +
+      rows.map(function(l){
+        var emp = hrEmpForLeave.filter(function(e){ return e.empId === l.empId; })[0];
+        var days = (l.from && l.to) ? (Math.round((new Date(l.to) - new Date(l.from)) / 86400000) + 1) : '—';
+        return '<tr><td><b>'+esc(emp?emp.name:l.empId)+'</b></td><td>'+esc(l.type||'')+'</td>' +
+          '<td>'+C.fmtDate(l.from)+'</td><td>'+C.fmtDate(l.to)+'</td>' +
+          '<td class="hint">'+esc(l.reason||'')+' ('+days+' day(s))</td>' +
+          '<td class="c"><span class="badge '+(l.status==='Approved'?'series':l.status==='Rejected'?'':'sample')+'">'+esc(l.status)+'</span></td>' +
+          '<td>'+(l.status==='Pending'
+            ? '<button class="btn gold lv-app" data-id="'+esc(l.item_id)+'">Approve</button> <button class="btn del lv-rej" data-id="'+esc(l.item_id)+'">Reject</button>'
+            : '')+'</td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.lv-app').forEach(function(b){
+      b.addEventListener('click', async function(){
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:b.dataset.id, status:'Approved', reason:'approved by ' + (me.username||'') }) });
+          loadHrLeave(); } catch(e){ toast(e.message); }
+      });
+    });
+    host.querySelectorAll('.lv-rej').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Rejecting this leave request. Why?'); if (!why) return;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:b.dataset.id, status:'Rejected', reason:why }) });
+          loadHrLeave(); } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
+  /* ---------------- Engagement: recognition + surveys (native) ---------------- */
+  var hrRewards = [], hrSurveys = [], hrEmpForEngage = [];
+  async function loadHrEngage(){
+    hrEmpForEngage = await hrAllEmployees();
+    document.getElementById('eg-rw-emp').innerHTML = hrEmpSelectOptions(hrEmpForEngage);
+    try {
+      var j = await C.api('/api/hr?what=items');
+      var all = j.items || [];
+      hrRewards = all.filter(function(x){ return x.kind === 'reward'; }).map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
+      hrSurveys = all.filter(function(x){ return x.kind === 'survey'; }).map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
+    } catch(e){ hrRewards = []; hrSurveys = []; }
+    drawRecognition(); drawSurveys();
+  }
+  function drawRecognition(){
+    var responses = hrSurveys.reduce(function(t,s){ return t + (s.responses||[]).length; }, 0);
+    document.getElementById('eg-kpi').innerHTML =
+      [['Recognitions', hrRewards.length], ['Surveys', hrSurveys.length], ['Responses', responses]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('');
+    var host = document.getElementById('eg-rw-list');
+    host.innerHTML = hrRewards.length ? '<table class="t"><thead><tr><th>Employee</th><th>Award</th>' +
+      '<th>Period</th><th>Note</th><th>Recorded</th><th></th></tr></thead><tbody>' +
+      hrRewards.map(function(r){
+        var emp = hrEmpForEngage.filter(function(e){ return e.empId === r.empId; })[0];
+        return '<tr><td><b>'+esc(emp?emp.name:r.empId)+'</b></td><td>'+esc(r.type||'')+'</td>' +
+          '<td>'+esc(r.period||'')+'</td><td class="hint">'+esc(r.note||'')+'</td><td class="hint">'+esc(r.recordedOn||'')+'</td>' +
+          '<td><button class="btn del eg-rw-del" data-id="'+esc(r.item_id)+'">Delete</button></td></tr>';
+      }).join('') + '</tbody></table>' : '<div class="empty"><b>No recognition recorded yet</b></div>';
+    host.querySelectorAll('.eg-rw-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Removing this recognition record. Why?'); if (!why) return;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:b.dataset.id, remove:true, reason:why }) });
+          loadHrEngage(); } catch(e){ toast(e.message); }
+      });
+    });
+  }
+  function drawSurveys(){
+    var host = document.getElementById('eg-sv-list');
+    host.innerHTML = hrSurveys.length ? hrSurveys.map(function(sv){
+      var resp = sv.responses || [];
+      return '<div class="card" style="margin-bottom:10px;"><h4>'+esc(sv.title)+' <span class="badge sample">'+esc(sv.status)+'</span></h4>' +
+        '<div class="hint">'+resp.length+' response(s) · '+(sv.anonymous?'anonymous':'named')+' · '+(sv.questions||[]).length+' question(s)</div>' +
+        '<button class="btn del eg-sv-del" data-id="'+esc(sv.item_id)+'" style="margin-top:8px;">Delete</button></div>';
+    }).join('') : '<div class="empty"><b>No surveys yet</b></div>';
+    host.querySelectorAll('.eg-sv-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Deleting this survey. Why?'); if (!why) return;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:b.dataset.id, remove:true, reason:why }) });
+          loadHrEngage(); } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
+  /* ---------------- Exit & Full and Final (native, phase 1 — see the note
+     on the screen itself: the settlement figure is not calculated here) ---------------- */
+  var hrExits = [], hrEmpForExit = [];
+  async function loadHrExit(){
+    hrEmpForExit = await hrAllEmployees();
+    document.getElementById('ex-emp').innerHTML = hrEmpSelectOptions(hrEmpForExit.filter(function(e){ return e.status !== 'Exited'; }));
+    try {
+      var j = await C.api('/api/hr?what=items&kind=exit');
+      hrExits = (j.items || []).map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
+    } catch(e){ hrExits = []; }
+    drawExits();
+  }
+  function drawExits(){
+    document.getElementById('ex-kpi').innerHTML =
+      [['In progress', hrExits.filter(function(x){return x.status!=='Settled';}).length],
+       ['Settled', hrExits.filter(function(x){return x.status==='Settled';}).length]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('');
+    var host = document.getElementById('ex-list');
+    host.innerHTML = hrExits.length ? hrExits.map(function(x){
+      var emp = hrEmpForExit.filter(function(e){ return e.empId === x.empId; })[0];
+      return '<div class="card" style="margin-bottom:10px;"><h4>'+esc(emp?emp.name:x.empId)+' — '+esc(x.type||'')+' ' +
+        '<span class="badge '+(x.status==='Settled'?'series':'sample')+'">'+esc(x.status)+'</span></h4>' +
+        '<div class="hint">Last working day '+C.fmtDate(x.lastWorkingDay)+(x.reason?' · '+esc(x.reason):'')+'</div>' +
+        '<div class="sub" style="margin-top:8px;">Clearance</div>' +
+        '<div class="row four">' +
+        ['Tools returned','ID card returned','Company property','Handover complete','Accounts clear'].map(function(c){
+          return '<div><label>'+c+'</label><select class="ex-clr" data-id="'+esc(x.item_id)+'" data-k="'+esc(c)+'">' +
+            '<option value="">Pending</option>' +
+            '<option value="yes"'+((x.clearance||{})[c]==='yes'?' selected':'')+'>Cleared</option>' +
+            '<option value="na"'+((x.clearance||{})[c]==='na'?' selected':'')+'>Not applicable</option></select></div>';
+        }).join('') + '</div>' +
+        '<div class="row four" style="margin-top:9px;"><div><label>Recoveries / advances</label>' +
+        '<input class="num ex-in" data-id="'+esc(x.item_id)+'" data-k="recoveries" value="'+esc(x.recoveries||0)+'"></div>' +
+        '<div style="grid-column:span 2;"><label>Exit interview notes</label>' +
+        '<input class="ex-in" data-id="'+esc(x.item_id)+'" data-k="exitNotes" value="'+esc(x.exitNotes||'')+'"></div></div>' +
+        '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button class="btn gold ex-save" data-id="'+esc(x.item_id)+'">Save</button>' +
+        (x.status!=='Settled' ? '<button class="btn ex-settle" data-id="'+esc(x.item_id)+'">Mark settled</button>' : '') +
+        '</div></div>';
+    }).join('') : '<div class="empty"><b>No exits in progress</b></div>';
+    host.querySelectorAll('.ex-clr, .ex-in').forEach(function(el){
+      el.addEventListener('change', function(){
+        var x = hrExits.filter(function(v){ return v.item_id === el.dataset.id; })[0]; if (!x) return;
+        if (el.classList.contains('ex-clr')){ x.clearance = x.clearance || {}; x.clearance[el.dataset.k] = el.value; }
+        else x[el.dataset.k] = el.value;
+      });
+    });
+    host.querySelectorAll('.ex-save').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var x = hrExits.filter(function(v){ return v.item_id === b.dataset.id; })[0]; if (!x) return;
+        var data = Object.assign({}, x); delete data.item_id; delete data.status;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:x.item_id,
+          patch:data, reason:'exit record updated' }) });
+          toast('Saved.'); } catch(e){ toast(e.message); }
+      });
+    });
+    host.querySelectorAll('.ex-settle').forEach(function(b){
+      b.addEventListener('click', async function(){
+        if (!confirm('Mark this exit settled? This is a record that payment has been made, not a calculation.')) return;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:b.dataset.id, status:'Settled', reason:'marked settled' }) });
+          loadHrExit(); } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
+  /* ---------------- Control Tower (native) ----------------
+     A cross-HR summary — nothing entered here, everything read from the
+     screens above it. */
+  async function loadHrTower(){
+    var host = document.getElementById('tw-body');
+    host.innerHTML = '<div class="hint">Reading…</div>';
+    try {
+      var j = await C.api('/api/hr?what=items');
+      var all = j.items || [];
+      var leave = all.filter(function(x){ return x.kind === 'leave-req'; });
+      var cands = all.filter(function(x){ return x.kind === 'candidate'; });
+      var exits = all.filter(function(x){ return x.kind === 'exit' && x.status !== 'Settled'; });
+      var pendingLeave = leave.filter(function(x){ return x.status === 'Pending'; });
+      var today = new Date().toISOString().slice(0,10);
+      var onLeaveToday = leave.filter(function(x){ var d = x.data||{};
+        return x.status === 'Approved' && d.from <= today && d.to >= today; });
+      var inProcess = cands.filter(function(x){ return ['Joined','Rejected'].indexOf(x.status) < 0; });
+      host.innerHTML = '<div class="stat">' +
+        [['On leave today', onLeaveToday.length], ['Leave requests pending', pendingLeave.length],
+         ['Candidates in process', inProcess.length], ['Exits in progress', exits.length]]
+        .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') + '</div>';
+    } catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; }
+  }
+
   /* ---------------- gap analysis ----------------
      Required level (from the role) minus assessed level (from the matrix). No
      third source, so there is nothing to keep in step. */
@@ -11457,15 +11948,15 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     ['Attendance', [
       ['att','att','Attendance Register','The month for everyone, marked from the devices','v:att'],
       ['dev','face','Attendance Devices','Fingerprint and face devices, rules and the punch log','v:dev'],
-      ['leave','leave','Leave & Permission','Apply, approve and see balances','e:leave'],
-      ['tower','tower','Control Tower','Today across attendance, leave and tasks','e:tower'] ]],
+      ['leave','leave','Leave & Permission','Apply, approve and see balances','s:hr_leave'],
+      ['tower','tower','Control Tower','Today across attendance, leave and tasks','s:hr_tower'] ]],
     ['People', [
       ['emp','people','Employees','The employee master','s:hrm'],
       ['empbulk','upload','Employee Bulk Upload','Add many employees from a spreadsheet','b:employee'],
       ['punchbulk','dev','Import Device Log','Punches exported from a device that cannot send them','b:punches'],
       ['recruit','recruit','Recruitment','Requisitions, candidates and the hiring pipeline','s:recruitment'],
-      ['engage','engage','Engagement','Surveys, recognition, grievances','e:engage'],
-      ['exit','exit','Exit & Full and Final','Resignations, clearance and settlement','e:exit'] ]],
+      ['engage','engage','Engagement','Surveys, recognition, grievances','s:hr_engage'],
+      ['exit','exit','Exit & Full and Final','Resignations, clearance and settlement','s:hr_exit'] ]],
     ['Pay', [
       ['payroll','pay','Payroll','Pay runs, payslips and approval','e:payroll'],
       ['mpcost','pay','Manpower Cost','Earned salary and statutory payables from attendance, as of today','v:mpcost'],
@@ -11475,9 +11966,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['skills','skills','Competency','Competency mapping','s:competency_map'],
       ['training','training','Training','Training plan against actual','s:training_plan_actual'],
       ['kpi','kpi','KPI & Appraisal','Goals and appraisal cycles','e:kpi'],
-      ['policies','policies','Policies','HR policies and acknowledgements','e:policies'],
+      ['policies','policies','Policies','HR policies and acknowledgements','s:hr_policies'],
       ['auditready','auditready','Audit Readiness','What an auditor will ask for','e:audit-ready'],
-      ['audit','audit','Audit Trail','Every HR change, who and why','e:audit'] ]]
+      ['audit','audit','Audit Trail','Every HR change, who and why','s:hr_audit_trail'] ]]
   ];
   var hpState = { view:'', content:null, employees:[], att:{}, leave:[], month:'', sel:null };
   function hpTile(key){
@@ -24753,6 +25244,97 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.querySelectorAll('[data-panel="recruitment"] [data-goto]').forEach(function(a){
     a.addEventListener('click', function(){ go(a.dataset.goto); });
   });
+
+  document.getElementById('hat-refresh').addEventListener('click', loadHrAuditTrail);
+
+  document.getElementById('pl-create').addEventListener('click', async function(){
+    var title = fieldVal('pl-title'), msg = document.getElementById('pl-msg'), say = noteWriter(msg);
+    if (!title) return say('Give the policy a title.');
+    var item = { itemId:'POL-'+Date.now().toString(36).toUpperCase(), kind:'policy', status:'Draft',
+      title:title, category:fieldVal('pl-cat'), version:fieldVal('pl-ver')||'1.0',
+      effectiveFrom:fieldVal('pl-eff'), appliesTo:fieldVal('pl-applies'), owner:fieldVal('pl-owner'),
+      reviewOn:fieldVal('pl-review'), supersedes:document.getElementById('pl-supersedes').value,
+      body:fieldVal('pl-body'), acknowledgements:[] };
+    this.disabled = true;
+    try {
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item, reason:'policy drafted' }) });
+      ['pl-title','pl-cat','pl-ver','pl-applies','pl-owner','pl-body'].forEach(function(id){ document.getElementById(id).value = ''; });
+      say('Saved as draft.', true);
+      loadHrPolicies();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+
+  document.getElementById('lv-apply').addEventListener('click', async function(){
+    var empId = document.getElementById('lv-emp').value, msg = document.getElementById('lv-msg'), say = noteWriter(msg);
+    var from = fieldVal('lv-from'), to = fieldVal('lv-to');
+    if (!empId || !from || !to) return say('Choose the employee and both dates.');
+    var item = { itemId:'LV-'+Date.now().toString(36).toUpperCase(), kind:'leave-req', status:'Pending',
+      empId:empId, type:document.getElementById('lv-type').value, from:from, to:to,
+      reason:fieldVal('lv-reason'), appliedOn:new Date().toISOString().slice(0,10) };
+    this.disabled = true;
+    try {
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item, reason:'leave applied' }) });
+      document.getElementById('lv-reason').value = '';
+      say('Applied.', true);
+      loadHrLeave();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+  document.getElementById('lv-filter').addEventListener('change', drawLeaveList);
+
+  document.getElementById('eg-rw-add').addEventListener('click', async function(){
+    var empId = document.getElementById('eg-rw-emp').value, msg = document.getElementById('eg-rw-msg'), say = noteWriter(msg);
+    if (!empId) return say('Choose an employee.');
+    var item = { itemId:'RWD-'+Date.now().toString(36).toUpperCase(), kind:'reward', status:'Recorded',
+      empId:empId, type:fieldVal('eg-rw-type'), period:fieldVal('eg-rw-period'), note:fieldVal('eg-rw-note'),
+      recordedOn:new Date().toLocaleDateString() };
+    this.disabled = true;
+    try {
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item, reason:'recognition recorded' }) });
+      ['eg-rw-type','eg-rw-period','eg-rw-note'].forEach(function(id){ document.getElementById(id).value = ''; });
+      say('Recorded.', true);
+      loadHrEngage();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+  document.getElementById('eg-sv-add').addEventListener('click', async function(){
+    var title = fieldVal('eg-sv-title'), msg = document.getElementById('eg-sv-msg'), say = noteWriter(msg);
+    var qs = fieldVal('eg-sv-qs').split('\n').map(function(x){ return x.trim(); }).filter(Boolean);
+    if (!title || !qs.length) return say('Give the survey a title and at least one question.');
+    var item = { itemId:'SRV-'+Date.now().toString(36).toUpperCase(), kind:'survey', status:'Open',
+      title:title, questions:qs, anonymous:document.getElementById('eg-sv-anon').value==='yes', responses:[] };
+    this.disabled = true;
+    try {
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item, reason:'survey created' }) });
+      document.getElementById('eg-sv-title').value = ''; document.getElementById('eg-sv-qs').value = '';
+      say('Survey created.', true);
+      loadHrEngage();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+
+  document.getElementById('ex-add').addEventListener('click', async function(){
+    var empId = document.getElementById('ex-emp').value, lwd = fieldVal('ex-lwd');
+    var msg = document.getElementById('ex-msg'), say = noteWriter(msg);
+    if (!empId || !lwd) return say('Choose the employee and the last working day.');
+    var item = { itemId:'EXT-'+Date.now().toString(36).toUpperCase(), kind:'exit', status:'In Progress',
+      empId:empId, type:document.getElementById('ex-type').value, noticeDate:fieldVal('ex-notice'),
+      lastWorkingDay:lwd, reason:fieldVal('ex-reason'), clearance:{}, recoveries:0, exitNotes:'' };
+    this.disabled = true;
+    try {
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item, reason:'exit initiated' }) });
+      document.getElementById('ex-reason').value = '';
+      say('Recorded.', true);
+      loadHrExit();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+  document.getElementById('tw-refresh').addEventListener('click', loadHrTower);
+  document.querySelectorAll('[data-panel="hr_exit"] [data-goto]').forEach(function(a){
+    a.addEventListener('click', function(){ go(a.dataset.goto); });
+  });
+
   document.querySelectorAll('[data-panel="agentic_ai"] [data-goto]').forEach(function(a){
     a.addEventListener('click', function(){ go(a.dataset.goto); });
   });

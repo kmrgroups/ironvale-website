@@ -2450,3 +2450,72 @@ Pipeline (`emb_pipeline`). Recruitment is the first of these moved
 natively; the pattern here — reuse the existing generic endpoint, port the
 same AI prompts verbatim, defer anything touching send/document
 infrastructure to its own pass — is the one to repeat for the rest.
+
+## Six more HR screens moved natively — Audit Trail, Policies, Leave, Engagement, Exit, Control Tower
+
+Continuing the migration directly after Recruitment, on the instruction to
+move everything off the website and leave it alone rather than do this
+piecemeal. Same discipline as Recruitment throughout: reuse the existing
+generic `/api/hr?what=items` and `?what=audit` endpoints (no new tables),
+port the same field names and the same calculations where a calculation
+existed and was safe to port, and flag plainly on-screen anywhere something
+was deliberately left out rather than silently doing a thinner job.
+
+- **HR Audit Trail** (`hr_audit_trail`) — read-only, `what=audit`. Was
+  restricted to the developer role only on the server; relaxed to
+  developer-or-admin, matching how every other restricted deletion and
+  audit view on this platform is gated (nothing else here was
+  developer-only specifically).
+- **Policies** (`hr_policies`) — draft → publish, exactly as the website
+  version worked: publishing supersedes whatever it replaces and resets
+  acknowledgements to zero, and published text itself is never edited (a
+  correction is a new version).
+- **Leave & Permission** (`hr_leave`) — apply, approve, reject. This is the
+  one that mattered most: it was completely unreachable for anyone without
+  the developer login before this. **Leave balances are not shown yet** —
+  entitlement and carry-forward depend on the leave-rule masters, which
+  still live on Statutory & Masters (not yet migrated); applying and
+  approving do not need them and are fully native now.
+- **Engagement** (`hr_engage`) — recognition and surveys, the two things
+  that actually exist in the website's version (its own tile description
+  mentioned "grievances" too; there was no such feature to port — the
+  panel was corrected to match what the code actually does, not what the
+  label implied). Survey response collection (a form for an employee to
+  answer) was not ported this pass — creating and listing surveys was.
+- **Exit & Full and Final** (`hr_exit`) — recording a resignation/exit and
+  the clearance checklist is fully native. The settlement figure itself
+  (final salary pro-rated, leave encashment, gratuity under the Payment of
+  Gratuity Act) is **not calculated here** — `calcFnF()` on the website
+  depends on `leaveBalance()`, which depends on the same un-migrated leave
+  rules Leave & Permission is waiting on, and gratuity/statutory
+  calculations are exactly the kind of thing not worth porting under time
+  pressure. The screen says so plainly and points at HR & Payroll for the
+  calculated version until leave rules move here too.
+- **Control Tower** (`hr_tower`) — a small native cross-HR summary (on
+  leave today, leave pending, candidates in process, exits in progress),
+  not a port of the website's own Control Tower, which pulled together
+  several more data sources than were worth wiring up for a single
+  landing-page dashboard.
+
+`HP_TILES` updated so the HR & Payroll tiles for all six now open the
+native screens (`s:`) instead of the website iframe (`e:`).
+
+**Still genuinely left running from the website**, and worth naming
+plainly rather than letting the list quietly shrink in people's heads:
+**Payroll** (pay runs, payslips, approval — the heaviest and riskiest of
+everything here, deliberately last), **Statutory & Masters** (PF/ESI/PT/TDS,
+shifts, holidays, leave rules — Leave and Exit above are both already
+waiting on this one), **KPI & Appraisal**, **Audit Readiness**, and the
+**RFQ Pipeline** (a separate, much larger system — drawing reading, AI
+costing, AI quotation drafting — that deserves its own dedicated pass, not
+a rushed corner of this one).
+
+Tested in `tests/hrnativetest.mjs`: all six screens are live menu entries,
+and one real flow through each — audit rows actually showing, a policy
+drafted then published, an employee applying for leave then it being
+approved with the approver's name recorded, recognition and a survey both
+saved, an exit recorded with its clearance checklist actually saving, and
+the Control Tower reading a live cross-screen summary rather than being a
+static page. `node --check` after every edit; full suite (31 files now)
+clean throughout — same 2 pre-existing, unrelated smoketest failures the
+whole way, nothing new broken.

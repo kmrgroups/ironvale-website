@@ -382,7 +382,7 @@ export default async function handler(req, res) {
 
     /* ---------------- AUDIT TRAIL ---------------- */
     if (what === 'audit' && req.method === 'GET') {
-      if (!(await checkRole(token, ['developer'])))
+      if (!(await checkRole(token, ['developer', 'admin'])))
         return res.status(403).json({ ok: false, error: 'Audit history is restricted.' });
       const rows = await sql`SELECT who, what, ref, reason, at FROM hr_audit ORDER BY at DESC LIMIT 300`;
       return res.status(200).json({ ok: true, audit: rows });

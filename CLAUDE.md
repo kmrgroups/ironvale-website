@@ -2136,3 +2136,39 @@ Control Charts (explain an out-of-control point). Plain CRUD masters
 (Customer/Supplier/Parts/Machine/etc.) were deliberately left without an
 agent — there is no ranking or drafting judgement for the AI to add to
 typing in a customer's address.
+
+## Agentic AI coverage pass, part 2
+
+Continued the same pass immediately after the above:
+
+- **Capacity Plan** — "AI risk brief" (`explainCapacity`), on the
+  machine-months already flagged over 100% by the fixed hours-needed-vs-
+  available arithmetic; says which shortfall to deal with first and what the
+  realistic options are (overtime, a shift, sub-contract, move the date).
+- **Machine Loading Plan** — "AI risk brief" (`explainLoading`), on the
+  orders the finite forward schedule already projects as late, cross-read
+  against which machine's queue is the real bottleneck behind them.
+- **Control Charts** — "What to investigate" (`explainCc`). Deliberately
+  *not* a restatement of the existing rule-based verdict (beyond-limits/
+  run-of-seven/out-of-tolerance warnings already say what broke, in plain
+  language, and duplicating that adds nothing) — instead it hands the AI
+  only the flagged readings' own recorded shift/operator/machine and asks
+  whether they share one, which nothing on the screen cross-checks today.
+
+**MSA Study Report was deliberately skipped.** Looked at it: `drawMsaResult`
+already produces a complete plain-language verdict (Gauge R&R %, NDC, a
+plain "should not be used to accept or reject parts" line when it fails) —
+adding an AI button here would restate that, not add judgement, the same
+reason Control Charts' agent was scoped away from the verdict text and onto
+the one thing not already covered.
+
+Same discipline as part 1: every screen's own already-computed rule-based
+output is what gets handed to the AI, `node --check` after every edit, full
+suite run clean after each screen (same 2 pre-existing smoketest failures
+throughout, nothing new).
+
+**Genuinely nothing left that fits this pattern.** Everything remaining on
+the menu is either a plain master/CRUD screen, a report that already states
+its finding in full plain language with nothing further for an AI to add, or
+one of the 6 screens not built yet (`pfmea_master`, `pp_spec_master`,
+`supplier_competency`, `form`, `report_inprocess_inspection`, `accounts_pl`).

@@ -1565,9 +1565,14 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <option value="all">Every machine</option>
             <option value="over">Overloaded months only</option></select></div>
           <div style="align-self:end;"><button class="btn gold" id="cp-run">Work it out</button></div>
+          <div style="align-self:end;"><button class="btn ai-btn" id="cp-explain">AI risk brief</button></div>
           <div style="align-self:end;"><button class="btn" id="cp-print">Print</button></div>
         </div>
         <div class="note" id="cp-msg" style="display:none;"></div>
+      </div>
+      <div class="card" id="cp-brief-box" style="display:none;">
+        <h4>What to do about it</h4>
+        <div id="cp-brief-body"></div>
       </div>
       <div id="cp-body"></div>
       <div class="card">
@@ -1597,9 +1602,14 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <option value="all">Every order</option>
             <option value="late">Orders that will miss the date</option></select></div>
           <div style="align-self:end;"><button class="btn gold" id="ml-run">Load the machines</button></div>
+          <div style="align-self:end;"><button class="btn ai-btn" id="ml-explain">AI risk brief</button></div>
           <div style="align-self:end;"><button class="btn" id="ml-print">Print</button></div>
         </div>
         <div class="note" id="ml-msg" style="display:none;"></div>
+      </div>
+      <div class="card" id="ml-brief-box" style="display:none;">
+        <h4>What to do about it</h4>
+        <div id="ml-brief-body"></div>
       </div>
       <div id="ml-body"></div>
     </div>
@@ -1669,9 +1679,14 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         <div class="row four" style="margin-top:9px;">
           <div><label>To</label><input type="date" id="cc-to"></div>
           <div style="align-self:end;"><button class="btn gold" id="cc-run">Draw the chart</button></div>
+          <div style="align-self:end;"><button class="btn ai-btn" id="cc-explain">What to investigate</button></div>
           <div style="align-self:end;"><button class="btn" id="cc-print">Print</button></div>
         </div>
         <div class="note" id="cc-msg" style="display:none;"></div>
+      </div>
+      <div id="cc-brief-box" style="display:none;" class="card">
+        <h4>Where to look first</h4>
+        <div id="cc-brief-body"></div>
       </div>
       <div id="cc-body"></div>
     </div>
@@ -8095,7 +8110,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      shift box, because one grinder on a single shift and a cell running three is
      the ordinary case, and a blended average hides exactly the machine that is
      the constraint. */
-  var capMachines = [], capOrders = [], capRows = [], capMonths = [], capUnknown = [];
+  var capMachines = [], capOrders = [], capRows = [], capMonths = [], capUnknown = [], cpNarrative = '';
 
   var DEFAULT_CAP = { shiftsPerDay: 2, hoursPerShift: 8, workDaysPerWeek: 6, availabilityPct: 85 };
   function capOf(m){
@@ -8152,6 +8167,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   async function loadCapacity(){ await capLoadData(); runCapacity(); }
 
   function runCapacity(){
+    cpNarrative = '';
+    document.getElementById('cp-brief-box').style.display = 'none';
     var months = C.num(document.getElementById('cp-horizon').value) || 6;
     var now = new Date(), start = new Date(now.getFullYear(), now.getMonth(), 1);
     capMonths = [];
@@ -8362,7 +8379,49 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           return [r.name].concat(r.cells.map(function(c){ return c.need ? C.qty(c.need) : '—'; })); }),
         note:'Demand is the balance still to make on each open order times the routing cycle times, ' +
              'placed in the month the order is due. Availability is per machine: shifts x hours x ' +
-             'working days x availability percentage.' } ] });
+             'working days x availability percentage.' },
+      cpNarrative ? { type:'text', title:'What to do about it', body: cpNarrative.replace(/<[^>]+>/g,'') } : null
+    ].filter(Boolean) });
+  }
+
+  /* ---------------- Capacity Plan risk brief ----------------
+     capRows/capMonths are already worked out by fixed arithmetic (needed vs.
+     available hours, per machine, per month). The AI is asked only to say
+     what that shortfall means and what the options are — overtime, a third
+     shift, sub-contracting, or moving the order — never to recompute a
+     figure the plan already gives. */
+  async function explainCapacity(){
+    var msg = document.getElementById('cp-msg');
+    var say = noteWriter(msg);
+    if (!capRows.length) return say('Work it out first, or there is nothing to brief on.');
+    var btn = document.getElementById('cp-explain');
+    btn.disabled = true; btn.textContent = 'Thinking';
+    var lines = [];
+    capRows.forEach(function(r){
+      r.cells.forEach(function(c, i){
+        if (c.pct !== null && c.pct > 100)
+          lines.push(r.name + ' in ' + capMonths[i].label + ': needs ' + C.qty(c.need) +
+            'h against ' + C.qty(c.avail) + 'h available (' + c.pct + '%)');
+      });
+    });
+    if (!lines.length){ btn.disabled = false; btn.textContent = 'AI risk brief';
+      return say('No machine is short of hours in any month shown — there is nothing to brief on.', true); }
+    try {
+      var txt = await C.callAI(
+        'These are the machine-months at a Tier-2 automotive machining works where hours needed ' +
+        'exceed hours available, worked out by fixed arithmetic from the open orders and routings, ' +
+        'not by you:\n\n- ' + lines.slice(0, 30).join('\n- ') +
+        '\n\nIn no more than 120 words of plain prose, say which shortfall to deal with first and ' +
+        'what the realistic options are — overtime, an extra shift, sub-contracting the operation, ' +
+        'or moving the order\'s date — without recommending one blindly; weigh how far over capacity ' +
+        'it is and how soon the month arrives. Name the machines and months you mean. Do not invent ' +
+        'a percentage or figure not given above.', { maxTokens: 400 });
+      cpNarrative = esc(C.stripMarkup(txt));
+      document.getElementById('cp-brief-body').innerHTML = '<div class="note">' + cpNarrative + '</div>';
+      document.getElementById('cp-brief-box').style.display = '';
+      msg.style.display = 'none';
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'AI risk brief';
   }
 
   /* ---------------- machine loading ----------------
@@ -8370,7 +8429,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      waits for both the machine ahead of it and the previous operation on its own
      order. What comes out is the date each order will actually finish if nothing
      changes — which is the only version of that date worth telling a customer. */
-  var mlOrders = [], mlQueues = [], mlFrom = null;
+  var mlOrders = [], mlQueues = [], mlFrom = null, mlNarrative = '';
 
   async function loadLoading(){
     if (!document.getElementById('ml-from').value)
@@ -8390,6 +8449,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 
   function runLoading(){
     var msg = document.getElementById('ml-msg');
+    mlNarrative = '';
+    document.getElementById('ml-brief-box').style.display = 'none';
     mlFrom = new Date(document.getElementById('ml-from').value || Date.now());
     if (isNaN(mlFrom)) mlFrom = new Date();
 
@@ -8541,7 +8602,52 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
            'Hours come from the routing cycle times and the balance still to make; a machine\'s day is ' +
            'its shifts times hours times its availability percentage. It is a projection from the ' +
            'order book as it stands today, not a commitment.' });
+    if (mlNarrative) secs.push({ type:'text', title:'What to do about it', body: mlNarrative.replace(/<[^>]+>/g,'') });
     C.openReport({ title:'Machine Loading Plan', landscape:true, sections:secs });
+  }
+
+  /* ---------------- Machine Loading risk brief ----------------
+     mlOrders/mlQueues are already computed by the finite forward schedule
+     above — the AI is asked only to explain the knock-on effect of the
+     schedule already produced (which order is genuinely stuck behind which
+     machine) and never to reschedule anything itself. */
+  async function explainLoading(){
+    var msg = document.getElementById('ml-msg');
+    var say = noteWriter(msg);
+    if (!mlOrders.length) return say('Load the machines first, or there is nothing to brief on.');
+    var btn = document.getElementById('ml-explain');
+    btn.disabled = true; btn.textContent = 'Thinking';
+    var late = mlOrders.filter(function(r){ return r.lateBy !== null && r.lateBy > 0; })
+      .sort(function(a,b){ return b.lateBy - a.lateBy; });
+    var noRoute = mlOrders.filter(function(r){ return r.noRouting; });
+    var bottlenecks = mlQueues.slice(0, 8).map(function(q){
+      return q.machine + ': ' + C.qty(q.hours) + ' hour(s) queued, clear by ' +
+        C.fmtDate(q.clearBy.toISOString().slice(0,10)) + ', ' + q.jobs.length + ' job(s) waiting';
+    });
+    if (!late.length && !noRoute.length){ btn.disabled = false; btn.textContent = 'AI risk brief';
+      return say('Nothing will miss its date in this schedule — there is nothing to brief on.', true); }
+    var facts = [
+      late.length + ' order(s) projected to miss their date: ' +
+        (late.map(function(r){ return r.po + ' (' + r.partNo + '), ' + r.lateBy + ' day(s) late'; }).slice(0,10).join('; ') || 'none'),
+      noRoute.length + ' order(s) with no routing so they are not scheduled at all: ' +
+        (noRoute.map(function(r){ return r.po; }).slice(0,10).join(', ') || 'none'),
+      'Busiest machines: ' + (bottlenecks.join('; ') || 'none loaded')
+    ].join('\n- ');
+    try {
+      var txt = await C.callAI(
+        'This is a finite forward machine-loading schedule for a Tier-2 automotive machining works, ' +
+        'worked out by fixed rules from the open orders and routings, not by you:\n\n- ' + facts +
+        '\n\nIn no more than 120 words of plain prose, say which late order to deal with first and ' +
+        'which machine is really the bottleneck behind it — an order can be late because of a machine ' +
+        'queued behind another order, which is a scheduling problem, not that order\'s own fault. Name ' +
+        'the orders and machines you mean. Do not invent a date or figure not given above, and do not ' +
+        'soften it if several orders are badly late.', { maxTokens: 400 });
+      mlNarrative = esc(C.stripMarkup(txt));
+      document.getElementById('ml-brief-body').innerHTML = '<div class="note">' + mlNarrative + '</div>';
+      document.getElementById('ml-brief-box').style.display = '';
+      msg.style.display = 'none';
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'AI risk brief';
   }
 
   /* ================= BILL OF MATERIALS =================
@@ -9039,6 +9145,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   function runCc(){
     var msg = document.getElementById('cc-msg'), host = document.getElementById('cc-body');
     msg.style.display = 'none';
+    document.getElementById('cc-brief-box').style.display = 'none';
     var g = ccGather(), pts = g.pts, dim = g.dim;
 
     if (!pts.length){
@@ -9191,6 +9298,54 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
              'tolerance describes what the customer asked for. They are different things and both ' +
              'are drawn.' } ] });
   }
+
+  /* ---------------- Control chart investigation agent ----------------
+     The rule-based warnings above already say WHAT broke (a point beyond the
+     limits, a run of seven, a reading outside tolerance) in plain language —
+     duplicating that would add nothing. What is missing is WHERE to look:
+     each reading already carries its own machine, operator and shift, which
+     nothing on this screen cross-checks against the flagged points. This
+     hands the AI exactly those flagged readings' own recorded facts and asks
+     it to spot a pattern — it is given no reading that was not already
+     flagged by the fixed rules above. */
+  async function explainCc(){
+    var msg = document.getElementById('cc-msg');
+    var say = noteWriter(msg);
+    if (!ccResult) return say('Draw a chart first, or there is nothing to look into.');
+    var r = ccResult;
+    var flagged = {};
+    r.beyond.forEach(function(n){ flagged[n] = flagged[n] || []; flagged[n].push('beyond the control limits'); });
+    r.outSpec.forEach(function(n){ flagged[n] = flagged[n] || []; flagged[n].push('outside tolerance'); });
+    r.runs.forEach(function(run){
+      for (var n = run[0]; n <= run[1]; n++){ flagged[n] = flagged[n] || []; flagged[n].push('part of a run of seven or more'); }
+    });
+    var nums = Object.keys(flagged);
+    if (!nums.length) return say('Nothing was flagged on this chart — there is nothing to look into.', true);
+    var btn = document.getElementById('cc-explain');
+    btn.disabled = true; btn.textContent = 'Thinking';
+    var list = nums.map(function(n){
+      var p = r.pts[+n - 1];
+      return '#' + n + ' on ' + C.fmtDate(p.on) + (p.at ? ' ' + p.at : '') + ', shift ' + (p.shift||'not recorded') +
+        ', operator ' + (p.operator||'not recorded') + ', machine ' + (p.machine||'not recorded') +
+        ' — reading ' + p.v + ' (' + flagged[n].join(', ') + ')';
+    }).join('\n');
+    try {
+      var txt = await C.callAI(
+        'These are the flagged readings from a control chart at a Tier-2 automotive machining ' +
+        'company, exactly as recorded on the self-inspection sheets — the flag on each was raised ' +
+        'by a fixed statistical rule, not by you:\n\n' + list +
+        '\n\nIn no more than 100 words of plain prose, say whether the flagged readings share a ' +
+        'shift, operator or machine worth looking into first, or whether they are too scattered for ' +
+        'that. Name only the shift, operator or machine values given above. Do not invent a cause ' +
+        '(tooling, material, temperature) that is not evidenced by the data given, and say plainly ' +
+        'if nothing in common stands out.', { maxTokens: 300 });
+      document.getElementById('cc-brief-body').innerHTML = '<div class="note">' + esc(C.stripMarkup(txt)) + '</div>';
+      document.getElementById('cc-brief-box').style.display = '';
+      msg.style.display = 'none';
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'What to investigate';
+  }
+
 
   /* ================= SUPPLIER MASTER =================
      The same lesson as the machine list: a name typed on a receipt is the only
@@ -23416,11 +23571,13 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('cp-run').addEventListener('click', loadCapacity);
   document.getElementById('cp-horizon').addEventListener('change', runCapacity);
   document.getElementById('cp-filter').addEventListener('change', function(){ drawCapacity([]); });
+  document.getElementById('cp-explain').addEventListener('click', explainCapacity);
   document.getElementById('cp-print').addEventListener('click', printCapacity);
 
   document.getElementById('ml-run').addEventListener('click', loadLoading);
   document.getElementById('ml-from').addEventListener('change', runLoading);
   document.getElementById('ml-filter').addEventListener('change', drawLoading);
+  document.getElementById('ml-explain').addEventListener('click', explainLoading);
   document.getElementById('ml-print').addEventListener('click', printLoading);
 
   document.getElementById('bm-part').addEventListener('change', openBom);
@@ -23437,6 +23594,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('cc-part').addEventListener('change', ccFillOps);
   document.getElementById('cc-op').addEventListener('change', ccFillChars);
   document.getElementById('cc-run').addEventListener('click', runCc);
+  document.getElementById('cc-explain').addEventListener('click', explainCc);
   document.getElementById('cc-print').addEventListener('click', printCc);
 
   document.getElementById('su-save').addEventListener('click', saveSupplier);

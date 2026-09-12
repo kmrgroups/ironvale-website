@@ -2092,3 +2092,47 @@ Vercel serves any file in the repo root, so `idms.html` needs no configuration.
 files in the repo root (`_db.js`, `auth.js`, `content.js`, `notify.js`,
 `assets.js`, `rfqs.js`). Vercel only routes `/api`, so they are dead weight, but
 they are out of date and will mislead. They can be deleted.
+
+## Agentic AI coverage pass (post-v122)
+
+Extended existing agent buttons out to screens that only had rule-based
+flags before, following the exact shape already proven on Supplier Watch
+Agent and the Works Dashboard's Morning Briefing — read what the screen has
+already computed by fixed rules, ask the AI to rank or explain it in plain
+prose, never let it invent a fact the screen does not already show, and
+never let it write a record by itself.
+
+- **Every department dashboard** (`kpidash`, so all twelve — Company
+  Scorecard down to Accounts) now has an "AI briefing" button
+  (`briefKpiDash`), reading each KPI card's own text with its chart SVG
+  stripped out, so it can never disagree with the dashboard above it.
+- **Preventive Maintenance** — "Ask the AI to prioritise" (`explainMaintenance`),
+  ranking `pmRows` (already computed: overdue state, breakdown minutes).
+- **Open Actions** — "Ask the AI to prioritise" (`explainOpenActions`), ranking
+  the open NCR/8D actions already sorted by days overdue.
+- **Skill Gap Analysis** — "Suggest a training plan" (`explainGapAnalysis`).
+  Deliberately advisory only — it does not create a Training Need
+  Identification record; that stays a human step on the TNI screen.
+- **Calibration Report** — "Ask the AI to prioritise" (`explainCalibration`),
+  ranking gauges already flagged overdue/due/never-calibrated by `calState()`.
+- **Production Plan** — "AI risk brief" (`explainPlan`), the same job the
+  website's older, since-orphaned production-planner risk brief did, rebuilt
+  against this screen's own `planRows` instead.
+- **4M Change** — "Draft impact assessment with AI" (`draft4MImpact`) suggests
+  which documents (PFMEA/control plan/PFD/CNC programme/PPAP/re-qualification)
+  likely need re-checking for the specific change described. Separate from the
+  existing rule-based customer-notification warning, which is untouched.
+
+All of the above were added directly to `idms.html` (the file actually
+served — see the note above about it, not `idms-app.js`, being the live
+source). `node --check` was run after every edit and the full suite
+(`node tests/run-all.mjs`) was run clean after each screen — no test needed
+changing for this pass.
+
+**Still not covered**, and worth doing the same way next: Capacity Plan and
+Machine Loading Plan (natural continuations of the Production Plan risk
+brief), MSA Study Report (interpret a study's result in plain language),
+Control Charts (explain an out-of-control point). Plain CRUD masters
+(Customer/Supplier/Parts/Machine/etc.) were deliberately left without an
+agent — there is no ranking or drafting judgement for the AI to add to
+typing in a customer's address.

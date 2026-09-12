@@ -1457,7 +1457,12 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           <div style="align-self:end;"><button class="btn gold" id="ga-run">Work it out</button></div>
           <div style="align-self:end;"><button class="btn" id="ga-print">Print</button></div>
         </div>
+        <div style="margin-top:9px;"><button class="btn ai-btn" id="ga-explain">Suggest a training plan</button></div>
         <div class="note" id="ga-msg" style="display:none;"></div>
+        <div id="ga-brief-box" style="display:none;margin-top:10px;">
+          <h5 style="margin:0 0 6px;">Suggested training priority</h5>
+          <div id="ga-brief-body"></div>
+        </div>
       </div>
       <div id="ga-body"></div>
     </div>
@@ -1682,11 +1687,18 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           <div style="align-self:end;"><button class="btn" id="kd-entry">Enter plan &amp; actual</button></div>
           <div style="align-self:end;"><button class="btn" id="kd-print">Print</button></div>
         </div>
+        <div style="margin-top:9px;"><button class="btn ai-btn" id="kd-brief">AI briefing</button></div>
+        <div class="note" id="kd-brief-msg" style="display:none;"></div>
+      </div>
+      <div class="card" id="kd-brief-box" style="display:none;">
+        <h4>Briefing</h4>
+        <div id="kd-brief-body"></div>
       </div>
       <div id="kd-ppc-sales" style="display:none;"></div>
       <div id="kd-hrm-manpower" style="display:none;"></div>
       <div id="kd-body"></div>
     </div>
+
 
     <!-- ============ KPI data entry ============ -->
     <div class="panel" data-panel="kpi_entry">
@@ -1989,6 +2001,10 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <input id="fm-told-who"></div>
         </div>
         <div id="fm-warn"></div>
+        <div style="margin-top:10px;"><button class="btn ai-btn" id="fm-ai">Draft impact assessment with AI</button></div>
+        <div id="fm-ai-box" style="display:none;margin-top:10px;">
+          <div id="fm-ai-body"></div>
+        </div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn gold" id="fm-save2">Record the change</button>
           <button class="btn" id="fm-print2">Print register</button>
@@ -2088,16 +2104,22 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <option value="30">Last 30 days</option><option value="90" selected>Last 90 days</option>
             <option value="365">Last year</option></select></div>
           <div style="align-self:end;"><button class="btn gold" id="pm-run">Refresh</button></div>
+          <div style="align-self:end;"><button class="btn ai-btn" id="pm-explain">Ask the AI to prioritise</button></div>
           <div style="align-self:end;"><button class="btn" id="pm-print">Print schedule</button></div>
         </div>
         <div class="note" id="pm-msg" style="display:none;"></div>
       </div>
       <div class="card"><div id="pm-summary"></div></div>
+      <div class="card" id="pm-brief-box" style="display:none;">
+        <h4>Which machine to service first</h4>
+        <div id="pm-brief-body"></div>
+      </div>
       <div class="card">
         <h4>Schedule</h4>
         <div id="pm-body"></div>
       </div>
     </div>
+
 
     <div class="panel" data-panel="machine_process">
       <div class="card">
@@ -2179,6 +2201,12 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         <h4>Open actions</h4>
         <div class="hint" style="margin-bottom:10px;">What is still owed, and to whom. An action
           with no owner and no date is a wish, so both are shown and the overdue ones come first.</div>
+        <div style="margin-bottom:10px;"><button class="btn ai-btn" id="nco-explain">Ask the AI to prioritise</button></div>
+        <div class="note" id="nco-msg" style="display:none;"></div>
+        <div id="nco-brief-box" style="display:none;margin-bottom:12px;">
+          <h5 style="margin:0 0 6px;">Who to chase first</h5>
+          <div id="nco-brief-body"></div>
+        </div>
         <div id="nco-body"></div>
       </div>
     </div>
@@ -2514,9 +2542,14 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <option>5</option><option selected>6</option><option>7</option></select></div>
           <div style="align-self:end;">
             <button class="btn gold" id="pp-run">Work out the plan</button>
+            <button class="btn ai-btn" id="pp-explain" style="margin-left:6px;">AI risk brief</button>
             <button class="btn" id="pp-print2" style="margin-left:6px;">Print</button></div>
         </div>
         <div class="note" id="pp-plan-msg" style="display:none;"></div>
+      </div>
+      <div class="card" id="pp-brief-box" style="display:none;">
+        <h4>What needs attention</h4>
+        <div id="pp-brief-body"></div>
       </div>
       <div class="card"><div id="pp-summary"></div></div>
       <div class="card">
@@ -2838,7 +2871,13 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <option value="">All gauges</option><option value="overdue">Overdue</option>
             <option value="due">Due within 30 days</option><option value="ok">In date</option>
             <option value="scrapped">Withdrawn</option></select></div>
+          <div style="align-self:end;"><button class="btn ai-btn" id="cal-explain">Ask the AI to prioritise</button></div>
           <div style="align-self:end;"><button class="btn" id="cal-print">Print register</button></div>
+        </div>
+        <div class="note" id="cal-explain-msg" style="display:none;"></div>
+        <div id="cal-brief-box" style="display:none;margin-bottom:12px;">
+          <h5 style="margin:0 0 6px;">Which gauge to send for calibration first</h5>
+          <div id="cal-brief-body"></div>
         </div>
         <div id="cal-list"></div>
       </div>
@@ -7456,14 +7495,15 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   /* ---------------- gap analysis ----------------
      Required level (from the role) minus assessed level (from the matrix). No
      third source, so there is nothing to keep in step. */
-  var gapRows = [], gapUnmatched = [];
-
+  var gapRows = [], gapUnmatched = [], gaNarrative = '';
   async function loadGapAnalysis(){
     await compLoad();
     var sel = document.getElementById('ga-dept'), keep = sel.value;
     sel.innerHTML = '<option value="">Every department</option>' +
       departments().map(function(d){ return '<option>'+esc(d)+'</option>'; }).join('');
     sel.value = keep;
+    gaNarrative = '';
+    document.getElementById('ga-brief-box').style.display = 'none';
     runGapAnalysis();
   }
 
@@ -7581,6 +7621,44 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
                   r.assessedOn ? C.fmtDate(r.assessedOn) : '—', r.criticality]; }),
         note:'Required comes from the competency map against each person\'s designation; assessed ' +
              'comes from the skill matrix. Neither figure is entered on this screen.' } ] });
+  }
+
+  /* ---------------- Skill Gap agent ----------------
+     Suggests a priority order for training only — it never creates a Training
+     Need Identification record itself. That stays a deliberate human step on
+     the TNI screen, the same separation Review Agent Work enforces elsewhere:
+     an AI ranking of a gap that already exists is not the same thing as
+     committing a training budget against it. */
+  async function explainGapAnalysis(){
+    var msg = document.getElementById('ga-msg');
+    var say = noteWriter(msg);
+    var gaps = gapRows.filter(function(r){ return r.gap > 0; });
+    if (!gaps.length) return say('No gaps to prioritise — work it out first, or there is genuinely nothing outstanding.');
+    var btn = document.getElementById('ga-explain');
+    btn.disabled = true; btn.textContent = 'Thinking';
+    var list = gaps.sort(function(a,b){
+      if ((a.criticality!=='Ordinary') !== (b.criticality!=='Ordinary')) return a.criticality!=='Ordinary' ? -1 : 1;
+      return b.gap - a.gap;
+    }).slice(0, 40).map(function(r, i){
+      return (i+1) + '. ' + r.name + ' (' + r.designation + ', ' + r.department + ') needs ' + r.thing +
+        ' at level ' + r.required + ', currently ' + (r.actual || 'never assessed') +
+        ' — ' + r.criticality;
+    }).join('\n');
+    try {
+      var txt = await C.callAI(
+        'These are the skill gaps at a Tier-2 automotive machining company — required level from ' +
+        'each person\'s designation, against their assessed level on the skill matrix:\n\n' + list +
+        '\n\nIn no more than 120 words of plain prose, suggest a training priority order. Group ' +
+        'people who need the same thing into one training session where that makes sense. Weigh ' +
+        'safety/statutory/quality gaps above ordinary ones, and a gap of several levels above a gap ' +
+        'of one. Name who and what you mean. Do not invent a name or a level not given above.',
+        { maxTokens: 400 });
+      gaNarrative = esc(C.stripMarkup(txt));
+      document.getElementById('ga-brief-body').innerHTML = '<div class="note">' + gaNarrative + '</div>';
+      document.getElementById('ga-brief-box').style.display = '';
+      msg.style.display = 'none';
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Suggest a training plan';
   }
 
   /* ---------------- training need identification ---------------- */
@@ -10001,6 +10079,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     document.getElementById('kd-note').textContent = d.note;
     fillFy('kd-fy');
     document.getElementById('kd-fy').value = String(kpiFy);
+    /* a briefing is specific to one department and one financial year — carrying
+       last screen's text over onto this one would read as current when it is not */
+    document.getElementById('kd-brief-box').style.display = 'none';
+    document.getElementById('kd-brief-body').innerHTML = '';
+    document.getElementById('kd-brief-msg').style.display = 'none';
     window.KPIX.refresh();
     var extra = document.getElementById('kd-ppc-sales');
     if (dept === 'ppc'){
@@ -10022,6 +10105,47 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       delete extraHr.dataset.wired;
     }
     await window.KPIX.renderDashboard(dept, document.getElementById('kd-body'), kpiFy);
+  }
+
+  /* ---------------- AI briefing, shared by every department dashboard ----------------
+     One implementation covers all twelve — Company Scorecard down to Accounts — because
+     they all draw into this same kpidash panel. It reads back exactly what is already on
+     screen (each KPI card's own heading and figures, with the chart SVGs stripped out so
+     the AI is not asked to read a picture) rather than re-deriving anything of its own, so
+     it can never show a number that disagrees with the dashboard sitting above it. */
+  async function briefKpiDash(){
+    if (!window.KPIX) return;
+    var btn = document.getElementById('kd-brief'), msg = document.getElementById('kd-brief-msg');
+    var box = document.getElementById('kd-brief-box'), body = document.getElementById('kd-brief-body');
+    msg.style.display = 'none';
+    btn.disabled = true; btn.textContent = 'Thinking';
+    try {
+      var host = document.getElementById('kd-body');
+      var cards = Array.prototype.slice.call(host.querySelectorAll('.kpi-card'));
+      if (!cards.length) throw new Error('Nothing on this dashboard yet to brief on.');
+      var facts = cards.map(function(c){
+        var h = c.querySelector('h4'), name = h ? h.textContent.trim() : '';
+        var clone = c.cloneNode(true);
+        clone.querySelectorAll('svg').forEach(function(s){ s.remove(); });
+        var text = clone.textContent.replace(/\s+/g,' ').trim();
+        if (name && text.indexOf(name) === 0) text = text.slice(name.length).trim();
+        return name + ': ' + (text || 'no data yet');
+      }).join('\n- ');
+      var d = window.KPIX.DEPTS.filter(function(x){ return x.key === kpiDept; })[0] || { title: kpiDept };
+      var txt = await C.callAI(
+        'This is the ' + d.title + ' dashboard of a Tier-2 automotive machining works, financial ' +
+        'year ' + window.KPIX.fyLabel(kpiFy) + ', read straight off its own records:\n\n- ' + facts +
+        '\n\nWrite whoever runs this department a briefing of no more than 120 words of plain prose. ' +
+        'Say what matters and what it means to do about it. Connect things that are connected. Do ' +
+        'not list the figures back one by one, do not invent anything, and do not reassure — if ' +
+        'something needs attention, say so plainly. If a card says there is no data yet, do not ' +
+        'guess at what it might show.', { maxTokens: 400 });
+      body.innerHTML = '<div class="note">' + esc(C.stripMarkup(txt)) + '</div>';
+      box.style.display = '';
+    } catch(e){
+      msg.style.display=''; msg.className='note bad'; msg.textContent = e.message;
+    }
+    btn.disabled = false; btn.textContent = 'AI briefing';
   }
 
   /* ---------------- PPC & MMD dashboard: Sales value & % widgets ----------------
@@ -12251,6 +12375,46 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       (m.tell ? '<b>This kind of change usually has to be agreed with the customer first.</b> '
               : '<b>This change does not normally need the customer told.</b> ') +
       esc(m.note) + '</div>';
+    /* the assessment drafted below is specific to the description typed in;
+       switching category, part or the from/to text makes it stale, so hide it
+       rather than leave the last category's advice sitting under a new one */
+    document.getElementById('fm-ai-box').style.display = 'none';
+  }
+
+  /* ---------------- 4M impact-assessment draft ----------------
+     A 4M change form asks what changed; it does not ask what that puts at
+     risk. This drafts that second part — which documents most likely need a
+     fresh look — for the person raising the change to check and act on. It
+     writes nothing itself: no PFMEA, control plan or PPAP is touched. */
+  async function draft4MImpact(){
+    var msg = document.getElementById('fm-msg2');
+    var say = noteWriter(msg);
+    var cat = document.getElementById('fm-cat').value;
+    var partId = document.getElementById('fm-part2').value;
+    var from = fieldVal('fm-from'), to = fieldVal('fm-to'), why = fieldVal('fm-why');
+    if (!partId) return say('Choose the part first.');
+    if (!from || !to) return say('Say what it was and what it is now first — there is nothing to assess yet.');
+    var btn = document.getElementById('fm-ai');
+    btn.disabled = true; btn.textContent = 'Thinking';
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+    var op = processes.filter(function(x){ return x.doc_id === document.getElementById('fm-op2').value; })[0];
+    var m = M4[cat] || M4.man;
+    try {
+      var txt = await C.callAI(
+        'A ' + m.label.toLowerCase() + ' change is being raised at a Tier-2 automotive machining ' +
+        'company, on part ' + (p.part_no||'unknown') + (op ? ', operation ' + (op.data||{}).opNo +
+        ' ' + ((op.data||{}).name||'') : ', no single operation named') + ':\n\n' +
+        'From: ' + from + '\nTo: ' + to + (why ? '\nReason given: ' + why : '') +
+        '\n\nIn no more than 100 words of plain prose, say which existing documents most likely need ' +
+        're-checking because of this change — choose from PFMEA, control plan, process flow diagram, ' +
+        'CNC programme, PPAP, and re-qualification/first-off inspection — and why, for this specific ' +
+        'change. Do not tell the person whether to inform the customer; that is answered above this. ' +
+        'Do not invent detail about the part that was not given.', { maxTokens: 350 });
+      document.getElementById('fm-ai-body').innerHTML = '<div class="note">' + esc(C.stripMarkup(txt)) + '</div>';
+      document.getElementById('fm-ai-box').style.display = '';
+      msg.style.display = 'none';
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Draft impact assessment with AI';
   }
 
   async function save4M(){
@@ -12804,9 +12968,12 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   }
 
   /* ---- the maintenance screen ---- */
+  var pmNarrative = '';
   async function loadMaintenance(){
     try { machines = await C.idms.docs('machine'); } catch(e){ machines = []; }
     try { prodDocs = await C.idms.docs('production'); } catch(e){ prodDocs = []; }
+    pmNarrative = '';
+    document.getElementById('pm-brief-box').style.display = 'none';
     runMaintenance();
   }
 
@@ -12943,9 +13110,46 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
               'counted from the production bookings, not estimated.'
             : 'Every machine is within its maintenance interval. Breakdown figures are counted from ' +
               'the production bookings, not estimated.' },
+        pmNarrative ? { type:'text', title:'Which machine to service first',
+          body: pmNarrative.replace(/<[^>]+>/g,'') } : null,
         { type:'text', title:'Signatures',
           body:'Maintenance                              Production                              Plant head' }
-      ]});
+      ].filter(Boolean)});
+  }
+
+  /* ---------------- Preventive Maintenance agent ----------------
+     The same shape as the Supplier Watch Agent: pmRows is already computed by
+     fixed rules (overdue/due/ok, breakdown minutes, breakdown count) — the AI
+     is asked only to rank what is already there and say why, never to invent
+     a machine condition of its own. */
+  async function explainMaintenance(){
+    var msg = document.getElementById('pm-msg');
+    var say = noteWriter(msg);
+    if (!pmRows.length) return say('Run the schedule first, or there is nothing to prioritise.');
+    var btn = document.getElementById('pm-explain');
+    btn.disabled = true; btn.textContent = 'Thinking';
+    var days = C.num(document.getElementById('pm-days').value) || 90;
+    var list = pmRows.filter(function(r){ return r.state.key !== 'retired'; }).map(function(r, i){
+      return (i+1) + '. ' + r.name + ' [' + r.state.label + ', ' + esc(String(r.crit).split(' —')[0]) +
+        ']: ' + r.breakdowns + ' breakdown(s), ' + r.breakMins + ' minute(s) lost in the last ' +
+        days + ' days, ' + C.qty(r.made) + ' pieces made';
+    }).join('\n');
+    if (!list) { btn.disabled = false; btn.textContent = 'Ask the AI to prioritise';
+      return say('Nothing active to prioritise — every machine is retired.'); }
+    try {
+      var txt = await C.callAI(
+        'These are the machines at a Tier-2 automotive machining company and their maintenance ' +
+        'state, counted from the machine master and production bookings by fixed rules, not by ' +
+        'you:\n\n' + list + '\n\nIn no more than 120 words of plain prose, say which machine to ' +
+        'service first and why, weighing overdue/critical machines against how much breakdown ' +
+        'time they have already cost. Name the machines you mean. Do not invent a condition that ' +
+        'is not in the list, do not repeat the list back, and do not soften it.', { maxTokens: 400 });
+      pmNarrative = esc(C.stripMarkup(txt));
+      document.getElementById('pm-brief-body').innerHTML = '<div class="note">' + pmNarrative + '</div>';
+      document.getElementById('pm-brief-box').style.display = '';
+      msg.style.display = 'none';
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Ask the AI to prioritise';
   }
 
   /* ---------------- Machine & Process (reference) ----------------
@@ -13450,12 +13654,17 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     });
   }
 
+  var ncoOpen = [], ncoNarrative = '';
   async function loadOpenActions(){
     var host = document.getElementById('nco-body');
     host.innerHTML = '<div class="hint">Reading</div>';
+    ncoNarrative = '';
+    document.getElementById('nco-brief-box').style.display = 'none';
+    document.getElementById('nco-msg').style.display = 'none';
     try { ncrs = await C.idms.docs('ncr'); } catch(e){ ncrs = []; }
     var open = ncrs.filter(function(r){ return r.status !== 'Closed'; })
       .sort(function(a,b){ return (ncOverdue(b)||0) - (ncOverdue(a)||0); });
+    ncoOpen = open;
     if (!open.length){
       host.innerHTML = '<div class="note good">Nothing is owed. Every non-conformance raised has ' +
         'been worked through to a close.</div>';
@@ -13492,6 +13701,41 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       b.addEventListener('click', function(){ go('ncr'); setTimeout(function(){
         loadNcr().then(function(){ openNcr(b.dataset.id); }); }, 200); });
     });
+  }
+
+  /* ---------------- Open Actions agent ----------------
+     ncoOpen is exactly what is already drawn on screen, by the same fixed
+     sort (most overdue first) — the AI is asked only to say which to chase
+     first and why, never to invent a fact about a record it was not given. */
+  async function explainOpenActions(){
+    var msg = document.getElementById('nco-msg');
+    var say = noteWriter(msg);
+    if (!ncoOpen.length) return say('Nothing open to prioritise.');
+    var btn = document.getElementById('nco-explain');
+    btn.disabled = true; btn.textContent = 'Thinking';
+    var list = ncoOpen.map(function(r, i){
+      var v = r.data||{}, over = ncOverdue(r);
+      var owed = !String(v.d3||'').trim() ? 'containment (D3)' : !String(v.d4||'').trim() ? 'root cause (D4)'
+        : !String(v.d5||'').trim() ? 'agreeing the action (D5)' : !String(v.d6||'').trim() ? 'doing it (D6)'
+        : !String(v.d7||'').trim() ? 'updating the PFMEA/control plan (D7)' : 'verifying and closing (D8)';
+      return (i+1) + '. ' + (r.doc_no||'') + ' — ' + String(v.d2||'').slice(0,80) + ' — owner: ' +
+        (v.raisedBy||'none named') + ' — waiting on: ' + owed +
+        (over ? ' — ' + over + ' day(s) overdue' : ' — not yet overdue');
+    }).join('\n');
+    try {
+      var txt = await C.callAI(
+        'These are the open non-conformance actions at a Tier-2 automotive machining company, ' +
+        'sorted by how overdue each one is:\n\n' + list + '\n\nIn no more than 120 words of plain ' +
+        'prose, say which one to chase first and who to chase, grouping any that share one owner ' +
+        'or one root cause. Name the numbers you mean. Do not invent a fact not given above, do ' +
+        'not repeat the list back, and do not soften it if several are badly overdue.',
+        { maxTokens: 400 });
+      ncoNarrative = esc(C.stripMarkup(txt));
+      document.getElementById('nco-brief-body').innerHTML = '<div class="note">' + ncoNarrative + '</div>';
+      document.getElementById('nco-brief-box').style.display = '';
+      msg.style.display = 'none';
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Ask the AI to prioritise';
   }
 
   function printNcrRegister(){
@@ -13834,7 +14078,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      The plan is only worth having because the two numbers it compares come from
      somewhere real: made comes from production bookings, despatched from cleared
      lots drawn down by challans. Nothing here asks anybody how it is going. */
-  var orders = [], planRows = [], soTab = 'live';
+  var orders = [], planRows = [], soTab = 'live', ppNarrative = '';
 
   async function loadOrders(){
     await fetchParts();
@@ -15818,6 +16062,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     document.getElementById('pp-summary').innerHTML =
       '<div class="empty"><b>Nothing worked out yet</b>Press <b>Work out the plan</b>.</div>';
     document.getElementById('pp-orders').innerHTML = '';
+    ppNarrative = '';
+    document.getElementById('pp-brief-box').style.display = 'none';
   }
 
   function runPlan(){
@@ -15921,8 +16167,48 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
                      : r.noRouting ? 'no routing' : 'plannable'];
           }),
           note:'Machine-by-machine loading is on the Capacity Plan and Machine Loading Plan reports, ' +
-               'not repeated here.' }
-      ]});
+               'not repeated here.' },
+        ppNarrative ? { type:'text', title:'What needs attention', body: ppNarrative.replace(/<[^>]+>/g,'') } : null
+      ].filter(Boolean)});
+  }
+
+  /* ---------------- Production Plan risk brief ----------------
+     planRows is already worked out by fixed arithmetic (balance, working
+     days left, rate needed, machine hours). The AI is asked only to say what
+     that arithmetic means and what to do about it today — the same job the
+     older risk-brief on the website's production planner did, brought onto
+     the native screen so it reads this screen's own figures instead. */
+  async function explainPlan(){
+    var msg = document.getElementById('pp-plan-msg');
+    var say = quietWriter(msg);
+    if (!planRows.length) return say('Work out the plan first, or there is nothing to brief on.');
+    var btn = document.getElementById('pp-explain');
+    btn.disabled = true; btn.textContent = 'Thinking';
+    var late = planRows.filter(function(r){ return r.late; });
+    var noRoute = planRows.filter(function(r){ return r.noRouting; });
+    var tight = planRows.filter(function(r){ return !r.late && !r.noRouting && r.workDays !== null && r.workDays <= 3; });
+    var totHrs = Math.round(planRows.reduce(function(t,r){ return t + (r.noRouting?0:r.hours); }, 0) * 10) / 10;
+    var facts = [
+      planRows.length + ' open order(s), ' + totHrs + ' machine hour(s) needed in total',
+      late.length + ' already past their date: ' + (late.map(function(r){ return r.po + ' (' + r.partNo + ')'; }).slice(0,10).join(', ') || 'none'),
+      noRoute.length + ' with no routing yet so their hours are not even counted: ' + (noRoute.map(function(r){ return r.po; }).slice(0,10).join(', ') || 'none'),
+      tight.length + ' with 3 working days or fewer left: ' + (tight.map(function(r){ return r.po + ' needs ' + C.qty(r.perDay) + '/day'; }).slice(0,10).join(', ') || 'none')
+    ].join('\n- ');
+    try {
+      var txt = await C.callAI(
+        'This is the production plan of a Tier-2 automotive machining works, worked out by fixed ' +
+        'arithmetic from the open orders and routings, not by you:\n\n- ' + facts +
+        '\n\nIn no more than 120 words of plain prose, say what needs attention today and in what ' +
+        'order, and what it means for the customer in each case. Connect things that are connected ' +
+        '— for example an order with no routing cannot be planned at all, which is worse than being ' +
+        'merely late. Name the orders you mean. Do not invent anything, and do not reassure — if the ' +
+        'position is bad, say so.', { maxTokens: 400 });
+      ppNarrative = esc(C.stripMarkup(txt));
+      document.getElementById('pp-brief-body').innerHTML = '<div class="note">' + ppNarrative + '</div>';
+      document.getElementById('pp-brief-box').style.display = '';
+      msg.style.display = 'none';
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'AI risk brief';
   }
 
 
@@ -18077,8 +18363,12 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     return { key:'ok', label:'In date', cls:'series', days:days };
   }
 
+  var calNarrative = '';
   async function loadCalibration(){
     try { gauges = await C.idms.docs('gauge'); } catch(e){ gauges = []; }
+    calNarrative = '';
+    document.getElementById('cal-brief-box').style.display = 'none';
+    document.getElementById('cal-explain-msg').style.display = 'none';
     await drawCalGap();
     drawCalList();
   }
@@ -18281,9 +18571,47 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             ? overdue + ' gauge(s) are overdue. Readings taken with them since their last valid ' +
               'calibration are in question.'
             : 'All gauges shown are within their calibration interval.' },
+        calNarrative ? { type:'text', title:'Which gauge to send first',
+          body: calNarrative.replace(/<[^>]+>/g,'') } : null,
         { type:'text', title:'Signatures',
           body:'Prepared by                              Quality                              Date' }
-      ]});
+      ].filter(Boolean)});
+  }
+
+  /* ---------------- Calibration agent ----------------
+     calState() has already ruled which gauges are overdue, due soon, or never
+     calibrated — this only ranks that existing list, weighted by how many
+     days overdue a gauge is, never by inventing a risk the register does not
+     already show. */
+  async function explainCalibration(){
+    var msg = document.getElementById('cal-explain-msg');
+    var say = noteWriter(msg);
+    var atRisk = gauges.filter(function(g){
+      var st = calState(g); return st.key === 'overdue' || st.label === 'Never calibrated' || st.key === 'due';
+    });
+    if (!atRisk.length) return say('Nothing overdue or due soon — there is nothing to prioritise.', true);
+    var btn = document.getElementById('cal-explain');
+    btn.disabled = true; btn.textContent = 'Thinking';
+    var list = atRisk.map(function(rec, i){
+      var g = rec.data||{}, st = calState(rec);
+      return (i+1) + '. ' + (rec.doc_no||'') + ' — ' + (g.description||'') + ' (' + (g.type||'') + '), ' +
+        'at ' + (g.location||'unknown location') + ': ' + st.label;
+    }).join('\n');
+    try {
+      var txt = await C.callAI(
+        'These are the gauges at a Tier-2 automotive machining company that are overdue, never ' +
+        'calibrated, or due within 30 days, from the calibration register:\n\n' + list +
+        '\n\nIn no more than 120 words of plain prose, say which to send for calibration first and ' +
+        'why, weighing how overdue a gauge is against how widely a gauge type like it is usually ' +
+        'used on a shop floor. Name the numbers you mean. Do not invent a fact not given above, do ' +
+        'not repeat the list back, and do not soften it if several are badly overdue.',
+        { maxTokens: 400 });
+      calNarrative = esc(C.stripMarkup(txt));
+      document.getElementById('cal-brief-body').innerHTML = '<div class="note">' + calNarrative + '</div>';
+      document.getElementById('cal-brief-box').style.display = '';
+      msg.style.display = 'none';
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Ask the AI to prioritise';
   }
 
   /* ---------------- Inward inspection ----------------
@@ -23074,6 +23402,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('ga-filter').addEventListener('change', drawGapAnalysis);
   document.getElementById('ga-dept').addEventListener('change', drawGapAnalysis);
   document.getElementById('ga-print').addEventListener('click', printGapAnalysis);
+  document.getElementById('ga-explain').addEventListener('click', explainGapAnalysis);
 
   document.getElementById('tn-save').addEventListener('click', saveTni);
   document.getElementById('tn-print').addEventListener('click', printTni);
@@ -23126,6 +23455,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('ap-print').addEventListener('click', printApqp);
 
   document.getElementById('kd-run').addEventListener('click', function(){ loadKpiDash(kpiDept); });
+  document.getElementById('kd-brief').addEventListener('click', briefKpiDash);
   document.getElementById('kd-fy').addEventListener('change', function(){
     kpiFy = +this.value; loadKpiDash(kpiDept);
   });
@@ -23133,6 +23463,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('kd-print').addEventListener('click', function(){
     window.KPIX.printDashboard(kpiDept, kpiFy, document.getElementById('kd-body'));
   });
+
 
   document.getElementById('ke-fy').addEventListener('change', function(){
     kpiFy = +this.value; drawKpiForm(); drawKpiGaps();
@@ -23224,6 +23555,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 
   document.getElementById('fm-cat').addEventListener('change', draw4MWarning);
   document.getElementById('fm-part2').addEventListener('change', draw4MOps);
+  document.getElementById('fm-ai').addEventListener('click', draft4MImpact);
   document.getElementById('fm-save2').addEventListener('click', save4M);
   document.getElementById('fm-print2').addEventListener('click', print4M);
 
@@ -23239,6 +23571,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('pm-run').addEventListener('click', loadMaintenance);
   document.getElementById('pm-days').addEventListener('change', runMaintenance);
   document.getElementById('pm-print').addEventListener('click', printMaintenance);
+  document.getElementById('pm-explain').addEventListener('click', explainMaintenance);
+  document.getElementById('nco-explain').addEventListener('click', explainOpenActions);
 
   document.getElementById('mp-machine').addEventListener('change', drawMachineProcess);
   document.getElementById('mp-process').addEventListener('change', drawMachineProcess);
@@ -23328,6 +23662,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 
   document.getElementById('sd-refresh').addEventListener('click', drawSalesDashboard);
   document.getElementById('pp-run').addEventListener('click', runPlan);
+  document.getElementById('pp-explain').addEventListener('click', explainPlan);
   document.getElementById('pp-print2').addEventListener('click', printPlan);
   document.getElementById('pp-go-capacity').addEventListener('click', function(){ go('capacity_plan'); });
   document.getElementById('pp-go-loading').addEventListener('click', function(){ go('machine_loading'); });
@@ -23410,6 +23745,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('cal-clear').addEventListener('click', clearGaugeForm);
   document.getElementById('cal-filter').addEventListener('change', drawCalList);
   document.getElementById('cal-print').addEventListener('click', printCalibration);
+  document.getElementById('cal-explain').addEventListener('click', explainCalibration);
 
   document.getElementById('ii-addline').addEventListener('click', function(){
     var g = fieldVal;

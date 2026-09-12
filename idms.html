@@ -443,6 +443,11 @@ table.ha-t th.nm,table.ha-t td.nm{width:180px;text-align:left;padding:3px 6px;po
 table.ha-t th.nm{background:#eef2f7}
 table.ha-t th.sum,table.ha-t td.sum{width:52px;font-weight:700}
 table.ha-t th.wkend{background:#e6e9ef}
+table.ha-t th.sat,table.ha-t td.sat{background:#e7f0fb}
+table.ha-t th.sun,table.ha-t td.sun{background:#fdeceb}
+table.ha-t th.sat{color:#1a4a7a}
+table.ha-t th.sun{color:#a23c2e}
+table.ha-t th.dow{font-weight:600;font-size:9px;color:#7c8cab;height:16px}
 .ha-c{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;border-radius:5px;
   font-weight:700;font-size:11px;position:relative;padding:0 2px}
 button.ha-c{border:0;cursor:pointer;font-family:inherit}
@@ -1679,6 +1684,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         </div>
       </div>
       <div id="kd-ppc-sales" style="display:none;"></div>
+      <div id="kd-hrm-manpower" style="display:none;"></div>
       <div id="kd-body"></div>
     </div>
 
@@ -3402,6 +3408,21 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           </div>
           <div id="hd-unmatched" style="margin-top:10px;"></div>
           <div id="hd-punches" style="margin-top:10px;"></div>
+        </div>
+
+        <!-- ============ Manpower Cost ============ -->
+        <div class="hp-view" id="hp-v-mpcost" style="display:none;margin-top:14px;">
+          <div class="row four">
+            <div><label>Month</label><input type="month" id="mc-month"></div>
+            <div><label>Department</label><select id="mc-dept"><option value="">All departments</option></select></div>
+            <div><label>Employee</label><select id="mc-emp"><option value="">All employees</option></select></div>
+            <div style="align-self:end;"><button class="btn gold" id="mc-load">Show</button>
+              <button class="btn" id="mc-print" style="margin-left:6px;">Print</button></div>
+          </div>
+          <div class="hint" id="mc-asof" style="margin-top:8px;"></div>
+          <div class="stat" id="mc-cards" style="margin-top:12px;"></div>
+          <div id="mc-grid" style="margin-top:14px;"></div>
+          <div id="mc-detail" style="display:none;margin-top:14px;"></div>
         </div>
 
         <!-- ============ screens still served by the HR engine ============ -->
@@ -9959,6 +9980,15 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       extra.innerHTML = '';
       delete extra.dataset.wired;
     }
+    var extraHr = document.getElementById('kd-hrm-manpower');
+    if (dept === 'hrm'){
+      extraHr.style.display = '';
+      await renderHrmManpowerKpis(extraHr);
+    } else {
+      extraHr.style.display = 'none';
+      extraHr.innerHTML = '';
+      delete extraHr.dataset.wired;
+    }
     await window.KPIX.renderDashboard(dept, document.getElementById('kd-body'), kpiFy);
   }
 
@@ -10111,6 +10141,93 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         : '<div class="empty">No invoices raised yet in ' + esc(monthLabel(month)) + '.</div>');
   }
 
+  /* ---------------- HR dashboard: Manpower Cost card ----------------
+     The same arithmetic as the Manpower Cost register (mcCompute), run once
+     per month of the financial year in one attendance fetch, so the trend and
+     the register can never disagree with each other. */
+  function fyRange(fy){
+    var months = fyMonthKeys(fy);
+    return { from: months[0] + '-01', to: months[11] + '-' + pad2(mcMonthDays(months[11])) };
+  }
+  async function renderHrmManpowerKpis(host){
+    if (!host.dataset.wired){
+      host.dataset.wired = '1';
+      host.innerHTML =
+        '<div class="card"><h4>Manpower Cost — earned from attendance</h4>' +
+        '<div class="hint" style="margin-bottom:10px;">Nothing here is typed twice — it reads the same attendance, salary ' +
+          'structure and statutory rules as the Manpower Cost register and the Attendance Register. The current month is ' +
+          'earned to date; earlier months in the year are the full month.</div>' +
+        '<div id="kdhr-cards"></div>' +
+        '<div id="kdhr-chart" style="margin-top:14px;"></div>' +
+        '<div id="kdhr-table" style="margin-top:14px;"></div>' +
+        '<div style="margin-top:12px;"><button class="btn" id="kdhr-open">Open Manpower Cost register</button></div></div>';
+      document.getElementById('kdhr-open').addEventListener('click', function(){
+        go('hr_payroll');
+        setTimeout(function(){ hpOpen('mpcost'); }, 60);
+      });
+    }
+    var cardsHost = document.getElementById('kdhr-cards');
+    cardsHost.innerHTML = '<div class="hint">Loading…</div>';
+    var fy = kpiFy, months = fyMonthKeys(fy), range = fyRange(fy), curMonth = thisMonthKey();
+    try {
+      var got = await Promise.all([
+        C.api('/api/hr?what=employees'),
+        C.api('/api/hr?what=attendance&from=' + range.from + '&to=' + range.to),
+        C.api('/api/hr?what=leave').catch(function(){ return { leave:[] }; }),
+        hpContent()
+      ]);
+      var employees = (got[0].employees || []).filter(function(e){ return e.status !== 'Exited'; });
+      var att = {};
+      (got[1].attendance || []).forEach(function(a){ att[a.empId + '|' + String(a.day).slice(0,10)] = a; });
+      var leave = got[2].leave || [], content = got[3] || {};
+      /* mcCompute reads its data through hpState/mcState, the same as the register does */
+      hpState.att = att; hpState.leave = leave; hpState.content = content;
+      mcState.content = content;
+
+      var perMonth = months.map(function(m){
+        var asOf = mcAsOf(m);
+        if (!asOf) return { month:m, started:false, gross:0, net:0, pf:0, esi:0, other:0, cost:0 };
+        var tot = { gross:0, net:0, pf:0, esi:0, other:0, cost:0 };
+        employees.forEach(function(e){
+          var r = mcCompute(e, m, asOf);
+          tot.gross += r.gross; tot.net += r.netPayable; tot.pf += r.pfTotal; tot.esi += r.esiTotal;
+          tot.other += r.otherPayable; tot.cost += r.cost;
+        });
+        return Object.assign({ month:m, started:true }, tot);
+      });
+      var curRow = perMonth.filter(function(r){ return r.month === curMonth; })[0] || { started:false, gross:0, net:0, pf:0, esi:0, other:0, cost:0 };
+      var asOfCur = mcAsOf(curMonth);
+      cardsHost.innerHTML =
+        '<div class="hint" style="margin-bottom:8px;">Current month' + (asOfCur ? ' — as of ' + C.fmtDate(asOfCur) : ' — not started') + '</div>' +
+        '<div class="stat">' +
+          '<div class="b"><b>' + moneyFmt(curRow.cost,'INR') + '</b><span>Manpower cost</span></div>' +
+          '<div class="b"><b>' + moneyFmt(curRow.net,'INR') + '</b><span>Salary payable</span></div>' +
+          '<div class="b"><b>' + moneyFmt(curRow.pf,'INR') + '</b><span>PF payable</span></div>' +
+          '<div class="b"><b>' + moneyFmt(curRow.esi,'INR') + '</b><span>ESI payable</span></div>' +
+          '<div class="b"><b>' + moneyFmt(curRow.other,'INR') + '</b><span>Other payables</span></div>' +
+        '</div>';
+      var labels = months.map(monthLabel);
+      document.getElementById('kdhr-chart').innerHTML =
+        '<h5 style="margin:0 0 8px;">Monthly manpower cost trend — ' + esc(window.KPIX.fyLabel(fy)) + '</h5>' +
+        window.KPIX.charts.line(labels, [{ name:'Manpower cost', values: perMonth.map(function(r){ return r.cost; }) }], '₹');
+      document.getElementById('kdhr-table').innerHTML =
+        '<h5 style="margin:0 0 8px;">Payables, month by month</h5>' +
+        '<div style="overflow-x:auto;"><table class="t"><thead><tr><th>Month</th><th class="r">Salary payable</th>' +
+        '<th class="r">PF payable</th><th class="r">ESI payable</th><th class="r">Other payables</th>' +
+        '<th class="r">Manpower cost</th></tr></thead><tbody>' +
+        perMonth.map(function(r){
+          return '<tr><td>' + esc(monthLabel(r.month)) + (r.month === curMonth ? ' <span class="hint">(to date)</span>' : '') + '</td>' +
+            '<td class="r">' + (r.started ? moneyFmt(r.net,'INR') : '—') + '</td>' +
+            '<td class="r">' + (r.started ? moneyFmt(r.pf,'INR') : '—') + '</td>' +
+            '<td class="r">' + (r.started ? moneyFmt(r.esi,'INR') : '—') + '</td>' +
+            '<td class="r">' + (r.started ? moneyFmt(r.other,'INR') : '—') + '</td>' +
+            '<td class="r"><b>' + (r.started ? moneyFmt(r.cost,'INR') : '—') + '</b></td></tr>';
+        }).join('') + '</tbody></table></div>';
+    } catch(e){
+      cardsHost.innerHTML = '<div class="note bad">' + esc(e.message) + '</div>';
+    }
+  }
+
   /* A chart with nothing behind it offers the entry screen, and lands on the
      right KPI when you get there — otherwise it is a dead end. */
   if (window.KPIX) window.KPIX.onEntryRequest = function (kpiId){
@@ -10239,6 +10356,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['exit','exit','Exit & Full and Final','Resignations, clearance and settlement','e:exit'] ]],
     ['Pay', [
       ['payroll','pay','Payroll','Pay runs, payslips and approval','e:payroll'],
+      ['mpcost','pay','Manpower Cost','Earned salary and statutory payables from attendance, as of today','v:mpcost'],
       ['statutory','statutory','Statutory & Masters','PF, ESI, PT, TDS, shifts, holidays, leave rules','e:statutory'] ]],
     ['Capability & compliance', [
       ['dwm','dwm','DWM & Tasks','Daily work management boards','s:dwm'],
@@ -10314,7 +10432,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     document.getElementById('hp-workico').innerHTML = hpIcon(t[1]);
     document.getElementById('hp-worktitle').textContent = t[2];
     document.getElementById('hp-worknote').textContent = t[3];
-    ['att','dev','frame'].forEach(function(v){ document.getElementById('hp-v-' + v).style.display = 'none'; });
+    ['att','dev','mpcost','frame'].forEach(function(v){ document.getElementById('hp-v-' + v).style.display = 'none'; });
     document.getElementById('hp-reload').style.display = kind === 'e' ? '' : 'none';
     hpState.view = key;
     if (kind === 'e'){
@@ -10326,6 +10444,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     document.getElementById('hp-v-' + arg).style.display = '';
     if (arg === 'att') haOpen();
     if (arg === 'dev') hdOpen();
+    if (arg === 'mpcost') mcOpen();
   }
   document.getElementById('hp-back').addEventListener('click', function(){ hpHome(); hpDrawStatus(); });
   document.getElementById('hp-reload').addEventListener('click', function(){
@@ -10423,12 +10542,21 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       host.innerHTML = '<div class="empty"><b>No employees yet</b>Add them on Employees, or with Employee Bulk Upload.</div>'; return; }
     if (!rows.length){ host.innerHTML = '<div class="empty"><b>Nobody matches</b>Change the department or search.</div>'; return; }
     var weekOff = ((hpState.content || {}).leavePolicy || {}).weekOff || [0];
-    var head = '<tr><th class="nm">Employee</th>' + days.map(function(d){
-      var dow = new Date(d + 'T00:00:00').getDay();
-      return '<th' + (weekOff.indexOf(dow) >= 0 ? ' class="wkend"' : '') + '>' + Number(d.slice(8)) + '</th>'; }).join('') +
-      '<th class="sum" title="Days present (half days count half)">Pres.</th><th class="sum">Late</th>' +
-      '<th class="sum" title="Days with one punch only">Missed</th><th class="sum" title="Overtime hours approved">OT</th>' +
-      '<th class="sum" title="Overtime hours waiting for approval">OT wait</th></tr>';
+    var dowAbbr = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    /* Sat/Sun get their own colour regardless of which days the company's own
+       week-off policy names, so the register reads at a glance; the policy's
+       weekOff still drives the "W" mark and the generic wkend tint for any
+       other day it names. */
+    var dowCls = function(dow){ return dow === 0 ? 'sun' : dow === 6 ? 'sat' : (weekOff.indexOf(dow) >= 0 ? 'wkend' : ''); };
+    var head = '<tr><th class="nm" rowspan="2">Employee</th>' + days.map(function(d){
+      var dow = new Date(d + 'T00:00:00').getDay(), c = dowCls(dow);
+      return '<th' + (c ? ' class="' + c + '"' : '') + '>' + Number(d.slice(8)) + '</th>'; }).join('') +
+      '<th class="sum" rowspan="2" title="Days present (half days count half)">Pres.</th><th class="sum" rowspan="2">Late</th>' +
+      '<th class="sum" rowspan="2" title="Days with one punch only">Missed</th><th class="sum" rowspan="2" title="Overtime hours approved">OT</th>' +
+      '<th class="sum" rowspan="2" title="Overtime hours waiting for approval">OT wait</th></tr><tr>' +
+      days.map(function(d){
+        var dow = new Date(d + 'T00:00:00').getDay(), c = dowCls(dow);
+        return '<th class="dow' + (c ? ' ' + c : '') + '">' + dowAbbr[dow] + '</th>'; }).join('') + '</tr>';
     var body = rows.map(function(e){
       var lmap = haLeaveMap(e.empId), pres = 0, late = 0, miss = 0, ot = 0, otw = 0;
       var cells = days.map(function(d){
@@ -10442,7 +10570,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           '<span class="ha-c ' + c.cls + '"') + (tip ? ' title="' + esc(tip) + '"' : '') + '>' + esc(c.code) +
           (clickable ? '</button>' : '</span>') +
           (r && C.num(r.otPendingHours) ? '<span class="ha-ot">+' + C.num(r.otPendingHours) + '</span>' : '');
-        return '<td>' + inner + '</td>';
+        var dCls = dowCls(new Date(d + 'T00:00:00').getDay());
+        return '<td' + (dCls === 'sat' || dCls === 'sun' ? ' class="' + dCls + '"' : '') + '>' + inner + '</td>';
       }).join('');
       return '<tr><td class="nm"><b>' + esc(e.name) + '</b><div class="hint">' + esc(e.empId) +
         (e.shift ? ' · ' + esc(e.shift) : '') + '</div></td>' + cells +
@@ -10558,7 +10687,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     var days = haDays(), rows = haRows();
     C.openReport({ title:'Attendance Register — ' + hpState.month, landscape:true, sections:[
       { type:'table', title:'Attendance', dense:true,
-        columns:[{ label:'Employee' }].concat(days.map(function(d){ return { label: String(Number(d.slice(8))) }; }))
+        columns:[{ label:'Employee' }].concat(days.map(function(d){
+          var dow = new Date(d + 'T00:00:00').getDay();
+          return { label: Number(d.slice(8)) + ' ' + ['Su','Mo','Tu','We','Th','Fr','Sa'][dow] }; }))
           .concat([{ label:'Present' }, { label:'Late' }, { label:'OT h' }]),
         rows: rows.map(function(e){
           var lmap = haLeaveMap(e.empId), pres = 0, late = 0, ot = 0;
@@ -10749,6 +10880,235 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       : '<div class="empty"><b>No punches in these dates</b>A registered device that is reporting sends them within a minute of each scan.</div>';
   }
   document.getElementById('hd-pload').addEventListener('click', hdPunches);
+
+  /* ---------------- Manpower Cost ----------------
+     Earned salary and statutory payables computed straight from attendance —
+     nothing typed a second time. The same shape as calcPayslip on the website
+     payroll engine (salary structure, PF/ESI/PT rules from Statutory &
+     Masters), but run for the days that have actually happened so far this
+     month rather than waiting for the month to close. Selecting an earlier
+     month runs the same arithmetic over the whole month, which is what a
+     closed month's earned figure would have been. */
+  var mcState = { employees:[], att:{}, leave:[], content:{}, month:'', asOf:'', rows:[] };
+
+  function mcMonthDays(month){
+    var p = month.split('-').map(Number);
+    return new Date(p[0], p[1], 0).getDate();
+  }
+  /* the last day counted this run: today, if the selected month is the
+     current one; the whole month, if it is a month already gone by */
+  function mcAsOf(month){
+    var today = C.dayKey(new Date()), curMonth = today.slice(0,7);
+    if (month > curMonth) return null;               // a month yet to start: nothing earned
+    if (month === curMonth) return today;
+    return month + '-' + pad2(mcMonthDays(month));
+  }
+  function mcLeaveMap(empId){ return haLeaveMap(empId); }   // same rule the register uses
+
+  /* One employee's earned pay for the elapsed part of the month: attendance
+     drives a proration factor against the full monthly structure, then the
+     same PF/ESI/PT formulas Statutory & Masters defines are applied to the
+     earned figures — an interim payslip, not a second set of rules. */
+  function mcCompute(emp, month, asOf){
+    var days = [], p = month.split('-').map(Number), n = mcMonthDays(month);
+    for (var d = 1; d <= n; d++){ var k = month + '-' + pad2(d); if (k <= asOf) days.push(k); }
+    var lmap = mcLeaveMap(emp.empId), lp = (mcState.content || {}).leavePolicy || {};
+    var paidCodes = {}; (lp.types || []).forEach(function(t){ if (t.paid) paidCodes[t.code] = 1; });
+    var present = 0, otHours = 0, payableDays = 0, lop = 0;
+    days.forEach(function(day){
+      var c = haCell(emp, day, lmap), r = c.rec;
+      if (r && r.status === 'Present'){ present += C.num(r.dayFraction || 1); otHours += C.num(r.otHours); payableDays += C.num(r.dayFraction || 1); return; }
+      if (r && r.status === 'Absent'){ lop++; return; }
+      if (lmap[day]){ if (paidCodes[lmap[day]]) payableDays++; else lop++; return; }
+      if (c.cls === 'hol' || c.cls === 'w'){ payableDays++; return; }
+      if (day > C.dayKey(new Date())) return;         // not happened yet
+      lop++;                                          // no record, not a day off: absent
+    });
+    var totalDays = n;
+    var factor = totalDays ? payableDays / totalDays : 0;
+    var s = emp.structure || {};
+    var basic = num2(s.basic) * factor, da = num2(s.da) * factor, hra = num2(s.hra) * factor,
+        conv = num2(s.conveyance) * factor, special = num2(s.special) * factor, other = num2(s.otherAllow) * factor;
+    var stt = (mcState.content || {}).statutory || {};
+    var otBasis = (stt.ot && stt.ot.basisComponents === 'gross')
+      ? (num2(s.basic)+num2(s.da)+num2(s.hra)+num2(s.conveyance)+num2(s.special)+num2(s.otherAllow))
+      : (num2(s.basic) + num2(s.da));
+    var hoursPerMonth = Math.max(1, totalDays * 8);
+    var otRate = (otBasis / hoursPerMonth) * num2((stt.ot || {}).multiplier || 2);
+    var otAmount = otHours * otRate;
+    var gross = basic + da + hra + conv + special + other + otAmount;
+
+    var pf = stt.pf || {}, pfEmp = 0, pfEr = 0;
+    if (pf.enabled && emp.pfApplicable !== false){
+      var pfWageRaw = basic + da, pfWage = pf.applyCeiling ? Math.min(pfWageRaw, num2(pf.wageCeiling)) : pfWageRaw;
+      pfEmp = pfWage * num2(pf.employeePct) / 100;
+      pfEr = pfWage * num2(pf.employerPct) / 100;
+    }
+    var esi = stt.esi || {}, esiEmp = 0, esiEr = 0;
+    if (esi.enabled && emp.esiApplicable !== false && gross <= num2(esi.grossLimit)){
+      esiEmp = Math.ceil(gross * num2(esi.employeePct) / 100);
+      esiEr = Math.ceil(gross * num2(esi.employerPct) / 100);
+    }
+    var pt = 0, ptr = stt.pt || {};
+    if (ptr.enabled && emp.ptApplicable !== false){
+      var slab = (ptr.slabs || []).slice().sort(function(a,b){ return num2(a.upTo)-num2(b.upTo); })
+        .filter(function(x){ return gross <= num2(x.upTo); })[0];
+      pt = slab ? num2(slab.amount) : 0;
+    }
+    var lwf = stt.lwf || {}, lwfEmp = lwf.enabled ? num2(lwf.employee) : 0, lwfEr = lwf.enabled ? num2(lwf.employer) : 0;
+    var otherPayable = pt + lwfEmp + lwfEr;
+    var netPayable = gross - pfEmp - esiEmp - pt - lwfEmp;
+    return { empId:emp.empId, name:emp.name, department:emp.department, payableDays:payableDays, totalDays:totalDays,
+      factor:factor, gross:gross, pfEmp:pfEmp, pfEr:pfEr, pfTotal:pfEmp+pfEr, esiEmp:esiEmp, esiEr:esiEr,
+      esiTotal:esiEmp+esiEr, pt:pt, lwfEmp:lwfEmp, lwfEr:lwfEr, otherPayable:otherPayable, netPayable:netPayable,
+      cost:gross+pfEr+esiEr+lwfEr };
+  }
+  function num2(v){ return isFinite(v) ? Number(v) || 0 : 0; }
+
+  async function mcOpen(){
+    var m = document.getElementById('mc-month');
+    if (!m.value) m.value = C.dayKey(new Date()).slice(0,7);
+    await mcLoad();
+  }
+  async function mcLoad(){
+    var month = document.getElementById('mc-month').value;
+    if (!month) return;
+    var host = document.getElementById('mc-grid');
+    host.innerHTML = '<div class="hint">Loading…</div>';
+    document.getElementById('mc-detail').style.display = 'none';
+    var last = mcMonthDays(month), from = month + '-01', to = month + '-' + pad2(last);
+    try {
+      var got = await Promise.all([
+        C.api('/api/hr?what=employees'),
+        C.api('/api/hr?what=attendance&from=' + from + '&to=' + to),
+        C.api('/api/hr?what=leave').catch(function(){ return { leave:[] }; }),
+        hpContent()
+      ]);
+      mcState.employees = got[0].employees || [];
+      mcState.att = {};
+      (got[1].attendance || []).forEach(function(a){ mcState.att[a.empId + '|' + String(a.day).slice(0,10)] = a; });
+      mcState.leave = got[2].leave || [];
+      mcState.content = got[3] || {};
+      mcState.month = month;
+    } catch(e){ host.innerHTML = '<div class="note bad">' + esc(e.message) + '</div>'; return; }
+    /* haCell/haLeaveMap read hpState — point it at the same data so the two
+       screens can never disagree about what a day counted for */
+    hpState.att = mcState.att; hpState.leave = mcState.leave; hpState.content = mcState.content; hpState.month = month;
+    var dsel = document.getElementById('mc-dept'), keepD = dsel.value;
+    var depts = [];
+    mcState.employees.forEach(function(e){ if (e.department && depts.indexOf(e.department) < 0) depts.push(e.department); });
+    dsel.innerHTML = '<option value="">All departments</option>' + depts.sort().map(function(d){
+      return '<option' + (d === keepD ? ' selected' : '') + '>' + esc(d) + '</option>'; }).join('');
+    var esel = document.getElementById('mc-emp'), keepE = esel.value;
+    esel.innerHTML = '<option value="">All employees</option>' + mcState.employees.filter(function(e){ return e.status !== 'Exited'; })
+      .sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); })
+      .map(function(e){ return '<option value="' + esc(e.empId) + '"' + (e.empId === keepE ? ' selected' : '') + '>' +
+        esc(e.name) + ' (' + esc(e.empId) + ')</option>'; }).join('');
+    mcDraw();
+  }
+  function mcRows(){
+    var dept = document.getElementById('mc-dept').value, empId = document.getElementById('mc-emp').value;
+    var asOf = mcAsOf(mcState.month);
+    var list = mcState.employees.filter(function(e){
+      if (e.status === 'Exited') return false;
+      if (dept && e.department !== dept) return false;
+      if (empId && e.empId !== empId) return false;
+      return true;
+    });
+    if (!asOf) return { asOf:null, rows:[] };
+    return { asOf:asOf, rows: list.map(function(e){ return mcCompute(e, mcState.month, asOf); })
+      .sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); }) };
+  }
+  function mcDraw(){
+    var host = document.getElementById('mc-grid'), cards = document.getElementById('mc-cards');
+    var note = document.getElementById('mc-asof');
+    if (!mcState.employees.length){
+      host.innerHTML = '<div class="empty"><b>No employees yet</b>Add them on Employees, or with Employee Bulk Upload.</div>';
+      cards.innerHTML = ''; note.textContent = ''; return;
+    }
+    var got = mcRows(), rows = got.rows;
+    if (!got.asOf){
+      note.textContent = ''; cards.innerHTML = '';
+      host.innerHTML = '<div class="empty"><b>That month has not started yet</b>Nothing is earned until it does.</div>';
+      return;
+    }
+    note.textContent = 'Earned pay for ' + esc(monthLabel(mcState.month)) + ' up to and including ' + C.fmtDate(got.asOf) +
+      (got.asOf === (mcState.month + '-' + pad2(mcMonthDays(mcState.month))) ? ' — the full month.' : ' — the month is still running.');
+    if (!rows.length){ host.innerHTML = '<div class="empty"><b>Nobody matches</b>Change the department or employee.</div>'; cards.innerHTML = ''; return; }
+    var tot = { gross:0, net:0, pf:0, esi:0, other:0, cost:0 };
+    rows.forEach(function(r){ tot.gross += r.gross; tot.net += r.netPayable; tot.pf += r.pfTotal; tot.esi += r.esiTotal;
+      tot.other += r.otherPayable; tot.cost += r.cost; });
+    cards.innerHTML =
+      '<div class="b"><b>' + rows.length + '</b><span>Employees</span></div>' +
+      '<div class="b"><b>' + moneyFmt(tot.gross,'INR') + '</b><span>Gross earned</span></div>' +
+      '<div class="b"><b>' + moneyFmt(tot.net,'INR') + '</b><span>Salary payable (net)</span></div>' +
+      '<div class="b"><b>' + moneyFmt(tot.pf,'INR') + '</b><span>PF payable</span></div>' +
+      '<div class="b"><b>' + moneyFmt(tot.esi,'INR') + '</b><span>ESI payable</span></div>' +
+      '<div class="b"><b>' + moneyFmt(tot.other,'INR') + '</b><span>Other payables (PT, LWF)</span></div>' +
+      '<div class="b"><b>' + moneyFmt(tot.cost,'INR') + '</b><span>Manpower cost (with employer contributions)</span></div>';
+    var head = '<tr><th>Employee</th><th>Department</th><th class="r">Days paid</th><th class="r">Gross earned</th>' +
+      '<th class="r">PF (emp+er)</th><th class="r">ESI (emp+er)</th><th class="r">PT</th><th class="r">Net payable</th>' +
+      '<th class="r">Cost to company</th></tr>';
+    var body = rows.map(function(r){
+      return '<tr class="mc-row" data-emp="' + esc(r.empId) + '" style="cursor:pointer;">' +
+        '<td><b>' + esc(r.name) + '</b><div class="hint">' + esc(r.empId) + '</div></td>' +
+        '<td>' + esc(r.department || '—') + '</td>' +
+        '<td class="r">' + r.payableDays + ' / ' + r.totalDays + '</td>' +
+        '<td class="r">' + moneyFmt(r.gross,'INR') + '</td>' +
+        '<td class="r">' + moneyFmt(r.pfTotal,'INR') + '</td>' +
+        '<td class="r">' + moneyFmt(r.esiTotal,'INR') + '</td>' +
+        '<td class="r">' + moneyFmt(r.pt,'INR') + '</td>' +
+        '<td class="r"><b>' + moneyFmt(r.netPayable,'INR') + '</b></td>' +
+        '<td class="r">' + moneyFmt(r.cost,'INR') + '</td></tr>';
+    }).join('');
+    host.innerHTML = '<div style="overflow-x:auto;"><table class="t"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>';
+    host.querySelectorAll('.mc-row').forEach(function(tr){
+      tr.addEventListener('click', function(){ mcDetail(tr.dataset.emp); });
+    });
+  }
+  function mcDetail(empId){
+    var box = document.getElementById('mc-detail');
+    var got = mcRows(), r = got.rows.filter(function(x){ return x.empId === empId; })[0];
+    var emp = mcState.employees.filter(function(e){ return e.empId === empId; })[0] || {};
+    if (!r){ box.style.display = 'none'; return; }
+    box.style.display = '';
+    var pairs = function(rows){ return '<table class="iv-grid" style="max-width:460px;"><tbody>' + rows.map(function(x){
+      return '<tr><th style="width:52%;">' + x[0] + '</th><td>' + x[1] + '</td></tr>'; }).join('') + '</tbody></table>'; };
+    box.innerHTML = '<div class="iv-sec" style="margin-top:0;">' + esc(r.name) + ' — ' + esc(monthLabel(mcState.month)) + '</div>' +
+      pairs([
+        ['Days paid for', r.payableDays + ' of ' + r.totalDays + ' days in the month'],
+        ['Gross earned so far', moneyFmt(r.gross,'INR')],
+        ['PF', moneyFmt(r.pfEmp,'INR') + ' employee + ' + moneyFmt(r.pfEr,'INR') + ' employer'],
+        ['ESI', moneyFmt(r.esiEmp,'INR') + ' employee + ' + moneyFmt(r.esiEr,'INR') + ' employer'],
+        ['Professional tax', moneyFmt(r.pt,'INR')],
+        ['Net payable to date', '<b>' + moneyFmt(r.netPayable,'INR') + '</b>'],
+        ['Cost to company to date', moneyFmt(r.cost,'INR')]
+      ]) +
+      '<div class="hint" style="margin-top:8px;">This is an interim figure for the part of the month that has ' +
+        'happened so far, not a payslip — the actual pay run may apply overrides, advances and TDS this does not.</div>';
+  }
+  document.getElementById('mc-load').addEventListener('click', mcLoad);
+  document.getElementById('mc-month').addEventListener('change', mcLoad);
+  document.getElementById('mc-dept').addEventListener('change', mcDraw);
+  document.getElementById('mc-emp').addEventListener('change', mcDraw);
+  document.getElementById('mc-print').addEventListener('click', function(){
+    var got = mcRows();
+    if (!got.asOf){ toast('That month has not started yet.'); return; }
+    var tot = { gross:0, net:0, pf:0, esi:0, other:0, cost:0 };
+    got.rows.forEach(function(r){ tot.gross += r.gross; tot.net += r.netPayable; tot.pf += r.pfTotal; tot.esi += r.esiTotal;
+      tot.other += r.otherPayable; tot.cost += r.cost; });
+    C.openReport({ title:'Manpower Cost — ' + monthLabel(mcState.month) + ' as of ' + C.fmtDate(got.asOf), sections:[
+      { type:'table', title:'By employee', dense:true,
+        columns:[{label:'Employee'},{label:'Department'},{label:'Days paid'},{label:'Gross earned'},
+          {label:'PF'},{label:'ESI'},{label:'PT'},{label:'Net payable'},{label:'Cost to company'}],
+        rows: got.rows.map(function(r){ return [esc(r.name)+' ('+esc(r.empId)+')', esc(r.department||'—'),
+          r.payableDays+' / '+r.totalDays, C.rate(r.gross), C.rate(r.pfTotal), C.rate(r.esiTotal), C.rate(r.pt),
+          C.rate(r.netPayable), C.rate(r.cost)]; }) },
+      { type:'table', title:'Total', columns:[{label:'Gross earned'},{label:'PF payable'},{label:'ESI payable'},
+          {label:'Other payables'},{label:'Net salary payable'},{label:'Manpower cost'}],
+        rows:[[C.rate(tot.gross), C.rate(tot.pf), C.rate(tot.esi), C.rate(tot.other), C.rate(tot.net), C.rate(tot.cost)]] }
+    ] });
+  });
 
   /* ---------------- screens served by the website ---------------- */
   var EMBEDS = {

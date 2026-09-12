@@ -170,7 +170,14 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, empId: e.empId });
       }
       if (req.method === 'PATCH' && body.remove) {
+        // deleting a person's record is an administrator's decision, with a
+        // stated reason, same as deleting a part or a quality document
+        if (!(await checkRole(token, ['developer', 'admin'])))
+          return res.status(403).json({ ok: false, error: 'Only an administrator may delete an employee record.' });
+        if (!String(body.reason || '').trim())
+          return res.status(400).json({ ok: false, error: 'State a reason for the deletion.' });
         const prev = (await sql`SELECT data FROM hr_employees WHERE emp_id = ${body.empId}`)[0];
+        if (!prev) return res.status(404).json({ ok: false, error: 'No such employee.' });
         await sql`DELETE FROM hr_employees WHERE emp_id = ${body.empId}`;
         await audit(me && me.username, 'employee.delete', body.empId, prev ? prev.data : null, null, body.reason);
         return res.status(200).json({ ok: true, removed: body.empId });

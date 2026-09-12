@@ -1859,6 +1859,39 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         </div>
         <div class="note" id="bk-msg" style="display:none;"></div>
       </div>
+
+      <div class="card" style="border:1px solid var(--bad,#b03a2e);">
+        <h4>Flush all data and records</h4>
+        <div class="hint" style="margin-bottom:10px;">Deletes every part, order, routing, PFMEA,
+          control plan, production booking, attendance record, punch, payslip and uploaded
+          attachment — every record this deployment has ever made. <b>Does not touch</b> your company
+          profile, branding, users, provider keys, or registered devices — the same team can carry
+          straight on entering fresh data afterwards. This cannot be undone; export a backup above
+          first if there is any chance you will want this again.</div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>Type <code>FLUSH ALL DATA</code> to enable this</label>
+            <input id="fl-data-confirm" placeholder="FLUSH ALL DATA" autocomplete="off"></div>
+          <div style="align-self:end;"><button class="btn del" id="fl-data-go" disabled>Flush all data and records</button></div>
+        </div>
+        <div class="note" id="fl-data-msg" style="display:none;"></div>
+      </div>
+
+      <div class="card" style="border:1px solid var(--bad,#b03a2e);">
+        <h4>Flush all settings &amp; admin data — for a fresh deploy</h4>
+        <div class="hint" style="margin-bottom:10px;">Deletes everything that makes this deployment
+          look like this company — the company profile, logo and branding, website content and
+          pricing, print/home settings, AI/email/WhatsApp provider keys, and registered biometric
+          devices. <b>Does not touch</b> user accounts (remove those yourself from User Management)
+          and <b>does not touch any data</b> — parts, orders and every other record are untouched; use
+          Flush All Data above as well if this deployment is being handed to a brand new customer with
+          nothing carried over. This cannot be undone.</div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>Type <code>FLUSH ALL SETTINGS</code> to enable this</label>
+            <input id="fl-settings-confirm" placeholder="FLUSH ALL SETTINGS" autocomplete="off"></div>
+          <div style="align-self:end;"><button class="btn del" id="fl-settings-go" disabled>Flush settings &amp; admin data</button></div>
+        </div>
+        <div class="note" id="fl-settings-msg" style="display:none;"></div>
+      </div>
     </div>
 
     <!-- ============ Admin: sample data ============ -->
@@ -2115,6 +2148,77 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         </div>
         <h4>The matrix</h4>
         <div id="sk-body"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="recruitment">
+      <div class="card">
+        <h4>Recruitment</h4>
+        <div class="hint" style="margin-bottom:10px;">Requisitions and the candidate pipeline, native
+          to the IDMS — reachable by any role that has been given this screen, not the developer
+          login only. Converting a candidate to an employee creates their record on People
+          automatically; nothing is typed twice. <b>AI assists with screening only</b> — it
+          summarises and flags what a CV does and does not evidence against the role. It never
+          scores or ranks people, and the hiring decision stays entirely with you.
+          <span class="hint" style="display:block;margin-top:6px;">Interview invitations by email/
+          WhatsApp and offer-letter generation still run from the website's HR engine for now — open
+          <a data-goto="hr_payroll" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">HR &amp; Payroll</a>
+          for those, until they move here too.</span></div>
+        <div class="stat" id="rc-stats"></div>
+      </div>
+
+      <div class="card">
+        <h4>Raise a requisition</h4>
+        <div class="row four">
+          <div><label>Position</label><input id="rc-rq-title" placeholder="CNC Operator"></div>
+          <div><label>Department</label><input id="rc-rq-dept"></div>
+          <div><label>Positions</label><input class="num" id="rc-rq-count" value="1"></div>
+          <div><label>Needed by</label><input type="date" id="rc-rq-by"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Grade</label><input id="rc-rq-grade"></div>
+          <div><label>CTC range</label><input id="rc-rq-ctc" placeholder="2.4 – 3.0 LPA"></div>
+          <div><label>Reason</label><select id="rc-rq-reason">
+            <option>Replacement</option><option>Expansion</option><option>New line</option>
+            <option>Temporary</option></select></div>
+          <div><label>Raised by</label><input id="rc-rq-who"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
+          <label>Job description — responsibilities, qualification, experience, competencies</label>
+          <textarea id="rc-rq-jd" rows="8"></textarea>
+          <div style="margin-top:8px;"><button class="btn ai-btn" id="rc-rq-ai">Draft JD with AI</button></div>
+        </div></div>
+        <div style="margin-top:12px;"><button class="btn gold" id="rc-rq-create">Raise requisition</button></div>
+        <div class="note" id="rc-rq-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Requisitions</h4>
+        <div id="rc-req-list"></div>
+      </div>
+
+      <div class="card">
+        <h4>Add a candidate</h4>
+        <div class="row four">
+          <div><label>Requisition</label><select id="rc-cd-req"></select></div>
+          <div><label>Name</label><input id="rc-cd-name"></div>
+          <div><label>Phone</label><input id="rc-cd-phone"></div>
+          <div><label>Email</label><input id="rc-cd-email"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Qualification</label><input id="rc-cd-qual"></div>
+          <div><label>Experience (years)</label><input class="num" id="rc-cd-exp"></div>
+          <div><label>Current CTC</label><input class="num" id="rc-cd-cctc"></div>
+          <div><label>Expected CTC</label><input class="num" id="rc-cd-ectc"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
+          <label>CV text (paste here — there is no file upload on this screen yet)</label>
+          <textarea id="rc-cd-cv" rows="4"></textarea></div></div>
+        <div style="margin-top:12px;"><button class="btn gold" id="rc-cd-add">Add candidate</button></div>
+        <div class="note" id="rc-cd-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4>Candidates</h4>
+        <div id="rc-cand-list"></div>
       </div>
     </div>
 
@@ -3715,6 +3819,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <option value="">Everyone</option><option>Active</option><option>Probation</option>
             <option>Notice</option><option>Exited</option></select></div>
           <div style="align-self:end;"><button class="btn" id="hr-refresh">Refresh</button>
+            <button class="btn gold" id="hr-add" style="margin-left:6px;">Add employee</button>
             <button class="btn" id="hr-bulk" style="margin-left:6px;">Bulk upload employees</button></div>
         </div>
         <div id="hr-list"></div>
@@ -3755,6 +3860,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn gold" id="he-save">Save</button>
           <button class="btn" id="he-card">Print details</button>
+          <button class="btn del" id="he-delete">Delete employee</button>
           <button class="btn" id="he-close">Close</button>
         </div>
         <div class="note" id="he-msg" style="display:none;"></div>
@@ -4337,6 +4443,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['hr_payroll','💼','HR & Payroll',1],
       ['attendance_lookup','🪪','My Attendance',1],
       ['skill_matrix','📊','Skill Matrix',1],
+      ['recruitment','🧑\u200d💼','Recruitment',1],
       ['org_chart','🏗','Organisation Chart',1],
       ['dwm','📊','DWM — Daily Work Management',1],
       ['roles_resp','📋','Roles & Responsibilities',1],
@@ -4601,6 +4708,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'entry_machine')  loadMachines();
     if (s === 'machine_process') loadMachineProcess();
     if (s === 'skill_matrix')   loadSkills();
+    if (s === 'recruitment')    loadRecruitment();
     if (s === 'change_4m')      load4M();
     if (s === 'maintenance')    loadMaintenance();
     if (s === 'ncr_open')       loadOpenActions();
@@ -7754,6 +7862,330 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       await C.idms.saveDoc({ docId:id, kind:'competency', docNo:c.doc_no, status:'Withdrawn',
         data: Object.assign({}, c.data||{}, { withdrawn:true }) }, 'competency requirement withdrawn');
       await loadCompetency();
+    } catch(e){ toast(e.message); }
+  }
+
+  /* ---------------- Recruitment (native) ----------------
+     Requisitions and candidates are 'requisition'/'candidate' kind records on
+     the existing generic hr_items table and its /api/hr?what=items endpoint
+     — nothing new on the server, the same storage the website's HR engine
+     already used, so nothing here is a second, competing copy of anyone's
+     hiring history. What this phase does NOT cover, on purpose, deferred to
+     a second pass: interview invitations by email/WhatsApp, offer-letter
+     generation with terms templates, and the quick-message-templates —
+     those still run from HR & Payroll's website-embedded engine until they
+     are moved here too (see the note on the screen itself). */
+  var rcReqs = [], rcCands = [], rcExpanded = null, RC_STAGES = ['Applied','Screened','Interview','Selected','Offer Made','Joined','Rejected'];
+
+  async function loadRecruitment(){
+    try {
+      var j = await C.api('/api/hr?what=items');
+      var all = j.items || [];
+      rcReqs = all.filter(function(x){ return x.kind === 'requisition'; })
+        .map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
+      rcCands = all.filter(function(x){ return x.kind === 'candidate'; })
+        .map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
+    } catch(e){ toast(e.message); rcReqs = []; rcCands = []; }
+    drawRcStats();
+    fillRcReqSelect();
+    drawRequisitions();
+    drawCandidates();
+  }
+
+  function drawRcStats(){
+    var open = rcReqs.filter(function(r){ return r.status !== 'Closed'; });
+    var joined = rcCands.filter(function(c){ return c.status === 'Joined'; });
+    var inProcess = rcCands.filter(function(c){ return ['Joined','Rejected'].indexOf(c.status) < 0; });
+    var offers = rcCands.filter(function(c){ return c.status === 'Offer Made'; });
+    document.getElementById('rc-stats').innerHTML =
+      [['Open positions', open.length], ['Candidates in process', inProcess.length],
+       ['Offers pending', offers.length], ['Joined', joined.length]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('');
+  }
+
+  function fillRcReqSelect(){
+    var open = rcReqs.filter(function(r){ return r.status !== 'Closed'; });
+    var sel = document.getElementById('rc-cd-req'), keep = sel.value;
+    sel.innerHTML = open.length
+      ? open.map(function(r){ return '<option value="'+esc(r.item_id)+'">'+esc(r.title)+' — '+esc(r.department||'')+'</option>'; }).join('')
+      : '<option value="">Raise a requisition first</option>';
+    sel.value = keep;
+  }
+
+  function drawRequisitions(){
+    var host = document.getElementById('rc-req-list');
+    if (!rcReqs.length){ host.innerHTML = '<div class="empty"><b>No requisitions raised yet</b></div>'; return; }
+    host.innerHTML = '<table class="t"><thead><tr><th>Position</th><th>Department</th>' +
+      '<th class="r">Positions</th><th class="r">Candidates</th><th>Needed by</th><th class="c">Status</th><th></th></tr></thead><tbody>' +
+      rcReqs.map(function(r){
+        var mine = rcCands.filter(function(c){ return c.reqId === r.item_id; });
+        var late = r.neededBy && r.neededBy < new Date().toISOString().slice(0,10) && r.status !== 'Closed';
+        return '<tr><td><b>'+esc(r.title)+'</b><div class="hint">'+esc(r.reason||'')+'</div></td>' +
+          '<td>'+esc(r.department||'—')+'</td><td class="r">'+esc(r.count||1)+'</td>' +
+          '<td class="r">'+mine.length+'</td>' +
+          '<td'+(late?' style="color:var(--bad,#b03a2e);font-weight:700;"':'')+'>'+(r.neededBy?C.fmtDate(r.neededBy):'—')+'</td>' +
+          '<td class="c"><span class="badge '+(r.status==='Closed'?'series':'sample')+'">'+esc(r.status)+'</span></td>' +
+          '<td>'+(r.status!=='Closed'?'<button class="btn rc-rq-close" data-id="'+esc(r.item_id)+'">Close</button> ':'')+
+          '<button class="btn del rc-rq-del" data-id="'+esc(r.item_id)+'">Delete</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    host.querySelectorAll('.rc-rq-close').forEach(function(b){
+      b.addEventListener('click', async function(){
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:b.dataset.id, status:'Closed', reason:'position filled or withdrawn' }) });
+          loadRecruitment(); } catch(e){ toast(e.message); }
+      });
+    });
+    host.querySelectorAll('.rc-rq-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Deleting this requisition. Why?'); if (!why) return;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:b.dataset.id, remove:true, reason:why }) });
+          loadRecruitment(); } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
+  function rcStructure(annualCtc){
+    return C.api('/api/content').then(function(j){
+      var t = ((j.data||{}).salaryStructure) || {}, m = C.num(annualCtc) / 12;
+      var basic = Math.round(m * C.num(t.basicPct) / 100);
+      var da = Math.round(m * C.num(t.daPct) / 100);
+      var hra = Math.round(m * C.num(t.hraPct) / 100);
+      var conveyance = C.num(t.conveyance);
+      var known = basic + da + hra + conveyance;
+      return { basic:basic, da:da, hra:hra, conveyance:conveyance, special:Math.max(0, Math.round(m - known)), otherAllow:0 };
+    }).catch(function(){ return null; });
+  }
+
+  function rcCandRow(c){
+    var req = rcReqs.filter(function(r){ return r.item_id === c.reqId; })[0];
+    var open = rcExpanded === c.item_id;
+    var badge = c.status === 'Joined' ? 'series' : (c.status === 'Rejected' ? '' : 'sample');
+    var screeningHtml = c.screening ? (
+      '<div class="card" style="margin-top:8px;"><div class="kpi-src"><b>Match against stated requirements</b> · ' +
+      esc(c.screenedOn||'') + '</div>' +
+      '<div class="hint" style="margin-bottom:6px;">Measured against ' +
+      (c.screenedFrom === 'form' ? 'the application form details — no CV text was entered' : 'the pasted CV text') + '.</div>' +
+      (c.matchPct != null ? '<div class="note ' + (c.matchPct>=70?'good':c.matchPct>=40?'':'bad') + '" style="margin-bottom:8px;">' +
+        '<b>' + c.matchPct + '% of stated requirements evidenced</b><br>' + esc(c.recommendation||'') + '</div>' : '') +
+      '<div style="white-space:pre-wrap;font-size:13px;">' + esc(c.screening) + '</div></div>'
+    ) : '';
+    return '<div class="card" style="margin-bottom:10px;">' +
+      '<div class="rc-cand-head" data-cand="'+esc(c.item_id)+'" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
+      '<div><b>'+esc(c.name)+'</b><div class="hint">'+esc(req?req.title:'—')+' · '+esc(c.experience||0)+' yrs · '+
+      (c.expectedCtc ? 'expects ' + C.inr(c.expectedCtc) : 'CTC not stated')+'</div></div>' +
+      '<span class="badge '+badge+'">'+esc(c.status)+'</span></div>' +
+      (open ? (
+        '<div style="margin-top:12px;">' +
+        '<div class="hint">'+esc(c.phone||'')+(c.email?' · '+esc(c.email):'')+' · '+esc(c.qualification||'qualification not recorded')+'</div>' +
+        '<div style="margin-top:8px;"><label>CV text</label><textarea class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="cvText" rows="3">'+esc(c.cvText||'')+'</textarea></div>' +
+        '<div style="margin-top:8px;"><button class="btn ai-btn rc-cd-screen" data-id="'+esc(c.item_id)+'">Evaluate against the role</button></div>' +
+        screeningHtml +
+        '<div class="sub" style="margin-top:12px;">Interview &amp; assessment</div>' +
+        '<div class="row four">' +
+        '<div><label>Interview date</label><input type="date" class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="interviewDate" value="'+esc(c.interviewDate||'')+'"></div>' +
+        '<div><label>Technical /10</label><input class="rc-cd-in num" data-id="'+esc(c.item_id)+'" data-k="techScore" value="'+esc(c.techScore||'')+'"></div>' +
+        '<div><label>HR /10</label><input class="rc-cd-in num" data-id="'+esc(c.item_id)+'" data-k="hrScore" value="'+esc(c.hrScore||'')+'"></div>' +
+        '<div><label>Interviewed by</label><input class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="interviewer" value="'+esc(c.interviewer||'')+'"></div>' +
+        '</div>' +
+        '<div style="margin-top:8px;"><label>Interview notes</label><textarea class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="notes" rows="2">'+esc(c.notes||'')+'</textarea></div>' +
+        '<div class="sub" style="margin-top:12px;">Offer</div>' +
+        '<div class="row four">' +
+        '<div><label>Offered CTC (annual)</label><input class="rc-cd-in num" data-id="'+esc(c.item_id)+'" data-k="offerCtc" value="'+esc(c.offerCtc||'')+'"></div>' +
+        '<div><label>Designation</label><input class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="designation" value="'+esc(c.designation||(req?req.title:''))+'"></div>' +
+        '<div><label>Grade</label><input class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="grade" value="'+esc(c.grade||'')+'"></div>' +
+        '<div><label>Joining date</label><input type="date" class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="joiningDate" value="'+esc(c.joiningDate||'')+'"></div>' +
+        '</div>' +
+        '<div class="hint" id="rc-struct-'+esc(c.item_id)+'" style="margin-top:6px;"></div>' +
+        '<div class="row four" style="margin-top:12px;">' +
+        '<div><label>Stage</label><select class="rc-cd-stage" data-id="'+esc(c.item_id)+'">' +
+        RC_STAGES.map(function(s){ return '<option'+(c.status===s?' selected':'')+'>'+s+'</option>'; }).join('') + '</select></div>' +
+        '</div>' +
+        '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button class="btn gold rc-cd-save" data-id="'+esc(c.item_id)+'">Save</button>' +
+        (['Selected','Offer Made','Joined'].indexOf(c.status) >= 0 && !c.empId
+          ? '<button class="btn rc-cd-join" data-id="'+esc(c.item_id)+'">Convert to employee</button>' : '') +
+        (c.empId ? '<span class="badge series">Employee '+esc(c.empId)+'</span>' : '') +
+        '<button class="btn del rc-cd-del" data-id="'+esc(c.item_id)+'">Delete</button>' +
+        '</div></div>'
+      ) : '') + '</div>';
+  }
+
+  function drawCandidates(){
+    var host = document.getElementById('rc-cand-list');
+    if (!rcCands.length){ host.innerHTML = '<div class="empty"><b>No candidates yet</b></div>'; return; }
+    host.innerHTML = rcCands.map(rcCandRow).join('');
+    host.querySelectorAll('.rc-cand-head').forEach(function(el){
+      el.addEventListener('click', function(){
+        rcExpanded = rcExpanded === el.dataset.cand ? null : el.dataset.cand;
+        drawCandidates();
+      });
+    });
+    host.querySelectorAll('.rc-cd-in').forEach(function(inp){
+      inp.addEventListener('click', function(e){ e.stopPropagation(); });
+      inp.addEventListener('input', function(){
+        var c = rcCands.filter(function(x){ return x.item_id === inp.dataset.id; })[0];
+        if (c) c[inp.dataset.k] = inp.value;
+        if (inp.dataset.k === 'offerCtc') rcShowStructure(inp.dataset.id, inp.value);
+      });
+    });
+    host.querySelectorAll('.rc-cd-save, .rc-cd-screen, .rc-cd-join, .rc-cd-del').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); });
+    });
+    host.querySelectorAll('.rc-cd-stage').forEach(function(sel){
+      sel.addEventListener('click', function(e){ e.stopPropagation(); });
+      sel.addEventListener('change', async function(){
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:sel.dataset.id, status:sel.value, reason:'stage → ' + sel.value }) });
+          loadRecruitment(); } catch(e){ toast(e.message); }
+      });
+    });
+    host.querySelectorAll('.rc-cd-save').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var c = rcCands.filter(function(x){ return x.item_id === b.dataset.id; })[0]; if (!c) return;
+        var data = Object.assign({}, c); delete data.item_id; delete data.status;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:c.item_id, patch:data, reason:'candidate updated' }) });
+          toast('Saved.'); loadRecruitment(); } catch(e){ toast(e.message); }
+      });
+    });
+    host.querySelectorAll('.rc-cd-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Deleting this candidate. Why?'); if (!why) return;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:b.dataset.id, remove:true, reason:why }) });
+          loadRecruitment(); } catch(e){ toast(e.message); }
+      });
+    });
+    host.querySelectorAll('.rc-cd-join').forEach(function(b){
+      b.addEventListener('click', function(){ rcConvertToEmployee(b.dataset.id); });
+    });
+    host.querySelectorAll('.rc-cd-screen').forEach(function(b){
+      b.addEventListener('click', function(){ rcScreenCandidate(b.dataset.id, b); });
+    });
+    rcCands.forEach(function(c){ if (rcExpanded === c.item_id && c.offerCtc) rcShowStructure(c.item_id, c.offerCtc); });
+  }
+
+  function rcShowStructure(candId, annualCtc){
+    var el = document.getElementById('rc-struct-' + candId);
+    if (!el || !C.num(annualCtc)) { if (el) el.textContent = ''; return; }
+    rcStructure(annualCtc).then(function(st){
+      if (!st) return;
+      el.textContent = 'Monthly structure this would produce: Basic ' + C.inr(st.basic) + ' · HRA ' + C.inr(st.hra) +
+        ' · Conveyance ' + C.inr(st.conveyance) + ' · Special ' + C.inr(st.special) +
+        ' — gross ' + C.inr(st.basic+st.da+st.hra+st.conveyance+st.special);
+    });
+  }
+
+  /* ---------------- AI: draft a JD for the requisition being raised ---------------- */
+  async function rcDraftJd(){
+    var title = fieldVal('rc-rq-title'), dept = fieldVal('rc-rq-dept');
+    if (!title) { toast('Enter the position first.'); return; }
+    var btn = document.getElementById('rc-rq-ai');
+    btn.disabled = true; btn.textContent = 'Drafting…';
+    try {
+      var txt = await C.callAI(
+        'Draft a job description for a manufacturing company.\n\nPOSITION: ' + title +
+        '\nDEPARTMENT: ' + (dept || 'not specified') +
+        '\n\nCover, briefly and in plain language: job purpose; key responsibilities; authority; ' +
+        'qualification; experience; technical skills; behavioural competencies; safety ' +
+        'responsibilities; quality responsibilities; and the KPIs this role is measured on.' +
+        '\n\nKeep it under 350 words. Write it as a draft for HR to edit — do not invent ' +
+        'company-specific policies, salary figures or reporting lines.', { maxTokens: 900 });
+      document.getElementById('rc-rq-jd').value = C.stripMarkup(txt);
+      toast('Draft added — edit it before raising.');
+    } catch(e){ toast(e.message); }
+    btn.disabled = false; btn.textContent = 'Draft JD with AI';
+  }
+
+  /* ---------------- AI: evaluate a CV or application-form details against the JD ----------------
+     Same shape and the same rules as every other AI feature on this platform:
+     reads what is actually on file (the JD, the pasted CV text or, failing
+     that, the form fields), scores only against what the JD itself states,
+     and never assesses the person — the hiring decision is not this
+     screen's to make. */
+  async function rcScreenCandidate(candId, btn){
+    var c = rcCands.filter(function(x){ return x.item_id === candId; })[0]; if (!c) return;
+    var req = rcReqs.filter(function(r){ return r.item_id === c.reqId; })[0];
+    var formFacts = [
+      c.qualification ? 'Qualification: ' + c.qualification : '',
+      C.num(c.experience) ? 'Experience: ' + c.experience + ' years' : '',
+      c.currentCtc ? 'Current CTC: ' + c.currentCtc : '',
+      c.expectedCtc ? 'Expected CTC: ' + c.expectedCtc : ''
+    ].filter(Boolean).join('\n');
+    var fromForm = !c.cvText;
+    if (fromForm && !formFacts) { toast('No CV text and nothing on the application details — nothing to measure.'); return; }
+    btn.disabled = true; btn.textContent = 'Reading…';
+    var prompt = 'Compare a CV against the written requirements of a role. Be factual and specific.\n\n' +
+      'ROLE: ' + (req ? req.title : 'not specified') +
+      '\nSTATED REQUIREMENTS (this is the only standard to measure against):\n' +
+      (req ? (req.jd || 'No written requirements — say so and measure nothing.') : 'not specified') +
+      '\n\nWHAT YOU ARE MEASURING: ' + (fromForm
+        ? 'the details entered on the application form. There is no CV text. Say so in your answer, and do not assume anything the form does not state.'
+        : 'the pasted CV text.') +
+      '\n\nDETAILS FROM THE APPLICATION FORM:\n' + (formFacts || '(nothing entered)') +
+      (fromForm ? '' : '\nCV:\n' + (c.cvText || '(none supplied)')) +
+      '\n\nReply in EXACTLY this shape. Three labels, nothing before or after, no JSON, no code ' +
+      'fences, no asterisks and no markdown of any kind:\n\n' +
+      'MATCH: <a whole number 0-100, or the word null if the JD lists no requirements>\n' +
+      'VERDICT: <one sentence, in one of these three shapes>\n' +
+      '  Meets the stated requirements — worth interviewing\n' +
+      '  Partially meets the requirements — interview to clarify [what]\n' +
+      '  Does not evidence the stated requirements — [what is missing]\n' +
+      'DETAIL:\nRequirements evidenced\n- ...\nRequirements not evidenced\n- ...\n' +
+      'Gaps to probe at interview\n- ...\nThree questions to ask\n1. ...\n\n' +
+      'MATCH is the percentage of the requirements actually written in the JD that are evidenced. ' +
+      'Count only requirements stated in the JD.\n\nRules you must follow:\n' +
+      '- Judge the evidence against the written requirements only. Never assess the person\'s worth, potential or fit.\n' +
+      '- Never mention or infer age, sex, marital status, religion, caste, region, community, disability or health.\n' +
+      '- If the CV does not state something, say it is not evidenced rather than assuming either way.\n' +
+      '- A low percentage means the document lacks evidence, not that the person is unsuitable.';
+    try {
+      var txt = await C.callAI(prompt, { maxTokens: 1100 });
+      var m = txt.match(/^\s*MATCH\s*:\s*(null|\d{1,3})/im);
+      var v = txt.match(/^\s*VERDICT\s*:\s*(.+)$/im);
+      var dt = txt.match(/^\s*DETAIL\s*:\s*([\s\S]*)$/im);
+      var pct = m ? (/null/i.test(m[1]) ? null : Math.max(0, Math.min(100, parseInt(m[1],10)))) : null;
+      c.matchPct = pct;
+      c.recommendation = v ? v[1].trim() : '';
+      c.screening = dt ? C.stripMarkup(dt[1]) : C.stripMarkup(txt);
+      c.screenedFrom = fromForm ? 'form' : 'cv';
+      c.screenedOn = new Date().toLocaleString();
+      var data = Object.assign({}, c); delete data.item_id; delete data.status;
+      await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:c.item_id,
+        patch:data, status: c.status === 'Applied' ? 'Screened' : c.status,
+        reason:'AI screening summary generated' }) });
+      loadRecruitment();
+    } catch(e){ toast(e.message); }
+    btn.disabled = false; btn.textContent = 'Evaluate against the role';
+  }
+
+  /* A candidate who has joined becomes an employee the same way Add Employee
+     already assigns an ID — never typed, checked against who is actually on
+     file, not a stored counter. */
+  async function rcConvertToEmployee(candId){
+    var c = rcCands.filter(function(x){ return x.item_id === candId; })[0]; if (!c) return;
+    if (!confirm('Convert ' + c.name + ' to an employee record?')) return;
+    var hm = {}, hrList = [];
+    try { hm = ((await C.api('/api/content')).data || {}).hrMasters || {}; } catch(e){}
+    try { hrList = (await C.api('/api/hr?what=employees')).employees || []; } catch(e){}
+    var used = {}; hrList.forEach(function(x){ used[String(x.empId||'').toUpperCase()] = 1; });
+    var n = C.num(hm.empIdNextSeq) || 1, empId;
+    do { empId = (hm.empIdPrefix || 'EMP') + String(n).padStart(C.num(hm.empIdPad) || 3, '0'); n++; }
+    while (used[empId.toUpperCase()]);
+    var st = c.offerCtc ? await rcStructure(c.offerCtc) : null;
+    var emp = { empId:empId, name:c.name, designation:c.designation||'', department:(rcReqs.filter(function(r){return r.item_id===c.reqId;})[0]||{}).department||'',
+      doj:c.joiningDate || new Date().toISOString().slice(0,10), status:'Probation', phone:c.phone||'',
+      email:c.email||'', grade:c.grade||'', structure: st || undefined };
+    try {
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'employees', employee:emp,
+        reason:'converted from a candidate record' }) });
+      c.empId = empId;
+      var data = Object.assign({}, c); delete data.item_id; delete data.status;
+      await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:c.item_id,
+        patch:data, status:'Joined', reason:'converted to employee ' + empId }) });
+      toast(c.name + ' is now employee ' + empId + '.');
+      loadRecruitment();
     } catch(e){ toast(e.message); }
   }
 
@@ -11031,7 +11463,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['emp','people','Employees','The employee master','s:hrm'],
       ['empbulk','upload','Employee Bulk Upload','Add many employees from a spreadsheet','b:employee'],
       ['punchbulk','dev','Import Device Log','Punches exported from a device that cannot send them','b:punches'],
-      ['recruit','recruit','Recruitment','Requisitions, candidates, offers','e:recruit'],
+      ['recruit','recruit','Recruitment','Requisitions, candidates and the hiring pipeline','s:recruitment'],
       ['engage','engage','Engagement','Surveys, recognition, grievances','e:engage'],
       ['exit','exit','Exit & Full and Final','Resignations, clearance and settlement','e:exit'] ]],
     ['Pay', [
@@ -23636,7 +24068,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      The same /api/hr endpoint the website uses. Nothing is copied and no data
      moves — this is the record opened from the IDMS instead of the website.
      Attendance, leave and payroll follow once this is proven on live data. */
-  var hrPeople = [], hrOpen = null;
+  var hrPeople = [], hrOpen = null, hrIsNew = false;
 
   function hrStatus(s){
     var cls = {Active:'series',Probation:'sample',Notice:'apqp',Exited:'new'}[s] || 'new';
@@ -23694,7 +24126,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   function openPerson(empId){
     var p = hrPeople.filter(function(x){ return x.empId === empId; })[0];
     if (!p) return;
-    hrOpen = p;
+    hrOpen = p; hrIsNew = false;
+    document.getElementById('he-delete').style.display = '';
     var st = p.structure || {};
     var gross = C.num(st.basic)+C.num(st.da)+C.num(st.hra)+C.num(st.conveyance)+
                 C.num(st.special)+C.num(st.otherAllow);
@@ -23708,6 +24141,36 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     set('he-regime',p.taxRegime||'');
     set('he-pfesi',(p.pfApplicable===false?'PF no':'PF yes')+' · '+(p.esiApplicable===false?'ESI no':'ESI yes'));
     document.getElementById('he-status').value = p.status || 'Active';
+    document.getElementById('hr-record').style.display = '';
+    document.getElementById('he-msg').style.display = 'none';
+    document.getElementById('hr-record').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  /* A new employee's ID is auto-assigned, the same prefix + next-free-number
+     scheme Bulk Upload already uses (checked against who is actually on file
+     right now, not a stored counter, so two people adding someone at the
+     same moment can never collide) — never typed, the same way a part
+     number is never typed on Add a Part. */
+  async function addPerson(){
+    var hm = {};
+    try { hm = ((await C.api('/api/content')).data || {}).hrMasters || {}; } catch(e){}
+    var used = {}; hrPeople.forEach(function(x){ used[String(x.empId||'').toUpperCase()] = 1; });
+    var n = C.num(hm.empIdNextSeq) || 1, empId;
+    do { empId = (hm.empIdPrefix || 'EMP') + String(n).padStart(C.num(hm.empIdPad) || 3, '0'); n++; }
+    while (used[empId.toUpperCase()]);
+
+    hrOpen = null; hrIsNew = true;
+    document.getElementById('he-delete').style.display = 'none';
+    document.getElementById('hr-rec-title').textContent = empId + ' — new employee';
+    var set = function(id,v){ document.getElementById(id).value = v == null ? '' : v; };
+    set('he-id', empId); set('he-name',''); set('he-desig',''); set('he-dept','');
+    set('he-doj', new Date().toISOString().slice(0,10));
+    set('he-reports',''); set('he-shift',''); set('he-bio',''); set('he-phone','');
+    set('he-email',''); set('he-loc',''); set('he-grade','');
+    set('he-gross',''); set('he-basic','');
+    set('he-regime','set from Statutory & Masters once saved');
+    set('he-pfesi','set from Statutory & Masters once saved');
+    document.getElementById('he-status').value = 'Active';
     document.getElementById('hr-record').style.display = '';
     document.getElementById('he-msg').style.display = 'none';
     document.getElementById('hr-record').scrollIntoView({behavior:'smooth',block:'start'});
@@ -24246,6 +24709,50 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('ga-dept').addEventListener('change', drawGapAnalysis);
   document.getElementById('ga-print').addEventListener('click', printGapAnalysis);
   document.getElementById('ga-explain').addEventListener('click', explainGapAnalysis);
+
+  document.getElementById('rc-rq-ai').addEventListener('click', rcDraftJd);
+  document.getElementById('rc-rq-create').addEventListener('click', async function(){
+    var title = fieldVal('rc-rq-title'), msg = document.getElementById('rc-rq-msg');
+    var say = noteWriter(msg);
+    if (!title) return say('Enter the position.');
+    var item = { itemId:'REQ-'+Date.now().toString(36).toUpperCase(), kind:'requisition', status:'Open',
+      title:title, department:fieldVal('rc-rq-dept'), count:C.num(fieldVal('rc-rq-count'))||1,
+      neededBy:fieldVal('rc-rq-by')||null, grade:fieldVal('rc-rq-grade'), ctcRange:fieldVal('rc-rq-ctc'),
+      reason:document.getElementById('rc-rq-reason').value, raisedBy:fieldVal('rc-rq-who'),
+      jd:fieldVal('rc-rq-jd') };
+    this.disabled = true;
+    try {
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item, reason:'requisition raised' }) });
+      ['rc-rq-title','rc-rq-dept','rc-rq-grade','rc-rq-ctc','rc-rq-jd','rc-rq-who'].forEach(function(id){
+        document.getElementById(id).value = ''; });
+      document.getElementById('rc-rq-count').value = '1';
+      say('Requisition raised.', true);
+      loadRecruitment();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+  document.getElementById('rc-cd-add').addEventListener('click', async function(){
+    var name = fieldVal('rc-cd-name'), reqId = document.getElementById('rc-cd-req').value;
+    var msg = document.getElementById('rc-cd-msg'), say = noteWriter(msg);
+    if (!name || !reqId) return say('Choose a requisition and enter a name.');
+    var item = { itemId:'CAND-'+Date.now().toString(36).toUpperCase(), kind:'candidate', status:'Applied',
+      name:name, reqId:reqId, phone:fieldVal('rc-cd-phone'), email:fieldVal('rc-cd-email'),
+      qualification:fieldVal('rc-cd-qual'), experience:C.num(fieldVal('rc-cd-exp')),
+      currentCtc:C.num(fieldVal('rc-cd-cctc')), expectedCtc:C.num(fieldVal('rc-cd-ectc')),
+      cvText:fieldVal('rc-cd-cv') };
+    this.disabled = true;
+    try {
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item, reason:'candidate added' }) });
+      ['rc-cd-name','rc-cd-phone','rc-cd-email','rc-cd-qual','rc-cd-exp','rc-cd-cctc','rc-cd-ectc','rc-cd-cv'].forEach(function(id){
+        document.getElementById(id).value = ''; });
+      say('Candidate added.', true);
+      loadRecruitment();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+  document.querySelectorAll('[data-panel="recruitment"] [data-goto]').forEach(function(a){
+    a.addEventListener('click', function(){ go(a.dataset.goto); });
+  });
   document.querySelectorAll('[data-panel="agentic_ai"] [data-goto]').forEach(function(a){
     a.addEventListener('click', function(){ go(a.dataset.goto); });
   });
@@ -24432,6 +24939,36 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     });
     f.click();
   });
+
+  /* Both flush actions stay disabled until the exact phrase is typed — no
+     confirm() dialog, which is too easy to dismiss with a reflexive click;
+     typing the phrase out is deliberately slower and harder to do by
+     accident. The server checks the same phrase again independently. */
+  function wireFlush(scope, phrase, inputId, btnId, msgId){
+    var input = document.getElementById(inputId), btn = document.getElementById(btnId);
+    input.addEventListener('input', function(){ btn.disabled = input.value.trim() !== phrase; });
+    btn.addEventListener('click', async function(){
+      var msg = document.getElementById(msgId), say = noteWriter(msg);
+      if (String(me.role || '').toLowerCase().indexOf('admin') < 0 &&
+          String(me.role || '').toLowerCase() !== 'developer') {
+        return say('This needs an administrator login.');
+      }
+      btn.disabled = true; btn.textContent = 'Working…';
+      try {
+        var j = await C.api('/api/idms?what=flush', { method:'POST',
+          body: JSON.stringify({ scope: scope, confirm: input.value.trim() }) });
+        if (!j || j.ok === false) throw new Error((j && j.error) || 'That did not go through.');
+        say(scope === 'data' ? 'All data and records are gone. Reloading…'
+                              : 'All settings and admin data are gone. Reloading…', true);
+        setTimeout(function(){ location.reload(); }, 1200);
+      } catch(e){
+        say(esc(e.message)); btn.disabled = input.value.trim() !== phrase; btn.textContent = btn.dataset.label;
+      }
+    });
+    btn.dataset.label = btn.textContent;
+  }
+  wireFlush('data', 'FLUSH ALL DATA', 'fl-data-confirm', 'fl-data-go', 'fl-data-msg');
+  wireFlush('settings', 'FLUSH ALL SETTINGS', 'fl-settings-confirm', 'fl-settings-go', 'fl-settings-msg');
 
   document.getElementById('fm-cat').addEventListener('change', draw4MWarning);
   document.getElementById('fm-part2').addEventListener('change', draw4MOps);
@@ -24905,6 +25442,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('hr-q').addEventListener('input', drawHrList);
   document.getElementById('hr-filter').addEventListener('change', drawHrList);
   document.getElementById('hr-refresh').addEventListener('click', loadHrm);
+  document.getElementById('hr-add').addEventListener('click', addPerson);
   document.getElementById('hr-bulk').addEventListener('click', function(){ openBulkUpload('employee'); });
   document.getElementById('he-close').addEventListener('click', function(){
     document.getElementById('hr-record').style.display='none'; hrOpen=null;
@@ -24912,7 +25450,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('he-card').addEventListener('click', printPerson);
 
   document.getElementById('he-save').addEventListener('click', async function(){
-    if (!hrOpen) return;
+    if (!hrOpen && !hrIsNew) return;
     var msg = document.getElementById('he-msg');
     var g = fieldVal;
     if (!g('he-name')){
@@ -24925,12 +25463,12 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
        ID would have one person's attendance marked for both. */
     var bio = g('he-bio');
     if (bio){
-      var clash = hrPeople.filter(function(x){ return x.empId !== hrOpen.empId &&
+      var clash = hrPeople.filter(function(x){ return x.empId !== g('he-id') &&
         String(x.biometricId || x.empId || '').toUpperCase() === bio.toUpperCase(); })[0];
       if (clash){ msg.style.display=''; msg.className='note bad';
         msg.textContent='Biometric ID ' + bio + ' is already ' + clash.name + ' (' + clash.empId + ') — each person needs their own.'; return; }
     }
-    var next = Object.assign({}, hrOpen, {
+    var next = Object.assign({}, hrOpen || { empId: g('he-id') }, {
       name:g('he-name'), designation:g('he-desig'), department:g('he-dept'),
       doj:g('he-doj'), status:document.getElementById('he-status').value,
       reportsTo:g('he-reports'), shift:g('he-shift'), biometricId:bio,
@@ -24939,12 +25477,32 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     this.disabled = true;
     try {
       await C.api('/api/hr',{method:'POST',body:JSON.stringify({what:'employees',
-        employee:next, reason:'edited in the IDMS'})});
-      msg.style.display=''; msg.className='note good'; msg.textContent='Saved.';
+        employee:next, reason: hrIsNew ? 'added in the IDMS' : 'edited in the IDMS'})});
+      msg.style.display=''; msg.className='note good';
+      msg.textContent = hrIsNew ? 'Added.' : 'Saved.';
       var i = hrPeople.findIndex(function(x){ return x.empId===next.empId; });
-      if (i>=0) hrPeople[i]=next;
-      hrOpen = next;
-      drawHrList();
+      if (i>=0) hrPeople[i]=next; else hrPeople.unshift(next);
+      hrOpen = next; hrIsNew = false;
+      document.getElementById('he-delete').style.display = '';
+      document.getElementById('hr-rec-title').textContent = next.empId + ' — ' + (next.name||'');
+      loadHrm();
+    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent=e.message; }
+    this.disabled = false;
+  });
+
+  document.getElementById('he-delete').addEventListener('click', async function(){
+    if (!hrOpen) return;
+    var msg = document.getElementById('he-msg');
+    var why = prompt('Removing ' + (hrOpen.name || hrOpen.empId) + ' (' + hrOpen.empId + '). Why?');
+    if (!why) return;
+    this.disabled = true;
+    try {
+      await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({
+        what:'employees', empId: hrOpen.empId, remove:true, reason: why }) });
+      toast(hrOpen.name + ' removed.');
+      document.getElementById('hr-record').style.display = 'none';
+      hrOpen = null; hrIsNew = false;
+      loadHrm();
     } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent=e.message; }
     this.disabled = false;
   });

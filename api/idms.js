@@ -220,6 +220,50 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, audit: rows });
     }
 
+    /* ---------------- flush: start over, deliberately hard to trigger by
+       accident — a senior role, and the exact phrase the screen made the
+       person type, checked again here rather than trusted from the client. */
+    if (what === 'flush' && req.method === 'POST') {
+      if (!(await checkRole(token, ['developer', 'admin'])))
+        return res.status(403).json({ ok: false, error: 'Only an administrator may do this.' });
+      const scope = String(body.scope || '');
+      const confirm = String(body.confirm || '').trim();
+
+      if (scope === 'data') {
+        if (confirm !== 'FLUSH ALL DATA')
+          return res.status(400).json({ ok: false, error: 'Type the confirmation phrase exactly.' });
+        // records, and whatever is attached to them — not users, not company
+        // profile/branding, not settings, not registered devices
+        for (const t of ['idms_docs', 'idms_parts', 'idms_counters', 'rfqs',
+          'hr_employees', 'hr_attendance', 'hr_leave', 'hr_training', 'hr_items',
+          'hr_payruns', 'hr_audit', 'hr_punches', 'ppc_orders', 'assets']) {
+          await sql.query(`DELETE FROM ${t}`);
+        }
+        // idms_audit last, and only after everything else is gone, so the one
+        // thing left on record is the flush itself — never a silent wipe
+        await sql`DELETE FROM idms_audit`;
+        await audit(who, 'system', 'flush-data', 'flush', null, null,
+          body.reason || 'Flushed all data and records');
+        return res.status(200).json({ ok: true, flushed: 'data' });
+      }
+
+      if (scope === 'settings') {
+        if (confirm !== 'FLUSH ALL SETTINGS')
+          return res.status(400).json({ ok: false, error: 'Type the confirmation phrase exactly.' });
+        // whatever makes this deployment look like THIS company — branding,
+        // provider keys, registered devices — not users, and not a single
+        // record of data; a fresh customer's data still needs Flush Data too
+        for (const t of ['site_content', 'idms_settings', 'secrets', 'login_codes', 'hr_devices']) {
+          await sql.query(`DELETE FROM ${t}`);
+        }
+        await audit(who, 'system', 'flush-settings', 'flush', null, null,
+          body.reason || 'Flushed all settings and admin data for a fresh deploy');
+        return res.status(200).json({ ok: true, flushed: 'settings' });
+      }
+
+      return res.status(400).json({ ok: false, error: 'Unknown scope — expected "data" or "settings".' });
+    }
+
     return res.status(400).json({ ok: false, error: 'Unknown request: ' + what });
   } catch (e) {
     console.log('idms error:', e.message);

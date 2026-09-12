@@ -2367,3 +2367,86 @@ the one with the wild outlier) was left untouched and still passes
 unmodified — its 22-reading set happens not to trigger any of the three
 new rules, which is a fact about that particular data, not a gap in the
 new logic.
+
+## Flush Data, Flush Settings, manual Employee CRUD, and a first native slice of Recruitment
+
+Four separate requests, done in one pass.
+
+**Two flush actions**, Admin → Backup & Restore, `what=flush` on `api/idms.js`
+(new — nothing else in the codebase needed a bulk wipe before). Both are
+gated behind typing an exact phrase into a text box rather than a
+dismissible `confirm()`, checked again server-side, and restricted to
+developer/admin:
+- **Flush all data and records** — every part, order, routing, PFMEA,
+  control plan, production booking, attendance record, punch, payslip and
+  uploaded attachment. Explicitly does NOT touch company profile, branding,
+  users, provider keys, or registered devices — the same team can carry
+  straight on entering fresh data. `idms_audit` is wiped last, then one
+  fresh audit row is written recording the flush itself, so the trail is
+  never silently empty.
+- **Flush all settings & admin data** — company profile/branding, website
+  content and pricing, print/home settings, AI/email/WhatsApp provider keys,
+  registered devices. Explicitly does NOT touch user accounts (remove those
+  from User Management yourself — a self-service button that can lock out
+  the person clicking it is the wrong shape for this) and does NOT touch any
+  data — run Flush Data too if a new customer needs a genuinely blank slate.
+
+Tested in `tests/flushtest.mjs`: the button gate (near-miss phrases,
+including the OTHER scope's own phrase, do not enable it), that each button
+sends its own scope, and that a server-side rejection is surfaced rather
+than swallowed.
+
+**Manual Add/Edit/Delete on People** (`hrm`). Turned out the backend already
+supported Add and Edit through one upsert endpoint, and Delete already
+existed — just no UI for any of the first two, and Delete had no role or
+reason check, unlike every other deletion on this platform. Added that check
+to `api/hr.js`, and built the missing "Add employee" / "Delete employee"
+buttons. A new employee's ID is auto-assigned — the exact prefix + next-free
+scheme Bulk Upload already uses, checked against who is actually on file
+rather than a stored counter — never typed, the same way a part number is
+never typed on Add a Part. Tested in `tests/employeecrudtest.mjs`.
+
+**Recruitment — investigated first, then split into two phases.** The ask
+was to hide the other tabs in the embedded Recruitment view and get it off
+the website. Checking `openTarget('hr')` found something more serious than
+extra tabs: the whole embedded HR engine (Recruitment, Leave, Engagement,
+Exit, Payroll, Statutory, KPI, Policies, Audit) is hard-gated to the
+developer login — `if(currentRole!=='developer'){ toast('HR records need
+the developer login.'); return; }` — so no other role could open any of it
+at all, regardless of what IDMS's own User Management grants them. That
+changed this from a cosmetic fix to a real functional gap.
+
+Phase 1, built now: a native **Recruitment** screen (`recruitment`, a proper
+MENU entry under HRM, also reachable from HR & Payroll's Recruitment tile,
+now `s:recruitment` instead of `e:recruit`) — requisitions, AI JD drafting,
+candidates, the full seven-stage pipeline, AI CV-match screening (same
+MATCH/VERDICT/DETAIL reply shape and the same "never assess the person,
+only what's evidenced" rules the website's version used), and Convert to
+Employee, which auto-assigns an ID the same way Add Employee does. No server
+changes needed — `requisition`/`candidate` are already generic `hr_items`
+records behind `/api/hr?what=items`, the exact endpoint the website's own
+version used, so this reads and writes the same data, not a second,
+competing copy of anyone's hiring history.
+
+Phase 2, deliberately not built yet, flagged on the screen itself so nobody
+mistakes the gap for an oversight: interview invitations by email/WhatsApp,
+offer-letter generation with editable terms templates, and the quick
+candidate-message templates. Each touches sending/document infrastructure
+this pass did not verify end to end, and a broken offer letter or a missed
+candidate email is a real cost, not a cosmetic one — worth its own pass
+rather than rushing it alongside everything else here.
+
+Tested in `tests/recruitmenttest.mjs`: raising a requisition, adding a
+candidate, the AI screening call and reply parsing (including that a low
+match does not auto-move the stage — the hiring decision stays human), a
+manual stage change, and Convert to Employee producing a real, auto-ID'd
+employee record linked back to the candidate.
+
+**Still openly running from the website**, for whoever picks up Phase 2 or
+the rest of this migration next: Leave, Engagement, Exit, Payroll,
+Statutory, KPI, Policies, Audit-Readiness, Audit Trail (all still `e:`
+tiles in `HP_TILES`, still behind the developer-only gate), and the RFQ
+Pipeline (`emb_pipeline`). Recruitment is the first of these moved
+natively; the pattern here — reuse the existing generic endpoint, port the
+same AI prompts verbatim, defer anything touching send/document
+infrastructure to its own pass — is the one to repeat for the rest.

@@ -111,6 +111,16 @@ check('the existing employee is in the list to open', !!openBtn);
 click(openBtn);
 await wait(100);
 check('the delete button is shown for an existing record', $('he-delete').style.display !== 'none');
+
+// row-level Edit/Delete must work without opening the profile card first —
+// the original ask was for these outside the profile, not only inside it
+nav('hrm');
+await wait(300);
+const rowDelBtn = window.document.querySelector('.hr-row-del[data-id="EMP001"]');
+check('a Delete button sits directly on the row, not only inside the opened profile', !!rowDelBtn);
+check('an Edit button (not "Open") sits on the row too',
+  window.document.querySelector('.hr-open[data-id="EMP001"]').textContent.trim() === 'Edit');
+
 set('he-desig', 'Senior Supervisor');
 click($('he-save'));
 await wait(200);

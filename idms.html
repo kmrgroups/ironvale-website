@@ -15,21 +15,25 @@
    Laid out to match the screen the team already works to, but every name,
    logo and tagline is read from the database rather than written in. */
 .top{background:linear-gradient(135deg,var(--navy),var(--navy-deep));color:#fff;
-  padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  position:relative;z-index:600;}
 .top .id{display:flex;align-items:center;gap:11px;min-width:0;}
 .top .id img{height:40px;width:40px;object-fit:contain;background:#fff;border-radius:8px;padding:3px;}
 .top .id .mark{height:40px;width:40px;border-radius:8px;background:var(--gold);color:#fff;
   display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:15px;}
 .top .id .co{font-family:var(--disp);font-weight:800;font-size:15px;line-height:1.15;}
 .top .id .tag{font-family:var(--mono);font-size:10px;opacity:.7;letter-spacing:.04em;}
-.top .tsearch{position:relative;width:230px;flex:0 0 auto;}
+.top .tdivider{width:1px;align-self:stretch;background:rgba(255,255,255,.16);margin:2px 2px;flex:0 0 auto;}
+.top .tsearch{position:relative;width:250px;flex:0 0 auto;}
 .top .tsearch input{width:100%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
-  border-radius:9px;color:#fff;font-family:var(--body);font-size:12.5px;padding:8px 11px;outline:none;}
+  border-radius:9px;color:#fff;font-family:var(--body);font-size:12.5px;padding:8px 11px 8px 32px;outline:none;}
+.top .tsearch::before{content:'🔍';position:absolute;left:11px;top:50%;transform:translateY(-50%);
+  font-size:11px;opacity:.55;pointer-events:none;}
 .top .tsearch input::placeholder{color:rgba(255,255,255,.55);}
 .top .tsearch input:focus{border-color:var(--gold,#c2932e);background:rgba(255,255,255,.18);}
-.top .tsearch #t-search-results{display:none;position:absolute;top:calc(100% + 6px);left:0;width:280px;
+.top .tsearch #t-search-results{display:none;position:absolute;top:calc(100% + 8px);left:0;width:300px;
   background:#fff;border-radius:10px;box-shadow:var(--shadow-md);overflow:hidden;z-index:60;
-  max-height:340px;overflow-y:auto;}
+  max-height:340px;overflow-y:auto;border:1px solid var(--line);}
 .top .tsearch #t-search-results.show{display:block;}
 .top .tsearch .tsr-group{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
   color:var(--ink-soft,#7c8cab);padding:8px 12px 3px;}
@@ -39,6 +43,8 @@
 .top .tsearch .tsr-item .ic{font-size:15px;width:20px;text-align:center;flex:0 0 auto;}
 .top .tsearch .tsr-item .lbl{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .top .tsearch .tsr-item .grp{font-size:10px;color:var(--ink-soft,#7c8cab);flex:0 0 auto;}
+.top .tsearch .tsr-item.notlive{opacity:.6;}
+.top .tsearch .tsr-item.notlive .grp:first-of-type{color:var(--gold-deep,#8e6a19);font-weight:700;}
 .top .tsearch .tsr-empty{padding:12px;font-size:12.5px;color:var(--ink-soft,#7c8cab);}
 .top .spacer{flex:1 1 auto;}
 .top .chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.10);
@@ -627,6 +633,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       <div><div class="co" id="t-co">—</div>
         <div class="tag">Agentic AI — Intelligent Digital Manufacturing System</div></div>
     </div>
+    <div class="tdivider"></div>
     <div class="tsearch" id="t-search-wrap">
       <input type="text" id="t-search" placeholder="Search screens… (e.g. calibration, routing)" autocomplete="off">
       <div id="t-search-results"></div>
@@ -641,6 +648,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       style="cursor:pointer;font-family:inherit;color:#fff;"><span class="dot off"></span><span id="t-dbtext">Checking…</span></button>
     <button class="chip" id="t-faceid" title="Set up or manage Face ID sign-in for your own account"
       style="cursor:pointer;font-family:inherit;color:#fff;display:none;">🙂 Set up Face ID</button>
+    <div class="tdivider"></div>
     <div class="who"><div class="av" id="t-av">?</div>
       <div><b id="t-user">—</b><span id="t-role"></span></div></div>
     <a class="btn ghost" href="/" style="text-decoration:none;line-height:1.9;">Website</a>
@@ -4661,12 +4669,13 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   /* ---------------- title-bar search ----------------
      Built once, straight off MENU — the same list the menu itself is drawn
      from, so a screen can never be searchable here and missing from the menu,
-     or the other way round. Screens not yet built (no LIVE flag) are left out
-     on purpose: searching one up would only land on the "not built yet"
-     placeholder. */
-  var SEARCH_INDEX = [{ screen:'home', icon:'🏠', label:'Home', dept:'' }];
+     or the other way round. Screens not yet built are still included —
+     leaving them out made a screen someone knows is on the menu (P&L, say)
+     look like it could not be found at all, which reads as more broken than
+     landing on the honest "not built yet" placeholder does. */
+  var SEARCH_INDEX = [{ screen:'home', icon:'🏠', label:'Home', dept:'', live:true }];
   MENU.forEach(function(g){ g[4].forEach(function(it){
-    if (it[3]) SEARCH_INDEX.push({ screen:it[0], icon:it[1], label:it[2], dept:g[2] });
+    SEARCH_INDEX.push({ screen:it[0], icon:it[1], label:it[2], dept:g[2], live: !!it[3] });
   });});
 
   function tSearchMatches(q){
@@ -4694,8 +4703,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       return;
     }
     host.innerHTML = items.map(function(x, i){
-      return '<div class="tsr-item' + (i===0?' sel':'') + '" data-screen="' + esc(x.screen) + '">' +
+      return '<div class="tsr-item' + (i===0?' sel':'') + (x.live?'':' notlive') + '" data-screen="' + esc(x.screen) + '">' +
         '<span class="ic">' + x.icon + '</span><span class="lbl">' + esc(x.label) + '</span>' +
+        (x.live ? '' : '<span class="grp">not built yet</span>') +
         (x.dept ? '<span class="grp">' + esc(x.dept) + '</span>' : '') + '</div>';
     }).join('');
     host.classList.add('show');
@@ -24597,7 +24607,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       host.innerHTML = '<div class="empty"><b>' +
         (hrPeople.length ? 'Nobody matches that' : 'No employees on file') + '</b>' +
         (hrPeople.length ? 'Clear the search or change the filter.'
-                         : 'People are added on the website for now.') + '</div>';
+                         : 'Press Add employee above, or Bulk upload employees for many at once.') + '</div>';
       return;
     }
     host.innerHTML = '<table class="t"><thead><tr><th>ID</th><th>Name</th><th>Designation</th>' +
@@ -24607,11 +24617,34 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           '<td>'+esc(p.designation||'—')+'</td><td>'+esc(p.department||'—')+'</td>'+
           '<td class="hint">'+C.fmtDate(p.doj)+'</td>'+
           '<td class="c">'+hrStatus(p.status)+'</td>'+
-          '<td><button class="btn hr-open" data-id="'+esc(p.empId)+'">Open</button></td></tr>';
+          '<td style="white-space:nowrap;"><button class="btn hr-open" data-id="'+esc(p.empId)+'">Edit</button> ' +
+          '<button class="btn del hr-row-del" data-id="'+esc(p.empId)+'">Delete</button></td></tr>';
       }).join('') + '</tbody></table>';
     host.querySelectorAll('.hr-open').forEach(function(b){
       b.addEventListener('click', function(){ openPerson(b.dataset.id); });
     });
+    host.querySelectorAll('.hr-row-del').forEach(function(b){
+      b.addEventListener('click', function(){ hrDeletePerson(b.dataset.id); });
+    });
+  }
+
+  /* Shared by the Delete button in the list (no need to open the profile
+     first) and the Delete button inside an opened profile — one path, one
+     reason prompt, so the two can never behave differently. */
+  async function hrDeletePerson(empId){
+    var p = hrPeople.filter(function(x){ return x.empId === empId; })[0];
+    var why = prompt('Removing ' + (p ? (p.name || p.empId) : empId) + '. Why?');
+    if (!why) return;
+    try {
+      await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({
+        what:'employees', empId: empId, remove:true, reason: why }) });
+      toast((p ? p.name : empId) + ' removed.');
+      if (hrOpen && hrOpen.empId === empId){
+        document.getElementById('hr-record').style.display = 'none';
+        hrOpen = null; hrIsNew = false;
+      }
+      loadHrm();
+    } catch(e){ toast(e.message); }
   }
 
   function openPerson(empId){
@@ -26072,21 +26105,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     this.disabled = false;
   });
 
-  document.getElementById('he-delete').addEventListener('click', async function(){
+  document.getElementById('he-delete').addEventListener('click', function(){
     if (!hrOpen) return;
-    var msg = document.getElementById('he-msg');
-    var why = prompt('Removing ' + (hrOpen.name || hrOpen.empId) + ' (' + hrOpen.empId + '). Why?');
-    if (!why) return;
-    this.disabled = true;
-    try {
-      await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({
-        what:'employees', empId: hrOpen.empId, remove:true, reason: why }) });
-      toast(hrOpen.name + ' removed.');
-      document.getElementById('hr-record').style.display = 'none';
-      hrOpen = null; hrIsNew = false;
-      loadHrm();
-    } catch(e){ msg.style.display=''; msg.className='note bad'; msg.textContent=e.message; }
-    this.disabled = false;
+    hrDeletePerson(hrOpen.empId);
   });
 
   /* the override offered in the message above */

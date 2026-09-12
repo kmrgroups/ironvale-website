@@ -1,18 +1,49 @@
-/* An in-memory stand-in for api/_db.js, used only by devicetest.mjs so the real
-   device endpoint can be driven end to end without a database. It answers the
-   handful of statements api/device.js issues, matched on their text; anything
-   it does not recognise throws, so a new query cannot pass silently. */
+/* An in-memory stand-in for api/_db.js, used by devicetest.mjs (the device
+   endpoint end to end) and flushservertest.mjs (the real flush handler in
+   api/idms.js end to end). It answers the handful of statements those two
+   endpoints issue, matched on their text; anything it does not recognise
+   throws, so a new query can never pass silently. */
 import crypto from 'crypto';
 export const hash = s => crypto.createHash('sha256').update(String(s)).digest('hex');
-export const db = { devices: {}, punches: {}, attendance: {}, employees: [], settings: {}, content: {}, audit: [], sessions: {} };
+export const db = {
+  devices: {}, punches: {}, attendance: {}, employees: [], settings: {}, content: {}, audit: [], sessions: {},
+  /* one array per table the flush endpoint can wipe, plus idmsAudit for the
+     self-log entry it writes afterwards — real row counts, so a test can
+     assert both "this got emptied" and "that did not" */
+  idmsDocs: [1], idmsParts: [1], idmsCounters: [1], rfqs: [1], hrEmployees: [1], hrAttendance: [1],
+  hrLeave: [1], hrTraining: [1], hrItems: [1], hrPayruns: [1], hrAuditRows: [1], hrPunches: [1],
+  ppcOrders: [1], assets: [1], siteContent: [1], idmsSettings: [1], secrets: [1], loginCodes: [1],
+  hrDevices: [1], idmsAudit: [1]
+};
 export async function ensureTables() {}
 export function cors() {}
 export async function tokenUser(t) { return db.sessions[t] || null; }
+export async function checkToken(t) { return !!(await tokenUser(t)); }
+export function readBody(req) { return typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {}); }
+export async function checkRole(t, roles) {
+  const u = db.sessions[t];
+  return u && roles.includes(u.role) ? u : null;
+}
+
+const FLUSH_TABLE_KEY = {
+  idms_docs: 'idmsDocs', idms_parts: 'idmsParts', idms_counters: 'idmsCounters', rfqs: 'rfqs',
+  hr_employees: 'hrEmployees', hr_attendance: 'hrAttendance', hr_leave: 'hrLeave',
+  hr_training: 'hrTraining', hr_items: 'hrItems', hr_payruns: 'hrPayruns', hr_audit: 'hrAuditRows',
+  hr_punches: 'hrPunches', ppc_orders: 'ppcOrders', assets: 'assets', site_content: 'siteContent',
+  idms_settings: 'idmsSettings', secrets: 'secrets', login_codes: 'loginCodes', hr_devices: 'hrDevices',
+  idms_audit: 'idmsAudit'
+};
 
 export function sql(strings, ...vals) {
   const text = strings.join('?').replace(/\s+/g, ' ').trim();
   const v = vals;
   const T = re => re.test(text);
+  const delMatch = text.match(/^DELETE FROM (\w+)$/);
+  if (delMatch && FLUSH_TABLE_KEY[delMatch[1]]) { db[FLUSH_TABLE_KEY[delMatch[1]]].length = 0; return []; }
+  if (T(/^INSERT INTO idms_audit \(who, kind, ref, action, before_val, after_val, reason\)/)) {
+    db.idmsAudit.push({ who: v[0], kind: v[1], ref: v[2], action: v[3], reason: v[6] });
+    return [];
+  }
   if (T(/^SELECT data FROM idms_settings WHERE key = 'attendance_devices'/))
     return db.settings.attendance_devices ? [{ data: db.settings.attendance_devices }] : [];
   if (T(/^SELECT data FROM site_content WHERE id = 1/)) return [{ data: db.content }];

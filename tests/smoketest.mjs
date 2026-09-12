@@ -277,6 +277,28 @@ check('clicking a search result opens that screen',
   window.document.querySelector('[data-panel="report_calibration"]').classList.contains('on'));
 check('the search box clears itself after navigating', tSearch.value === '');
 
+// a screen not yet built (P&L) must still be findable — not finding it at
+// all read as more broken than landing on the honest placeholder does
+tSearch.dispatchEvent(new window.Event('focus'));
+tSearch.value = 'P&L';
+tSearch.dispatchEvent(new window.Event('input', { bubbles: true }));
+await wait(50);
+const plResults = [...window.document.querySelectorAll('#t-search-results .tsr-item')];
+check('a not-yet-built screen (P&L) is still searchable',
+  plResults.some(r => r.dataset.screen === 'accounts_pl'), plResults.map(r => r.textContent).join(' | '));
+check('it is visibly marked as not built yet, not presented as a normal result',
+  plResults.some(r => r.dataset.screen === 'accounts_pl' && /not built yet/i.test(r.textContent)));
+tSearch.value = ''; tSearch.dispatchEvent(new window.Event('input', { bubbles: true }));
+await wait(50);
+
+// the dropdown must render above the menu bar, not behind it (a real bug:
+// .menubar had an explicit z-index and .top, its sibling, did not, so the
+// whole dropdown painted underneath the menu bar regardless of its own z-index)
+const topZ = Number(window.getComputedStyle(window.document.querySelector('.top')).zIndex);
+const menubarZ = Number(window.getComputedStyle(window.document.querySelector('.menubar')).zIndex);
+check('the title bar sits above the menu bar in the stacking order, so its dropdown is never hidden behind it',
+  topZ > menubarZ, 'top z-index=' + topZ + ', menubar z-index=' + menubarZ);
+
 // ---- 14. Agentic AI hub ----
 nav('agentic_ai');
 await wait(150);

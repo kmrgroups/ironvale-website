@@ -2519,3 +2519,61 @@ the Control Tower reading a live cross-screen summary rather than being a
 static page. `node --check` after every edit; full suite (31 files now)
 clean throughout — same 2 pre-existing, unrelated smoketest failures the
 whole way, nothing new broken.
+
+## Bug fixes from real usage — flush crash, search, title bar, employee row actions
+
+Reported directly from a live deployment, with screenshots. Five real bugs,
+one clarification.
+
+**Flush All Data crashed in production**: `sql.query is not a function`.
+The driver actually deployed does not expose `.query()` — interpolating a
+table name into the tagged-template `sql` isn't possible either (the
+template tag binds interpolated values as query parameters, not
+identifiers), so each table now gets its own literal `sql\`DELETE FROM
+x\`` statement via a `flushTable()` switch, the same pattern every other
+query in this file already uses. This is exactly the class of bug that
+only shows up against a *real* driver, and the original `flushtest.mjs`
+entirely mocked the client's fetch, so it could not have caught it —
+`tests/fake-db.mjs` was extended with `checkRole`, `checkToken`, `readBody`,
+and a literal-table-name DELETE matcher, and a new `flushservertest.mjs`
+drives the actual exported handler in `api/idms.js`, the same end-to-end
+pattern `devicetest.mjs` already used for `api/device.js`. Proved it would
+have caught the original bug by reintroducing `sql.query(...)` on one line,
+confirming 7 of 18 checks fail, then reverting.
+
+**Search dropdown hid behind the menu bar**: `.menubar` had an explicit
+`z-index:500`; `.top` (holding the search box) had none, so its entire
+subtree — including the dropdown's own `z-index:60` — lost to the menu
+bar regardless, since z-index only competes within a shared stacking
+context and `.top` never entered one. Fixed by giving `.top` its own
+`position:relative;z-index:600`.
+
+**Search excluded screens not yet built** (P&L, etc.) — deliberate at the
+time, but wrong: not finding a screen you know exists reads as more broken
+than landing on the honest "not built yet" placeholder. `SEARCH_INDEX` now
+carries every menu item regardless of its LIVE flag, with a `not built yet`
+label on the ones that aren't.
+
+**Title bar reorganised**: dividers between identity / search / utility
+chips / user, a search icon inside the box, dropdown widened from 280px to
+300px with its own border for definition against light card backgrounds.
+
+**Employee row actions were only inside the opened profile.** The original
+ask was for Add/Edit/Delete outside the profile too — `drawHrList()` now
+puts Edit and Delete directly on each row (`hr-open` renamed to read
+"Edit", not "Open"); deleting no longer requires opening the record first.
+Both the row's Delete and the profile's own Delete now call one shared
+`hrDeletePerson()` so the two can never prompt or behave differently.
+
+**Recruitment "hidden tab"**: there isn't one. Recruitment is a fully
+standalone native screen with no tab bar — nothing hidden via CSS, unlike
+the website's old embedded version. What was likely meant is the
+deferred-features note (interview invites, offer letters), which sits as a
+hint at the top of the Recruitment screen itself.
+
+Tests added/extended: `flushservertest.mjs` (new, 18 checks against the
+real handler), `smoketest.mjs` (+3: P&L searchable and marked not-built,
+title bar z-index above the menu bar's), `employeecrudtest.mjs` (+2:
+row-level Delete button present, row button reads "Edit" not "Open").
+Full suite (32 files) clean throughout — same 2 pre-existing, unrelated
+smoketest failures, nothing new broken.

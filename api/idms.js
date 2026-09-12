@@ -229,6 +229,38 @@ export default async function handler(req, res) {
       const scope = String(body.scope || '');
       const confirm = String(body.confirm || '').trim();
 
+      /* One literal DELETE per table, the same tagged-template `sql` used by
+         every other query in this file — no `sql.query(...)`, which is not
+         a method this driver actually exposes (interpolating a table name
+         into a tagged template isn't possible either, since the template
+         tag binds interpolated values as query parameters, not identifiers,
+         so each table needs its own literal statement rather than a loop
+         building the SQL text itself). */
+      async function flushTable(t) {
+        switch (t) {
+          case 'idms_docs': return sql`DELETE FROM idms_docs`;
+          case 'idms_parts': return sql`DELETE FROM idms_parts`;
+          case 'idms_counters': return sql`DELETE FROM idms_counters`;
+          case 'rfqs': return sql`DELETE FROM rfqs`;
+          case 'hr_employees': return sql`DELETE FROM hr_employees`;
+          case 'hr_attendance': return sql`DELETE FROM hr_attendance`;
+          case 'hr_leave': return sql`DELETE FROM hr_leave`;
+          case 'hr_training': return sql`DELETE FROM hr_training`;
+          case 'hr_items': return sql`DELETE FROM hr_items`;
+          case 'hr_payruns': return sql`DELETE FROM hr_payruns`;
+          case 'hr_audit': return sql`DELETE FROM hr_audit`;
+          case 'hr_punches': return sql`DELETE FROM hr_punches`;
+          case 'ppc_orders': return sql`DELETE FROM ppc_orders`;
+          case 'assets': return sql`DELETE FROM assets`;
+          case 'site_content': return sql`DELETE FROM site_content`;
+          case 'idms_settings': return sql`DELETE FROM idms_settings`;
+          case 'secrets': return sql`DELETE FROM secrets`;
+          case 'login_codes': return sql`DELETE FROM login_codes`;
+          case 'hr_devices': return sql`DELETE FROM hr_devices`;
+          default: throw new Error('Unknown table: ' + t);
+        }
+      }
+
       if (scope === 'data') {
         if (confirm !== 'FLUSH ALL DATA')
           return res.status(400).json({ ok: false, error: 'Type the confirmation phrase exactly.' });
@@ -237,7 +269,7 @@ export default async function handler(req, res) {
         for (const t of ['idms_docs', 'idms_parts', 'idms_counters', 'rfqs',
           'hr_employees', 'hr_attendance', 'hr_leave', 'hr_training', 'hr_items',
           'hr_payruns', 'hr_audit', 'hr_punches', 'ppc_orders', 'assets']) {
-          await sql.query(`DELETE FROM ${t}`);
+          await flushTable(t);
         }
         // idms_audit last, and only after everything else is gone, so the one
         // thing left on record is the flush itself — never a silent wipe
@@ -254,7 +286,7 @@ export default async function handler(req, res) {
         // provider keys, registered devices — not users, and not a single
         // record of data; a fresh customer's data still needs Flush Data too
         for (const t of ['site_content', 'idms_settings', 'secrets', 'login_codes', 'hr_devices']) {
-          await sql.query(`DELETE FROM ${t}`);
+          await flushTable(t);
         }
         await audit(who, 'system', 'flush-settings', 'flush', null, null,
           body.reason || 'Flushed all settings and admin data for a fresh deploy');

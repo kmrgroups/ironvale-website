@@ -136,11 +136,11 @@ check('signed in — app visible', $('app').style.display === '');
 
 // ---- 3. the menu ----
 const groups = [...window.document.querySelectorAll('#menubar .mgroup > a')].map(b => b.textContent.trim());
-/* 'Live Production' was added between Accounts and Admin, and 'Masters' between
-   QMS and Marketing, after this list was written — the positional check below
-   reported the whole menu as misordered each time. The order asked for is
-   otherwise unchanged. */
-const want = ['Home', 'Top Management', 'QMS', 'Masters', 'Marketing', 'NPD', 'Purchase & SCM',
+/* 'Live Production' was added between Accounts and Admin, 'Masters' between
+   QMS and Marketing, and 'Agentic AI' right after Home, after this list was
+   written — the positional check below reported the whole menu as misordered
+   each time. The order asked for is otherwise unchanged. */
+const want = ['Home', 'Agentic AI', 'Top Management', 'QMS', 'Masters', 'Marketing', 'NPD', 'Purchase & SCM',
   'PPC & MMD', 'Production', 'Quality Assurance', 'Maintenance', 'HRM', 'Accounts',
   'Live Production', 'Admin'];
 want.forEach(w => check('menu has ' + w, groups.some(g => g.includes(w)), groups.join(' | ')));
@@ -258,6 +258,30 @@ check('the hero banner on Home reads from the website\'s own content record',
 check('token is kept in sessionStorage, so it does not cross into a new tab',
   window.sessionStorage.getItem('app_token') === 'TOK', window.sessionStorage.getItem('app_token'));
 check('token is not left in localStorage', !window.localStorage.getItem('app_token'));
+
+// ---- 13. Agentic AI hub ----
+nav('agentic_ai');
+await wait(150);
+const aaTiles = [...window.document.querySelectorAll('#aa-tiles .aa-tile')];
+check('agentic AI hub shows at least one tile per department with an agent',
+  aaTiles.length >= 15, 'tiles=' + aaTiles.length);
+check('agentic AI hub groups tiles under department headings',
+  window.document.querySelectorAll('#aa-tiles .bu-group').length >= 6);
+check('clicking a tile opens that screen',
+  (() => {
+    const t = window.document.querySelector('#aa-tiles [data-screen="maintenance"]');
+    if (!t) return false;
+    t.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    return true;
+  })());
+await wait(150);
+check('tile click actually navigated to the agent\'s own screen',
+  window.document.querySelector('[data-panel="maintenance"]').classList.contains('on'));
+nav('agentic_ai');
+await wait(2000);
+const badges = [...window.document.querySelectorAll('.aa-badge')];
+check('every tile\'s gap badge resolved to a number or a dash, not left "checking"',
+  badges.every(b => b.textContent !== '…'), badges.map(b => b.id + '=' + b.textContent).join(', '));
 
 // ---- diagnostics ----
 console.log('\nWhat each dashboard drew:');

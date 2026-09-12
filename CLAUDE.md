@@ -2214,3 +2214,41 @@ clean after every conversion (same 2 pre-existing smoketest failures
 throughout, nothing new), and a plain manual sanity check of the TASK block
 parser against a sample AI reply before trusting it in seven functions at
 once.
+
+## Agentic AI hub — a new top-level menu entry
+
+Added `Agentic AI` as the first item in the menu, right after Home. One
+screen (`agentic_ai`), showing every agent built in parts 1–3 above as a
+square tile (reusing the `.bu-tile`/`.bu-tilegrid`/`.bu-group` classes Bulk
+Upload and HR & Payroll already use, so no new visual language), grouped
+under the same department headings the main menu itself uses.
+
+Two kinds of tile, `AA_TILES` in the code:
+- **`auto`** — agents that work over a whole list (Preventive Maintenance,
+  Skill Gap Analysis, Calibration, Production/Capacity/Loading Plan, Supplier
+  Watch, Audit Readiness, Works Dashboard). Each tile's badge is a live count
+  — read straight from the same module-level array the screen's own table
+  draws from, by literally calling that screen's own `load...()` function
+  and then reading the result, so the hub can never show a number the real
+  screen would disagree with. Each also gets a **"Fix with AI →"** link that
+  navigates to the screen and then calls that screen's own `load` then
+  `explain`/`brief`/`run` function in sequence — the exact two clicks a
+  person would make themselves, done for them. Still only *proposes*:
+  whatever gets written lands as `aiProposed` and is reviewed on Review
+  Agent Work exactly as before, nothing here saves anything by itself.
+- **`open`** — agents that work on one part or one record at a time (PFMEA,
+  Control Plan, CNC Programme, NPD Agent, Non-conformance & 8D, Control
+  Charts, 4M Change, HR Recruitment, RFQ Pipeline). There is no single "run
+  it" for these that would not mean silently choosing a part, a record, or a
+  customer on the person's behalf, so the tile only opens the screen. Where
+  a real count exists — parts with no routing/PFMEA/control plan yet — it is
+  still computed and shown (`partsGap()`, one cheap parts+kind query, cached
+  per kind across tiles), so the gap is visible before deciding what to open.
+
+`node tests/smoketest.mjs` gained its own section for this: tile count and
+grouping, that a tile click actually navigates to that agent's screen, and
+that every badge resolves (to a number or a dash) rather than being left on
+its "checking…" placeholder. `tests/smoketest.mjs`'s menu-order check was
+also updated — it is a positional check that has needed a one-line update
+every time a menu group was added (Masters, Live Production, now this),
+which is expected and noted in the test's own comment.

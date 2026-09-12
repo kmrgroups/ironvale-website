@@ -424,6 +424,13 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 .bu-tile .bu-tdest{font-size:10px;color:#8a93a0;font-family:var(--mono,monospace)}
 .bu-ico{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:14px;
   background:#eef3fa;color:var(--navy,#0b2a5b)}
+.aa-ico-wrap{position:relative;display:inline-flex}
+.aa-badge{position:absolute;top:-6px;right:-8px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;
+  background:var(--bad,#b03a2e);color:#fff;font-size:11px;font-weight:700;line-height:20px;text-align:center;
+  font-family:var(--mono,monospace);box-shadow:0 0 0 2px #fff}
+.aa-badge.ok{background:var(--ok,#1f9d6b)}
+.aa-badge.wait{background:#9aa3b2}
+.aa-fix{display:inline-block;margin-top:2px;font-size:10.5px;font-weight:700;color:var(--gold-deep,#8e6a19)}
 .bu-ico svg{width:30px;height:30px}
 .bu-ico.big{width:46px;height:46px;border-radius:12px}
 .bu-ico.big svg{width:26px;height:26px}
@@ -645,6 +652,21 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           Each department's dashboard is the first item in its group, and the figures on it come
           from the records entered on the screens below it.</div>
       </div>
+    </div>
+
+    <div class="panel" data-panel="agentic_ai">
+      <div class="card">
+        <h4>Agentic AI</h4>
+        <div class="hint" style="margin-bottom:6px;">Every AI agent in the system, in one place,
+          grouped by the department that owns it. Each tile opens straight to that agent's own
+          screen. Where the agent works over a whole list rather than one part at a time, its tile
+          also shows what is waiting for attention right now, and a <b>Fix with AI</b> link that
+          opens the screen and runs the agent immediately — it still only <i>proposes</i>: nothing
+          is saved, assigned or closed without a person reviewing it on
+          <a data-goto="agent_review" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Review Agent Work</a>.</div>
+        <div class="note" id="aa-msg" style="display:none;"></div>
+      </div>
+      <div id="aa-tiles"></div>
     </div>
 
     <!-- ============ Supplier master ============ -->
@@ -4048,6 +4070,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      the first thing anyone sees is how their own area is doing, and the screens
      that produce those figures sit directly beneath it. */
   var MENU = [
+    ['agentic','🤖','Agentic AI','Every AI agent in one place — grouped by department, with what needs attention right now',[
+      ['agentic_ai','🤖','Agentic AI',1]]],
     ['topmgmt','🏛','Top Management','Oversight',[
       ['dash_topmgmt','📊','Company Scorecard',1],
       ['dashboard','🏭','Works Dashboard',1],
@@ -4316,6 +4340,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         'use are already in place, so it can be added without disturbing anything you use today.';
     }
     if (s === 'home')    loadHome();
+    if (s === 'agentic_ai') loadAgenticHub();
     if (s === 'parts')   loadParts();
     if (s === 'grn')     { loadGrn(); fillGrnSuppliers(); }
     if (s === 'dc')      loadDc();
@@ -11632,6 +11657,200 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     } catch(e){
       document.getElementById('home-stats').innerHTML = '<div class="note bad">'+esc(e.message)+'</div>';
     }
+  }
+
+  /* ---------------- Agentic AI hub ----------------
+     One tile per agent already built elsewhere in this file — nothing here
+     duplicates their logic, it calls straight into the same load/explain
+     functions those screens already use, so a gap count here can never
+     disagree with what the screen itself shows once opened.
+
+     Two kinds of tile:
+     - "auto" tiles work over a whole list (Preventive Maintenance, Skill Gap
+       Analysis, and so on). Fix with AI calls that screen's own load
+       function, then its own explain/brief function — the exact same two
+       calls a person would trigger by opening the screen and pressing the
+       button themselves, just done in one click from here. The gap count is
+       read from the same module-level array the screen's own table is drawn
+       from, straight after that load call.
+     - "open" tiles work on one part at a time (PFMEA, Control Plan, CNC
+       Programme, NPD Agent) or one record at a time (Non-conformance & 8D)
+       or live on the website (RFQ Pipeline) — there is no single "run it"
+       that would not mean silently picking a part, a record, or a customer
+       for the person, so these only open the screen. Where a meaningful
+       count exists (parts with no routing/PFMEA/control plan yet) it is
+       still shown, so the gap is visible before you decide which to open. */
+  var AA_TILES = [
+    { screen:'dashboard', dept:'Top Management', icon:'📊', label:'Works Dashboard',
+      desc:'AI morning briefing on today\'s figures.', kind:'auto',
+      load:function(){ return loadDashboard(); }, run:function(){ return briefDashboard(); },
+      gap:function(){ return dbData ? { n: C.num(dbData.overdue), label: C.num(dbData.overdue) + ' order(s) past their date' } : null; } },
+    { screen:'agent_audit', dept:'Top Management', icon:'🔎', label:'Audit Readiness Agent',
+      desc:'Ranks what to fix before an audit.', kind:'auto',
+      load:function(){ return loadAgent(); }, run:function(){ return explainAgent(); },
+      gap:function(){ return { n: agentFindings.length, label: agentFindings.length + ' finding(s) open' }; } },
+    { screen:'agent_supplier', dept:'Purchase & SCM', icon:'🤝', label:'Supplier Watch Agent',
+      desc:'Ranks which supplier to speak to first.', kind:'auto',
+      load:function(){ return loadSupplierAgent(); }, run:function(){ return explainSupplierAgent(); },
+      gap:function(){ return { n: swFindings.length, label: swFindings.length + ' supplier issue(s) open' }; } },
+    { screen:'agent_npd', dept:'NPD', icon:'🤖', label:'NPD Agent',
+      desc:'Drafts routing, dimensions, PFMEA and control plan for a part — choose the part, then run it.',
+      kind:'open', gapKind:'process', gapLabel:'routing' },
+    { screen:'fmea', dept:'NPD', icon:'⚠', label:'PFMEA',
+      desc:'Drafts a PFMEA from the routing — open the part, then Draft with AI.',
+      kind:'open', gapKind:'pfmea', gapLabel:'PFMEA' },
+    { screen:'control_plan', dept:'NPD', icon:'📋', label:'Control Plan',
+      desc:'Drafts a control plan from the PFMEA — open the part, then Draft with AI.',
+      kind:'open', gapKind:'control_plan', gapLabel:'control plan' },
+    { screen:'cnc', dept:'NPD', icon:'⌨', label:'CNC Programme',
+      desc:'Drafts a CNC programme outline for a machining operation.', kind:'open' },
+    { screen:'production_plan', dept:'PPC & MMD', icon:'🏭', label:'Production Plan',
+      desc:'Risk brief on what needs attention today.', kind:'auto',
+      load:function(){ return loadPlan().then(function(){ runPlan(); }); }, run:function(){ return explainPlan(); },
+      gap:function(){ var n = planRows.filter(function(r){ return r.late; }).length;
+        return { n:n, label:n + ' order(s) past their date' }; } },
+    { screen:'capacity_plan', dept:'PPC & MMD', icon:'⚙', label:'Capacity Plan',
+      desc:'Risk brief on machine-months short of hours.', kind:'auto',
+      load:function(){ return loadCapacity(); }, run:function(){ return explainCapacity(); },
+      gap:function(){ var n = capRows.filter(function(r){ return r.over > 0; }).length;
+        return { n:n, label:n + ' machine(s) short of hours somewhere in the plan' }; } },
+    { screen:'machine_loading', dept:'PPC & MMD', icon:'🔩', label:'Machine Loading Plan',
+      desc:'Risk brief on orders projected late.', kind:'auto',
+      load:function(){ return loadLoading(); }, run:function(){ return explainLoading(); },
+      gap:function(){ var n = mlOrders.filter(function(r){ return r.lateBy !== null && r.lateBy > 0; }).length;
+        return { n:n, label:n + ' order(s) projected late' }; } },
+    { screen:'ncr', dept:'Quality Assurance', icon:'⚠', label:'Non-conformance & 8D',
+      desc:'Drafts a root-cause/8D write-up — open the record, then Draft with AI.', kind:'open' },
+    { screen:'report_control_charts', dept:'Quality Assurance', icon:'📊', label:'Control Charts',
+      desc:'Checks flagged readings for a shared shift, operator or machine — choose the characteristic, then run it.',
+      kind:'open' },
+    { screen:'report_calibration', dept:'Quality Assurance', icon:'📏', label:'Calibration Report',
+      desc:'Ranks which gauge to send for calibration first.', kind:'auto',
+      load:function(){ return loadCalibration(); }, run:function(){ return explainCalibration(); },
+      gap:function(){ var n = gauges.filter(function(g){ var st = calState(g);
+          return st.key === 'overdue' || st.label === 'Never calibrated' || st.key === 'due'; }).length;
+        return { n:n, label:n + ' gauge(s) overdue, due soon, or never calibrated' }; } },
+    { screen:'ncr_open', dept:'Quality Assurance', icon:'📌', label:'Open Actions',
+      desc:'Ranks which overdue action to chase first.', kind:'auto',
+      load:function(){ return loadOpenActions(); }, run:function(){ return explainOpenActions(); },
+      gap:function(){ return { n: ncoOpen.length, label: ncoOpen.length + ' action(s) still open' }; } },
+    { screen:'maintenance', dept:'Maintenance', icon:'🔧', label:'Preventive Maintenance',
+      desc:'Ranks which machine to service first.', kind:'auto',
+      load:function(){ return loadMaintenance(); }, run:function(){ return explainMaintenance(); },
+      gap:function(){ var n = pmRows.filter(function(r){ return r.state.key === 'overdue' || r.state.key === 'never'; }).length;
+        return { n:n, label:n + ' machine(s) overdue or never serviced' }; } },
+    { screen:'gap_analysis', dept:'HRM', icon:'📈', label:'Skill Gap Analysis',
+      desc:'Suggests a training priority order.', kind:'auto',
+      load:function(){ return loadGapAnalysis(); }, run:function(){ return explainGapAnalysis(); },
+      gap:function(){ var n = gapRows.filter(function(r){ return r.gap > 0; }).length;
+        return { n:n, label:n + ' skill gap(s) outstanding' }; } },
+    { screen:'hr_payroll', dept:'HRM', icon:'💼', label:'HR & Payroll — Recruitment',
+      desc:'AI job-description drafting and CV matching, inside the Recruitment tile.', kind:'open' },
+    { screen:'change_4m', dept:'Quality Assurance', icon:'🔁', label:'4M Change',
+      desc:'Drafts which documents likely need re-checking after a change — open it, fill in the change, then draft.',
+      kind:'open' },
+    { screen:'emb_pipeline', dept:'Marketing', icon:'📨', label:'RFQ Pipeline',
+      desc:'Triage, drawing reading, cost working and quotation drafting for open enquiries.', kind:'open' }
+  ];
+
+  function aaGroupOrder(){
+    var order = [];
+    MENU.forEach(function(g){ if (order.indexOf(g[2]) < 0) order.push(g[2]); });
+    return order;
+  }
+
+  function aaTileHtml(t){
+    return '<button type="button" class="bu-tile aa-tile" data-screen="' + esc(t.screen) + '" ' +
+      'title="' + esc(t.label) + '">' +
+      '<span class="aa-ico-wrap"><span class="bu-ico">' + t.icon + '</span>' +
+      '<span class="aa-badge wait" id="aa-badge-' + esc(t.screen) + '">…</span></span>' +
+      '<b>' + esc(t.label) + '</b>' +
+      '<span class="bu-tdesc">' + esc(t.desc) + '</span>' +
+      (t.kind === 'auto' ? '<span class="aa-fix" data-fix="' + esc(t.screen) + '">Fix with AI →</span>' : '') +
+      '</button>';
+  }
+
+  function drawAgenticHub(){
+    var order = aaGroupOrder();
+    var byDept = {};
+    AA_TILES.forEach(function(t){ (byDept[t.dept] = byDept[t.dept] || []).push(t); });
+    var html = order.filter(function(d){ return byDept[d]; }).map(function(d){
+      return '<div class="bu-group">' + esc(d) + '</div><div class="bu-tilegrid">' +
+        byDept[d].map(aaTileHtml).join('') + '</div>';
+    }).join('');
+    document.getElementById('aa-tiles').innerHTML = html ||
+      '<div class="empty"><b>No agents to show</b></div>';
+
+    document.querySelectorAll('#aa-tiles .aa-tile').forEach(function(b){
+      b.addEventListener('click', function(e){
+        /* the small "Fix with AI" link inside the tile has its own handler
+           below and must not also trigger the tile's plain "open" click */
+        if (e.target && e.target.dataset && e.target.dataset.fix) return;
+        navigate(b.dataset.screen);
+      });
+    });
+    document.querySelectorAll('#aa-tiles [data-fix]').forEach(function(a){
+      a.addEventListener('click', function(e){
+        e.stopPropagation();
+        aaFixWithAi(a.dataset.fix);
+      });
+    });
+  }
+
+  async function aaFixWithAi(screen){
+    var t = AA_TILES.filter(function(x){ return x.screen === screen; })[0];
+    if (!t || !t.load || !t.run) return;
+    navigate(screen);
+    /* give go()'s own call to this screen's load function (fired by the
+       navigate above) a moment to finish, the same wait-then-reload pattern
+       Open Actions already uses to hand off to another screen safely, then
+       load again (harmless — every load function here is a plain re-read)
+       and run its agent once the data is definitely in. */
+    setTimeout(function(){
+      Promise.resolve(t.load()).then(function(){ return t.run(); }).catch(function(){});
+    }, 250);
+  }
+
+  async function loadAgenticHub(){
+    drawAgenticHub();
+    var msg = document.getElementById('aa-msg');
+    msg.style.display = '';
+    msg.className = 'note';
+    msg.textContent = 'Checking what is waiting for attention on each agent…';
+
+    var partsGapCache = {};
+    async function partsGap(kind, label){
+      var key = kind;
+      if (!partsGapCache[key]){
+        partsGapCache[key] = Promise.all([C.idms.parts(), C.idms.docs(kind)]).then(function(r){
+          var parts = r[0], docs = r[1], have = {};
+          docs.forEach(function(d){ var pid = (d.data||{}).partId || d.part_id; if (pid) have[pid] = 1; });
+          var missing = parts.filter(function(p){ return !have[p.part_id]; }).length;
+          return { n: missing, label: missing + ' part(s) with no ' + label + ' yet' };
+        }).catch(function(){ return null; });
+      }
+      return partsGapCache[key];
+    }
+
+    var results = await Promise.all(AA_TILES.map(function(t){
+      if (t.kind === 'open' && t.gapKind) return partsGap(t.gapKind, t.gapLabel).catch(function(){ return null; });
+      if (t.kind === 'auto' && t.load && t.gap){
+        return Promise.resolve(t.load()).then(function(){ return t.gap(); }).catch(function(){ return null; });
+      }
+      return Promise.resolve(null);
+    }));
+
+    AA_TILES.forEach(function(t, i){
+      var el = document.getElementById('aa-badge-' + t.screen);
+      if (!el) return;
+      var r = results[i];
+      if (!r){ el.textContent = '—'; el.className = 'aa-badge wait'; el.title = 'Not checked'; return; }
+      el.textContent = r.n > 99 ? '99+' : String(r.n);
+      el.className = 'aa-badge ' + (r.n ? '' : 'ok');
+      el.title = r.label;
+    });
+
+    msg.style.display = 'none';
   }
 
   /* ---------------- parts ---------------- */
@@ -23687,6 +23906,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('ga-dept').addEventListener('change', drawGapAnalysis);
   document.getElementById('ga-print').addEventListener('click', printGapAnalysis);
   document.getElementById('ga-explain').addEventListener('click', explainGapAnalysis);
+  document.querySelectorAll('[data-panel="agentic_ai"] [data-goto]').forEach(function(a){
+    a.addEventListener('click', function(){ go(a.dataset.goto); });
+  });
 
   document.getElementById('tn-save').addEventListener('click', saveTni);
   document.getElementById('tn-print').addEventListener('click', printTni);

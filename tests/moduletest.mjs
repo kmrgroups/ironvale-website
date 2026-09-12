@@ -217,7 +217,7 @@ check('validation phase stays shut while the records are empty',
 const menuText = $('menubar').textContent;
 check('MSA is on the menu once', (menuText.match(/MSA/g) || []).length === 1, (menuText.match(/MSA[^\n]{0,18}/g)||[]).join(' | '));
 const soon = [...window.document.querySelectorAll('#menubar .drop a')].filter(a => a.querySelector('.soon'));
-check('the pending list is down to 7', soon.length === 7, 'soon=' + soon.length);
+check('the pending list is down to 6', soon.length === 6, 'soon=' + soon.length);
 /* named rather than counted, so this does not go red every time one is built */
 ['entry_supplier','entry_rawmat','apqp','dept_master','desig_master','position_master',
  'bom','sheet_rawmat','report_control_charts','capacity_plan','machine_loading',
@@ -225,7 +225,8 @@ check('the pending list is down to 7', soon.length === 7, 'soon=' + soon.length)
  'org_chart','roles_resp','succession_plan','audits','cft_master',
  'qms_level1','qms_level2','qms_level3','qms_level4','doc_format_master','signatories',
  'doc_master_pfd','doc_master_pfmea','doc_master_cp','compliance_audit_trail',
- 'users','report_tool_history','report_machine_checksheet','dwm','task_list'].forEach(id => {
+ 'users','report_tool_history','report_machine_checksheet','dwm','task_list',
+ 'machine_process'].forEach(id => {
   const a = window.document.querySelector('#menubar [data-s="' + id + '"]');
   check(id + ' is no longer marked soon', a && !a.querySelector('.soon'));
 });

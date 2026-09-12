@@ -2099,6 +2099,37 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       </div>
     </div>
 
+    <div class="panel" data-panel="machine_process">
+      <div class="card">
+        <h4>Machine &amp; Process — reference</h4>
+        <div class="hint" style="margin-bottom:10px;">Nothing is entered here. It reads the routings
+          already built on Process Master Configuration and cross-references them against the
+          Machine Addition master — by machine, so you can see everything that runs on it before
+          routing a new part to it, or by process, so you can see every machine that has already run
+          a given operation.</div>
+        <div class="row four">
+          <div><label>Machine</label><select id="mp-machine"><option value="">— all machines —</option></select></div>
+          <div><label>Process (operation name)</label><select id="mp-process"><option value="">— all processes —</option></select></div>
+          <div><label>Carried out</label><select id="mp-where">
+            <option value="">In house and sub-contract</option>
+            <option value="in">In house only</option>
+            <option value="sub">Sub-contract only</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="mp-print">Print</button></div>
+        </div>
+      </div>
+      <div class="card"><div id="mp-summary"></div></div>
+      <div class="card">
+        <h4 id="mp-list-title">Every operation</h4>
+        <div id="mp-list"></div>
+      </div>
+      <div class="card">
+        <h4>Machines with nothing on a routing yet</h4>
+        <div class="hint" style="margin-bottom:10px;">On the Machine Addition master, active, but not
+          named on any operation — idle, not yet routed to, or worth checking is still needed.</div>
+        <div id="mp-idle"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="ncr">
       <div class="card">
         <h4>Non-conformance and corrective action</h4>
@@ -4017,7 +4048,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
          sat under Quality Assurance — the same thing on the menu twice, and the
          copy here a dead end. They are Quality's screens and are listed there
          once; the APQP programme links straight to them. */
-      ['machine_process','⚙','Machine & Process'],['pfmea_master','🧠','PFMEA Master'],
+      ['machine_process','⚙','Machine & Process',1],['pfmea_master','🧠','PFMEA Master'],
       ['pp_spec_master','📋','PP Spec Master'],['agent_npd','🤖','NPD Agent',1]]],
     ['purchase','🏭','Purchase & SCM','Suppliers and inward material',[
       ['dash_purchase','📊','Purchase & SCM Dashboard',1],
@@ -4267,6 +4298,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'dashboard')      loadDashboard();
     if (s === 'ncr')            loadNcr();
     if (s === 'entry_machine')  loadMachines();
+    if (s === 'machine_process') loadMachineProcess();
     if (s === 'skill_matrix')   loadSkills();
     if (s === 'change_4m')      load4M();
     if (s === 'maintenance')    loadMaintenance();
@@ -12913,6 +12945,169 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
               'the production bookings, not estimated.' },
         { type:'text', title:'Signatures',
           body:'Maintenance                              Production                              Plant head' }
+      ]});
+  }
+
+  /* ---------------- Machine & Process (reference) ----------------
+     A view screen only — it writes nothing. The routing already carries a
+     machine name against every operation (see Process Master Configuration);
+     this reads that, and the Machine Addition master, and cross-references
+     them two ways: pick a machine and see every part/operation that runs on
+     it, or pick a process (an operation name) and see every machine that has
+     run it. The "idle machines" table is the same cross-reference read the
+     other way round — a machine on the master that no operation names. */
+  async function loadMachineProcess(){
+    try { machines = await C.idms.docs('machine'); } catch(e){ machines = []; }
+    try { processes = await C.idms.docs('process'); } catch(e){ processes = []; }
+    await fetchParts();
+    fillMpFilters();
+    drawMachineProcess();
+  }
+
+  function fillMpFilters(){
+    var msel = document.getElementById('mp-machine'), keepM = msel.value;
+    msel.innerHTML = '<option value="">— all machines —</option>' +
+      machines.slice().sort(function(a,b){
+        return String((a.data||{}).name||'').localeCompare(String((b.data||{}).name||''));
+      }).map(function(m){
+        var n = String((m.data||{}).name||'').trim();
+        return n ? '<option value="'+esc(n)+'">'+esc(n)+'</option>' : '';
+      }).join('');
+    msel.value = keepM;
+
+    var psel = document.getElementById('mp-process'), keepP = psel.value;
+    var names = {};
+    processes.forEach(function(o){
+      var n = String((o.data||{}).name||'').trim();
+      if (n) names[n] = 1;
+    });
+    psel.innerHTML = '<option value="">— all processes —</option>' +
+      Object.keys(names).sort().map(function(n){
+        return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
+    psel.value = keepP;
+  }
+
+  function mpPartLabel(partId){
+    var p = allParts.filter(function(x){ return x.part_id === partId; })[0];
+    return p ? (p.part_no + (p.part_name ? ' — ' + p.part_name : '')) : '—';
+  }
+
+  function mpFilteredRows(){
+    var mFilter = document.getElementById('mp-machine').value;
+    var pFilter = document.getElementById('mp-process').value;
+    var wFilter = document.getElementById('mp-where').value;
+    return processes.filter(function(o){
+      var v = o.data || {};
+      if (mFilter && String(v.machine||'').trim() !== mFilter) return false;
+      if (pFilter && String(v.name||'').trim() !== pFilter) return false;
+      if (wFilter && (v.where||'in') !== wFilter) return false;
+      return true;
+    }).sort(function(a,b){
+      var va = a.data||{}, vb = b.data||{};
+      var m = String(va.machine||'').localeCompare(String(vb.machine||''));
+      if (m) return m;
+      return C.num(va.opNo) - C.num(vb.opNo);
+    });
+  }
+
+  function drawMachineProcess(){
+    var rows = mpFilteredRows();
+    var mFilter = document.getElementById('mp-machine').value;
+    var pFilter = document.getElementById('mp-process').value;
+
+    var machinesUsed = {}, partsUsed = {}, subCount = 0, totalCycle = 0;
+    rows.forEach(function(o){
+      var v = o.data||{};
+      if (v.machine) machinesUsed[v.machine] = 1;
+      if (v.partId) partsUsed[v.partId] = 1;
+      if (v.where === 'sub') subCount++;
+      totalCycle += C.num(v.cycleSec);
+    });
+    document.getElementById('mp-summary').innerHTML = '<div class="stat">' +
+      [['Operations', rows.length], ['Machines', Object.keys(machinesUsed).length],
+       ['Parts', Object.keys(partsUsed).length], ['Sub-contract', subCount],
+       ['Cycle time, total', C.qty(totalCycle) + ' s']]
+      .map(function(x){ return '<div class="b"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'; }).join('') +
+      '</div>';
+
+    document.getElementById('mp-list-title').textContent =
+      mFilter ? ('Operations on ' + mFilter)
+      : pFilter ? ('Machines running ' + pFilter)
+      : 'Every operation';
+
+    var host = document.getElementById('mp-list');
+    if (!rows.length){
+      host.innerHTML = '<div class="empty"><b>Nothing matches</b>Try a different machine or ' +
+        'process, or check the routings on <a data-goto="process_master" style="cursor:pointer;' +
+        'color:var(--sky-deep);font-weight:600;">Process Master Configuration</a>.</div>';
+      host.querySelectorAll('[data-goto]').forEach(function(a){
+        a.addEventListener('click', function(){ go(a.dataset.goto); }); });
+    } else {
+      host.innerHTML = '<table class="t"><thead><tr><th>Machine</th><th>Part</th>' +
+        '<th class="c">Op</th><th>Operation</th><th class="r">Setup</th><th class="r">Cycle</th>' +
+        '<th class="c">Where</th></tr></thead><tbody>' +
+        rows.map(function(o){
+          var v = o.data||{};
+          return '<tr><td><b>'+esc(v.machine||'—')+'</b></td>' +
+            '<td>'+esc(mpPartLabel(v.partId))+'</td>' +
+            '<td class="c">'+esc(v.opNo)+'</td>' +
+            '<td>'+esc(v.name||'—')+'<div class="hint">'+esc(v.description||'')+'</div></td>' +
+            '<td class="r">'+(C.num(v.setupMin)?C.qty(v.setupMin)+' min':'—')+'</td>' +
+            '<td class="r">'+(C.num(v.cycleSec)?C.qty(v.cycleSec)+' s':'—')+'</td>' +
+            '<td class="c">'+(v.where==='sub'
+              ?'<span class="badge sample">Sub-con</span>'
+              :'<span class="badge series">In house</span>')+'</td></tr>';
+        }).join('') + '</tbody></table>';
+    }
+
+    drawMpIdle();
+  }
+
+  function drawMpIdle(){
+    var host = document.getElementById('mp-idle');
+    var used = {};
+    processes.forEach(function(o){
+      var n = String((o.data||{}).machine||'').trim().toLowerCase();
+      if (n) used[n] = 1;
+    });
+    var idle = machines.filter(function(m){
+      return m.status !== 'Retired' && !used[String((m.data||{}).name||'').trim().toLowerCase()];
+    });
+    if (!idle.length){
+      host.innerHTML = '<div class="note good">' + (machines.length
+        ? 'Every active machine on the master has at least one operation against it.'
+        : 'No machines on the master yet — add them on Machine Addition.') + '</div>';
+      return;
+    }
+    host.innerHTML = '<table class="t"><thead><tr><th>Code</th><th>Machine</th><th>Type</th>' +
+      '<th>Location</th></tr></thead><tbody>' + idle.map(function(m){
+        var v = m.data||{};
+        return '<tr><td><b>'+esc(m.doc_no||'')+'</b></td><td>'+esc(v.name||'')+'</td>' +
+          '<td class="hint">'+esc(v.type||'')+'</td><td class="hint">'+esc(v.location||'—')+'</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function printMachineProcess(){
+    var rows = mpFilteredRows();
+    if (!rows.length) { toast('Nothing to print for this filter.'); return; }
+    var mFilter = document.getElementById('mp-machine').value;
+    var pFilter = document.getElementById('mp-process').value;
+    C.openReport({
+      title:'Machine & Process Reference', kind:'Machine & Process', landscape:true,
+      subtitle: (mFilter ? 'Machine: ' + mFilter + ' · ' : '') +
+        (pFilter ? 'Process: ' + pFilter + ' · ' : '') + rows.length + ' operation(s)',
+      sections:[
+        { type:'table', title:'Operations',
+          columns:[{label:'Machine'},{label:'Part'},{label:'Op',align:'c'},{label:'Operation'},
+            {label:'Setup',align:'r'},{label:'Cycle',align:'r'},{label:'Where'}],
+          rows: rows.map(function(o){
+            var v = o.data||{};
+            return [esc(v.machine||'—'), esc(mpPartLabel(v.partId)), esc(v.opNo),
+              esc(v.name||'—'), C.num(v.setupMin)?C.qty(v.setupMin)+' min':'—',
+              C.num(v.cycleSec)?C.qty(v.cycleSec)+' s':'—',
+              v.where==='sub'?'Sub-contract':'In house'];
+          }) },
+        { type:'text', title:'Signatures', body:'Engineering                              Production' }
       ]});
   }
 
@@ -23044,6 +23239,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('pm-run').addEventListener('click', loadMaintenance);
   document.getElementById('pm-days').addEventListener('change', runMaintenance);
   document.getElementById('pm-print').addEventListener('click', printMaintenance);
+
+  document.getElementById('mp-machine').addEventListener('change', drawMachineProcess);
+  document.getElementById('mp-process').addEventListener('change', drawMachineProcess);
+  document.getElementById('mp-where').addEventListener('change', drawMachineProcess);
+  document.getElementById('mp-print').addEventListener('click', printMachineProcess);
 
   document.getElementById('nc-raise').addEventListener('click', raiseNcr);
   document.getElementById('nc-refresh').addEventListener('click', loadNcr);

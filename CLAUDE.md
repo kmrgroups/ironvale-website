@@ -1101,13 +1101,23 @@ quietly deletes it). Closing needs a note of what was actually done.
 
 Records: kind `task`. The board stores nothing — it is computed on every open.
 
-**Declared but not built:** 7 screens still marked `soon` (down from 42):
-`machine_process`, `pfmea_master`, `pp_spec_master`, `supplier_competency`,
+**Declared but not built:** 6 screens still marked `soon` (down from 42, then 7):
+`pfmea_master`, `pp_spec_master`, `supplier_competency`,
 `form`, `report_inprocess_inspection`, `accounts_pl`.
 
-**Suggested order for the rest**, of the seven left:
+**Machine & Process is now built.** A reference-only screen under NPD: filters
+by machine, by process (operation name typed on a routing), and by in-house/
+sub-contract, reading `process` docs (the routing) cross-referenced against
+`machine` docs (the Machine Addition master) — nothing new is written. It shows
+the matching operations (machine, part, op no., setup, cycle time), a summary
+strip, a printable report, and a table of active machines on the master with no
+operation against them yet (the same cross-reference read the other way, to
+surface idle or unrouted machines). `tests/moduletest.mjs`'s pending-count
+check was updated from 7 to 6 accordingly.
 
-1. **Machine & process**, **PFMEA master**, **PP spec master**, **supplier
+**Suggested order for the rest**, of the six left:
+
+1. **PFMEA master**, **PP spec master**, **supplier
    competency** — reference screens over data that already exists. Small, and
    mostly views rather than new records.
 2. **Key Process Input** — needs a decision on what it is for; the name predates
@@ -1115,7 +1125,7 @@ Records: kind `task`. The board stores nothing — it is computed on every open.
 3. **P&L** — should wait until there is a costing model, or it becomes another
    entry screen pretending to be an account.
 
-Two of the seven are **decisions rather than work**: `report_inprocess_inspection`
+Two of the six are **decisions rather than work**: `report_inprocess_inspection`
 (see below) and `form`.
 
 **Still undecided: `report_inprocess_inspection`.** Self Inspection already is

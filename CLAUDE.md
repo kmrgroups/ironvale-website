@@ -2881,3 +2881,54 @@ Capabilities, Process, Stats, Industries, Certifications, AI Chatbot,
 Testimonial, Contact, Sections — an image-heavy CMS with no IDMS
 equivalent concept), and the website-side setup wizard. Full suite (42
 files) clean — same 2 pre-existing, unrelated smoketest failures.
+
+## RFQ Pipeline — Phase 2: drawing reading, costing, quotation drafting
+
+Same discipline as Payroll, for the same reason: the costing engine is
+arithmetic with a right answer, so it was **ported and proved, not
+reimplemented**. `computeCosting`, `machineRate`, `labourRate`,
+`availableHours`, `totalMachineHours`, `defaultLabourRate` and `listCost`
+became `rcComputeCosting` and its `rc*` helpers. A throwaway harness
+extracted both implementations from their real source files and ran them on
+six cases — simple weight×rate, an itemised BOM overriding it, tooling
+amortised over tool life, an unmatched machine falling back to a zero rate,
+packaging/freight/special processes together, and a zero-quantity guard.
+**All six identical.** One real bug caught in the process: the first draft
+of `rcListCost` dropped the original's `isFinite` guard, so a tool with a
+zero life would have produced `Infinity` and poisoned the whole cost sheet.
+Fixed before the comparison was run.
+
+**The division of labour is the point of this screen, and it is enforced
+rather than described**: the AI reads the drawing and proposes the route and
+the times; *every rupee* comes from the company's own figures on Quoting &
+Costing Setup. The prompt says outright "Do NOT price machine time, labour
+or overhead", lists only the company's real machines and labour grades, and
+material prices found in the price book override whatever the AI supplied.
+`tests/rfqpipelinetest.mjs` proves this rather than trusting it: the mocked
+AI deliberately returns a material rate of 999, and the test asserts the
+saved costing carries 85 — the real price-book rate — with its source
+recorded as "Company price book".
+
+**Built**: drawing reading (with the 3D-CAD refusal and the missing-items
+list intact), the full costing breakdown per operation with the cost
+build-up beneath it, quotation drafting numbered from the configured format
+and sequence with tax at the configured rate, plus a printable internal
+cost sheet (marked CONFIDENTIAL, carrying the AI's stated assumptions and a
+note on exactly what the AI did and did not supply) and a printable
+customer quotation.
+
+**Still on the website, deliberately**: sending the quotation by email and
+its customer-facing PDF template. Those touch the send path and its own
+document layout, which is its own piece of work — and a quotation sent with
+the wrong template is a customer-facing mistake, not an internal one.
+
+30 checks in `tests/rfqpipelinetest.mjs` (up from 17). One existing
+assertion needed updating: per-RFQ controls moved inside the expandable
+detail in Phase 2, so the test now opens the row before reaching for the
+stage selector. Full suite (42 files) clean — same 2 pre-existing,
+unrelated smoketest failures.
+
+**Remaining after this**: the 15 pure website-design tabs (Hero, Gallery,
+Founders, Brand, Design, Sizing, Capabilities, Process, Stats, Industries,
+Certifications, AI Chatbot, Testimonial, Contact, Sections) and the
+website-side setup wizard.

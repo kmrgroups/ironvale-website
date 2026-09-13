@@ -2098,12 +2098,13 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       <div class="card">
         <h4>RFQ Pipeline</h4>
         <div class="hint" style="margin-bottom:10px;">Every enquiry the website has received, and
-          where it stands. <b>Phase 1 of moving this off the website</b>: seeing the queue, triaging
-          it, and moving a stage by hand are native here. Reading a drawing, working out a cost,
-          drafting the line-item quotation, and sending it are still done from the website's own RFQ
-          Pipeline for now — a line-item quotation builder with its own PDF output is a substantial
-          piece of work in its own right, and belongs in its own pass rather than a rushed corner of
-          this one.</div>
+          where it stands. Reading a drawing, working out a cost and drafting the quotation are all
+          native here — the costing arithmetic runs entirely on your own figures from
+          <a data-goto="admin_quoting" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Quoting &amp; Costing Setup</a>;
+          the AI proposes the route and the times, never a price.
+          <span class="hint" style="display:block;margin-top:6px;">Sending the quotation by email and
+          the customer-facing PDF layout still run from the website's own RFQ Pipeline — those touch
+          the send path and its document template, which is its own piece of work.</span></div>
         <div class="stat" id="rp-kpi"></div>
       </div>
 
@@ -26317,12 +26318,121 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      — each touches AI/document-generation machinery substantial enough to
      deserve its own pass, the same reasoning Recruitment's phase split
      used. Those still run from the website's own RFQ Pipeline. */
+  /* ---------------- RFQ costing engine (ported) ----------------
+     Ported line-for-line from the website's own rate functions. The AI
+     proposes the route and the times; every rupee is computed from the
+     company's own figures on Quoting & Costing Setup — the AI never
+     supplies a price. Same reasoning as the payroll engine: this is
+     arithmetic with a right answer, so it is transferred, not reinvented. */
+  function rcAvailableHours(b){
+    var gross = C.num(b.workingDays) * C.num(b.shiftsPerDay) * C.num(b.hoursPerShift);
+    return gross * (1 - C.num(b.downtimePct)/100);
+  }
+  function rcTotalMachineHours(b, machines){
+    return rcAvailableHours(b) * Math.max(1, (machines||[]).length);
+  }
+  function rcMachineRate(m, b, machines){
+    var hrs = rcAvailableHours(b);
+    if (hrs <= 0) return { total:0, parts:{}, error:'Set working days, shifts and hours first.' };
+    var dep = (C.num(m.cost) - C.num(m.salvage)) / Math.max(1, C.num(m.lifeYears)) / hrs;
+    var power = C.num(m.kw) * (C.num(m.loadFactor)/100) * C.num(b.powerTariff);
+    var maint = C.num(m.maintenance) / hrs;
+    var rentPerSqFtMonth = C.num(b.factoryArea) > 0 ? C.num(b.factoryRent)/C.num(b.factoryArea) : 0;
+    var space = rentPerSqFtMonth * C.num(m.area) * 12 / hrs;
+    var tmh = rcTotalMachineHours(b, machines);
+    var oh = tmh > 0 ? (C.num(b.factoryOverhead) * 12) / tmh : 0;
+    return { total: dep+power+maint+space+oh,
+      parts:{ depreciation:dep, power:power, maintenance:maint, space:space, overhead:oh } };
+  }
+  function rcLabourRate(l){
+    var hrs = Math.max(1, C.num(l.paidDays) * C.num(l.hoursPerDay));
+    return C.num(l.wage) * (1 + C.num(l.statutoryPct)/100) / hrs;
+  }
+  function rcDefaultLabourRate(grades){
+    var g = (grades||[]).filter(function(x){ return /operator/i.test(x.grade); })[0] || (grades||[])[0];
+    return g ? rcLabourRate(g) : 0;
+  }
+  function rcListCost(list){
+    return (list||[]).reduce(function(t, x){
+      var life = C.num(x.life);
+      var per = life > 0 ? C.num(x.unitCost)/life : C.num(x.costPerPart);
+      return t + (isFinite(per) ? per : 0);
+    }, 0);
+  }
+  /* the deterministic cost build-up — no AI anywhere in this function */
+  function rcComputeCosting(c, cfgSet){
+    c = c || {};
+    var b = cfgSet.costBase || {}, machines = cfgSet.machines || [], grades = cfgSet.labourGrades || [];
+    var byId = function(list, id){ return (list||[]).filter(function(x){ return x.id === id; })[0] || null; };
+    var qty = Math.max(1, C.num(c.qty));
+    var batch = Math.max(1, C.num(c.batchQty) || qty);
+    var mat = c.material || {};
+
+    var blank = C.num(mat.blankWeight) || C.num(mat.finishWeight);
+    var matGross = blank * C.num(mat.rate);
+    var recovery = (blank - C.num(mat.finishWeight)) * C.num(mat.scrapRecovery);
+    var bomTotal = (c.bom||[]).reduce(function(t, x){
+      var per = C.num(x.costPerPart) || (C.num(x.qtyPerPart) * C.num(x.rate));
+      return t + (/offcut credit/i.test(x.type||'') ? -Math.abs(per) : per);
+    }, 0);
+    var materialCost = bomTotal > 0 ? bomTotal : Math.max(0, matGross - recovery);
+
+    var machineCost = 0, labourCost = 0, setupCost = 0, totalCycleMin = 0;
+    var ops = (c.operations||[]).map(function(o){
+      var m = byId(machines, o.machineId);
+      var mr = m ? rcMachineRate(m, b, machines).total : 0;
+      var l = byId(grades, o.labourGradeId);
+      var lr = l ? rcLabourRate(l) : rcDefaultLabourRate(grades);
+      var cyc = C.num(o.cycleMin);
+      var setupPerPart = C.num(o.setupMin) / batch;
+      var mc = (cyc/60) * mr;
+      var lc = ((cyc + setupPerPart)/60) * lr * (m ? C.num(m.operators)||1 : 1);
+      var sc = (setupPerPart/60) * mr;
+      machineCost += mc; labourCost += lc; setupCost += sc; totalCycleMin += cyc;
+      return Object.assign({}, o, { machineName: m ? m.name : '(not matched)', machineRate:mr,
+        labourRate:lr, machineCost:mc, labourCost:lc, setupCost:sc, setupPerPart:setupPerPart });
+    });
+
+    var inspGrade = (grades||[]).filter(function(l){ return /inspect/i.test(l.grade); })[0];
+    var inspection = (C.num(c.inspectionMinPerPart)/60) * (inspGrade ? rcLabourRate(inspGrade) : rcDefaultLabourRate(grades));
+    var special = (c.specialProcesses||[]).reduce(function(t,s){ return t + C.num(s.ratePerPart); }, 0);
+
+    var toolingList = rcListCost(c.tooling), consumList = rcListCost(c.consumables);
+    var tooling = toolingList > 0 ? toolingList : C.num(c.toolingPerPart);
+    var consumables = consumList > 0 ? consumList : C.num(c.consumablesPerPart);
+    var packaging = C.num(c.packaging && c.packaging.costPerPart) || C.num(c.packagingPerPart);
+    var freight = C.num(c.freight && c.freight.costPerPart) || C.num(c.freightPerPart);
+
+    var direct = materialCost+machineCost+labourCost+setupCost+inspection+special+tooling+consumables+packaging+freight;
+    var scrap = direct * C.num(b.scrapPct)/100;
+    var withScrap = direct + scrap;
+    var admin = withScrap * C.num(b.adminPct)/100;
+    var finance = withScrap * C.num(b.financePct)/100;
+    var contingency = withScrap * C.num(b.contingencyPct)/100;
+    var totalCost = withScrap + admin + finance + contingency;
+    var profit = totalCost * C.num(b.profitPct)/100;
+    var sellingPrice = totalCost + profit;
+
+    return { qty:qty, batch:batch, ops:ops, materialCost:materialCost, machineCost:machineCost,
+      labourCost:labourCost, setupCost:setupCost, inspection:inspection, special:special,
+      tooling:tooling, consumables:consumables, packaging:packaging, freight:freight,
+      direct:direct, scrap:scrap, admin:admin, finance:finance, contingency:contingency,
+      totalCost:totalCost, profit:profit, sellingPrice:sellingPrice, totalCycleMin:totalCycleMin,
+      minPrice: totalCost * 1.03, lineTotal: sellingPrice * qty };
+  }
+
   var RFQ_STAGES = ['Received','Quote Drafted','Awaiting Approval','Approved & Sent','Won','Closed'];
   var RFQ_TRI_SEV = { high:{ rank:3, label:'Do today', cls:'' }, med:{ rank:2, label:'This week', cls:'sample' },
     low:{ rank:1, label:'When you can', cls:'series' } };
-  var rfqRows = [], rfqTriFindings = [], rfqTriNarrative = '';
+  var rfqRows = [], rfqTriFindings = [], rfqTriNarrative = '', rfqExpanded = null, rfqCfg = {};
 
   async function loadRfqPipeline(){
+    try {
+      var content = (await C.api('/api/content')).data || {};
+      rfqCfg = { costBase:content.costBase||{}, machines:content.machines||[],
+        labourGrades:content.labourGrades||[], materials:content.materials||[],
+        quoteCfg:content.quoteCfg||{}, company:content.company||{} };
+    } catch(e){ rfqCfg = { costBase:{}, machines:[], labourGrades:[], materials:[], quoteCfg:{}, company:{} }; }
     try { rfqRows = (await C.api('/api/rfqs')).rfqs || []; } catch(e){ rfqRows = []; toast(e.message); }
     rfqTriFindings = []; rfqTriNarrative = '';
     document.getElementById('rp-tri-narrative').innerHTML = '';
@@ -26350,19 +26460,119 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (!rows.length){ host.innerHTML = '<div class="empty"><b>Nothing to show</b></div>'; return; }
     host.innerHTML = rows.map(function(r){
       var age = rfqDaysSince(r.createdAt || r.at || r.date);
-      return '<div class="card" style="margin-bottom:10px;"><h4>'+esc(r.ref)+' — '+esc(r.name||'')+
+      var open = rfqExpanded === r.ref;
+      return '<div class="card" style="margin-bottom:10px;">' +
+        '<div class="rp-head" data-ref="'+esc(r.ref)+'" style="cursor:pointer;">' +
+        '<h4>'+esc(r.ref)+' — '+esc(r.name||'')+
         (r.company?' · '+esc(r.company):'')+' <span class="badge">'+esc(r.status||'Received')+'</span></h4>' +
         '<div class="hint">'+esc(r.email||'')+(r.phone?' · '+esc(r.phone):'')+
-        (age !== null ? ' · '+age+' day(s) old' : '')+'</div>' +
-        '<div style="margin-top:6px;">'+esc(r.message||'—')+'</div>' +
-        (r.fileName ? '<div class="hint" style="margin-top:6px;">📎 '+esc(r.fileName)+'</div>' : '') +
-        '<div class="row four" style="margin-top:10px;">' +
-        '<div><label>Stage</label><select class="rp-stage" data-ref="'+esc(r.ref)+'">' +
-        RFQ_STAGES.map(function(s){ return '<option'+((r.status||'Received')===s?' selected':'')+'>'+s+'</option>'; }).join('') +
-        '</select></div><div style="align-self:end;"><button class="btn del rp-del" data-ref="'+esc(r.ref)+'">Delete</button></div></div>' +
-        '</div>';
+        (age !== null ? ' · '+age+' day(s) old' : '')+
+        (r.extract && !r.extract.error ? ' · <span class="badge series">drawing read</span>' : '') +
+        (r.costing ? ' · <span class="badge series">costed</span>' : '') +
+        (r.quoteDoc ? ' · <span class="badge series">quoted</span>' : '') + '</div></div>' +
+        (open ? rfqDetailHtml(r) : '') + '</div>';
     }).join('');
+    host.querySelectorAll('.rp-head').forEach(function(el){
+      el.addEventListener('click', function(){
+        rfqExpanded = rfqExpanded === el.dataset.ref ? null : el.dataset.ref;
+        drawRfqList();
+      });
+    });
+    rfqWireDetail(host);
+  }
+
+  function rfqDetailHtml(r){
+    var x = r.extract, cs = r.costing, q = r.quoteDoc;
+    var h = '<div style="margin-top:10px;">' +
+      '<div style="margin-bottom:8px;">'+esc(r.message||'—')+'</div>' +
+      (r.fileName ? '<div class="hint">📎 '+esc(r.fileName)+'</div>' : '<div class="hint">No attachment on this enquiry.</div>');
+
+    /* ---- drawing reading ---- */
+    h += '<div class="sub" style="margin-top:12px;">Drawing</div>';
+    if (!x){
+      h += '<button class="btn ai-btn rp-read" data-ref="'+esc(r.ref)+'">Read drawing with AI</button>';
+    } else if (x.error){
+      h += '<div class="note bad">'+esc(x.error)+'</div>' +
+        '<button class="btn ai-btn rp-read" data-ref="'+esc(r.ref)+'" style="margin-top:8px;">Try again</button>';
+    } else {
+      var p = x.part || {};
+      h += '<div class="hint">Read '+esc(x.readAt||'')+'</div>' +
+        ((p.number||p.name||p.drawingNumber) ? '<div style="margin:6px 0;"><b>'+
+          esc([p.number, p.name, p.drawingNumber && ('Dwg '+p.drawingNumber), p.revision && ('Rev '+p.revision)]
+            .filter(Boolean).join(' · '))+'</b></div>' : '') +
+        ((x.requirements||[]).length ? '<table class="t"><thead><tr><th>Category</th><th>Requirement</th>' +
+          '<th>Source</th><th class="c">Confidence</th></tr></thead><tbody>' +
+          x.requirements.map(function(q2){
+            return '<tr><td class="hint">'+esc(q2.category)+'</td><td>'+esc(q2.requirement)+'</td>' +
+              '<td class="hint">'+esc(q2.source)+'</td><td class="c">'+esc(q2.confidence)+'</td></tr>';
+          }).join('') + '</tbody></table>' : '<div class="hint">Nothing could be read from this drawing.</div>') +
+        ((x.missing||[]).filter(Boolean).length ? '<div class="note bad" style="margin-top:8px;">' +
+          '<b>Not on the drawing — needs clarification:</b><ul style="margin:6px 0 0 18px;">' +
+          x.missing.filter(Boolean).map(function(m){ return '<li>'+esc(m)+'</li>'; }).join('') + '</ul></div>' : '') +
+        '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button class="btn ai-btn rp-read" data-ref="'+esc(r.ref)+'">Re-read</button></div>';
+    }
+
+    /* ---- costing ---- */
+    h += '<div class="sub" style="margin-top:14px;">Costing</div>';
+    if (!cs){
+      h += '<button class="btn ai-btn rp-cost" data-ref="'+esc(r.ref)+'">Work out cost with AI</button>' +
+        '<div class="hint" style="margin-top:6px;">The AI plans the route and the times; every rupee comes from your own rates.</div>';
+    } else if (cs.error){
+      h += '<div class="note bad">'+esc(cs.error)+'</div>' +
+        '<button class="btn ai-btn rp-cost" data-ref="'+esc(r.ref)+'" style="margin-top:8px;">Try again</button>';
+    } else {
+      var t = rcComputeCosting(cs, rfqCfg);
+      h += '<div class="stat">' + [['Quantity', C.qty(t.qty)], ['Cost/piece', C.inr(t.totalCost)],
+        ['Selling/piece', C.inr(t.sellingPrice)], ['Line total', C.inr(t.lineTotal)]]
+        .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') + '</div>' +
+        '<div class="scroll-x" style="margin-top:8px;"><table class="t"><thead><tr><th class="c">Op</th><th>Process</th>' +
+        '<th>Machine</th><th class="r">Setup min</th><th class="r">Cycle min</th><th class="r">Machine</th>' +
+        '<th class="r">Labour</th><th class="r">Total</th></tr></thead><tbody>' +
+        (t.ops||[]).map(function(o){
+          return '<tr><td class="c">'+esc(o.op)+'</td><td>'+esc(o.process||'')+'</td>' +
+            '<td>'+esc(o.machineName)+'</td><td class="r">'+C.qty(o.setupMin)+'</td>' +
+            '<td class="r">'+C.qty(o.cycleMin)+'</td><td class="r">'+C.inr(o.machineCost)+'</td>' +
+            '<td class="r">'+C.inr(o.labourCost)+'</td>' +
+            '<td class="r"><b>'+C.inr(o.machineCost+o.labourCost+o.setupCost)+'</b></td></tr>';
+        }).join('') + '</tbody></table></div>' +
+        '<div class="hint" style="margin-top:6px;">Material '+C.inr(t.materialCost)+' · tooling '+C.inr(t.tooling)+
+        ' · consumables '+C.inr(t.consumables)+' · packaging '+C.inr(t.packaging)+' · freight '+C.inr(t.freight)+
+        ' · scrap '+C.inr(t.scrap)+' · admin '+C.inr(t.admin)+' · profit '+C.inr(t.profit)+'</div>' +
+        ((cs.assumptions||[]).length ? '<div class="note" style="margin-top:8px;"><b>Assumptions the AI had to make:</b>' +
+          '<ul style="margin:6px 0 0 18px;">'+cs.assumptions.map(function(a){ return '<li>'+esc(a)+'</li>'; }).join('')+'</ul></div>' : '') +
+        '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button class="btn ai-btn rp-cost" data-ref="'+esc(r.ref)+'">Re-plan route</button>' +
+        '<button class="btn rp-costsheet" data-ref="'+esc(r.ref)+'">Print cost sheet</button></div>';
+    }
+
+    /* ---- quotation ---- */
+    h += '<div class="sub" style="margin-top:14px;">Quotation</div>';
+    if (!cs || cs.error){
+      h += '<div class="hint">Cost the enquiry first — a quotation without a costing is a guess.</div>';
+    } else if (!q){
+      h += '<button class="btn ai-btn rp-quote" data-ref="'+esc(r.ref)+'">Draft quotation</button>';
+    } else {
+      h += '<div class="stat">' + [['Number', esc(q.number||'—')], ['Total', C.inr(q.total)],
+        ['Validity', esc(q.validityDays||'—')+' days']]
+        .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') + '</div>' +
+        '<div style="white-space:pre-wrap;margin-top:8px;font-size:13px;">'+esc(q.body||'')+'</div>' +
+        '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button class="btn ai-btn rp-quote" data-ref="'+esc(r.ref)+'">Redraft</button>' +
+        '<button class="btn rp-quoteprint" data-ref="'+esc(r.ref)+'">Print quotation</button></div>';
+    }
+
+    h += '<div class="row four" style="margin-top:14px;">' +
+      '<div><label>Stage</label><select class="rp-stage" data-ref="'+esc(r.ref)+'">' +
+      RFQ_STAGES.map(function(s){ return '<option'+((r.status||'Received')===s?' selected':'')+'>'+s+'</option>'; }).join('') +
+      '</select></div><div style="align-self:end;"><button class="btn del rp-del" data-ref="'+esc(r.ref)+'">Delete</button></div></div>' +
+      '<div class="note" id="rp-msg-'+esc(r.ref)+'" style="display:none;"></div></div>';
+    return h;
+  }
+
+  function rfqWireDetail(host){
     host.querySelectorAll('.rp-stage').forEach(function(sel){
+      sel.addEventListener('click', function(e){ e.stopPropagation(); });
       sel.addEventListener('change', async function(){
         try {
           await C.api('/api/rfqs', { method:'PATCH', body:JSON.stringify({ ref:sel.dataset.ref,
@@ -26372,13 +26582,30 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       });
     });
     host.querySelectorAll('.rp-del').forEach(function(b){
-      b.addEventListener('click', async function(){
+      b.addEventListener('click', async function(e){
+        e.stopPropagation();
         var why = prompt('Deleting RFQ ' + b.dataset.ref + '. Why?'); if (!why) return;
         try {
           await C.api('/api/rfqs', { method:'PATCH', body:JSON.stringify({ ref:b.dataset.ref, remove:true }) });
+          rfqExpanded = null;
           loadRfqPipeline();
-        } catch(e){ toast(e.message); }
+        } catch(e2){ toast(e2.message); }
       });
+    });
+    host.querySelectorAll('.rp-read').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); rfqReadDrawing(b); });
+    });
+    host.querySelectorAll('.rp-cost').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); rfqGenerateCosting(b); });
+    });
+    host.querySelectorAll('.rp-quote').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); rfqDraftQuote(b); });
+    });
+    host.querySelectorAll('.rp-costsheet').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); rfqPrintCostSheet(b.dataset.ref); });
+    });
+    host.querySelectorAll('.rp-quoteprint').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); rfqPrintQuote(b.dataset.ref); });
     });
   }
 
@@ -26469,6 +26696,271 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       msg.style.display = 'none';
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Ask the AI to prioritise';
+  }
+
+  /* ---------------- Phase 2 actions ----------------
+     The AI reads the drawing and proposes the route; rcComputeCosting()
+     above turns that into money using only the company's own rates. */
+  function rfqSay(ref, text, good){
+    var el = document.getElementById('rp-msg-' + ref);
+    if (!el) { toast(text); return; }
+    el.style.display = ''; el.className = 'note ' + (good ? 'good' : 'bad'); el.innerHTML = text;
+  }
+  async function rfqPatch(ref, patch){
+    await C.api('/api/rfqs', { method:'PATCH', body:JSON.stringify({ ref:ref, patch:patch }) });
+  }
+  function rfqParseAiJson(text){
+    var t = String(text||'').replace(/```json|```/g, '').trim();
+    var i = t.indexOf('{'), j = t.lastIndexOf('}');
+    if (i >= 0 && j > i) t = t.slice(i, j+1);
+    /* a model will happily put a real line break inside a quoted string, which
+       JSON.parse rejects outright — escape control characters inside strings */
+    var out = '', inStr = false, prev = '';
+    for (var k = 0; k < t.length; k++){
+      var ch = t[k];
+      if (ch === '"' && prev !== '\\') inStr = !inStr;
+      if (inStr && (ch === '\n' || ch === '\r' || ch === '\t')) out += ch === '\t' ? '\\t' : '\\n';
+      else out += ch;
+      prev = ch;
+    }
+    return JSON.parse(out);
+  }
+
+  async function rfqReadDrawing(btn){
+    var ref = btn.dataset.ref;
+    var r = rfqRows.filter(function(x){ return x.ref === ref; })[0]; if (!r) return;
+    if (!r.fileName) return rfqSay(ref, 'There is no attachment on this enquiry to read.');
+    if (/\.(step|stp|iges|igs|sldprt|sldasm|x_t|x_b|catpart|prt|ipt)$/i.test(r.fileName))
+      return rfqSay(ref, esc(r.fileName) + ' is a 3D CAD file. Reading geometry from CAD needs specialist ' +
+        'software, so it cannot be analysed here. Ask the customer for a PDF drawing instead.');
+    btn.disabled = true; btn.textContent = 'Reading…';
+    try {
+      var txt = await C.callAI(
+        'You are a manufacturing estimator reading an engineering drawing. Extract everything needed ' +
+        'to quote it. Reply with ONLY this JSON, no commentary or code fences:\n' +
+        '{"part":{"number":"","name":"","drawingNumber":"","revision":""},' +
+        '"requirements":[{"category":"Material|Dimension|Tolerance|Finish|Treatment|Quantity|Standard|Other",' +
+        '"requirement":"","source":"where on the drawing","confidence":"High|Medium|Low"}],' +
+        '"criticalCharacteristics":[""],"missing":[""],"notes":""}\n\n' +
+        'Put anything a quotation needs but the drawing does not state into "missing" — never guess it.',
+        { attachmentUrl: r.fileUrl || r.fileName, maxTokens: 3000 });
+      if (!txt) throw new Error('The AI did not return a reading.');
+      var parsed;
+      try { parsed = rfqParseAiJson(txt); }
+      catch(e){ throw new Error('The AI answered, but not in the shape this needs. It said: "' +
+        String(txt).replace(/\s+/g,' ').trim().slice(0,160) + '…"'); }
+      parsed.readAt = new Date().toLocaleString();
+      await rfqPatch(ref, { extract: parsed });
+      loadRfqPipeline();
+    } catch(e){
+      try { await rfqPatch(ref, { extract: { error: e.message } }); } catch(e2){}
+      loadRfqPipeline();
+    }
+    btn.disabled = false; btn.textContent = 'Read drawing with AI';
+  }
+
+  async function rfqGenerateCosting(btn){
+    var ref = btn.dataset.ref;
+    var r = rfqRows.filter(function(x){ return x.ref === ref; })[0]; if (!r) return;
+    if (!rfqCfg.machines.length || !rfqCfg.labourGrades.length)
+      return rfqSay(ref, 'Add at least one machine and one labour grade on Quoting &amp; Costing Setup first — ' +
+        'without them every rate would be zero and the cost sheet would be meaningless.');
+    var x = r.extract && !r.extract.error ? r.extract : null;
+    var qty = C.num((r.costing||{}).qty) || 1;
+    if (x){
+      var qreq = (x.requirements||[]).filter(function(q){ return /quantity/i.test(q.category); })[0];
+      if (qreq){ var mm = String(qreq.requirement||'').match(/\d[\d,]*/); if (mm) qty = C.num(mm[0].replace(/,/g,'')) || qty; }
+    }
+    btn.disabled = true; btn.textContent = 'Planning…';
+    try {
+      var prompt = 'You are a manufacturing process planner at a precision machining company. Plan the ' +
+        'complete manufacture of the component below.\n\nAVAILABLE MACHINES (use only these; repeat the ' +
+        'exact "type" text so it can be matched):\n' +
+        rfqCfg.machines.map(function(m){ return '- ' + m.name + ' | type: ' + (m.type||''); }).join('\n') +
+        '\n\nLABOUR GRADES:\n' + rfqCfg.labourGrades.map(function(l){ return '- ' + l.grade; }).join('\n') +
+        '\n\nMATERIALS IN THE COMPANY PRICE BOOK:\n' +
+        (rfqCfg.materials.map(function(m){ return '- ' + m.name + ' (' + (m.grade||'') + ') ' + m.rate + '/' + (m.unit||'kg'); }).join('\n') || '- none listed') +
+        '\n\nCOMPONENT:\n' + (x ? JSON.stringify({ part:x.part, requirements:x.requirements, critical:x.criticalCharacteristics }) : (r.message||'no drawing data')) +
+        '\nOrder quantity: ' + qty + '\nCustomer\'s stated requirement: ' + (r.message||'(none given)') +
+        '\n\nRULES:\n1. Give realistic setup and cycle times in MINUTES based on the actual features.\n' +
+        '2. Do NOT price machine time, labour or overhead — those come from the company\'s own rates.\n' +
+        '3. For material, say where each price came from in "source": "Company price book" when it is in ' +
+        'the list above, "Market estimate" otherwise. Never claim a supplier quotation you do not have.\n' +
+        '4. List every assumption you had to make.\n\nReply with ONLY this JSON, no commentary or code fences:\n' +
+        '{"material":{"name":"","grade":"","stockForm":"","stockSize":"","finishWeight":0,"blankWeight":0,"rate":0,"source":"","basis":""},' +
+        '"bom":[{"item":"","type":"Base metal|Conversion|Offcut credit","spec":"","qtyPerPart":0,"unit":"kg","rate":0,"costPerPart":0,"source":"","confidence":"High|Medium|Low"}],' +
+        '"operations":[{"op":10,"process":"","machineType":"","setupMin":0,"cycleMin":0,"labourGrade":"","notes":"","confidence":"High|Medium|Low"}],' +
+        '"tooling":[{"op":10,"item":"","spec":"","unitCost":0,"life":0,"source":"","confidence":"High|Medium|Low"}],' +
+        '"consumables":[{"item":"","costPerPart":0,"source":"","confidence":"High|Medium|Low"}],' +
+        '"packaging":{"method":"","costPerPart":0,"source":""},"freight":{"method":"","costPerPart":0,"source":""},' +
+        '"specialProcesses":[{"name":"","note":""}],"inspectionMinPerPart":0,"assumptions":[""],"notes":""}';
+      var txt = await C.callAI(prompt, { maxTokens: 4500 });
+      if (!txt) throw new Error('No response from the AI.');
+      var p;
+      try { p = rfqParseAiJson(txt); }
+      catch(e){ throw new Error('The AI answered, but not in the shape the costing needs. It said: "' +
+        String(txt).replace(/\s+/g,' ').trim().slice(0,160) + '…" — try Re-plan route.'); }
+
+      var matByName = function(n){
+        return rfqCfg.materials.filter(function(m){
+          return String(m.grade||'').toLowerCase() === String(n||'').toLowerCase() ||
+                 String(m.name||'').toLowerCase() === String(n||'').toLowerCase(); })[0] || null;
+      };
+      var machineFor = function(type){
+        var t2 = String(type||'').toLowerCase();
+        return rfqCfg.machines.filter(function(m){
+          return String(m.type||'').toLowerCase() === t2; })[0] ||
+          rfqCfg.machines.filter(function(m){
+            return t2 && (String(m.type||'').toLowerCase().indexOf(t2) >= 0 || t2.indexOf(String(m.type||'').toLowerCase()) >= 0); })[0] || null;
+      };
+      var pm = p.material || {}, mat = matByName(pm.grade || pm.name || '');
+      var c = { qty:qty, batchQty:qty, createdAt:new Date().toLocaleString(),
+        material:{ name:pm.name||'', grade:pm.grade||'', stockForm:pm.stockForm||'', stockSize:pm.stockSize||'',
+          rate: mat ? C.num(mat.rate) : C.num(pm.rate), unit: mat ? mat.unit : 'kg',
+          rateSource: mat ? ('Company price book — ' + (mat.name||mat.grade)) : (pm.source||'Market estimate'),
+          rateConfidence: mat ? 'Verified' : 'Estimate',
+          finishWeight:C.num(pm.finishWeight), blankWeight:C.num(pm.blankWeight), scrapRecovery:0,
+          matched: !!mat, basis: pm.basis||'' },
+        bom:(p.bom||[]).filter(function(x2){ return x2 && x2.item; }).map(function(x2){
+          return { item:x2.item, type:x2.type||'Base metal', spec:x2.spec||'', qtyPerPart:C.num(x2.qtyPerPart),
+            unit:x2.unit||'kg', rate:C.num(x2.rate), costPerPart:C.num(x2.costPerPart)||(C.num(x2.qtyPerPart)*C.num(x2.rate)),
+            source:x2.source||'Market estimate', confidence:x2.confidence||'Medium' }; }),
+        operations:(p.operations||[]).map(function(o, i){
+          var m2 = machineFor(o.machineType);
+          var l = rfqCfg.labourGrades.filter(function(g){
+            return String(g.grade||'').toLowerCase() === String(o.labourGrade||'').toLowerCase(); })[0] ||
+            rfqCfg.labourGrades.filter(function(g){ return /operator/i.test(g.grade); })[0];
+          return { op:o.op||((i+1)*10), process:o.process||'', machineType:o.machineType||'',
+            machineId:m2?m2.id:'', labourGradeId:l?l.id:'', setupMin:C.num(o.setupMin), cycleMin:C.num(o.cycleMin),
+            notes:o.notes||'', confidence:o.confidence||'Medium' }; }),
+        tooling:(p.tooling||[]).filter(function(t2){ return t2 && t2.item; }).map(function(t2){
+          return { op:t2.op||'', item:t2.item, spec:t2.spec||'', unitCost:C.num(t2.unitCost), life:C.num(t2.life),
+            source:t2.source||'Market estimate', confidence:t2.confidence||'Medium' }; }),
+        consumables:(p.consumables||[]).filter(function(t2){ return t2 && t2.item; }).map(function(t2){
+          return { item:t2.item, costPerPart:C.num(t2.costPerPart), source:t2.source||'Market estimate',
+            confidence:t2.confidence||'Medium' }; }),
+        packaging:{ method:(p.packaging||{}).method||'', costPerPart:C.num((p.packaging||{}).costPerPart),
+          source:(p.packaging||{}).source||'Market estimate' },
+        freight:{ method:(p.freight||{}).method||'', costPerPart:C.num((p.freight||{}).costPerPart),
+          source:(p.freight||{}).source||'Market estimate' },
+        specialProcesses:(p.specialProcesses||[]).filter(function(s){ return s && s.name; })
+          .map(function(s){ return { name:s.name, note:s.note||'', ratePerPart:0 }; }),
+        inspectionMinPerPart:C.num(p.inspectionMinPerPart),
+        assumptions:(p.assumptions||[]).filter(Boolean), aiNotes:p.notes||'' };
+      var unmatched = c.operations.filter(function(o){ return !o.machineId; }).length;
+      await rfqPatch(ref, { costing: c });
+      loadRfqPipeline();
+      if (unmatched) setTimeout(function(){
+        rfqSay(ref, unmatched + ' operation(s) could not be matched to one of your machines — those ' +
+          'lines are costed at a zero machine rate. Check the route before quoting.');
+      }, 300);
+    } catch(e){
+      try { await rfqPatch(ref, { costing: { error: e.message } }); } catch(e2){}
+      loadRfqPipeline();
+    }
+    btn.disabled = false; btn.textContent = 'Work out cost with AI';
+  }
+
+  async function rfqDraftQuote(btn){
+    var ref = btn.dataset.ref;
+    var r = rfqRows.filter(function(x){ return x.ref === ref; })[0]; if (!r || !r.costing || r.costing.error) return;
+    btn.disabled = true; btn.textContent = 'Drafting…';
+    try {
+      var t = rcComputeCosting(r.costing, rfqCfg);
+      var cfg = rfqCfg.quoteCfg || {};
+      var x = r.extract || {}, part = x.part || {};
+      var sym = cfg.currencySymbol || '₹';
+      var number = (cfg.numberFormat || '{PREFIX}-{YYYY}-{SEQ}')
+        .replace('{PREFIX}', cfg.prefix || 'QTN')
+        .replace('{YYYY}', String(new Date().getFullYear()))
+        .replace('{SEQ}', String(C.num(cfg.nextSeq) || 1).padStart(C.num(cfg.seqPad) || 4, '0'));
+      var taxPct = cfg.showTax === false ? 0 : C.num(cfg.taxPercent);
+      var subtotal = t.lineTotal, tax = subtotal * taxPct / 100, total = subtotal + tax;
+      var txt = await C.callAI(
+        'Write the covering text of a quotation from a precision manufacturing company to a customer.\n\n' +
+        'Enquiry ' + r.ref + ' from ' + (r.name||'') + (r.company ? ' at ' + r.company : '') + '.\n' +
+        'Part: ' + ([part.number, part.name, part.drawingNumber].filter(Boolean).join(' · ') || 'as per drawing') + '\n' +
+        'Quantity: ' + t.qty + '\nUnit price: ' + sym + Math.round(t.sellingPrice) + '\n\n' +
+        'Under 120 words, professional and direct, no flattery and no invented capability claims. ' +
+        'Do not restate the price — it appears in the table beside this text. Return only the body text.',
+        { maxTokens: 500 });
+      var q = { number:number, createdAt:new Date().toLocaleString(),
+        qty:t.qty, unitPrice:Math.round(t.sellingPrice), subtotal:Math.round(subtotal),
+        taxLabel:cfg.taxLabel||'Tax', taxPct:taxPct, tax:Math.round(tax), total:Math.round(total),
+        validityDays:C.num(cfg.validityDays)||30, currencySymbol:sym,
+        body: C.stripMarkup(txt || ''),
+        partLine: [part.number, part.name, part.drawingNumber].filter(Boolean).join(' · ') || 'As per drawing',
+        paymentTerms:cfg.paymentTerms||'', deliveryTerms:cfg.deliveryTerms||'',
+        warrantyTerms:cfg.warrantyTerms||'', incoterms:cfg.incoterms||'' };
+      await rfqPatch(ref, { quoteDoc:q, status: (r.status === 'Received' ? 'Quote Drafted' : r.status) });
+      loadRfqPipeline();
+    } catch(e){ rfqSay(ref, esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Draft quotation';
+  }
+
+  function rfqPrintCostSheet(ref){
+    var r = rfqRows.filter(function(x){ return x.ref === ref; })[0];
+    if (!r || !r.costing || r.costing.error) return;
+    var t = rcComputeCosting(r.costing, rfqCfg);
+    var x = r.extract || {}, part = x.part || {};
+    C.openReport({ title:'Internal Cost Sheet — ' + r.ref, kind:'Costing', landscape:true,
+      subtitle:'CONFIDENTIAL — internal costing, not for the customer',
+      sections:[
+        { type:'pairs', title:'Enquiry', rows:[['Reference', esc(r.ref)], ['Customer', esc(r.company||r.name||'')],
+          ['Part', esc([part.number, part.name, part.drawingNumber].filter(Boolean).join(' · ')||'—')],
+          ['Quantity', C.qty(t.qty)]] },
+        { type:'table', title:'Operations', dense:true,
+          columns:[{label:'Op',align:'c'},{label:'Process'},{label:'Machine'},{label:'Setup min',align:'r'},
+            {label:'Cycle min',align:'r'},{label:'Machine',align:'r'},{label:'Labour',align:'r'},
+            {label:'Setup',align:'r'},{label:'Total',align:'r'}],
+          rows:(t.ops||[]).map(function(o){
+            return [esc(o.op), esc(o.process||''), esc(o.machineName), C.qty(o.setupMin), C.qty(o.cycleMin),
+              C.qty(Math.round(o.machineCost*100)/100), C.qty(Math.round(o.labourCost*100)/100),
+              C.qty(Math.round(o.setupCost*100)/100),
+              C.qty(Math.round((o.machineCost+o.labourCost+o.setupCost)*100)/100)];
+          }) },
+        { type:'pairs', title:'Cost build-up, per piece', rows:[
+          ['Material', C.inr(t.materialCost)], ['Machine', C.inr(t.machineCost)], ['Labour', C.inr(t.labourCost)],
+          ['Setup', C.inr(t.setupCost)], ['Inspection', C.inr(t.inspection)], ['Special processes', C.inr(t.special)],
+          ['Tooling', C.inr(t.tooling)], ['Consumables', C.inr(t.consumables)], ['Packaging', C.inr(t.packaging)],
+          ['Freight', C.inr(t.freight)], ['Direct cost', C.inr(t.direct)], ['Scrap allowance', C.inr(t.scrap)],
+          ['Admin overhead', C.inr(t.admin)], ['Finance', C.inr(t.finance)], ['Contingency', C.inr(t.contingency)],
+          ['Total cost', C.inr(t.totalCost)], ['Profit', C.inr(t.profit)], ['Selling price', C.inr(t.sellingPrice)],
+          ['Line total', C.inr(t.lineTotal)], ['Floor price (cost + 3%)', C.inr(t.minPrice)]] },
+        (r.costing.assumptions||[]).length ? { type:'text', title:'Assumptions the AI had to make',
+          body:r.costing.assumptions.join('\n') } : null,
+        { type:'text', title:'How this was worked out',
+          body:'The AI proposed the route and the times only. Every rate — machine hour rate, labour rate, ' +
+               'overhead, scrap, admin, finance, contingency and profit — was computed from the figures on ' +
+               'Quoting & Costing Setup. The AI supplied no prices except material where marked as a market estimate.' }
+      ].filter(Boolean) });
+  }
+
+  function rfqPrintQuote(ref){
+    var r = rfqRows.filter(function(x){ return x.ref === ref; })[0];
+    if (!r || !r.quoteDoc) return;
+    var q = r.quoteDoc, co = rfqCfg.company || {};
+    C.openReport({ title:'Quotation ' + (q.number||''), kind:'Quotation',
+      subtitle:(r.company || r.name || '') + ' · ' + r.ref,
+      sections:[
+        { type:'pairs', title:'Quotation', rows:[['Number', esc(q.number||'')], ['Date', esc(q.createdAt||'')],
+          ['To', esc(r.company||r.name||'')], ['Enquiry', esc(r.ref)],
+          ['Valid for', esc(q.validityDays)+' days']] },
+        q.body ? { type:'text', title:'', body:q.body } : null,
+        { type:'table', title:'Quotation', columns:[{label:'Description'},{label:'Qty',align:'r'},
+            {label:'Unit price',align:'r'},{label:'Amount',align:'r'}],
+          rows:[[esc(q.partLine||''), C.qty(q.qty), C.inr(q.unitPrice), C.inr(q.subtotal)]] },
+        { type:'pairs', title:'Totals', rows:[['Subtotal', C.inr(q.subtotal)]]
+            .concat(q.taxPct ? [[esc(q.taxLabel)+' @ '+q.taxPct+'%', C.inr(q.tax)]] : [])
+            .concat([['Total', C.inr(q.total)]]) },
+        { type:'text', title:'Terms',
+          body:[q.paymentTerms && ('Payment: ' + q.paymentTerms),
+                q.deliveryTerms && ('Delivery: ' + q.deliveryTerms),
+                q.incoterms && ('Incoterms: ' + q.incoterms),
+                q.warrantyTerms && ('Warranty: ' + q.warrantyTerms)].filter(Boolean).join('\n') || '—' },
+        { type:'text', title:'Signatures',
+          body:'For ' + (co.legalName || co.displayName || '') + '\n\n\nAuthorised signatory' }
+      ].filter(Boolean) });
   }
 
   /* ================= PAYROLL — the calculation engine =================

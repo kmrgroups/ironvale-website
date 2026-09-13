@@ -28175,7 +28175,15 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     try {
       var j = await C.api('/api/content');
       var ls = (j.data && j.data.loginScreen) || {};
-      if (ls.welcomeTitle) document.getElementById('g-welcome').textContent = ls.welcomeTitle;
+      var co = (j.data && j.data.company) || {};
+      var name = co.displayName || co.legalName || '';
+      /* A custom welcome wins; failing that, name the company rather than
+         leave the generic marketing line. Somebody signing in should see
+         whose system this is — and on a deployment sold to another company,
+         a stock headline about "the future of manufacturing" is simply the
+         wrong name on the door. */
+      document.getElementById('g-welcome').textContent =
+        ls.welcomeTitle || (name ? 'Welcome to ' + name : 'Welcome to the future of manufacturing');
       if (ls.welcomeText) document.getElementById('g-welcome-text').textContent = ls.welcomeText;
       var gal = document.getElementById('gl-gallery');
       gal.innerHTML = (ls.images || []).slice(0,6).map(function(u){

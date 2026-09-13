@@ -3055,3 +3055,30 @@ would have been worse than no test.
 
 Full suite (43 files) clean — same 2 pre-existing, unrelated smoketest
 failures that predate all of this work.
+
+## The two failures I reported every turn and never fixed
+
+For roughly twenty turns this log ended with "same 2 pre-existing, unrelated
+smoketest failures". They were pre-existing, and they were unrelated to each
+migration — but "unrelated to what I am doing right now" is not the same as
+"not my problem", and repeating the phrase had quietly turned a real defect
+into background noise.
+
+Both were the same bug. `loadGateContent()` read a custom `welcomeTitle`
+from the login-screen record and, when none was set, left the hard-coded
+headline "Welcome to the future of manufacturing" in place. It never fell
+back to the company name — so the sign-in screen of a system sold to another
+company greeted them with stock marketing copy and their own name nowhere on
+it. The test's own comment had said exactly this all along: "the sign-in
+screen is supposed to carry the company name from the site profile. If it
+fails, the screen has lost it."
+
+The fix is four lines: a custom welcome still wins; failing that, the gate
+names the company from the profile `/api/content` was already returning and
+the gate was already fetching. The generic line survives only as the
+last-resort default when there is no company name at all — a brand-new
+deployment before anything is set up.
+
+**`node tests/run-all.mjs` now reports `all suites clean`** — 40 files,
+1,155 checks, zero failures. That is the whole board green for the first
+time in this work.

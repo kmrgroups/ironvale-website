@@ -2932,3 +2932,46 @@ unrelated smoketest failures.
 Founders, Brand, Design, Sizing, Capabilities, Process, Stats, Industries,
 Certifications, AI Chatbot, Testimonial, Contact, Sections) and the
 website-side setup wizard.
+
+## Website Content — fifteen design tabs as one schema-driven screen
+
+I had flagged this as the hardest remaining piece and possibly not worth
+doing — an image CMS with no IDMS equivalent to port into. Looking at the
+actual data changed that assessment: the fifteen tabs are only **two shapes**
+underneath. A handful of plain text fields (`heroHeadline`, `capTitle`,
+`contactAddress`…), and lists of `{id, image, one or two labels}` —
+`capabilities`, `process`, `stats`, `gallery`, `industries`, `certs`,
+`founders`, plus two plain string lists (`ticker`, `botChips`).
+
+So this is one screen driven by a `WC_SECTIONS` schema, not fifteen bespoke
+editors. Writing fifteen would have been fifteen times the code and fifteen
+places for the same bug. Each entry declares its `fields` and, where it has
+one, its `list` (array name, image key, columns). The renderer handles text
+inputs, textareas, image upload/clear via the same `C.uploadFile()` every
+attachment in this system already uses, row reordering and removal. One
+notable irregularity handled by the schema rather than a special case:
+`founders` stores its image under `photo` while every other list uses `img`.
+
+Also carried over: the section visibility toggles (`data.sections`), which
+hide a section from visitors while keeping everything entered, so it can be
+turned back on unchanged.
+
+**The check worth having**, and the reason this screen could be trusted at
+all: a field name that *looks* right but is not one the website reads would
+save happily and change nothing on the live site — the worst kind of
+failure, because it looks like it worked. `tests/websitecontenttest.mjs`
+therefore reads `index.html` itself and asserts that every text key and
+every array this screen writes actually appears in the website's own source.
+20 checks, including reordering, the `photo`-vs-`img` irregularity, section
+toggles saved as real booleans, and the unrelated company profile surviving
+a save to the same shared record.
+
+**Deliberately not moved**: Design, Sizing and Brand. Those are the
+website's own theme system — colour tokens, type scale, spacing — and they
+are edited against a live preview of the site itself, which is the website's
+job, not the ERP's. Moving them would mean rebuilding a theme previewer
+inside IDMS to no benefit.
+
+**What genuinely remains**: quotation email sending with its
+customer-facing PDF template, and the website-side setup wizard. Full suite
+(43 files) clean — same 2 pre-existing, unrelated smoketest failures.

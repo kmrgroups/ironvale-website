@@ -2007,6 +2007,39 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       </div>
     </div>
 
+    <div class="panel" data-panel="admin_content">
+      <div class="card">
+        <h4>Website Content</h4>
+        <div class="hint" style="margin-bottom:10px;">Everything the public website shows —
+          headlines, the sections, photos, the chatbot and the contact details. Changes are saved to
+          the same record the website reads, so they are live as soon as you save.
+          <span class="hint" style="display:block;margin-top:6px;">Company name, address, logo, social
+          links and the map are on
+          <a data-goto="profile" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Company Profile</a>;
+          quotation terms and rates are on
+          <a data-goto="admin_quoting" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Quoting &amp; Costing Setup</a>.</span></div>
+        <div class="row four">
+          <div style="grid-column:span 2;"><label>Section</label><select id="wc-section"></select></div>
+          <div style="align-self:end;"><button class="btn" id="wc-refresh">Refresh</button></div>
+          <div style="align-self:end;"><button class="btn gold" id="wc-save">Save website content</button></div>
+        </div>
+        <div class="note" id="wc-msg" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <h4 id="wc-title">—</h4>
+        <div class="hint" id="wc-note" style="margin-bottom:10px;"></div>
+        <div id="wc-fields"></div>
+        <div id="wc-list" style="margin-top:14px;"></div>
+        <button class="btn" id="wc-add" style="margin-top:10px;display:none;">+ Add</button>
+      </div>
+      <div class="card">
+        <h4>Which sections appear on the website</h4>
+        <div class="hint" style="margin-bottom:10px;">Turning one off hides it from visitors but keeps
+          everything you have entered, so it can be turned back on unchanged.</div>
+        <div id="wc-toggles"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="admin_quoting">
       <div class="card">
         <h4>Quoting &amp; Costing Setup</h4>
@@ -5345,6 +5378,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     ['admin','⚙','Admin','Settings and the website',[
       ['admin_wizard','🧙','Setup Wizard',1],
       ['admin_quoting','🧮','Quoting & Costing Setup',1],
+      ['admin_content','🎨','Website Content',1],
       ['admin_site','🌐','Website Content',1],
       ['admin_banner','🖼','Home Banner',1],
       ['login_screen','🔐','Login Screen',1],
@@ -5616,6 +5650,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'profile') loadProfileScreen();
     if (s === 'admin_wizard') loadSetupWizard();
     if (s === 'admin_quoting') loadQuotingSetup();
+    if (s === 'admin_content') loadWebsiteContent();
     if (s === 'rfq_pipeline') loadRfqPipeline();
     if (s === 'dwm')                   loadDwm();
     if (s === 'task_list')             loadTasks();
@@ -26201,6 +26236,197 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      Same whole-object-preserving save pattern as Company Profile and
      Statutory & Masters — /api/content overwrites everything, so this reads
      the full record first and only changes its own keys. */
+  /* ---------------- Website Content (native) ----------------
+     Fifteen website-design tabs collapse into one schema-driven editor.
+     They are all the same two shapes underneath: a handful of text fields,
+     and a list of {id, image, one or two labels}. Writing fifteen bespoke
+     screens would have been fifteen times the code and fifteen places for
+     the same bug. `fields` are plain inputs; `list` names the array and the
+     columns each row carries. Images upload through the same
+     C.uploadFile() every attachment in this system already uses. */
+  var WC_SECTIONS = [
+    { key:'hero', title:'Hero banner', note:'The first thing a visitor sees.',
+      fields:[['heroEyebrow','Eyebrow (small text above the headline)'],['heroHeadline','Headline'],
+        ['heroSub','Sub-headline','textarea'],['ctaPrimary','Primary button'],['ctaSecondary','Secondary button']],
+      list:{ arr:'ticker', label:'Scrolling ticker lines', plain:true } },
+    { key:'capabilities', title:'Capabilities', note:'What you can make.',
+      fields:[['capTitle','Section title'],['capMenu','Menu label']],
+      list:{ arr:'capabilities', label:'Capabilities', img:'img',
+        cols:[['title','Title'],['desc','Description','textarea']] } },
+    { key:'process', title:'Process', note:'How a job moves through the works.',
+      fields:[['processTitle','Section title'],['processMenu','Menu label']],
+      list:{ arr:'process', label:'Steps', img:'img',
+        cols:[['title','Title'],['desc','Description','textarea']] } },
+    { key:'stats', title:'Stats', note:'The handful of numbers worth leading with.',
+      fields:[], list:{ arr:'stats', label:'Figures', cols:[['value','Figure'],['label','Caption']] } },
+    { key:'gallery', title:'Gallery', note:'Photographs of the works and the parts.',
+      fields:[['galleryTitle','Section title'],['galleryMenu','Menu label']],
+      list:{ arr:'gallery', label:'Photographs', img:'img', cols:[['label','Caption']] } },
+    { key:'industries', title:'Industries', note:'Who you supply.',
+      fields:[['industriesTitle','Section title'],['industriesMenu','Menu label']],
+      list:{ arr:'industries', label:'Industries', img:'img', cols:[['label','Name']] } },
+    { key:'certs', title:'Certifications', note:'Audited standards worth showing.',
+      fields:[['certsTitle','Section title'],['certsMenu','Menu label'],['certsSub','Sub-heading','textarea']],
+      list:{ arr:'certs', label:'Certifications', img:'img', cols:[['label','Standard'],['note','What it covers']] } },
+    { key:'founders', title:'Founders', note:'The people behind the company.',
+      fields:[['foundersTitle','Section title'],['foundersMenu','Menu label']],
+      list:{ arr:'founders', label:'People', img:'photo',
+        cols:[['name','Name'],['role','Role'],['bio','Short bio','textarea']] } },
+    { key:'testimonial', title:'Testimonial', note:'One quotation from a customer.',
+      fields:[['quoteText','The quotation','textarea'],['quoteName','Who said it'],['quoteRole','Their role or company']] },
+    { key:'contact', title:'Contact section', note:'What the contact block on the website says. ' +
+        'The address and phone shown here are the website\'s own wording — the company\'s formal ' +
+        'registered details live on Company Profile.',
+      fields:[['contactTitle','Heading'],['contactSub','Sub-heading','textarea'],
+        ['contactAddress','Address','textarea'],['contactPhone','Phone'],['contactEmail','Email']] },
+    { key:'chatbot', title:'AI chatbot', note:'The assistant that answers visitors on the website.',
+      fields:[['botName','Assistant name'],['botLauncher','Launcher text'],
+        ['botWelcome','Welcome message','textarea'],
+        ['botKnowledge','What it should know (facts it may state)','textarea']],
+      list:{ arr:'botChips', label:'Suggested questions', plain:true } }
+  ];
+  var WC_TOGGLES = [['capabilities','Capabilities'],['process','Process'],['stats-section','Stats'],
+    ['gallery','Gallery'],['industries','Industries'],['certs-section','Certifications'],
+    ['founders','Founders'],['testimonial-section','Testimonial'],['track','RFQ / contact form']];
+  var wcContent = null, wcSection = 'hero';
+
+  async function loadWebsiteContent(){
+    try { wcContent = (await C.api('/api/content')).data || {}; } catch(e){ wcContent = {}; }
+    wcContent.sections = wcContent.sections || {};
+    var sel = document.getElementById('wc-section');
+    sel.innerHTML = WC_SECTIONS.map(function(s){
+      return '<option value="'+esc(s.key)+'"'+(s.key===wcSection?' selected':'')+'>'+esc(s.title)+'</option>'; }).join('');
+    document.getElementById('wc-msg').style.display = 'none';
+    wcDrawSection();
+    wcDrawToggles();
+  }
+
+  function wcSpec(){ return WC_SECTIONS.filter(function(s){ return s.key === wcSection; })[0] || WC_SECTIONS[0]; }
+
+  function wcDrawSection(){
+    var s = wcSpec();
+    document.getElementById('wc-title').textContent = s.title;
+    document.getElementById('wc-note').textContent = s.note || '';
+    document.getElementById('wc-fields').innerHTML = (s.fields||[]).map(function(f){
+      var v = wcContent[f[0]] == null ? '' : wcContent[f[0]];
+      return '<div class="row" style="margin-bottom:9px;"><div><label>'+esc(f[1])+'</label>' +
+        (f[2] === 'textarea'
+          ? '<textarea class="wc-f" data-k="'+esc(f[0])+'" rows="3">'+esc(v)+'</textarea>'
+          : '<input class="wc-f" data-k="'+esc(f[0])+'" value="'+esc(v)+'">') + '</div></div>';
+    }).join('');
+    document.getElementById('wc-fields').querySelectorAll('.wc-f').forEach(function(el){
+      el.addEventListener('input', function(){ wcContent[el.dataset.k] = el.value; });
+    });
+    wcDrawList();
+  }
+
+  function wcDrawList(){
+    var s = wcSpec(), host = document.getElementById('wc-list');
+    var addBtn = document.getElementById('wc-add');
+    if (!s.list){ host.innerHTML = ''; addBtn.style.display = 'none'; return; }
+    var L = s.list;
+    wcContent[L.arr] = wcContent[L.arr] || [];
+    var rows = wcContent[L.arr];
+    addBtn.style.display = ''; addBtn.textContent = '+ Add to ' + L.label.toLowerCase();
+
+    if (L.plain){
+      host.innerHTML = '<div class="sub">'+esc(L.label)+'</div>' + (rows.length
+        ? rows.map(function(v,i){
+            return '<div style="display:flex;gap:8px;margin-top:6px;">' +
+              '<input class="wc-plain" data-i="'+i+'" value="'+esc(v)+'" style="flex:1;">' +
+              '<button class="btn del wc-plain-del" data-i="'+i+'">×</button></div>';
+          }).join('')
+        : '<div class="hint">Nothing yet.</div>');
+    } else {
+      host.innerHTML = '<div class="sub">'+esc(L.label)+'</div>' + (rows.length
+        ? rows.map(function(row,i){
+            return '<div class="card" style="margin-top:8px;">' +
+              '<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">' +
+              (L.img ? '<div style="flex:0 0 150px;">' +
+                (row[L.img] ? '<img src="'+esc(row[L.img])+'" style="max-width:150px;max-height:90px;border:1px solid var(--line);border-radius:6px;">' : '<div class="hint">No image</div>') +
+                '<input type="file" accept="image/*" class="wc-img" data-i="'+i+'" style="margin-top:6px;max-width:150px;">' +
+                (row[L.img] ? '<button class="btn del wc-img-clear" data-i="'+i+'" style="margin-top:6px;">Remove image</button>' : '') +
+                '</div>' : '') +
+              '<div style="flex:1;min-width:220px;">' +
+              L.cols.map(function(c){
+                var v = row[c[0]] == null ? '' : row[c[0]];
+                return '<div style="margin-bottom:8px;"><label>'+esc(c[1])+'</label>' +
+                  (c[2] === 'textarea'
+                    ? '<textarea class="wc-row" data-i="'+i+'" data-k="'+esc(c[0])+'" rows="2">'+esc(v)+'</textarea>'
+                    : '<input class="wc-row" data-i="'+i+'" data-k="'+esc(c[0])+'" value="'+esc(v)+'">') + '</div>';
+              }).join('') + '</div></div>' +
+              '<div style="margin-top:8px;display:flex;gap:6px;">' +
+              (i > 0 ? '<button class="btn wc-up" data-i="'+i+'">↑</button>' : '') +
+              (i < rows.length-1 ? '<button class="btn wc-down" data-i="'+i+'">↓</button>' : '') +
+              '<button class="btn del wc-row-del" data-i="'+i+'">Remove</button></div></div>';
+          }).join('')
+        : '<div class="empty"><b>Nothing here yet</b>Press Add below.</div>');
+    }
+
+    host.querySelectorAll('.wc-plain').forEach(function(el){
+      el.addEventListener('input', function(){ wcContent[L.arr][+el.dataset.i] = el.value; });
+    });
+    host.querySelectorAll('.wc-plain-del').forEach(function(b){
+      b.addEventListener('click', function(){ wcContent[L.arr].splice(+b.dataset.i,1); wcDrawList(); });
+    });
+    host.querySelectorAll('.wc-row').forEach(function(el){
+      el.addEventListener('input', function(){ wcContent[L.arr][+el.dataset.i][el.dataset.k] = el.value; });
+    });
+    host.querySelectorAll('.wc-row-del').forEach(function(b){
+      b.addEventListener('click', function(){ wcContent[L.arr].splice(+b.dataset.i,1); wcDrawList(); });
+    });
+    host.querySelectorAll('.wc-up').forEach(function(b){
+      b.addEventListener('click', function(){
+        var i = +b.dataset.i, a = wcContent[L.arr];
+        a.splice(i-1, 0, a.splice(i,1)[0]); wcDrawList();
+      });
+    });
+    host.querySelectorAll('.wc-down').forEach(function(b){
+      b.addEventListener('click', function(){
+        var i = +b.dataset.i, a = wcContent[L.arr];
+        a.splice(i+1, 0, a.splice(i,1)[0]); wcDrawList();
+      });
+    });
+    host.querySelectorAll('.wc-img-clear').forEach(function(b){
+      b.addEventListener('click', function(){ wcContent[L.arr][+b.dataset.i][L.img] = ''; wcDrawList(); });
+    });
+    host.querySelectorAll('.wc-img').forEach(function(inp){
+      inp.addEventListener('change', async function(){
+        var f = inp.files[0]; if (!f) return;
+        var say = noteWriter(document.getElementById('wc-msg'));
+        try {
+          var up = await C.uploadFile(f);
+          wcContent[L.arr][+inp.dataset.i][L.img] = up.url;
+          wcDrawList();
+          say('Image uploaded — press Save website content to keep it.', true);
+        } catch(e){ say(esc(e.message)); }
+      });
+    });
+  }
+
+  function wcDrawToggles(){
+    document.getElementById('wc-toggles').innerHTML = '<div class="row four">' +
+      WC_TOGGLES.map(function(t){
+        return '<div><label>'+esc(t[1])+'</label><select class="wc-toggle" data-k="'+esc(t[0])+'">' +
+          '<option value="yes">Shown</option><option value="no"'+
+          (wcContent.sections[t[0]] === false ? ' selected' : '')+'>Hidden</option></select></div>';
+      }).join('') + '</div>';
+    document.getElementById('wc-toggles').querySelectorAll('.wc-toggle').forEach(function(sel){
+      sel.addEventListener('change', function(){ wcContent.sections[sel.dataset.k] = sel.value !== 'no'; });
+    });
+  }
+
+  async function saveWebsiteContent(){
+    var say = noteWriter(document.getElementById('wc-msg'));
+    var btn = document.getElementById('wc-save');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      await C.api('/api/content', { method:'POST', body:JSON.stringify({ data: wcContent }) });
+      say('Saved. The website shows this now.', true);
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Save website content';
+  }
+
   var qsContent = null;
   async function loadQuotingSetup(){
     try { qsContent = (await C.api('/api/content')).data || {}; } catch(e){ qsContent = {}; }
@@ -28207,6 +28433,28 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('cp-sign-file').addEventListener('change', function(){ cpUploadTo('cp-sign-file', 'cp-sign-preview', 'signatureImg'); });
   document.getElementById('cp-seal-file').addEventListener('change', function(){ cpUploadTo('cp-seal-file', 'cp-seal-preview', 'sealImg'); });
   document.getElementById('cp-save').addEventListener('click', saveCompanyProfile);
+
+  document.getElementById('wc-refresh').addEventListener('click', loadWebsiteContent);
+  document.getElementById('wc-save').addEventListener('click', saveWebsiteContent);
+  document.getElementById('wc-section').addEventListener('change', function(){
+    wcSection = this.value; wcDrawSection();
+  });
+  document.getElementById('wc-add').addEventListener('click', function(){
+    var s = wcSpec(); if (!s.list) return;
+    var L = s.list;
+    wcContent[L.arr] = wcContent[L.arr] || [];
+    if (L.plain){ wcContent[L.arr].push(''); }
+    else {
+      var row = { id: 'x' + Date.now().toString(36) };
+      if (L.img) row[L.img] = '';
+      L.cols.forEach(function(c){ row[c[0]] = ''; });
+      wcContent[L.arr].push(row);
+    }
+    wcDrawList();
+  });
+  document.querySelectorAll('[data-panel="admin_content"] [data-goto]').forEach(function(a){
+    a.addEventListener('click', function(){ go(a.dataset.goto); });
+  });
 
   document.getElementById('qs-refresh').addEventListener('click', loadQuotingSetup);
   document.getElementById('qs-mc-add').addEventListener('click', function(){

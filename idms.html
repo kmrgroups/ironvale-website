@@ -1954,11 +1954,25 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 
         <div class="wiz-step" data-wiz="6">
           <h3 style="margin-top:0;">6 · Connections</h3>
-          <p class="hint">Email, AI and WhatsApp all work the same way here as on the website's own
-            Setup screen — the same keys, the same database, checked and saved one at a time so a
-            typo in one never risks another that already works.</p>
+          <p class="hint">Email, AI and WhatsApp. Each one says whether it is actually working, how
+            to get what it needs, and lets you test it for real before you rely on it.</p>
 
-          <div class="sub">Email — sends RFQ alerts and customer quotations</div>
+          <div class="sub" style="margin-top:14px;">
+            Email <span class="badge" id="wz-badge-email">checking…</span></div>
+          <div class="hint" style="margin-bottom:8px;">Sends you an alert when an RFQ arrives, and
+            sends quotations to customers.</div>
+          <details class="hint" style="margin-bottom:8px;"><summary style="cursor:pointer;font-weight:600;">How to get a Resend API key</summary>
+            <ol style="margin:6px 0 0 18px;">
+              <li>Go to resend.com and sign up — free at this volume.</li>
+              <li>Left menu → API Keys → Create API Key. Any name will do.</li>
+              <li>Copy the key straight away — it starts <code>re_</code> and is shown only once.</li>
+              <li>Paste it below and press Save email.</li>
+            </ol>
+            <p style="margin:8px 0 0;"><b>To send from your own domain:</b> Resend → Domains → Add
+              Domain, add the DNS records it gives you exactly as shown, then press Verify. Until that
+              says Verified, use <code>onboarding@resend.dev</code> — but it only delivers to the
+              address you registered with Resend, so customers will receive nothing.</p>
+          </details>
           <div class="row four">
             <div><label>Resend API key</label><input type="password" id="wz-set-RESEND_API_KEY" placeholder="re_..."></div>
             <div><label>Send emails from</label><input id="wz-set-FROM_EMAIL" placeholder="Company Name &lt;sales@yourdomain.com&gt;"></div>
@@ -1966,8 +1980,14 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <div style="align-self:end;"><button class="btn" data-wz-save-group="email">Save email</button></div>
           </div>
           <div class="hint" id="wz-set-email-status" style="margin-top:4px;"></div>
+          <div style="margin-top:8px;"><button class="btn" id="wz-test-email">Send myself a test email</button>
+            <span class="hint" id="wz-test-email-result" style="margin-left:8px;"></span></div>
 
-          <div class="sub" style="margin-top:16px;">AI — reads drawings, drafts documents, powers every agent</div>
+          <div class="sub" style="margin-top:18px;">
+            AI <span class="badge" id="wz-badge-ai">checking…</span></div>
+          <div class="hint" style="margin-bottom:8px;">Reads drawings, plans process routes, drafts
+            documents and powers every agent. Optional — everything else works without it. One
+            provider is enough; the others are fallbacks.</div>
           <div class="row four">
             <div><label>Mistral key</label><input type="password" id="wz-set-MISTRAL_API_KEY"></div>
             <div><label>Groq key</label><input type="password" id="wz-set-GROQ_API_KEY"></div>
@@ -1978,8 +1998,13 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <div style="align-self:end;"><button class="btn" data-wz-save-group="ai">Save AI keys</button></div>
           </div>
           <div class="hint" id="wz-set-ai-status" style="margin-top:4px;"></div>
+          <div style="margin-top:8px;"><button class="btn" id="wz-test-ai">Test the AI connection</button>
+            <span class="hint" id="wz-test-ai-result" style="margin-left:8px;"></span></div>
 
-          <div class="sub" style="margin-top:16px;">WhatsApp — optional, alongside email</div>
+          <div class="sub" style="margin-top:18px;">
+            WhatsApp <span class="badge" id="wz-badge-whatsapp">checking…</span></div>
+          <div class="hint" style="margin-bottom:8px;">Optional, alongside email. Needs a Meta
+            WhatsApp Business account and an approved message template.</div>
           <div class="row four">
             <div><label>WhatsApp token</label><input type="password" id="wz-set-WHATSAPP_TOKEN"></div>
             <div><label>Phone ID</label><input id="wz-set-WHATSAPP_PHONE_ID"></div>
@@ -1990,6 +2015,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <div style="align-self:end;"><button class="btn" data-wz-save-group="whatsapp">Save WhatsApp</button></div>
           </div>
           <div class="hint" id="wz-set-whatsapp-status" style="margin-top:4px;"></div>
+          <div style="margin-top:8px;"><button class="btn" id="wz-test-wa">Send myself a test WhatsApp</button>
+            <span class="hint" id="wz-test-wa-result" style="margin-left:8px;"></span></div>
         </div>
 
         <div class="wiz-step" data-wiz="7">
@@ -5380,7 +5407,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['admin_wizard','🧙','Setup Wizard',1],
       ['admin_quoting','🧮','Quoting & Costing Setup',1],
       ['admin_content','🎨','Website Content',1],
-      ['admin_site','🌐','Website Content',1],
+      ['admin_site','🌐','Website — theme & preview',1],
       ['admin_banner','🖼','Home Banner',1],
       ['login_screen','🔐','Login Screen',1],
       ['profile','🏢','Company Profile',1],
@@ -14076,10 +14103,12 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 
   /* ---------------- screens served by the website ---------------- */
   var EMBEDS = {
-    admin_site: ['Website Content', 'admin',
-      'The public website — text, photographs, sections, colours, contacts and the RFQ settings. ' +
-      'It is edited here and nowhere else: the website itself has no admin button. Anything published ' +
-      'here appears on the live site straight away, because both read the same record.'],
+    admin_site: ['Website — theme & preview', 'admin',
+      'The website\'s own theme editor — colours, type scale and spacing, edited against a live ' +
+      'preview of the site itself. Text, photographs, sections and contacts are now native on ' +
+      'Website Content; company details are on Company Profile, and quotation settings on ' +
+      'Quoting & Costing Setup. This remains framed because a theme previewer belongs with the ' +
+      'thing it is previewing.'],
     emb_pipeline: ['RFQ Pipeline', 'pipeline',
       'Enquiries from the website: drawing reading, costing, quotations, and the handover that turns ' +
       'a won quotation into a part in this system.'],
@@ -26205,13 +26234,77 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   }
   function wizDrawConnections(){
     var s = wizData.settings || {};
+    var has = function(k){ return s[k] && s[k].source !== 'none'; };
     Object.keys(WIZ_SETTING_GROUPS).forEach(function(g){
-      var known = WIZ_SETTING_GROUPS[g].filter(function(k){ return s[k] && s[k].source !== 'none'; });
+      var known = WIZ_SETTING_GROUPS[g].filter(has);
       document.getElementById('wz-set-' + g + '-status').innerHTML = known.length
         ? known.map(function(k){ return '<span class="badge series">' + k + ': ' + esc(s[k].masked) +
             (s[k].source === 'vercel' ? ' (from Vercel)' : '') + '</span>'; }).join(' ')
         : 'Nothing saved in this group yet.';
     });
+    /* Ready means "could actually work", not "somebody typed something" —
+       email needs a key AND a sender, WhatsApp needs the token, phone id
+       and template together, any one AI provider is enough. */
+    var state = {
+      email: has('RESEND_API_KEY') && has('FROM_EMAIL'),
+      ai: ['MISTRAL_API_KEY','GROQ_API_KEY','GEMINI_API_KEY','ANTHROPIC_API_KEY','OPENROUTER_API_KEY'].some(has),
+      whatsapp: has('WHATSAPP_TOKEN') && has('WHATSAPP_PHONE_ID') && has('WHATSAPP_TEMPLATE')
+    };
+    var partial = {
+      email: has('RESEND_API_KEY') || has('FROM_EMAIL'),
+      ai: false,
+      whatsapp: has('WHATSAPP_TOKEN') || has('WHATSAPP_PHONE_ID') || has('WHATSAPP_TEMPLATE')
+    };
+    [['email','Ready','Not set up'],['ai','Ready','Not set up'],['whatsapp','Ready','Not set up']]
+      .forEach(function(row){
+        var el = document.getElementById('wz-badge-' + row[0]);
+        if (!el) return;
+        if (state[row[0]]){ el.className = 'badge series'; el.textContent = row[1]; }
+        else if (partial[row[0]]){ el.className = 'badge sample'; el.textContent = 'Incomplete'; }
+        else { el.className = 'badge'; el.textContent = row[2]; }
+      });
+  }
+
+  function wizTestResult(id, text, ok){
+    var el = document.getElementById(id);
+    el.textContent = text;
+    el.style.color = ok ? 'var(--ok,#1f9d6b)' : 'var(--bad,#b03a2e)';
+  }
+  async function wizTestEmail(){
+    var btn = document.getElementById('wz-test-email');
+    var to = fieldVal('wz-set-OWNER_EMAIL');
+    btn.disabled = true; btn.textContent = 'Sending…'; wizTestResult('wz-test-email-result', '', true);
+    try {
+      var j = await C.api('/api/notify', { method:'POST', body:JSON.stringify({ event:'custom',
+        payload:{ to:to, subject:'Test from your IDMS',
+          text:'If you can read this, email notifications are working.\n\nSent from the Setup Wizard.' } }) });
+      var res = (j.results||[]).filter(function(x){ return /EMAIL/i.test(x); })[0] || 'no response';
+      wizTestResult('wz-test-email-result', res, /EMAIL SENT/i.test(res));
+    } catch(e){ wizTestResult('wz-test-email-result', e.message, false); }
+    btn.disabled = false; btn.textContent = 'Send myself a test email';
+  }
+  async function wizTestAi(){
+    var btn = document.getElementById('wz-test-ai');
+    btn.disabled = true; btn.textContent = 'Testing…'; wizTestResult('wz-test-ai-result', '', true);
+    try {
+      var txt = await C.callAI('Reply with exactly: AI connection working.', { maxTokens: 30 });
+      wizTestResult('wz-test-ai-result', txt ? ('Working — ' + C.stripMarkup(txt).slice(0, 60)) : 'No reply from the AI.', !!txt);
+    } catch(e){ wizTestResult('wz-test-ai-result', 'Failed — ' + e.message, false); }
+    btn.disabled = false; btn.textContent = 'Test the AI connection';
+  }
+  async function wizTestWa(){
+    var btn = document.getElementById('wz-test-wa');
+    var num = fieldVal('wz-set-OWNER_WHATSAPP').replace(/\D/g, '');
+    if (!num) return wizTestResult('wz-test-wa-result', 'Enter your WhatsApp number above and save it first.', false);
+    btn.disabled = true; btn.textContent = 'Sending…'; wizTestResult('wz-test-wa-result', '', true);
+    try {
+      var j = await C.api('/api/notify', { method:'POST', body:JSON.stringify({ event:'custom',
+        payload:{ whatsapp:num,
+          text:'Test from your IDMS. If you can read this, WhatsApp notifications are working.' } }) });
+      var res = (j.results||[]).filter(function(x){ return /WHATSAPP/i.test(x); })[0] || 'no response';
+      wizTestResult('wz-test-wa-result', res, /SENT|TEMPLATE/i.test(res));
+    } catch(e){ wizTestResult('wz-test-wa-result', e.message, false); }
+    btn.disabled = false; btn.textContent = 'Send myself a test WhatsApp';
   }
   async function wizSaveGroup(group){
     var keys = WIZ_SETTING_GROUPS[group];
@@ -28583,6 +28676,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       wizSaveGroup(g).finally(function(){ b.disabled = false; b.textContent = was; });
     });
   });
+  document.getElementById('wz-test-email').addEventListener('click', wizTestEmail);
+  document.getElementById('wz-test-ai').addEventListener('click', wizTestAi);
+  document.getElementById('wz-test-wa').addEventListener('click', wizTestWa);
   document.querySelectorAll('[data-panel="admin_wizard"] [data-goto]').forEach(function(a){
     a.addEventListener('click', function(){ go(a.dataset.goto); });
   });

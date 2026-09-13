@@ -3014,3 +3014,44 @@ step-through, and whether to convert it is a judgement about that screen,
 not an unfinished migration. Everything else the IDMS should own now lives
 in the IDMS. Full suite (43 files) clean — same 2 pre-existing, unrelated
 smoketest failures.
+
+## The setup wizard — and closing the last duplicate
+
+Rather than convert the website's Setup tab into a linear wizard, I read it
+properly first and found it had **three things the IDMS wizard's Connections
+step lacked**, which mattered more than its shape: a live readiness badge per
+service, collapsible "how to get this" instructions (getting a Resend key,
+verifying a sending domain), and real test buttons that actually send.
+
+So the work went the other way round: those were brought into the IDMS
+wizard instead.
+
+- **Readiness badges** mean "could actually work", not "somebody typed
+  something". Email needs a key *and* a sender; WhatsApp needs token, phone
+  id *and* template together; any one AI provider is enough. Anything
+  part-filled reads **Incomplete**, which is the honest answer and the one
+  that saves a support call.
+- **The how-to guidance** was carried over, including the warning that
+  `onboarding@resend.dev` only delivers to the address registered with
+  Resend — so customers receive nothing. That is exactly the kind of thing
+  somebody discovers the expensive way.
+- **Test buttons** for email, AI and WhatsApp, reporting the server's own
+  result string rather than a cheerful assumption. The WhatsApp test refuses
+  outright if no number is saved instead of sending nowhere.
+
+**A duplicate closed**: the old framed `admin_site` was still in the menu as
+"Website Content" alongside the new native screen of the same name — two
+entries, same label, different screens. Renamed to **Website — theme &
+preview**, with its description corrected to say what it still owns (the
+theme editor and its live preview) and where everything else now lives.
+That framing is deliberate, not leftover: a theme previewer belongs with the
+thing it previews.
+
+`tests/setupwizardtest.mjs` grew to 32 checks. One of my own assertions was
+wrong — I asserted email would read Incomplete at a point where the test had
+already saved both the key and the sender, so Ready was correct. Fixed the
+assertion rather than the behaviour; asserting my own mistaken assumption
+would have been worse than no test.
+
+Full suite (43 files) clean — same 2 pre-existing, unrelated smoketest
+failures that predate all of this work.

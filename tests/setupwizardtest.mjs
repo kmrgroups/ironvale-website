@@ -156,6 +156,47 @@ check('the status line reflects the saved key, masked, not in the clear',
   /RESEND_API_KEY/.test($('wz-set-email-status').textContent) && !$('wz-set-email-status').textContent.includes('re_testkey1234'),
   $('wz-set-email-status').textContent);
 
+// ---------- readiness badges: "could actually work", not "something was typed" ----------
+/* the email group save above included FROM_EMAIL as well as the key, so email
+   is legitimately Ready here — asserting Incomplete would have been asserting
+   my own mistaken assumption rather than the behaviour */
+check('email shows Ready once both a key and a sender address are saved',
+  $('wz-badge-email').textContent === 'Ready', $('wz-badge-email').textContent);
+check('AI shows Not set up when no provider key exists at all',
+  $('wz-badge-ai').textContent === 'Not set up', $('wz-badge-ai').textContent);
+set('wz-set-WHATSAPP_TOKEN', 'tok123');
+click(window.document.querySelector('[data-wz-save-group="whatsapp"]'));
+await wait(250);
+check('WhatsApp with only a token is Incomplete, not Ready — it needs the phone id and template too',
+  $('wz-badge-whatsapp').textContent === 'Incomplete', $('wz-badge-whatsapp').textContent);
+
+// ---------- the live test buttons ----------
+let notifyCalls = [];
+const realFetch = window.fetch;
+window.fetch = async (path, opts) => {
+  if (String(path).startsWith('/api/notify')) {
+    notifyCalls.push(opts && opts.body ? JSON.parse(opts.body) : {});
+    return { ok: true, status: 200, json: async () => ({ ok: true, results: ['EMAIL SENT to you@test.com'] }) };
+  }
+  return realFetch(path, opts);
+};
+set('wz-set-OWNER_EMAIL', 'you@test.com');
+click($('wz-test-email'));
+await wait(250);
+check('the test email actually goes through /api/notify', notifyCalls.length === 1, JSON.stringify(notifyCalls));
+check('it is addressed to the alert address typed in',
+  notifyCalls[0] && notifyCalls[0].payload.to === 'you@test.com');
+check('the result is reported back on screen', /EMAIL SENT/.test($('wz-test-email-result').textContent),
+  $('wz-test-email-result').textContent);
+
+notifyCalls = [];
+click($('wz-test-wa'));
+await wait(250);
+check('a WhatsApp test with no number saved refuses rather than sending nowhere',
+  /Enter your WhatsApp number/.test($('wz-test-wa-result').textContent) && notifyCalls.length === 0,
+  $('wz-test-wa-result').textContent);
+window.fetch = realFetch;
+
 // ---------- Step 7 (jump via dots): summary reflects real state ----------
 click(window.document.querySelector('.wiz-dot[data-wiz-dot="7"]'));
 await wait(150);

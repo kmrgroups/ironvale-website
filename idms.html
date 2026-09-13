@@ -392,6 +392,18 @@ body.pipeline-focus .embed-frame{width:100%;display:block;border:0;border-radius
 .cnc-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.cnc-toolbar .hint{margin:0}.cnc-alert{padding:10px;border-radius:8px;background:#fff4e5;color:#7a4b00;margin-bottom:12px}
 /* ---- the setup guide: numbered steps a non-programmer can follow ---- */
 .cs-step{border:1px solid var(--line,#d8dde6);border-radius:12px;background:#fff;padding:0;margin-bottom:12px;overflow:hidden}
+.wiz-dots{display:flex;align-items:center;gap:6px;margin-bottom:18px;flex-wrap:wrap;}
+.wiz-dot{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--ink-soft,#7c8cab);
+  padding:5px 10px;border-radius:999px;background:#f2f4f8;cursor:pointer;white-space:nowrap;}
+.wiz-dot .n{width:18px;height:18px;border-radius:50%;background:#d8dde6;color:#fff;display:inline-flex;
+  align-items:center;justify-content:center;font-size:10px;font-weight:700;}
+.wiz-dot.done{background:#eaf6ee;color:var(--ok,#1f9d6b);}
+.wiz-dot.done .n{background:var(--ok,#1f9d6b);}
+.wiz-dot.current{background:var(--navy,#0b2a5b);color:#fff;font-weight:700;}
+.wiz-dot.current .n{background:var(--gold,#c2932e);color:#fff;}
+.wiz-step{display:none;}
+.wiz-step.on{display:block;}
+.wiz-nav{display:flex;justify-content:space-between;margin-top:22px;padding-top:16px;border-top:1px solid var(--line,#eaeef3);}
 .cs-step>.h{display:flex;gap:11px;align-items:flex-start;padding:14px 15px;cursor:pointer;user-select:none}
 .cs-step>.h:hover{background:#f7fafd}
 .cs-num{flex:none;width:27px;height:27px;border-radius:50%;background:var(--navy,#0B2A5B);color:#fff;
@@ -1035,6 +1047,20 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       </div>
       <div class="card" id="us-list-card" style="display:none;">
         <h4>Logins</h4><div id="us-list"></div>
+      </div>
+      <div class="card">
+        <h4>Change your own password</h4>
+        <div class="hint" style="margin-bottom:10px;">This changes only the password of the login you
+          are signed in with right now — <b id="us-own-username">—</b>. To change anyone else's, use
+          the form above (administrator only).</div>
+        <div class="row four">
+          <div><label>Current password</label><input type="password" id="us-own-current" autocomplete="current-password"></div>
+          <div><label>New password</label><input type="password" id="us-own-new" autocomplete="new-password">
+            <div class="hint">At least 6 characters.</div></div>
+          <div><label>Confirm new password</label><input type="password" id="us-own-new2" autocomplete="new-password"></div>
+          <div style="align-self:end;"><button class="btn gold" id="us-own-save">Change password</button></div>
+        </div>
+        <div class="note" id="us-own-msg" style="display:none;"></div>
       </div>
     </div>
 
@@ -1854,6 +1880,133 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     </div>
 
     <!-- ============ Admin: backup and restore ============ -->
+    <div class="panel" data-panel="admin_wizard">
+      <div class="card">
+        <h4>Setup Wizard</h4>
+        <div class="hint" style="margin-bottom:14px;">Six steps, in order — each one saves as you go,
+          so there is nothing separate to remember to save at the end. Skip ahead any time using the
+          dots, or use Sample Data on Step 5 to explore with example records before typing in your
+          own.</div>
+        <div class="wiz-dots" id="wiz-dots"></div>
+
+        <div class="wiz-step on" data-wiz="1">
+          <h3 style="margin-top:0;">1 · Company profile</h3>
+          <p class="hint">These details appear on every quotation, invoice and printed document.</p>
+          <div class="row four">
+            <div><label>Legal name</label><input id="wz-legalName"></div>
+            <div><label>Document prefix</label><input id="wz-docPrefix" style="text-transform:uppercase;"></div>
+            <div><label>Tax registration no.</label><input id="wz-taxNumber"></div>
+            <div><label>City</label><input id="wz-city"></div>
+          </div>
+          <div class="note" id="wz1-msg" style="display:none;margin-top:10px;"></div>
+          <div class="hint" style="margin-top:8px;">More fields — bank details, signature, logo — are
+            on <a data-goto="profile" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Company Profile</a> directly, any time.</div>
+        </div>
+
+        <div class="wiz-step" data-wiz="2">
+          <h3 style="margin-top:0;">2 · Who else needs a login</h3>
+          <p class="hint">You are signed in as <b id="wz2-me">—</b>. Add the people who will use this
+            system day to day — an estimator does not need the same access as an administrator.</p>
+          <div id="wz2-status" class="note" style="margin-bottom:10px;"></div>
+          <div class="row four">
+            <div><label>Username</label><input id="wz-u-name"></div>
+            <div><label>Role</label><select id="wz-u-role"><option value="staff">Staff — day-to-day work</option><option value="developer">Administrator</option></select></div>
+            <div><label>Password</label><input type="password" id="wz-u-pass"></div>
+            <div style="align-self:end;"><button class="btn gold" id="wz-u-add">Add this login</button></div>
+          </div>
+          <div class="note" id="wz2-msg" style="display:none;margin-top:10px;"></div>
+          <div class="hint" style="margin-top:8px;">Fine-grained access per person is on
+            <a data-goto="users" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">User Management</a>.</div>
+        </div>
+
+        <div class="wiz-step" data-wiz="3">
+          <h3 style="margin-top:0;">3 · The masters everything else is built on</h3>
+          <p class="hint">A routing needs a part and a machine to exist first; an order needs a
+            customer. Add a few of each now, by hand or from a spreadsheet — the rest of the system
+            has nothing to work with until these do.</p>
+          <div class="stat" id="wz3-stat"></div>
+          <div class="row four" style="margin-top:12px;">
+            <div><button class="btn" data-goto="entry_customer">Customer Addition</button></div>
+            <div><button class="btn" data-goto="entry_supplier">Supplier Master</button></div>
+            <div><button class="btn" data-goto="parts">Parts Addition</button></div>
+            <div><button class="btn" data-goto="entry_machine">Machine Addition</button></div>
+          </div>
+          <div class="hint" style="margin-top:10px;">Have these in a spreadsheet already? <a data-goto="bulk_upload" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Bulk Upload</a> does all four in one go.</div>
+        </div>
+
+        <div class="wiz-step" data-wiz="4">
+          <h3 style="margin-top:0;">4 · Statutory rates and HR rules</h3>
+          <p class="hint">PF, ESI, professional tax and TDS come from your CA, not a guess — this
+            step only checks whether they have been entered yet, and takes you straight there.</p>
+          <div class="note" id="wz4-status"></div>
+          <div style="margin-top:12px;"><button class="btn gold" data-goto="hr_statutory">Open Statutory &amp; Masters</button></div>
+        </div>
+
+        <div class="wiz-step" data-wiz="5">
+          <h3 style="margin-top:0;">5 · Try it, or start entering real data</h3>
+          <p class="hint">Not ready to type in real records yet? Load example data across every
+            screen, click around risk-free, then clear it before going live. This is the same Sample
+            Data feature as Admin → Sample Data.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn gold" data-goto="admin_sample">Open Sample Data</button>
+          </div>
+        </div>
+
+        <div class="wiz-step" data-wiz="6">
+          <h3 style="margin-top:0;">6 · Connections</h3>
+          <p class="hint">Email, AI and WhatsApp all work the same way here as on the website's own
+            Setup screen — the same keys, the same database, checked and saved one at a time so a
+            typo in one never risks another that already works.</p>
+
+          <div class="sub">Email — sends RFQ alerts and customer quotations</div>
+          <div class="row four">
+            <div><label>Resend API key</label><input type="password" id="wz-set-RESEND_API_KEY" placeholder="re_..."></div>
+            <div><label>Send emails from</label><input id="wz-set-FROM_EMAIL" placeholder="Company Name &lt;sales@yourdomain.com&gt;"></div>
+            <div><label>Send RFQ alerts to</label><input id="wz-set-OWNER_EMAIL" placeholder="you@yourcompany.com"></div>
+            <div style="align-self:end;"><button class="btn" data-wz-save-group="email">Save email</button></div>
+          </div>
+          <div class="hint" id="wz-set-email-status" style="margin-top:4px;"></div>
+
+          <div class="sub" style="margin-top:16px;">AI — reads drawings, drafts documents, powers every agent</div>
+          <div class="row four">
+            <div><label>Mistral key</label><input type="password" id="wz-set-MISTRAL_API_KEY"></div>
+            <div><label>Groq key</label><input type="password" id="wz-set-GROQ_API_KEY"></div>
+            <div><label>Gemini key</label><input type="password" id="wz-set-GEMINI_API_KEY"></div>
+            <div><label>Anthropic key</label><input type="password" id="wz-set-ANTHROPIC_API_KEY"></div>
+          </div>
+          <div class="row four" style="margin-top:9px;">
+            <div style="align-self:end;"><button class="btn" data-wz-save-group="ai">Save AI keys</button></div>
+          </div>
+          <div class="hint" id="wz-set-ai-status" style="margin-top:4px;"></div>
+
+          <div class="sub" style="margin-top:16px;">WhatsApp — optional, alongside email</div>
+          <div class="row four">
+            <div><label>WhatsApp token</label><input type="password" id="wz-set-WHATSAPP_TOKEN"></div>
+            <div><label>Phone ID</label><input id="wz-set-WHATSAPP_PHONE_ID"></div>
+            <div><label>Template name</label><input id="wz-set-WHATSAPP_TEMPLATE"></div>
+            <div><label>Send alerts to (WhatsApp)</label><input id="wz-set-OWNER_WHATSAPP"></div>
+          </div>
+          <div class="row four" style="margin-top:9px;">
+            <div style="align-self:end;"><button class="btn" data-wz-save-group="whatsapp">Save WhatsApp</button></div>
+          </div>
+          <div class="hint" id="wz-set-whatsapp-status" style="margin-top:4px;"></div>
+        </div>
+
+        <div class="wiz-step" data-wiz="7">
+          <h3 style="margin-top:0;">7 · Done</h3>
+          <div id="wz6-summary"></div>
+          <p class="hint" style="margin-top:12px;">That is everything this wizard checks. Nothing is
+            locked — come back to any step at any time from Admin → Setup Wizard, or jump straight to
+            any screen from the menu.</p>
+        </div>
+
+        <div class="wiz-nav">
+          <button class="btn" id="wiz-back">← Back</button>
+          <button class="btn gold" id="wiz-next">Next →</button>
+        </div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="admin_backup">
       <div class="card">
         <h4>Backup &amp; Restore</h4>
@@ -4251,15 +4404,118 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     <div class="panel" data-panel="profile">
       <div class="card">
         <h4>Company profile</h4>
-        <div class="hint" style="margin-bottom:10px;">Read from the website's admin panel — one profile
-          serves both systems. Every printed document takes its letterhead and its document prefix from
-          here, so nothing in the software carries a company name.</div>
-        <table class="t" id="prof-table"></table>
-        <div class="note" style="margin-top:12px;">To change any of this, use <b>Site Admin</b> on the
-          website. Document numbers are built as <b>PREFIX-KIND-0001</b> using the prefix above and a
+        <div class="hint" style="margin-bottom:10px;">One record, read and written by both systems —
+          nothing here is a separate copy of what the website shows. Every printed document takes its
+          letterhead and its document prefix from here, so nothing in the software carries a company
+          name. Document numbers are built as <b>PREFIX-KIND-0001</b> using the prefix below and a
           counter held in the database, so two people saving at the same moment can never be given the
           same number.</div>
+        <button class="btn gold" id="cp-refresh">Refresh</button>
+        <div class="note" id="cp-msg" style="display:none;"></div>
       </div>
+
+      <div class="card">
+        <h4>Identity</h4>
+        <div class="row four">
+          <div><label>Legal name (on documents)</label><input id="cp-legalName"></div>
+          <div><label>Display name</label><input id="cp-displayName"></div>
+          <div><label>Tagline</label><input id="cp-tagline"></div>
+          <div><label>Document prefix</label><input id="cp-docPrefix" style="text-transform:uppercase;"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Registration no.</label><input id="cp-regNumber"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div>
+          <label>Letterhead logo</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <img id="cp-logo-preview" style="max-height:44px;max-width:160px;display:none;border:1px solid var(--line);border-radius:6px;padding:4px;">
+            <input type="file" id="cp-logo-file" accept="image/*">
+          </div>
+          <div class="hint" style="margin-top:6px;">
+            <label style="display:inline-flex;align-items:center;gap:6px;font-weight:400;">
+              <input type="checkbox" id="cp-use-website-logo"> Use the website's own logo on documents instead of the one above
+            </label>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="card">
+        <h4>Registered address</h4>
+        <div class="row four">
+          <div><label>Plant / location label</label><input id="cp-plantLabel" placeholder="Plant-1 or Head Office"></div>
+          <div><label>Address line 1</label><input id="cp-addr1"></div>
+          <div><label>Address line 2</label><input id="cp-addr2"></div>
+          <div><label>City</label><input id="cp-city"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>State</label><input id="cp-state"></div>
+          <div><label>Country</label><input id="cp-country"></div>
+          <div><label>PIN / ZIP</label><input id="cp-pin"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Contact</h4>
+        <div class="row four">
+          <div><label>Telephone</label><input id="cp-phone"></div>
+          <div><label>Mobile</label><input id="cp-mobile"></div>
+          <div><label>Email</label><input id="cp-email"></div>
+          <div><label>RFQ / Sales email</label><input id="cp-rfqEmail"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;"><div><label>Website</label><input id="cp-website"></div></div>
+      </div>
+
+      <div class="card">
+        <h4>Statutory</h4>
+        <div class="row four">
+          <div><label>Tax registration label</label><input id="cp-taxLabel" placeholder="GSTIN / VAT No. / Tax ID"></div>
+          <div><label>Tax number</label><input id="cp-taxNumber"></div>
+          <div><label>Second ID label</label><input id="cp-panLabel" placeholder="PAN"></div>
+          <div><label>Second ID number</label><input id="cp-panNumber"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>IEC (export code)</label><input id="cp-iec"></div>
+          <div><label>CIN</label><input id="cp-cin"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Bank details</h4>
+        <div class="row four">
+          <div><label>Show on quotations</label><select id="cp-bankShow"><option value="no">No</option><option value="yes">Yes</option></select></div>
+          <div><label>Bank name</label><input id="cp-bankName"></div>
+          <div><label>Branch</label><input id="cp-bankBranch"></div>
+          <div><label>Account name</label><input id="cp-bankAccName"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Account number</label><input id="cp-bankAccNo"></div>
+          <div><label>IFSC / SWIFT</label><input id="cp-bankIfsc"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Signature block</h4>
+        <div class="row four">
+          <div><label>Authorised signatory name</label><input id="cp-signatoryName"></div>
+          <div><label>Designation</label><input id="cp-signatoryTitle"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Signature image</label>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <img id="cp-sign-preview" style="max-height:40px;display:none;border:1px solid var(--line);border-radius:6px;padding:4px;">
+              <input type="file" id="cp-sign-file" accept="image/*"></div></div>
+          <div><label>Company seal</label>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <img id="cp-seal-preview" style="max-height:40px;display:none;border:1px solid var(--line);border-radius:6px;padding:4px;">
+              <input type="file" id="cp-seal-file" accept="image/*"></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <button class="btn gold" id="cp-save">Save company profile</button>
+        <div class="note" id="cp-save-msg" style="display:none;"></div>
+      </div>
+
       <div class="card">
         <h4>Recent activity</h4>
         <div class="hint" style="margin-bottom:8px;">Every create, change and deletion, with who did it and why.</div>
@@ -4848,6 +5104,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['cnc_live','🟢','CNC Live Monitor',1],
       ['cnc_setup','🧭','Setup Guide — Connect a Machine',1]]],
     ['admin','⚙','Admin','Settings and the website',[
+      ['admin_wizard','🧙','Setup Wizard',1],
       ['admin_site','🌐','Website Content',1],
       ['admin_banner','🖼','Home Banner',1],
       ['login_screen','🔐','Login Screen',1],
@@ -5116,6 +5373,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'production_plan') loadPlan();
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
+    if (s === 'admin_wizard') loadSetupWizard();
     if (s === 'dwm')                   loadDwm();
     if (s === 'task_list')             loadTasks();
     if (s === 'users')                 loadUsers();
@@ -5777,6 +6035,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 
   async function loadUsers(){
     var gate = document.getElementById('us-gate');
+    document.getElementById('us-own-username').textContent = (me && me.user) || '—';
+    document.getElementById('us-own-msg').style.display = 'none';
     if (String((me && me.role) || '') !== 'developer'){
       gate.innerHTML = '<div class="note bad">Only an administrator can manage logins. You are ' +
         'signed in as <b>' + esc((me && me.user) || '') + '</b> with the role <b>' +
@@ -25490,16 +25750,200 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   }
 
   /* ---------------- profile ---------------- */
+  var cpContent = null;
+  /* ---------------- Setup Wizard ----------------
+     Every step reads and writes exactly the same records the screen it
+     points at uses — Company Profile's own fields, the real customer/
+     supplier/part/machine counts, the real user list, the real statutory
+     settings — so a "done" tick here can never disagree with the screen
+     itself. Progressing through the steps is the saving; there is no
+     separate final Save. */
+  var WIZ_STEPS = 7, wizStep = 1, wizData = null;
+
+  async function loadSetupWizard(){
+    wizStep = 1;
+    document.getElementById('wz2-me').textContent = (me && me.user) || '—';
+    wizData = { fullContent:{}, company:{}, users:null, masters:null, statutory:{}, hrMasters:{} };
+    try {
+      wizData.fullContent = (await C.api('/api/content')).data || {};
+      wizData.fullContent.company = wizData.fullContent.company || {};
+      wizData.fullContent.statutory = wizData.fullContent.statutory || {};
+      wizData.fullContent.hrMasters = wizData.fullContent.hrMasters || {};
+      wizData.company = wizData.fullContent.company;
+      wizData.statutory = wizData.fullContent.statutory;
+      wizData.hrMasters = wizData.fullContent.hrMasters;
+    } catch(e){}
+    try {
+      var counts = await Promise.all([
+        C.idms.parts(), C.idms.docs('customer'), C.idms.docs('supplier'), C.idms.docs('machine')
+      ]);
+      wizData.masters = { parts:counts[0].length, customers:counts[1].length,
+        suppliers:counts[2].length, machines:counts[3].length };
+    } catch(e){ wizData.masters = null; }
+    try { wizData.settings = (await C.api('/api/settings')).settings || {}; } catch(e){ wizData.settings = {}; }
+    wizFillStep1();
+    wizDraw();
+  }
+
+  function wizFillStep1(){
+    var co = wizData.company;
+    document.getElementById('wz-legalName').value = co.legalName || '';
+    document.getElementById('wz-docPrefix').value = co.docPrefix || '';
+    document.getElementById('wz-taxNumber').value = co.taxNumber || '';
+    document.getElementById('wz-city').value = co.city || '';
+  }
+
+  function wizDoneFlags(){
+    var co = wizData.company || {}, st = wizData.statutory || {};
+    var m = wizData.masters;
+    var settings = wizData.settings || {};
+    var hasAny = function(keys){ return keys.some(function(k){ return settings[k] && settings[k].source !== 'none'; }); };
+    return {
+      company: !!(co.legalName && co.docPrefix),
+      users: wizData.users ? wizData.users.length > 1 : null,
+      masters: m ? (m.customers > 0 && m.parts > 0 && m.machines > 0) : null,
+      statutory: !!((st.pf && st.pf.employeePct) || (st.tds && st.tds.mode)),
+      connections: hasAny(['RESEND_API_KEY']) || hasAny(['MISTRAL_API_KEY','GROQ_API_KEY','OPENROUTER_API_KEY','GEMINI_API_KEY','ANTHROPIC_API_KEY'])
+    };
+  }
+
+  function wizDraw(){
+    var flags = wizDoneFlags();
+    var labels = ['Company', 'Users', 'Masters', 'Statutory', 'Try it', 'Connections', 'Done'];
+    var doneKey = ['company', 'users', 'masters', 'statutory', null, 'connections', null];
+    document.getElementById('wiz-dots').innerHTML = labels.map(function(lbl, i){
+      var n = i + 1, done = doneKey[i] && flags[doneKey[i]];
+      return '<div class="wiz-dot' + (n === wizStep ? ' current' : (done ? ' done' : '')) + '" data-wiz-dot="' + n + '">' +
+        '<span class="n">' + (done ? '✓' : n) + '</span>' + esc(lbl) + '</div>';
+    }).join('');
+    document.querySelectorAll('.wiz-dot').forEach(function(d){
+      d.addEventListener('click', function(){ wizGoto(+d.dataset.wizDot); });
+    });
+    document.querySelectorAll('.wiz-step').forEach(function(el){
+      el.classList.toggle('on', +el.dataset.wiz === wizStep);
+    });
+    document.getElementById('wiz-back').style.visibility = wizStep === 1 ? 'hidden' : 'visible';
+    document.getElementById('wiz-next').style.display = wizStep === WIZ_STEPS ? 'none' : '';
+
+    if (wizStep === 3) wizDrawStep3();
+    if (wizStep === 4) wizDrawStep4();
+    if (wizStep === 6) wizDrawConnections();
+    if (wizStep === 7) wizDrawDone();
+  }
+
+  async function wizGoto(n){
+    wizStep = Math.max(1, Math.min(WIZ_STEPS, n));
+    if (wizStep === 2 && wizData.users === null) await wizLoadUsers();
+    wizDraw();
+  }
+
+  async function wizLoadUsers(){
+    var box = document.getElementById('wz2-status');
+    try {
+      var j = await C.api('/api/auth', { method:'POST', body:JSON.stringify({ action:'listUsers' }) });
+      wizData.users = j.users || [];
+      box.className = 'note good';
+      box.textContent = wizData.users.length + ' login(s) exist' +
+        (wizData.users.length > 1 ? ' — more than one administrator/user is already set up.' : ' — only your own. Worth adding at least one more before relying on this.');
+    } catch(e){
+      wizData.users = [];
+      box.className = 'note';
+      box.textContent = 'Only an administrator can see the login list — nothing to check here for your own login.';
+    }
+  }
+
+  function wizDrawStep3(){
+    var m = wizData.masters;
+    document.getElementById('wz3-stat').innerHTML = !m
+      ? '<div class="note bad">Could not read the masters — try again.</div>'
+      : [['Customers', m.customers], ['Suppliers', m.suppliers], ['Parts', m.parts], ['Machines', m.machines]]
+        .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('');
+  }
+
+  function wizDrawStep4(){
+    var st = wizData.statutory || {}, m = wizData.hrMasters || {};
+    var have = [];
+    if (st.pf && st.pf.employeePct) have.push('PF');
+    if (st.esi && st.esi.employeePct) have.push('ESI');
+    if (st.pt && st.pt.slabs && st.pt.slabs.length) have.push('professional tax');
+    if (st.tds && st.tds.mode) have.push('TDS mode');
+    if (m.empIdPrefix) have.push('employee ID format');
+    var box = document.getElementById('wz4-status');
+    if (have.length){ box.className = 'note good'; box.textContent = 'Already set: ' + have.join(', ') + '.'; }
+    else { box.className = 'note'; box.textContent = 'Nothing set yet — this is normal before your CA has given you the figures.'; }
+  }
+
+  function wizDrawDone(){
+    var f = wizDoneFlags();
+    var rows = [
+      ['Company profile', f.company], ['A second login exists', f.users],
+      ['Core masters have at least one record each', f.masters], ['Statutory rates started', f.statutory],
+      ['Email or AI connected', f.connections]
+    ];
+    document.getElementById('wz6-summary').innerHTML = '<div class="stat">' +
+      rows.map(function(r){
+        return '<div class="b"><b style="color:'+(r[1]?'var(--ok,#1f9d6b)':'var(--bad,#b03a2e)')+';">'+
+          (r[1]===null?'—':r[1]?'✓':'✗')+'</b><span>'+r[0]+'</span></div>';
+      }).join('') + '</div>';
+  }
+
+  var WIZ_SETTING_GROUPS = {
+    email: ['RESEND_API_KEY','FROM_EMAIL','OWNER_EMAIL'],
+    ai: ['MISTRAL_API_KEY','GROQ_API_KEY','GEMINI_API_KEY','ANTHROPIC_API_KEY'],
+    whatsapp: ['WHATSAPP_TOKEN','WHATSAPP_PHONE_ID','WHATSAPP_TEMPLATE','OWNER_WHATSAPP']
+  };
+  async function wizLoadSettings(){
+    try { wizData.settings = (await C.api('/api/settings')).settings || {}; } catch(e){ wizData.settings = {}; }
+  }
+  function wizDrawConnections(){
+    var s = wizData.settings || {};
+    Object.keys(WIZ_SETTING_GROUPS).forEach(function(g){
+      var known = WIZ_SETTING_GROUPS[g].filter(function(k){ return s[k] && s[k].source !== 'none'; });
+      document.getElementById('wz-set-' + g + '-status').innerHTML = known.length
+        ? known.map(function(k){ return '<span class="badge series">' + k + ': ' + esc(s[k].masked) +
+            (s[k].source === 'vercel' ? ' (from Vercel)' : '') + '</span>'; }).join(' ')
+        : 'Nothing saved in this group yet.';
+    });
+  }
+  async function wizSaveGroup(group){
+    var keys = WIZ_SETTING_GROUPS[group];
+    var status = document.getElementById('wz-set-' + group + '-status');
+    var any = false;
+    for (var i = 0; i < keys.length; i++){
+      var el = document.getElementById('wz-set-' + keys[i]);
+      if (el && el.value.trim()){
+        any = true;
+        try { await C.api('/api/settings', { method:'POST', body:JSON.stringify({ name:keys[i], value:el.value.trim() }) }); el.value = ''; }
+        catch(e){ status.innerHTML = '<span class="badge">' + esc(e.message) + '</span>'; return; }
+      }
+    }
+    if (!any){ status.textContent = 'Nothing typed in to save.'; return; }
+    await wizLoadSettings();
+    wizDrawConnections();
+  }
+
   async function loadProfileScreen(){
-    var p = await C.loadProfile();
-    document.getElementById('prof-table').innerHTML = '<tbody>' +
-      [['Company', esc(p.name || '(not set on the website)')],
-       ['Address', esc(p.address || '—')],
-       ['GSTIN', esc(p.gstin || '—')],
-       ['Document prefix', '<b>'+esc(p.docPrefix)+'</b>'],
-       ['Logo', p.logo ? '<img src="'+p.logo+'" style="max-height:34px;">' : '—']]
-      .map(function(r){ return '<tr><th style="width:32%;">'+r[0]+'</th><td>'+r[1]+'</td></tr>'; })
-      .join('') + '</tbody>';
+    try { cpContent = (await C.api('/api/content')).data || {}; } catch(e){ cpContent = {}; }
+    var co = cpContent.company || {};
+    var set = function(id, v){ document.getElementById(id).value = v || ''; };
+    set('cp-legalName', co.legalName); set('cp-displayName', co.displayName); set('cp-tagline', co.tagline);
+    set('cp-docPrefix', co.docPrefix); set('cp-regNumber', co.regNumber);
+    set('cp-plantLabel', co.plantLabel); set('cp-addr1', co.addr1); set('cp-addr2', co.addr2);
+    set('cp-city', co.city); set('cp-state', co.state); set('cp-country', co.country); set('cp-pin', co.pin);
+    set('cp-phone', co.phone); set('cp-mobile', co.mobile); set('cp-email', co.email);
+    set('cp-rfqEmail', co.rfqEmail); set('cp-website', co.website);
+    set('cp-taxLabel', co.taxLabel); set('cp-taxNumber', co.taxNumber);
+    set('cp-panLabel', co.panLabel); set('cp-panNumber', co.panNumber); set('cp-iec', co.iec); set('cp-cin', co.cin);
+    document.getElementById('cp-bankShow').value = co.bankShow ? 'yes' : 'no';
+    set('cp-bankName', co.bankName); set('cp-bankBranch', co.bankBranch);
+    set('cp-bankAccName', co.bankAccName); set('cp-bankAccNo', co.bankAccNo); set('cp-bankIfsc', co.bankIfsc);
+    set('cp-signatoryName', co.signatoryName); set('cp-signatoryTitle', co.signatoryTitle);
+    cpShowImg('cp-logo-preview', co.letterheadLogo || cpContent.logoDataUrl);
+    cpShowImg('cp-sign-preview', co.signatureImg);
+    cpShowImg('cp-seal-preview', co.sealImg);
+    document.getElementById('cp-use-website-logo').checked = co.useWebsiteLogo !== false;
+    document.getElementById('cp-msg').style.display = 'none';
+
     var host = document.getElementById('audit-list');
     try {
       var rows = await C.idms.audit();
@@ -25512,6 +25956,49 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           }).join('') + '</tbody></table>'
         : '<div class="empty"><b>Nothing recorded yet</b>Activity appears here as soon as work starts.</div>';
     } catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; }
+  }
+  function cpShowImg(id, url){
+    var img = document.getElementById(id);
+    if (url){ img.src = url; img.style.display = ''; } else { img.style.display = 'none'; }
+  }
+  async function cpUploadTo(fileInputId, previewId, coKey){
+    var f = document.getElementById(fileInputId).files[0];
+    if (!f) return;
+    var msg = document.getElementById('cp-msg'), say = noteWriter(msg);
+    try {
+      var up = await C.uploadFile(f);
+      cpContent.company = cpContent.company || {};
+      cpContent.company[coKey] = up.url;
+      cpShowImg(previewId, up.url);
+      say('Uploaded — press Save company profile to keep it.', true);
+    } catch(e){ say(esc(e.message)); }
+  }
+  async function saveCompanyProfile(){
+    var g = fieldVal;
+    var co = cpContent.company = cpContent.company || {};
+    co.legalName = g('cp-legalName'); co.displayName = g('cp-displayName'); co.tagline = g('cp-tagline');
+    co.docPrefix = g('cp-docPrefix').toUpperCase(); co.regNumber = g('cp-regNumber');
+    co.plantLabel = g('cp-plantLabel'); co.addr1 = g('cp-addr1'); co.addr2 = g('cp-addr2');
+    co.city = g('cp-city'); co.state = g('cp-state'); co.country = g('cp-country'); co.pin = g('cp-pin');
+    co.phone = g('cp-phone'); co.mobile = g('cp-mobile'); co.email = g('cp-email');
+    co.rfqEmail = g('cp-rfqEmail'); co.website = g('cp-website');
+    co.taxLabel = g('cp-taxLabel'); co.taxNumber = g('cp-taxNumber');
+    co.panLabel = g('cp-panLabel'); co.panNumber = g('cp-panNumber'); co.iec = g('cp-iec'); co.cin = g('cp-cin');
+    co.bankShow = document.getElementById('cp-bankShow').value === 'yes';
+    co.bankName = g('cp-bankName'); co.bankBranch = g('cp-bankBranch');
+    co.bankAccName = g('cp-bankAccName'); co.bankAccNo = g('cp-bankAccNo'); co.bankIfsc = g('cp-bankIfsc');
+    co.signatoryName = g('cp-signatoryName'); co.signatoryTitle = g('cp-signatoryTitle');
+    co.useWebsiteLogo = document.getElementById('cp-use-website-logo').checked;
+    var msg = document.getElementById('cp-save-msg'), say = noteWriter(msg);
+    var btn = document.getElementById('cp-save');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      await C.api('/api/content', { method:'POST', body:JSON.stringify({ data: cpContent }) });
+      say('Saved. Every document, and the read-only profile the rest of the platform uses, now reflects ' +
+          'this — reloading so the change takes effect everywhere in this session too.', true);
+      setTimeout(function(){ location.reload(); }, 1400);
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Save company profile';
   }
 
   /* ---------------- sign in ---------------- */
@@ -25875,6 +26362,22 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 
   document.getElementById('us-save').addEventListener('click', saveUser);
   document.getElementById('us-clear').addEventListener('click', clearUserForm);
+  document.getElementById('us-own-save').addEventListener('click', async function(){
+    var msg = document.getElementById('us-own-msg'), say = noteWriter(msg);
+    var oldPass = fieldVal('us-own-current'), n1 = fieldVal('us-own-new'), n2 = fieldVal('us-own-new2');
+    if (!oldPass || !n1) return say('Enter your current password and a new one.');
+    if (n1.length < 6) return say('The new password needs to be at least 6 characters.');
+    if (n1 !== n2) return say('The new password and its confirmation do not match.');
+    this.disabled = true;
+    try {
+      var j = await C.api('/api/auth', { method:'POST', body:JSON.stringify({
+        action:'change', user: me.user, oldPass: oldPass, newUser: me.user, newPass: n1 }) });
+      if (j.token) C.setToken(j.token);
+      ['us-own-current','us-own-new','us-own-new2'].forEach(function(id){ document.getElementById(id).value = ''; });
+      say('Password changed. Use it next time you sign in — this session stays signed in.', true);
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
 
   document.getElementById('th-save').addEventListener('click', saveTool);
 
@@ -26190,6 +26693,60 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   });
 
   document.getElementById('ar-refresh').addEventListener('click', loadHrAuditReady);
+
+  document.getElementById('cp-refresh').addEventListener('click', loadProfileScreen);
+  document.getElementById('cp-logo-file').addEventListener('change', function(){ cpUploadTo('cp-logo-file', 'cp-logo-preview', 'letterheadLogo'); });
+  document.getElementById('cp-sign-file').addEventListener('change', function(){ cpUploadTo('cp-sign-file', 'cp-sign-preview', 'signatureImg'); });
+  document.getElementById('cp-seal-file').addEventListener('change', function(){ cpUploadTo('cp-seal-file', 'cp-seal-preview', 'sealImg'); });
+  document.getElementById('cp-save').addEventListener('click', saveCompanyProfile);
+
+  async function wizSaveStep1(){
+    var name = fieldVal('wz-legalName'), prefix = fieldVal('wz-docPrefix');
+    var msg = document.getElementById('wz1-msg'), say = noteWriter(msg);
+    if (!name || !prefix) { say('A legal name and a document prefix are needed before moving on.'); return false; }
+    var co = wizData.company;
+    co.legalName = name; co.docPrefix = prefix.toUpperCase();
+    co.taxNumber = fieldVal('wz-taxNumber'); co.city = fieldVal('wz-city');
+    try {
+      await C.api('/api/content', { method:'POST', body:JSON.stringify({ data: wizData.fullContent }) });
+      return true;
+    } catch(e){ say(esc(e.message)); return false; }
+  }
+  document.getElementById('wiz-next').addEventListener('click', async function(){
+    if (wizStep === 1){
+      this.disabled = true; this.textContent = 'Saving…';
+      var ok = await wizSaveStep1();
+      this.disabled = false; this.textContent = 'Next →';
+      if (!ok) return;
+    }
+    wizGoto(wizStep + 1);
+  });
+  document.getElementById('wiz-back').addEventListener('click', function(){ wizGoto(wizStep - 1); });
+  document.getElementById('wz-u-add').addEventListener('click', async function(){
+    var name = fieldVal('wz-u-name'), pass = fieldVal('wz-u-pass');
+    var msg = document.getElementById('wz2-msg'), say = noteWriter(msg);
+    if (!name) return say('Give the login a username.');
+    if (!pass || pass.length < 8) return say('The password needs to be at least 8 characters.');
+    this.disabled = true;
+    try {
+      await C.api('/api/auth', { method:'POST', body:JSON.stringify({ action:'saveUser',
+        username:name, role:document.getElementById('wz-u-role').value, password:pass }) });
+      say('Added.', true);
+      document.getElementById('wz-u-name').value = ''; document.getElementById('wz-u-pass').value = '';
+      await wizLoadUsers();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+  document.querySelectorAll('[data-wz-save-group]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var g = b.dataset.wzSaveGroup;
+      b.disabled = true; var was = b.textContent; b.textContent = 'Saving…';
+      wizSaveGroup(g).finally(function(){ b.disabled = false; b.textContent = was; });
+    });
+  });
+  document.querySelectorAll('[data-panel="admin_wizard"] [data-goto]').forEach(function(a){
+    a.addEventListener('click', function(){ go(a.dataset.goto); });
+  });
 
   document.querySelectorAll('[data-panel="agentic_ai"] [data-goto]').forEach(function(a){
     a.addEventListener('click', function(){ go(a.dataset.goto); });

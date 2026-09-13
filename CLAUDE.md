@@ -2645,3 +2645,93 @@ on a dashboard, and it depends on nearly everything else in this HR
 migration (Statutory rates, Leave, Attendance) being right first — which is
 now the case, but the calculation engine itself still deserves its own
 careful pass rather than being rushed in at the end of this one.
+
+## Company Profile / User Management overlap check, and a native Setup Wizard
+
+Checked before moving anything, as asked.
+
+- **Company Profile**: genuinely the same `site_content.company` record the
+  website's Site Admin edits — not a second copy. The native screen already
+  read it; it just couldn't write. Made it fully editable (identity, address,
+  contact, statutory, bank details, signature block, logo/signature/seal
+  uploads via the existing `C.uploadFile()` used everywhere else). Checked
+  the website's own code for the real image storage keys rather than
+  guessing — `company.letterheadLogo`, `company.signatureImg`,
+  `company.sealImg` — since a wrong key would silently show no logo despite
+  a "successful" save. Saving sends the whole `site_content` object back,
+  verified not to clobber unrelated settings living in the same record
+  (`tests/companyprofiletest.mjs`, 12 checks).
+- **User Management**: already the one real, authoritative login system —
+  the website's "Logins" tab and IDMS's native Users screen both sit on the
+  same `/api/auth` records. The one real gap: no self-service "change my own
+  password" in IDMS. Added it, reusing the existing shared `action:'change'`
+  endpoint — no server changes needed. Covered in `opstest.mjs` (+7 checks).
+
+**Setup Wizard** (`admin_wizard`, first item under Admin). A genuine linear
+step-through — progress dots, Back/Next, no separate final Save — covering
+Company Profile → Users → Masters → Statutory & Masters → Sample Data → a
+Done summary. Every step reads and writes the exact same records its
+underlying screen uses (Company Profile's own fields, real customer/
+supplier/part/machine counts via `C.idms.docs()`/`C.idms.parts()`, the real
+user list, the real statutory settings), so a "done" tick here can never
+disagree with the screen itself. Caught and fixed one bug before it shipped:
+an early draft of the data loader kept only a few sub-keys of the site
+content object, which would have wiped everything else in `site_content` on
+the very first save from this screen — exactly the mistake already guarded
+against in Company Profile and Statutory & Masters, fixed the same way
+(keep the whole object, mutate only the relevant keys). Tested in
+`tests/setupwizardtest.mjs` (20 checks): step-gating (an incomplete step 1
+is refused), the whole-object-preserved-on-save check, progress dots
+reflecting genuinely computed completion state (not assumed), and jumping
+directly to a step via the dots.
+
+**Still not done — the website-side wizard.** Only the IDMS side was built
+this pass. The website already has a good, functioning checklist-style
+Setup tab (status badges, "how to get this" instructions) — turning that
+into the same linear step-by-step shape, or deciding the checklist format
+is actually better suited to what it configures, is a decision worth making
+deliberately rather than converting it on momentum.
+
+**Unchanged from before**: Payroll, RFQ Pipeline, and 26 of the 27 Website
+Content tabs are still on the website. Full suite (37 files) clean
+throughout this pass — same 2 pre-existing, unrelated smoketest failures.
+
+## Setup Wizard, Step 6 — Connections (Email/AI/WhatsApp), and a real bug caught along the way
+
+Continuing through the Website Content tabs — this pass ported the website's
+own "Setup" tab (email/AI/WhatsApp provider keys). Unlike Company Profile
+and Statutory & Masters, this one carries no whole-blob clobber risk at
+all: `/api/settings` is a genuinely per-key store (the `secrets` table,
+same one Flush Settings already knew about), GET returns each key's status
+individually and POST saves one key at a time — so a typo in one key can
+never risk another that already works. No server changes needed; the
+website's own `loadSettings()`/`saveSetting()` pattern was ported as-is.
+
+Added as **Step 6 — Connections** (Setup Wizard grew from 6 steps to 7;
+Done moved to Step 7), grouped exactly like the source: Email
+(RESEND_API_KEY, FROM_EMAIL, OWNER_EMAIL), AI (Mistral/Groq/Gemini/
+Anthropic keys), WhatsApp (token, phone ID, template, alert number) — each
+group has its own Save button, matching the one-key-at-a-time save the
+website itself uses rather than one large risky save-everything button.
+
+**A real bug caught while extending the wizard, not introduced by this
+step**: the progress dots' "done" flags were off by one against the
+`labels` array (`doneKey[0]` was `null` while `labels[0]` was 'Company'),
+so the Company dot could never show as done regardless of actual
+completion — the Step 6 summary text was still correct (it reads
+`wizDoneFlags()` directly), but the dot itself was silently always wrong.
+Fixed the index alignment; `setupwizardtest.mjs`'s existing dot check
+happened not to exercise this specific path, which is itself worth noting
+for whoever extends this wizard further — checking the summary text is not
+the same as checking each dot's own state.
+
+Tested in `tests/setupwizardtest.mjs` (grew from 20 to 25 checks): a group
+save posts only the keys actually typed in (not the whole group blindly),
+the status line shows the saved key masked rather than in the clear, and
+the Done summary's "Email or AI connected" row reflects a key that was
+actually just saved.
+
+**Still unchanged**: Payroll, RFQ Pipeline, 25 of the 27 Website Content
+tabs (Company Profile and Setup/Connections are the two done so far), and
+the website-side wizard. Full suite (37 files) clean throughout — same 2
+pre-existing, unrelated smoketest failures.

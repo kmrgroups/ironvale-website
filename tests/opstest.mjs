@@ -62,6 +62,10 @@ window.fetch = async (path, opts = {}) => {
       users = users.filter(x => x.username !== body.username);
       return ok({ removed: body.username });
     }
+    if (body.action === 'change') {
+      if (body.oldPass !== 'currentpass123') return err('Current password is not correct.');
+      return ok({ token: 'NEWTOK', user: body.newUser || body.user });
+    }
     return ok({});
   }
   if (url.startsWith('/api/content')) return ok({ data: { company: { legalName: 'Test Mfg', docPrefix: 'TEST' } } });
@@ -163,6 +167,36 @@ check('a second developer can be created',
 click([...$('us-list').querySelectorAll('.us-del')].find(b => b.dataset.u === 'srao'));
 await wait(400);
 check('a login can be removed', !users.some(u => u.username === 'srao'), txt($('us-msg')));
+
+// ---------- self-service password change, available to any signed-in user ----------
+check('the self-service section names the actual signed-in user',
+  $('us-own-username').textContent === 'tester', $('us-own-username').textContent);
+click($('us-own-save')); await wait(150);
+check('changing with nothing entered is refused', /enter your current password/i.test(txt($('us-own-msg'))));
+
+$('us-own-current').value = 'wrongpassword';
+$('us-own-new').value = 'brandnewpass1';
+$('us-own-new2').value = 'brandnewpass1';
+click($('us-own-save')); await wait(200);
+check('the wrong current password is refused by the server, and the message is shown',
+  /current password is not correct/i.test(txt($('us-own-msg'))), txt($('us-own-msg')));
+
+$('us-own-new').value = 'short';
+$('us-own-current').value = 'currentpass123';
+click($('us-own-save')); await wait(150);
+check('a new password under 6 characters is refused before it reaches the server',
+  /at least 6/i.test(txt($('us-own-msg'))));
+
+$('us-own-new').value = 'brandnewpass1'; $('us-own-new2').value = 'somethingelse';
+click($('us-own-save')); await wait(150);
+check('a mismatched confirmation is refused', /do not match/i.test(txt($('us-own-msg'))));
+
+$('us-own-new2').value = 'brandnewpass1';
+click($('us-own-save')); await wait(250);
+check('the correct current password with a valid new one succeeds',
+  /password changed/i.test(txt($('us-own-msg'))), txt($('us-own-msg')));
+check('the fields are cleared after a successful change', $('us-own-current').value === '' && $('us-own-new').value === '');
+
 
 // ================= tool history =================
 nav('report_tool_history'); await wait(500);

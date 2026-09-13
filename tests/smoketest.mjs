@@ -217,10 +217,19 @@ nav('dash_production');
 await wait(400);
 check('the entered figure reaches the dashboard', /1,?500/.test($('kd-body').innerHTML));
 
-// ---- 9. the website screens open in a frame ----
-nav('admin_site');
-await wait(120);
-check('website content opens the admin panel in a frame', /embed=admin/.test($('em-frame').src), $('em-frame').src);
+// ---- 9. the theme screen is native now, not framed ----
+/* `admin_site` framed the website's whole admin panel. Theme editing is now
+   native (`admin_theme`) with the live site shown only as a preview pane,
+   so the assertion is that the screen is ours and the preview is the real
+   site — not that the editor itself is an iframe. */
+nav('admin_theme');
+await wait(200);
+check('the theme screen is a native panel, not a framed admin page',
+  window.document.querySelector('[data-panel="admin_theme"]').classList.contains('on'));
+check('the old framed website-admin entry is gone from the menu',
+  !window.document.querySelector('#menubar [data-s="admin_site"]'));
+check('it previews the real website rather than describing it',
+  /^\/\?preview=/.test(($('th-frame').getAttribute('src') || '')), $('th-frame').getAttribute('src'));
 // My Attendance stopped being one of these screens: it is a native panel now
 // (see cnctest-style suite for the full behaviour), so this only checks it
 // no longer routes through the frame at all.

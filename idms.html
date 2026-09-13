@@ -2034,6 +2034,63 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       </div>
     </div>
 
+    <div class="panel" data-panel="admin_theme">
+      <div class="card">
+        <h4>Website Theme &amp; Preview</h4>
+        <div class="hint" style="margin-bottom:10px;">Colours, type scale and spacing for the public
+          website. Move a slider and the preview below updates immediately — nothing is published
+          until you press Save, so you can try things freely and walk away.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="wt-save">Save theme</button>
+          <button class="btn" id="th-revert">Discard changes</button>
+          <button class="btn del" id="th-reset">Reset to defaults</button>
+          <button class="btn" id="th-open">Open the live site</button>
+        </div>
+        <div class="note" id="wt-msg" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <h4>Brand</h4>
+        <div class="row four">
+          <div><label>Brand name</label><input id="th-brandName"></div>
+          <div><label>Brand suffix</label><input id="th-brandSuffix"></div>
+          <div><label>Show brand text beside the logo</label><select id="th-showBrandText">
+            <option value="yes">Yes</option><option value="no">No</option></select></div>
+          <div><label>Glow behind the logo</label><select id="th-logoGlow">
+            <option value="yes">Yes</option><option value="no">No</option></select></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Colours</h4>
+        <div class="hint" style="margin-bottom:10px;">Lighter and darker shades of each are worked out
+          automatically, so one colour sets a whole family.</div>
+        <div id="th-colours" class="row four"></div>
+      </div>
+
+      <div class="card">
+        <h4>Type &amp; spacing</h4>
+        <div id="th-sliders"></div>
+      </div>
+
+      <div class="card">
+        <h4>Preview</h4>
+        <div class="hint" style="margin-bottom:10px;">The real website, with your unsaved changes
+          applied. <b id="th-dirty" style="display:none;color:var(--gold-deep,#8e6a19);">Unsaved
+          changes are shown here but are not live yet.</b></div>
+        <div class="row four" style="margin-bottom:8px;">
+          <div><label>Width</label><select id="th-width">
+            <option value="100%">Desktop</option><option value="820px">Tablet</option>
+            <option value="390px">Phone</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="th-reload">Reload preview</button></div>
+        </div>
+        <div style="display:flex;justify-content:center;">
+          <iframe id="th-frame" title="Website preview"
+            style="width:100%;height:640px;border:1px solid var(--line);border-radius:10px;background:#fff;"></iframe>
+        </div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="admin_content">
       <div class="card">
         <h4>Website Content</h4>
@@ -5406,8 +5463,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     ['admin','⚙','Admin','Settings and the website',[
       ['admin_wizard','🧙','Setup Wizard',1],
       ['admin_quoting','🧮','Quoting & Costing Setup',1],
+      ['admin_theme','🎨','Website Theme & Preview',1],
       ['admin_content','🎨','Website Content',1],
-      ['admin_site','🌐','Website — theme & preview',1],
       ['admin_banner','🖼','Home Banner',1],
       ['login_screen','🔐','Login Screen',1],
       ['profile','🏢','Company Profile',1],
@@ -5427,7 +5484,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     doc_master_pfd: 'masterlist', doc_master_pfmea: 'masterlist', doc_master_cp: 'masterlist',
     kpi_entry: 'kpi_entry', admin_banner: 'admin_banner',
     admin_backup: 'admin_backup', admin_sample: 'admin_sample',
-    admin_site: 'embed', emb_pipeline: 'embed', emb_hr: 'embed'
+    emb_pipeline: 'embed', emb_hr: 'embed'
   };
   (window.KPIX ? window.KPIX.DEPTS : []).forEach(function (d) { PANEL_OF['dash_' + d.key] = 'kpidash'; });
 
@@ -5679,6 +5736,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'admin_wizard') loadSetupWizard();
     if (s === 'admin_quoting') loadQuotingSetup();
     if (s === 'admin_content') loadWebsiteContent();
+    if (s === 'admin_theme') loadThemeScreen();
     if (s === 'rfq_pipeline') loadRfqPipeline();
     if (s === 'dwm')                   loadDwm();
     if (s === 'task_list')             loadTasks();
@@ -5715,7 +5773,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s.indexOf('dash_') === 0)  loadKpiDash(s.slice(5));
     if (s === 'kpi_entry')         loadKpiEntry();
     if (s === 'admin_banner')      loadBannerScreen();
-    if (s.indexOf('emb_') === 0 || s === 'admin_site') loadEmbed(s);
+    if (s.indexOf('emb_') === 0) loadEmbed(s);
   }
 
   /* ================= DAILY WORK MANAGEMENT =================
@@ -14103,12 +14161,6 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 
   /* ---------------- screens served by the website ---------------- */
   var EMBEDS = {
-    admin_site: ['Website — theme & preview', 'admin',
-      'The website\'s own theme editor — colours, type scale and spacing, edited against a live ' +
-      'preview of the site itself. Text, photographs, sections and contacts are now native on ' +
-      'Website Content; company details are on Company Profile, and quotation settings on ' +
-      'Quoting & Costing Setup. This remains framed because a theme previewer belongs with the ' +
-      'thing it is previewing.'],
     emb_pipeline: ['RFQ Pipeline', 'pipeline',
       'Enquiries from the website: drawing reading, costing, quotations, and the handover that turns ' +
       'a won quotation into a part in this system.'],
@@ -26330,6 +26382,160 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      Same whole-object-preserving save pattern as Company Profile and
      Statutory & Masters — /api/content overwrites everything, so this reads
      the full record first and only changes its own keys. */
+  /* ---------------- Website Theme & Preview (native) ----------------
+     The last framed screen, now native. Editing is IDMS's job — it writes to
+     the same site_content record everything else does. The preview is the
+     real website in an iframe, which is not a compromise: a theme preview
+     has to be the actual site or it is lying. Unsaved changes are pushed
+     into the frame as CSS variables so a slider moves the preview
+     immediately, while nothing is published until Save. */
+  var THEME_COLOURS = [['sky','Primary'],['navy','Dark'],['gold','Accent'],
+    ['glow','Glow'],['chatA','Chat start'],['chatB','Chat end']];
+  var THEME_SLIDERS = [
+    ['fontBase','Base text size',12,20,1,'px'], ['titleScale','Heading scale',0.8,1.4,0.05,''],
+    ['gutter','Page gutter',12,48,1,'px'], ['sectionPad','Space between sections',40,140,2,'px'],
+    ['cardMin','Card minimum width',220,420,10,'px'], ['cardGap','Gap between cards',8,40,1,'px'],
+    ['cardPad','Padding inside cards',12,40,1,'px'], ['mediaH','Picture height',120,360,10,'px'],
+    ['portraitH','Portrait height',200,440,10,'px'], ['radius','Corner rounding',0,28,1,'px'],
+    ['barHeight','Menu bar height',56,110,2,'px'], ['logoMax','Logo maximum width',120,360,10,'px']
+  ];
+  var THEME_DEFAULTS = { fontBase:16, titleScale:1, gutter:26, sectionPad:84, cardMin:300,
+    cardGap:22, cardPad:24, mediaH:220, portraitH:300, radius:14, barHeight:78, logoMax:230,
+    sky:'#3FA9E0', navy:'#0B2A5B', gold:'#C2932E', glow:'#69C2ED', chatA:'#7B3FF2', chatB:'#4B1FA8' };
+  var thContent = null, thSaved = null;
+
+  function thShade(hex, pct){
+    var n = parseInt(String(hex||'#000000').replace('#',''), 16);
+    var r = (n>>16)&255, g = (n>>8)&255, b = n&255;
+    if (pct > 0){ r = Math.round(r+(255-r)*pct); g = Math.round(g+(255-g)*pct); b = Math.round(b+(255-b)*pct); }
+    else { var p = 1+pct; r = Math.round(r*p); g = Math.round(g*p); b = Math.round(b*p); }
+    return '#' + [r,g,b].map(function(v){
+      return Math.max(0, Math.min(255, v)).toString(16).padStart(2,'0'); }).join('');
+  }
+
+  async function loadThemeScreen(){
+    try { thContent = (await C.api('/api/content')).data || {}; } catch(e){ thContent = {}; }
+    THEME_SLIDERS.concat(THEME_COLOURS).forEach(function(f){
+      if (thContent[f[0]] === undefined || thContent[f[0]] === '') thContent[f[0]] = THEME_DEFAULTS[f[0]];
+    });
+    thSaved = JSON.stringify(thContent);
+    document.getElementById('wt-msg').style.display = 'none';
+    thDrawAll();
+    thReloadPreview();
+  }
+
+  function thDrawAll(){
+    var set = function(id, v){ document.getElementById(id).value = v == null ? '' : v; };
+    set('th-brandName', thContent.brandName); set('th-brandSuffix', thContent.brandSuffix);
+    document.getElementById('th-showBrandText').value = thContent.showBrandText === false ? 'no' : 'yes';
+    document.getElementById('th-logoGlow').value = thContent.logoGlow === false ? 'no' : 'yes';
+
+    document.getElementById('th-colours').innerHTML = THEME_COLOURS.map(function(c){
+      return '<div><label>'+esc(c[1])+'</label><div style="display:flex;gap:6px;align-items:center;">' +
+        '<input type="color" class="th-colour" data-k="'+esc(c[0])+'" value="'+esc(thContent[c[0]])+'" style="width:44px;height:34px;padding:2px;">' +
+        '<input class="th-colour-hex" data-k="'+esc(c[0])+'" value="'+esc(thContent[c[0]])+'" style="flex:1;">' +
+        '</div></div>';
+    }).join('');
+
+    document.getElementById('th-sliders').innerHTML = THEME_SLIDERS.map(function(s){
+      return '<div style="margin-bottom:10px;"><label>'+esc(s[1])+
+        ' <b class="th-out" data-k="'+esc(s[0])+'">'+esc(thContent[s[0]])+esc(s[5])+'</b></label>' +
+        '<input type="range" class="th-range" data-k="'+esc(s[0])+'" data-unit="'+esc(s[5])+'" ' +
+        'min="'+s[2]+'" max="'+s[3]+'" step="'+s[4]+'" value="'+esc(thContent[s[0]])+'" style="width:100%;"></div>';
+    }).join('');
+
+    thWire();
+    thMarkDirty();
+  }
+
+  function thWire(){
+    document.querySelectorAll('.th-colour').forEach(function(el){
+      el.addEventListener('input', function(){
+        thContent[el.dataset.k] = el.value;
+        var hex = document.querySelector('.th-colour-hex[data-k="'+el.dataset.k+'"]');
+        if (hex) hex.value = el.value;
+        thApplyToPreview(); thMarkDirty();
+      });
+    });
+    document.querySelectorAll('.th-colour-hex').forEach(function(el){
+      el.addEventListener('input', function(){
+        if (!/^#[0-9a-f]{6}$/i.test(el.value.trim())) return;
+        thContent[el.dataset.k] = el.value.trim();
+        var sw = document.querySelector('.th-colour[data-k="'+el.dataset.k+'"]');
+        if (sw) sw.value = el.value.trim();
+        thApplyToPreview(); thMarkDirty();
+      });
+    });
+    document.querySelectorAll('.th-range').forEach(function(el){
+      el.addEventListener('input', function(){
+        thContent[el.dataset.k] = C.num(el.value);
+        var out = document.querySelector('.th-out[data-k="'+el.dataset.k+'"]');
+        if (out) out.textContent = el.value + el.dataset.unit;
+        thApplyToPreview(); thMarkDirty();
+      });
+    });
+    ['th-brandName','th-brandSuffix'].forEach(function(id){
+      document.getElementById(id).addEventListener('input', function(){
+        thContent[id === 'th-brandName' ? 'brandName' : 'brandSuffix'] = this.value;
+        thMarkDirty();
+      });
+    });
+    document.getElementById('th-showBrandText').addEventListener('change', function(){
+      thContent.showBrandText = this.value !== 'no'; thMarkDirty();
+    });
+    document.getElementById('th-logoGlow').addEventListener('change', function(){
+      thContent.logoGlow = this.value !== 'no'; thMarkDirty();
+    });
+  }
+
+  function thMarkDirty(){
+    var dirty = JSON.stringify(thContent) !== thSaved;
+    document.getElementById('th-dirty').style.display = dirty ? '' : 'none';
+  }
+
+  /* Push the unsaved values straight into the preview as CSS variables —
+     the same names and the same derived shades applyVars() uses on the
+     website itself, so what is previewed is what will be published. */
+  function thApplyToPreview(){
+    var f = document.getElementById('th-frame');
+    var doc = null;
+    try { doc = f.contentDocument; } catch(e){ return; }
+    if (!doc || !doc.documentElement) return;
+    var r = doc.documentElement.style, d = thContent;
+    r.setProperty('--sky', d.sky); r.setProperty('--sky-mid', thShade(d.sky, .18));
+    r.setProperty('--sky-light', thShade(d.sky, .45)); r.setProperty('--sky-wash', thShade(d.sky, .88));
+    r.setProperty('--sky-deep', thShade(d.sky, -.2)); r.setProperty('--navy', d.navy);
+    r.setProperty('--navy-deep', thShade(d.navy, -.35)); r.setProperty('--gold', d.gold);
+    r.setProperty('--gold-light', thShade(d.gold, .3)); r.setProperty('--gold-deep', thShade(d.gold, -.3));
+    r.setProperty('--glow', d.glow); r.setProperty('--chat-a', d.chatA); r.setProperty('--chat-b', d.chatB);
+    r.setProperty('--font-base', C.num(d.fontBase)+'px'); r.setProperty('--title-scale', d.titleScale);
+    r.setProperty('--gutter', C.num(d.gutter)+'px'); r.setProperty('--section-pad', C.num(d.sectionPad)+'px');
+    r.setProperty('--card-min', C.num(d.cardMin)+'px'); r.setProperty('--card-gap', C.num(d.cardGap)+'px');
+    r.setProperty('--card-pad', C.num(d.cardPad)+'px'); r.setProperty('--media-h', C.num(d.mediaH)+'px');
+    r.setProperty('--portrait-h', C.num(d.portraitH)+'px'); r.setProperty('--radius', C.num(d.radius)+'px');
+    r.setProperty('--radius-sm', Math.max(2, Math.round(C.num(d.radius)*.65))+'px');
+    r.setProperty('--bar-h', C.num(d.barHeight)+'px'); r.setProperty('--logo-max', C.num(d.logoMax)+'px');
+  }
+
+  function thReloadPreview(){
+    var f = document.getElementById('th-frame');
+    f.onload = function(){ thApplyToPreview(); };
+    f.src = '/?preview=' + Date.now();
+  }
+
+  async function saveTheme(){
+    var say = noteWriter(document.getElementById('wt-msg'));
+    var btn = document.getElementById('wt-save');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      await C.api('/api/content', { method:'POST', body:JSON.stringify({ data: thContent }) });
+      thSaved = JSON.stringify(thContent);
+      thMarkDirty();
+      say('Saved. The live website uses this now.', true);
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Save theme';
+  }
+
   /* ---------------- Website Content (native) ----------------
      Fifteen website-design tabs collapse into one schema-driven editor.
      They are all the same two shapes underneath: a handful of text fields,
@@ -28594,6 +28800,28 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('cp-sign-file').addEventListener('change', function(){ cpUploadTo('cp-sign-file', 'cp-sign-preview', 'signatureImg'); });
   document.getElementById('cp-seal-file').addEventListener('change', function(){ cpUploadTo('cp-seal-file', 'cp-seal-preview', 'sealImg'); });
   document.getElementById('cp-save').addEventListener('click', saveCompanyProfile);
+
+  document.getElementById('wt-save').addEventListener('click', saveTheme);
+  document.getElementById('th-reload').addEventListener('click', thReloadPreview);
+  document.getElementById('th-open').addEventListener('click', function(){ window.open('/', '_blank'); });
+  document.getElementById('th-width').addEventListener('change', function(){
+    document.getElementById('th-frame').style.width = this.value;
+  });
+  document.getElementById('th-revert').addEventListener('click', function(){
+    if (!thSaved) return;
+    thContent = JSON.parse(thSaved);
+    thDrawAll();
+    thApplyToPreview();
+    noteWriter(document.getElementById('wt-msg'))('Back to the last saved theme.', true);
+  });
+  document.getElementById('th-reset').addEventListener('click', function(){
+    if (!confirm('Reset every colour and spacing value to the original defaults? ' +
+      'Nothing is published until you press Save.')) return;
+    Object.keys(THEME_DEFAULTS).forEach(function(k){ thContent[k] = THEME_DEFAULTS[k]; });
+    thDrawAll();
+    thApplyToPreview();
+    noteWriter(document.getElementById('wt-msg'))('Defaults restored in the preview — press Save to publish them.', true);
+  });
 
   document.getElementById('wc-refresh').addEventListener('click', loadWebsiteContent);
   document.getElementById('wc-save').addEventListener('click', saveWebsiteContent);

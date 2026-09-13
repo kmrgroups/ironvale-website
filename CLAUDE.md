@@ -3082,3 +3082,47 @@ deployment before anything is set up.
 **`node tests/run-all.mjs` now reports `all suites clean`** — 40 files,
 1,155 checks, zero failures. That is the whole board green for the first
 time in this work.
+
+## Website Theme & Preview — native, and my "belongs with the website" call overturned
+
+I had argued this one should stay framed: "a theme previewer belongs with
+the thing it is previewing." Asked to move it anyway, and the reasoning was
+weaker than it sounded. The preview does have to be the real site — but that
+only means the *preview pane* is an iframe. It never meant the *editor* had
+to live on the website.
+
+So: editing is native (`admin_theme`), previewing is the real site in a
+frame beside it. Six colours, twelve spacing sliders, brand name/suffix and
+two toggles — small and regular, like the design tabs turned out to be.
+
+control pushes CSS variables straight into the frame using the same names
+and the same derived shades `applyVars()` uses on the site itself
+(`--sky-light` from `--sky`, `--radius-sm` from `--radius`, and so on), so
+what is previewed is what will be published. Nothing reaches the record
+until Save. Discard restores the last saved state; Reset restores the
+original defaults but still waits for Save — a reset that published
+immediately would be a trap.
+
+**Two collisions found and fixed**, both mine:
+- `th-save`/`th-msg` were already the Tool History screen's ids. `opstest`
+  caught it immediately — the tool test read *"Saved. The live website uses
+  this now."* Renamed the theme's to `wt-`. Worth noting the test suite
+  caught this within seconds of the change; a manual pass would very likely
+  have missed a wrong message on an unrelated screen.
+- I consumed the `Website Content (native)` comment header in a
+  `str_replace` and had to restore it.
+
+The old framed `admin_site` entry is gone from the menu entirely, along with
+its `EMBEDS` description and routing. `smoketest`'s "the website screens
+open in a frame" check was updated to assert the opposite: the screen is a
+native panel, the old entry is gone, and the preview points at the real
+site.
+
+**The embed machinery itself is now vestigial** — `emb_hr` redirects to the
+native Payroll screen and `emb_pipeline` is no longer in the menu. It is
+left in place deliberately: old bookmarks and stored per-user permissions
+still name those ids, and removing the redirects would break them for no
+gain.
+
+`tests/themetest.mjs` is new (26 checks). Full suite: **all suites clean**
+— 41 files, 1,207 checks, zero failures.

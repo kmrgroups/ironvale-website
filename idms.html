@@ -2747,23 +2747,25 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       <div class="card">
         <h4>Provident Fund</h4>
         <div class="row four">
+          <div><label>Enabled</label><select id="sm-pf-enabled"><option value="yes">Yes</option><option value="no">No</option></select></div>
           <div><label>Employee %</label><input class="num" id="sm-pf-emp"></div>
           <div><label>Employer %</label><input class="num" id="sm-pf-empr"></div>
           <div><label>Wage ceiling</label><input class="num" id="sm-pf-ceil">
             <div class="hint">0 and Apply ceiling = No applies PF on full wages</div></div>
-          <div><label>EPS %</label><input class="num" id="sm-pf-eps"></div>
         </div>
         <div class="row four" style="margin-top:9px;">
+          <div><label>EPS %</label><input class="num" id="sm-pf-eps"></div>
           <div><label>EPS ceiling</label><input class="num" id="sm-pf-epsceil"></div>
           <div><label>EDLI %</label><input class="num" id="sm-pf-edli"></div>
           <div><label>Admin %</label><input class="num" id="sm-pf-admin"></div>
-          <div><label>Apply ceiling</label><select id="sm-pf-applyceil"><option value="yes">Yes</option><option value="no">No</option></select></div>
         </div>
+        <div class="row four" style="margin-top:9px;"><div><label>Apply ceiling</label><select id="sm-pf-applyceil"><option value="yes">Yes</option><option value="no">No</option></select></div></div>
       </div>
 
       <div class="card">
         <h4>ESI</h4>
         <div class="row four">
+          <div><label>Enabled</label><select id="sm-esi-enabled"><option value="yes">Yes</option><option value="no">No</option></select></div>
           <div><label>Employee %</label><input class="num" id="sm-esi-emp"></div>
           <div><label>Employer %</label><input class="num" id="sm-esi-empr"></div>
           <div><label>Gross limit</label><input class="num" id="sm-esi-limit">
@@ -2773,10 +2775,44 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 
       <div class="card">
         <h4>Professional Tax</h4>
-        <div class="row four"><div><label>State</label><input id="sm-pt-state"></div></div>
+        <div class="row four">
+          <div><label>Enabled</label><select id="sm-pt-enabled"><option value="yes">Yes</option><option value="no">No</option></select></div>
+          <div><label>State</label><input id="sm-pt-state"></div>
+        </div>
         <div class="hint" style="margin:8px 0;">Slabs are state-specific — the threshold and the monthly amount payable up to it.</div>
         <div id="sm-pt-slabs"></div>
         <button class="btn" id="sm-pt-add" style="margin-top:8px;">+ Add slab</button>
+      </div>
+
+      <div class="card">
+        <h4>Labour Welfare Fund</h4>
+        <div class="row four">
+          <div><label>Enabled</label><select id="sm-lwf-enabled"><option value="no">No</option><option value="yes">Yes</option></select></div>
+          <div><label>Employee contribution</label><input class="num" id="sm-lwf-emp"></div>
+          <div><label>Employer contribution</label><input class="num" id="sm-lwf-empr"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Overtime</h4>
+        <div class="hint" style="margin-bottom:10px;">The Factories Act multiplier and what it applies
+          to — used by Payroll to value OT hours entered for a pay run.</div>
+        <div class="row four">
+          <div><label>Multiplier</label><input class="num" id="sm-ot-mult"></div>
+          <div><label>Applies to</label><select id="sm-ot-basis"><option value="basic+da">Basic + DA</option><option value="gross">Gross</option></select></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Gratuity &amp; Bonus provisions</h4>
+        <div class="hint" style="margin-bottom:10px;">These are accrual provisions shown on payroll for
+          costing purposes — not a deduction from anyone's pay, and not a payment until it is actually
+          due under the respective Act.</div>
+        <div class="row four">
+          <div><label>Gratuity accrual %</label><input class="num" id="sm-gr-pct"></div>
+          <div><label>Bonus accrual %</label><input class="num" id="sm-bo-pct"></div>
+          <div><label>Bonus wage ceiling</label><input class="num" id="sm-bo-ceil"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -2879,6 +2915,37 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         <div class="stat" id="ar-kpi" style="margin-top:10px;"></div>
       </div>
       <div class="card"><div id="ar-body"></div></div>
+    </div>
+
+    <div class="panel" data-panel="hr_payroll_native">
+      <div class="card">
+        <h4>Payroll</h4>
+        <div class="hint" style="margin-bottom:10px;">A pay run is built as a <b>draft</b> from the
+          attendance already marked for the period, checked line by line, then approved. Every rate
+          comes from <a data-goto="hr_statutory" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Statutory &amp; Masters</a> —
+          nothing here carries a hard-coded figure. <b>An approved pay run cannot be edited, reopened
+          or deleted</b>; a correction is a new run, because an approved run is a financial record.</div>
+        <div class="note bad" id="pr-guard" style="display:none;"></div>
+        <div class="stat" id="pr-kpi"></div>
+      </div>
+
+      <div class="card">
+        <h4>Build a draft pay run</h4>
+        <div class="row four">
+          <div><label>Period</label><input type="month" id="pr-period"></div>
+          <div><label>Days in period</label><input class="num" id="pr-days" value="30"></div>
+          <div style="align-self:end;"><button class="btn gold" id="pr-build">Build draft from attendance</button></div>
+        </div>
+        <div class="hint" style="margin-top:8px;">Payable days come from the attendance register for
+          that month. Anyone with no attendance marked is included at zero payable days and flagged,
+          rather than quietly left out of their own payslip.</div>
+        <div class="note" id="pr-msg" style="display:none;margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <h4>Pay runs</h4>
+        <div id="pr-list"></div>
+      </div>
     </div>
 
     <div class="panel" data-panel="entry_machine">
@@ -5256,6 +5323,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['hr_statutory','📐','Statutory & Masters',1],
       ['hr_kpi','🎯','KPI & Appraisal',1],
       ['hr_audit_ready','🛡','Audit Readiness',1],
+      ['hr_payroll_native','💰','Payroll',1],
       ['hr_engage','🤝','Engagement',1],
       ['hr_exit','🚪','Exit & Full and Final',1],
       ['hr_tower','🗼','Control Tower',1],
@@ -5538,6 +5606,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'hr_statutory')  loadHrStatutory();
     if (s === 'hr_kpi')        loadHrKpi();
     if (s === 'hr_audit_ready') loadHrAuditReady();
+    if (s === 'hr_payroll_native') loadPayroll();
     if (s === 'change_4m')      load4M();
     if (s === 'maintenance')    loadMaintenance();
     if (s === 'ncr_open')       loadOpenActions();
@@ -9688,6 +9757,12 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (!st.lastReviewedBy) st.lastReviewedBy = '';
     if (!st.lastReviewedOn) st.lastReviewedOn = '';
     st.pf = st.pf || {}; st.esi = st.esi || {}; st.pt = st.pt || {}; st.pt.slabs = st.pt.slabs || [];
+    st.lwf = st.lwf || {}; st.ot = st.ot || {}; st.gratuity = st.gratuity || {}; st.bonus = st.bonus || {};
+    if (st.pf.enabled === undefined) st.pf.enabled = true;
+    if (st.esi.enabled === undefined) st.esi.enabled = true;
+    if (st.pt.enabled === undefined) st.pt.enabled = true;
+    if (!st.ot.multiplier) st.ot.multiplier = 2;
+    if (!st.ot.basisComponents) st.ot.basisComponents = 'basic+da';
     st.tds = st.tds || {};
     st.tds.regimes = st.tds.regimes || {};
     if (!Object.keys(st.tds.regimes).length)
@@ -9765,6 +9840,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     document.getElementById('sm-pm-hrs').value = pm.freeHoursPerMonth||'';
     document.getElementById('sm-pm-excess').value = pm.excessTreatment||'lop';
 
+    document.getElementById('sm-pf-enabled').value = st.pf.enabled === false ? 'no' : 'yes';
     document.getElementById('sm-pf-emp').value = st.pf.employeePct||'';
     document.getElementById('sm-pf-empr').value = st.pf.employerPct||'';
     document.getElementById('sm-pf-ceil').value = st.pf.wageCeiling||'';
@@ -9773,10 +9849,20 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     document.getElementById('sm-pf-edli').value = st.pf.edliPct||'';
     document.getElementById('sm-pf-admin').value = st.pf.adminPct||'';
     document.getElementById('sm-pf-applyceil').value = st.pf.applyCeiling===false ? 'no' : 'yes';
+    document.getElementById('sm-esi-enabled').value = st.esi.enabled === false ? 'no' : 'yes';
     document.getElementById('sm-esi-emp').value = st.esi.employeePct||'';
     document.getElementById('sm-esi-empr').value = st.esi.employerPct||'';
     document.getElementById('sm-esi-limit').value = st.esi.grossLimit||'';
+    document.getElementById('sm-pt-enabled').value = st.pt.enabled === false ? 'no' : 'yes';
     document.getElementById('sm-pt-state').value = st.pt.state||'';
+    document.getElementById('sm-lwf-enabled').value = st.lwf.enabled ? 'yes' : 'no';
+    document.getElementById('sm-lwf-emp').value = st.lwf.employee||'';
+    document.getElementById('sm-lwf-empr').value = st.lwf.employer||'';
+    document.getElementById('sm-ot-mult').value = st.ot.multiplier||'';
+    document.getElementById('sm-ot-basis').value = st.ot.basisComponents||'basic+da';
+    document.getElementById('sm-gr-pct').value = st.gratuity.accrualPct||'';
+    document.getElementById('sm-bo-pct').value = st.bonus.accrualPct||'';
+    document.getElementById('sm-bo-ceil').value = st.bonus.wageCeiling||'';
     document.getElementById('sm-pt-slabs').innerHTML = st.pt.slabs.length
       ? '<table class="t"><thead><tr><th class="r">Gross up to</th><th class="r">PT amount</th><th></th></tr></thead><tbody>' +
         st.pt.slabs.map(function(sl,i){
@@ -9868,12 +9954,21 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       standardHours:C.num(fieldVal('sm-pm-std')), maxHoursPerRequest:C.num(fieldVal('sm-pm-max')),
       freeInstancesPerMonth:C.num(fieldVal('sm-pm-inst')), freeHoursPerMonth:C.num(fieldVal('sm-pm-hrs')),
       excessTreatment:document.getElementById('sm-pm-excess').value };
+    st.pf.enabled = document.getElementById('sm-pf-enabled').value !== 'no';
     st.pf.employeePct = C.num(fieldVal('sm-pf-emp')); st.pf.employerPct = C.num(fieldVal('sm-pf-empr'));
     st.pf.wageCeiling = C.num(fieldVal('sm-pf-ceil')); st.pf.epsPct = C.num(fieldVal('sm-pf-eps'));
     st.pf.epsCeiling = C.num(fieldVal('sm-pf-epsceil')); st.pf.edliPct = C.num(fieldVal('sm-pf-edli'));
     st.pf.adminPct = C.num(fieldVal('sm-pf-admin')); st.pf.applyCeiling = document.getElementById('sm-pf-applyceil').value === 'yes';
+    st.esi.enabled = document.getElementById('sm-esi-enabled').value !== 'no';
     st.esi.employeePct = C.num(fieldVal('sm-esi-emp')); st.esi.employerPct = C.num(fieldVal('sm-esi-empr'));
-    st.esi.grossLimit = C.num(fieldVal('sm-esi-limit')); st.pt.state = fieldVal('sm-pt-state');
+    st.esi.grossLimit = C.num(fieldVal('sm-esi-limit'));
+    st.pt.enabled = document.getElementById('sm-pt-enabled').value !== 'no';
+    st.pt.state = fieldVal('sm-pt-state');
+    st.lwf.enabled = document.getElementById('sm-lwf-enabled').value === 'yes';
+    st.lwf.employee = C.num(fieldVal('sm-lwf-emp')); st.lwf.employer = C.num(fieldVal('sm-lwf-empr'));
+    st.ot.multiplier = C.num(fieldVal('sm-ot-mult')); st.ot.basisComponents = document.getElementById('sm-ot-basis').value;
+    st.gratuity.accrualPct = C.num(fieldVal('sm-gr-pct'));
+    st.bonus.accrualPct = C.num(fieldVal('sm-bo-pct')); st.bonus.wageCeiling = C.num(fieldVal('sm-bo-ceil'));
     st.tds.mode = document.getElementById('sm-tds-mode').value;
     st.tds.defaultRegime = document.getElementById('sm-tds-regime').value;
     st.tds.cessPct = C.num(fieldVal('sm-tds-cess'));
@@ -13164,7 +13259,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['engage','engage','Engagement','Surveys, recognition, grievances','s:hr_engage'],
       ['exit','exit','Exit & Full and Final','Resignations, clearance and settlement','s:hr_exit'] ]],
     ['Pay', [
-      ['payroll','pay','Payroll','Pay runs, payslips and approval','e:payroll'],
+      ['payroll','pay','Payroll','Pay runs, payslips and approval','s:hr_payroll_native'],
       ['mpcost','pay','Manpower Cost','Earned salary and statutory payables from attendance, as of today','v:mpcost'],
       ['statutory','statutory','Statutory & Masters','PF, ESI, PT, TDS, shifts, holidays, leave rules','s:hr_statutory'] ]],
     ['Capability & compliance', [
@@ -26376,6 +26471,448 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     btn.disabled = false; btn.textContent = 'Ask the AI to prioritise';
   }
 
+  /* ================= PAYROLL — the calculation engine =================
+     Ported line-for-line from the website's own calcPayslip() and its four
+     helpers, NOT reimplemented from a description of what they do. These
+     compute what a person is actually paid, including marginal relief on
+     both the 87A rebate and the surcharge — subtle, legally-specific
+     arithmetic where a plausible-looking reimplementation would be worse
+     than useless. Every figure comes from Statutory & Masters; nothing here
+     carries a hard-coded rate. */
+  function prSlabTax(taxable, slabs){
+    var tax = 0, prev = 0;
+    (slabs||[]).slice().sort(function(a,b){ return C.num(a.upTo) - C.num(b.upTo); }).forEach(function(sl){
+      var band = Math.max(0, Math.min(taxable, C.num(sl.upTo)) - prev);
+      tax += band * C.num(sl.rate) / 100;
+      prev = C.num(sl.upTo);
+    });
+    return tax;
+  }
+  function prSurchargeRate(taxable, bands){
+    var b = (bands||[]).slice().sort(function(x,y){ return C.num(x.upTo) - C.num(y.upTo); })
+      .filter(function(x){ return taxable <= C.num(x.upTo); })[0];
+    return b ? C.num(b.rate) : 0;
+  }
+  /* tax after the 87A rebate, surcharge and marginal relief, before cess */
+  function prAnnualTaxBeforeCess(taxable, rg){
+    var grossTax = prSlabTax(taxable, rg.slabs);
+    var base = grossTax, rebate = 0, relief = 0;
+    var rl = C.num(rg.rebateLimit), ra = C.num(rg.rebateAmount);
+    if (rl && ra){
+      if (taxable <= rl){ rebate = Math.min(base, ra); base = base - rebate; }
+      else {
+        /* marginal relief just above the rebate limit: the tax cannot exceed the
+           income earned beyond the limit, or a rupee more of income would cost
+           more than a rupee of tax */
+        var atLimit = Math.max(0, prSlabTax(rl, rg.slabs) - ra);
+        var capped = atLimit + (taxable - rl);
+        if (capped < base){ relief = base - capped; base = capped; }
+      }
+    }
+    var bands = (rg.surcharge||[]).slice().sort(function(a,b){ return C.num(a.upTo) - C.num(b.upTo); });
+    var rate = prSurchargeRate(taxable, bands);
+    var sc = base * rate / 100, scRelief = 0;
+    if (sc > 0){
+      var crossed = bands.map(function(b){ return C.num(b.upTo); })
+        .filter(function(x){ return x < taxable; }).sort(function(a,b){ return b - a; });
+      if (crossed.length){
+        var T = crossed[0];
+        var baseT = prSlabTax(T, rg.slabs);
+        var cappedS = baseT + baseT * prSurchargeRate(T, bands) / 100 + (taxable - T);
+        if (base + sc > cappedS){ scRelief = (base + sc) - cappedS; sc = Math.max(0, cappedS - base); }
+      }
+    }
+    return { grossTax:grossTax, base:base, rebate:rebate, relief:relief, surcharge:sc,
+             surchargeRate:rate, surchargeRelief:scRelief, total:base + sc };
+  }
+  function prGrossMonthly(emp){
+    var s = emp.structure || {};
+    return C.num(s.basic)+C.num(s.da)+C.num(s.hra)+C.num(s.conveyance)+C.num(s.special)+C.num(s.otherAllow);
+  }
+
+  /* the payslip calculation for one employee for one period */
+  function prCalcPayslip(emp, att, st, cb){
+    st = st || {}; cb = cb || {};
+    var num = C.num, s = emp.structure || {};
+    var payableDays = num(att.payableDays), totalDays = Math.max(1, num(att.totalDays) || 30);
+    var factor = Math.min(1, payableDays / totalDays);
+
+    var basic = Math.round(num(s.basic)*factor), da = Math.round(num(s.da)*factor);
+    var hra = Math.round(num(s.hra)*factor), conveyance = Math.round(num(s.conveyance)*factor);
+    var special = Math.round(num(s.special)*factor), otherAllow = Math.round(num(s.otherAllow)*factor);
+
+    var otBasisMonthly = (String((st.ot||{}).basisComponents || 'basic+da') === 'gross')
+      ? prGrossMonthly(emp) : (num(s.basic) + num(s.da));
+    var hoursPerMonth = Math.max(1, totalDays * num(cb.hoursPerShift || 8));
+    var otRatePerHour = (otBasisMonthly / hoursPerMonth) * num((st.ot||{}).multiplier || 2);
+    var otAmount = Math.round(num(att.otHours) * otRatePerHour);
+
+    var incentive = num(att.incentive);
+    var gross = basic+da+hra+conveyance+special+otherAllow+otAmount+incentive;
+
+    var notes = [];
+    var pfEmp = 0, pfEr = 0, eps = 0, edli = 0, pfAdmin = 0;
+    var pf = st.pf || {};
+    if (pf.enabled && emp.pfApplicable !== false){
+      var pfWageRaw = basic + da;
+      var pfWage = pf.applyCeiling ? Math.min(pfWageRaw, num(pf.wageCeiling)) : pfWageRaw;
+      pfEmp = Math.round(pfWage * num(pf.employeePct) / 100);
+      var erTotal = Math.round(pfWage * num(pf.employerPct) / 100);
+      eps = Math.round(Math.min(pfWage, num(pf.epsCeiling || pf.wageCeiling)) * num(pf.epsPct) / 100);
+      pfEr = Math.max(0, erTotal - eps);
+      edli = Math.round(Math.min(pfWage, num(pf.wageCeiling)) * num(pf.edliPct) / 100);
+      pfAdmin = Math.round(Math.min(pfWage, num(pf.wageCeiling)) * num(pf.adminPct) / 100);
+      if (pf.applyCeiling && pfWageRaw > num(pf.wageCeiling)) notes.push('PF restricted to the wage ceiling');
+    }
+
+    var esiEmp = 0, esiEr = 0;
+    var esi = st.esi || {};
+    if (esi.enabled && emp.esiApplicable !== false){
+      if (gross <= num(esi.grossLimit)){
+        esiEmp = Math.ceil(gross * num(esi.employeePct) / 100);
+        esiEr = Math.ceil(gross * num(esi.employerPct) / 100);
+      } else notes.push('ESI not applied — gross above the configured limit');
+    }
+
+    var pt = 0, ptr = st.pt || {};
+    if (ptr.enabled && emp.ptApplicable !== false){
+      var slab = (ptr.slabs||[]).slice().sort(function(a,b){ return num(a.upTo) - num(b.upTo); })
+        .filter(function(x){ return gross <= num(x.upTo); })[0];
+      pt = slab ? num(slab.amount) : 0;
+    }
+
+    var tds = 0, tdsBasis = '', tdsComputed = 0;
+    var flagsPre = [], tdsCfg = st.tds || {};
+    if (tdsCfg.enabled !== false){
+      if (tdsCfg.mode === 'manual'){
+        tds = num(emp.monthlyTds);
+        tdsBasis = 'Fixed monthly figure';
+      } else {
+        var regimeKey = emp.taxRegime || tdsCfg.defaultRegime || 'New';
+        var rg = (tdsCfg.regimes||{})[regimeKey];
+        if (rg && (rg.slabs||[]).length){
+          var annualGross = gross * 12;
+          var taxable = Math.max(0, annualGross - num(rg.standardDeduction) - num(emp.declaredDeductions));
+          var t = prAnnualTaxBeforeCess(taxable, rg);
+          var cess = t.total * num(tdsCfg.cessPct) / 100;
+          var annualTax = t.total + cess;
+          tds = Math.round(annualTax / 12);
+          tdsBasis = regimeKey + ' regime · annual gross ' + Math.round(annualGross).toLocaleString('en-IN') +
+            ' · taxable ' + Math.round(taxable).toLocaleString('en-IN') +
+            ' after ' + num(rg.standardDeduction).toLocaleString('en-IN') + ' standard deduction' +
+            (num(emp.declaredDeductions) ? ' and ' + num(emp.declaredDeductions).toLocaleString('en-IN') + ' declared' : '') +
+            ' · tax on slabs ' + Math.round(t.grossTax).toLocaleString('en-IN') +
+            (t.rebate ? ' − 87A rebate ' + Math.round(t.rebate).toLocaleString('en-IN') : '') +
+            (t.relief ? ' − marginal relief ' + Math.round(t.relief).toLocaleString('en-IN') : '') +
+            (t.surcharge ? ' + ' + t.surchargeRate + '% surcharge ' + Math.round(t.surcharge).toLocaleString('en-IN') : '') +
+            (t.surchargeRelief ? ' (after ' + Math.round(t.surchargeRelief).toLocaleString('en-IN') + ' marginal relief)' : '') +
+            ' + ' + num(tdsCfg.cessPct) + '% cess = ' + Math.round(annualTax).toLocaleString('en-IN') + ' a year';
+          tdsComputed = tds;
+          if (num(emp.monthlyTds) > 0){
+            tds = num(emp.monthlyTds);
+            tdsBasis = 'Overridden on the employee record — the computed figure is ' +
+              Math.round(tdsComputed).toLocaleString('en-IN') + '/month';
+          }
+          if (!tdsCfg.slabsReviewedBy) notes.push('Tax slabs not yet confirmed by your CA');
+        } else {
+          tds = num(emp.monthlyTds);
+          tdsBasis = 'No slab table found for the ' + regimeKey + ' regime — set it on Statutory & Masters. ' +
+            'Until then only the per-employee figure is deducted';
+          flagsPre.push('No tax slabs for the ' + regimeKey + ' regime — TDS is not being computed');
+        }
+      }
+    }
+    var lwfEmp = (st.lwf||{}).enabled ? num(st.lwf.employee) : 0;
+    var lwfEr = (st.lwf||{}).enabled ? num(st.lwf.employer) : 0;
+    var otherDed = num(emp.otherDeduction) + num(att.advance);
+
+    var totalDeductions = pfEmp + esiEmp + pt + tds + lwfEmp + otherDed;
+    var net = gross - totalDeductions;
+    var ctcCost = gross + pfEr + eps + edli + pfAdmin + esiEr + lwfEr;
+
+    var gratuityProv = Math.round((basic+da) * num((st.gratuity||{}).accrualPct) / 100);
+    var bonusProv = Math.round(Math.min(basic+da, num((st.bonus||{}).wageCeiling) || (basic+da))
+      * num((st.bonus||{}).accrualPct) / 100);
+
+    var flags = flagsPre.slice();
+    if (net < 0) flags.push('Net pay is negative — check deductions');
+    if (payableDays > totalDays) flags.push('Payable days exceed days in the period');
+    if (!emp.structure || prGrossMonthly(emp) <= 0) flags.push('No salary structure set');
+    if (pf.enabled && emp.pfApplicable !== false && !emp.uan) flags.push('PF applicable but no UAN recorded');
+    if (esiEmp > 0 && !emp.esiNumber) flags.push('ESI deducted but no ESI number recorded');
+    if (num(att.otHours) > 0 && otAmount === 0) flags.push('OT hours entered but OT value is zero');
+
+    return { empId:emp.empId, name:emp.name, department:emp.department,
+      payableDays:payableDays, totalDays:totalDays, lopDays:Math.max(0, totalDays - payableDays),
+      earnings:{ basic:basic, da:da, hra:hra, conveyance:conveyance, special:special,
+                 otherAllow:otherAllow, ot:otAmount, incentive:incentive },
+      gross:gross,
+      deductions:{ pf:pfEmp, esi:esiEmp, pt:pt, tds:tds, lwf:lwfEmp, other:otherDed },
+      totalDeductions:totalDeductions, net:net,
+      employer:{ pf:pfEr, eps:eps, edli:edli, admin:pfAdmin, esi:esiEr, lwf:lwfEr },
+      ctcCost:ctcCost, provisions:{ gratuity:gratuityProv, bonus:bonusProv },
+      otHours:num(att.otHours), notes:notes, flags:flags, tdsBasis:tdsBasis, tdsComputed:tdsComputed,
+      rulesEffectiveFrom: st.effectiveFrom || '' };
+  }
+
+  /* ---------------- Payroll (native) ----------------
+     Builds a draft from real attendance, shows every payslip line for
+     checking, and approves. The engine above does the arithmetic; this only
+     gathers inputs and presents results. Payable days are counted from the
+     attendance register the same way the source does: a day with no record
+     and no week-off/holiday counts as absent, so nobody is silently paid
+     for a day nobody marked. */
+  var prEmployees = [], prPayruns = [], prAttendance = [], prSt = {}, prCb = {}, prExpanded = null;
+
+  async function loadPayroll(){
+    var msg = document.getElementById('pr-msg');
+    if (msg) msg.style.display = 'none';
+    try {
+      var content = (await C.api('/api/content')).data || {};
+      prSt = content.statutory || {}; prCb = content.costBase || {};
+    } catch(e){ prSt = {}; prCb = {}; }
+    prEmployees = await hrAllEmployees();
+    try { prPayruns = (await C.api('/api/hr?what=payruns')).payruns || []; } catch(e){ prPayruns = []; }
+    if (!document.getElementById('pr-period').value)
+      document.getElementById('pr-period').value = new Date().toISOString().slice(0,7);
+    prDrawGuard();
+    prDrawKpi();
+    prDrawRuns();
+  }
+
+  function prDrawGuard(){
+    var box = document.getElementById('pr-guard');
+    var problems = [];
+    if (!prSt.pf && !prSt.esi && !prSt.tds) problems.push('No statutory rates are set at all');
+    if (prSt.tds && prSt.tds.mode === 'slab' && !prSt.tds.slabsReviewedBy)
+      problems.push('Tax slabs have not been confirmed by a named person — every payslip will say so');
+    if (!prSt.lastReviewedBy) problems.push('The statutory rates have no recorded reviewer');
+    var noStructure = prEmployees.filter(function(e){
+      return e.status !== 'Exited' && (!e.structure || !C.num((e.structure||{}).basic)); }).length;
+    if (noStructure) problems.push(noStructure + ' active employee(s) have no salary structure set');
+    if (!problems.length){ box.style.display = 'none'; return; }
+    box.style.display = '';
+    box.innerHTML = '<b>Check these before approving anything.</b><ul style="margin:6px 0 0 18px;">' +
+      problems.map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('') + '</ul>';
+  }
+
+  function prDrawKpi(){
+    var drafts = prPayruns.filter(function(r){ return r.status !== 'Approved'; }).length;
+    var approved = prPayruns.filter(function(r){ return r.status === 'Approved'; }).length;
+    var active = prEmployees.filter(function(e){ return e.status !== 'Exited'; }).length;
+    document.getElementById('pr-kpi').innerHTML =
+      [['Employees on payroll', active], ['Draft runs', drafts], ['Approved runs', approved]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('');
+  }
+
+  function prAttendanceSummary(empId, period, fallbackDays){
+    var recs = prAttendance.filter(function(a){ return a.empId === empId && String(a.day).indexOf(period) === 0; });
+    if (!recs.length) return { hasRecords:false, payableDays:fallbackDays, totalDays:fallbackDays, otHours:0 };
+    var present = 0, ot = 0;
+    recs.forEach(function(r){
+      if (r.status === 'Absent') return;
+      present += C.num(r.dayFraction || 1);
+      ot += C.num(r.otHours);
+    });
+    return { hasRecords:true, payableDays:Math.round(present*1000)/1000, totalDays:fallbackDays, otHours:ot };
+  }
+
+  async function prBuildDraft(){
+    var period = document.getElementById('pr-period').value;
+    var totalDays = C.num(document.getElementById('pr-days').value) || 30;
+    var msg = document.getElementById('pr-msg'), say = noteWriter(msg);
+    if (!period) return say('Choose the period first.');
+    if (prPayruns.some(function(r){ return r.period === period && r.status === 'Approved'; }))
+      return say('That period already has an approved pay run. A correction must be a new, separate run.');
+    var btn = document.getElementById('pr-build');
+    btn.disabled = true; btn.textContent = 'Building…';
+    try {
+      try {
+        prAttendance = (await C.api('/api/hr?what=attendance&from=' + period + '-01&to=' + period + '-31')).attendance || [];
+      } catch(e){ prAttendance = []; }
+      var active = prEmployees.filter(function(e){ return e.status !== 'Exited'; });
+      if (!active.length) throw new Error('There is nobody on payroll to build a run for.');
+      var lines = active.map(function(e){
+        var a = prAttendanceSummary(e.empId, period, totalDays);
+        return { empId:e.empId, name:e.name, department:e.department,
+          payableDays:a.payableDays, totalDays:totalDays, otHours:a.otHours,
+          incentive:0, advance:0, fromAttendance:a.hasRecords };
+      });
+      var run = { runId:'PR-' + period.replace('-','') + '-' + Date.now().toString(36).slice(-4).toUpperCase(),
+        period:period, totalDays:totalDays, status:'Draft', lines:lines,
+        createdAt:new Date().toISOString(),
+        rulesEffectiveFrom:prSt.effectiveFrom || '', rulesReviewedBy:prSt.lastReviewedBy || '' };
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'payruns', payrun:run, reason:'draft created' }) });
+      say('Draft built for ' + period + ' — check every line before approving.', true);
+      prExpanded = run.runId;
+      loadPayroll();
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Build draft from attendance';
+  }
+
+  function prRunTotals(run){
+    var slips = (run.lines||[]).map(function(l){
+      var emp = prEmployees.filter(function(e){ return e.empId === l.empId; })[0];
+      return emp ? prCalcPayslip(emp, l, prSt, prCb) : null;
+    }).filter(Boolean);
+    return { slips:slips,
+      gross: slips.reduce(function(t,s){ return t+s.gross; }, 0),
+      deductions: slips.reduce(function(t,s){ return t+s.totalDeductions; }, 0),
+      net: slips.reduce(function(t,s){ return t+s.net; }, 0),
+      ctcCost: slips.reduce(function(t,s){ return t+s.ctcCost; }, 0),
+      flagged: slips.filter(function(s){ return s.flags.length; }) };
+  }
+
+  function prDrawRuns(){
+    var host = document.getElementById('pr-list');
+    if (!prPayruns.length){ host.innerHTML = '<div class="empty"><b>No pay runs yet</b>Build a draft above.</div>'; return; }
+    host.innerHTML = prPayruns.map(function(r){
+      var run = r.data || r;
+      var open = prExpanded === (r.run_id || run.runId);
+      var t = prRunTotals(run);
+      var approved = (r.status || run.status) === 'Approved';
+      return '<div class="card" style="margin-bottom:10px;">' +
+        '<div class="pr-head" data-run="'+esc(r.run_id||run.runId)+'" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
+        '<div><b>'+esc(run.period)+'</b> <span class="hint">'+esc(r.run_id||run.runId)+'</span>' +
+        '<div class="hint">'+(run.lines||[]).length+' employee(s) · net '+C.inr(t.net)+
+        (t.flagged.length ? ' · <span style="color:var(--bad,#b03a2e);font-weight:700;">'+t.flagged.length+' flagged</span>' : '')+'</div></div>' +
+        '<span class="badge '+(approved?'series':'sample')+'">'+esc(r.status||run.status)+'</span></div>' +
+        (open ? prRunDetailHtml(r, run, t, approved) : '') + '</div>';
+    }).join('');
+
+    host.querySelectorAll('.pr-head').forEach(function(el){
+      el.addEventListener('click', function(){
+        prExpanded = prExpanded === el.dataset.run ? null : el.dataset.run;
+        prDrawRuns();
+      });
+    });
+    host.querySelectorAll('.pr-line-in').forEach(function(inp){
+      inp.addEventListener('click', function(e){ e.stopPropagation(); });
+      inp.addEventListener('change', function(){
+        var r = prPayruns.filter(function(x){ return (x.run_id||(x.data||{}).runId) === inp.dataset.run; })[0];
+        if (!r) return;
+        var run = r.data || r;
+        var line = (run.lines||[]).filter(function(l){ return l.empId === inp.dataset.emp; })[0];
+        if (line) line[inp.dataset.k] = C.num(inp.value);
+        prDrawRuns();
+      });
+    });
+    host.querySelectorAll('.pr-save').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); prSaveDraft(b.dataset.run); });
+    });
+    host.querySelectorAll('.pr-approve').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); prApprove(b.dataset.run); });
+    });
+    host.querySelectorAll('.pr-discard').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); prDiscard(b.dataset.run); });
+    });
+    host.querySelectorAll('.pr-print').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); prPrintRun(b.dataset.run); });
+    });
+  }
+
+  function prRunDetailHtml(r, run, t, approved){
+    var runId = r.run_id || run.runId;
+    return '<div style="margin-top:12px;">' +
+      '<div class="stat">' + [['Gross', C.inr(t.gross)], ['Deductions', C.inr(t.deductions)],
+        ['Net payable', C.inr(t.net)], ['Total cost to company', C.inr(t.ctcCost)]]
+        .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') + '</div>' +
+      (run.rulesReviewedBy
+        ? '<div class="hint" style="margin-top:8px;">Rates effective '+esc(run.rulesEffectiveFrom||'—')+', last reviewed by '+esc(run.rulesReviewedBy)+'.</div>'
+        : '<div class="note bad" style="margin-top:8px;">These rates had no recorded reviewer when this run was built.</div>') +
+      (t.flagged.length ? '<div class="note bad" style="margin-top:8px;"><b>'+t.flagged.length+
+        ' line(s) need looking at:</b><ul style="margin:6px 0 0 18px;">' +
+        t.flagged.slice(0,8).map(function(s){ return '<li>'+esc(s.name)+' — '+esc(s.flags.join('; '))+'</li>'; }).join('') +
+        '</ul></div>' : '') +
+      '<div class="scroll-x" style="margin-top:10px;"><table class="t"><thead><tr><th>Employee</th>' +
+      '<th class="r">Payable days</th><th class="r">OT hrs</th><th class="r">Incentive</th><th class="r">Advance</th>' +
+      '<th class="r">Gross</th><th class="r">PF</th><th class="r">ESI</th><th class="r">PT</th><th class="r">TDS</th>' +
+      '<th class="r">Net</th></tr></thead><tbody>' +
+      t.slips.map(function(s){
+        var ed = approved ? '' : ' class="num pr-line-in" data-run="'+esc(runId)+'" data-emp="'+esc(s.empId)+'"';
+        var cell = function(k, v){
+          return approved ? '<td class="r">'+C.qty(v)+'</td>'
+            : '<td class="r"><input'+ed+' data-k="'+k+'" value="'+esc(v)+'" style="width:70px;"></td>';
+        };
+        return '<tr><td><b>'+esc(s.name)+'</b><div class="hint">'+esc(s.empId)+
+          (s.lopDays ? ' · LOP '+s.lopDays : '')+'</div></td>' +
+          cell('payableDays', s.payableDays) + cell('otHours', s.otHours) +
+          cell('incentive', s.earnings.incentive) + cell('advance', s.deductions.other) +
+          '<td class="r">'+C.inr(s.gross)+'</td><td class="r">'+C.inr(s.deductions.pf)+'</td>' +
+          '<td class="r">'+C.inr(s.deductions.esi)+'</td><td class="r">'+C.inr(s.deductions.pt)+'</td>' +
+          '<td class="r" title="'+esc(s.tdsBasis)+'">'+C.inr(s.deductions.tds)+'</td>' +
+          '<td class="r"><b>'+C.inr(s.net)+'</b></td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
+      (approved
+        ? '<button class="btn pr-print" data-run="'+esc(runId)+'">Print payslips</button>' +
+          '<span class="badge series">Approved — this is a financial record and cannot be changed</span>'
+        : '<button class="btn gold pr-save" data-run="'+esc(runId)+'">Save draft</button>' +
+          '<button class="btn pr-approve" data-run="'+esc(runId)+'">Approve this run</button>' +
+          '<button class="btn pr-print" data-run="'+esc(runId)+'">Print payslips</button>' +
+          '<button class="btn del pr-discard" data-run="'+esc(runId)+'">Discard draft</button>') +
+      '</div></div>';
+  }
+
+  function prFindRun(runId){
+    var r = prPayruns.filter(function(x){ return (x.run_id || (x.data||{}).runId) === runId; })[0];
+    return r ? { row:r, run:(r.data || r) } : null;
+  }
+  async function prSaveDraft(runId){
+    var f = prFindRun(runId); if (!f) return;
+    try {
+      await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'payruns', runId:runId,
+        patch:f.run, reason:'draft edited' }) });
+      toast('Draft saved.');
+    } catch(e){ toast(e.message); }
+  }
+  async function prApprove(runId){
+    var f = prFindRun(runId); if (!f) return;
+    var t = prRunTotals(f.run);
+    if (t.flagged.length && !confirm(t.flagged.length + ' line(s) are flagged. Approve anyway?')) return;
+    var reason = prompt('Approving ' + f.run.period + ' — net ' + C.inr(t.net) +
+      '. This cannot be undone. Note for the record:');
+    if (!reason) return;
+    try {
+      await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'payruns', runId:runId,
+        patch:f.run, status:'Approved', reason:reason }) });
+      toast('Approved.');
+      loadPayroll();
+    } catch(e){ toast(e.message); }
+  }
+  async function prDiscard(runId){
+    var why = prompt('Discarding this draft. Why?'); if (!why) return;
+    try {
+      await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'payruns', runId:runId,
+        remove:true, reason:why }) });
+      prExpanded = null;
+      loadPayroll();
+    } catch(e){ toast(e.message); }
+  }
+  function prPrintRun(runId){
+    var f = prFindRun(runId); if (!f) return;
+    var t = prRunTotals(f.run);
+    C.openReport({ title:'Payslips — ' + f.run.period, kind:'Payroll', landscape:true,
+      subtitle:(f.run.status || '') + ' · ' + t.slips.length + ' employee(s)',
+      sections:[
+        { type:'table', title:'Pay register', dense:true,
+          columns:[{label:'Employee'},{label:'Days',align:'r'},{label:'Gross',align:'r'},
+            {label:'PF',align:'r'},{label:'ESI',align:'r'},{label:'PT',align:'r'},
+            {label:'TDS',align:'r'},{label:'Other',align:'r'},{label:'Net',align:'r'}],
+          rows: t.slips.map(function(s){
+            return [esc(s.name)+' ('+esc(s.empId)+')', s.payableDays+'/'+s.totalDays,
+              C.qty(s.gross), C.qty(s.deductions.pf), C.qty(s.deductions.esi), C.qty(s.deductions.pt),
+              C.qty(s.deductions.tds), C.qty(s.deductions.other), C.qty(s.net)];
+          }),
+          note:'Rates effective ' + (f.run.rulesEffectiveFrom||'—') +
+               (f.run.rulesReviewedBy ? ', last reviewed by ' + f.run.rulesReviewedBy : ', with no recorded reviewer') + '.' },
+        { type:'pairs', title:'Totals', rows:[['Gross', C.inr(t.gross)], ['Deductions', C.inr(t.deductions)],
+          ['Net payable', C.inr(t.net)], ['Total cost to company', C.inr(t.ctcCost)]] },
+        { type:'text', title:'Signatures',
+          body:'Prepared by                              Checked by                              Approved by' }
+      ]});
+  }
+
   async function loadProfileScreen(){
     try { cpContent = (await C.api('/api/content')).data || {}; } catch(e){ cpContent = {}; }
     var co = cpContent.company || {};
@@ -27193,6 +27730,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('rp-tri-run').addEventListener('click', runRfqTriage);
   document.getElementById('rp-tri-explain').addEventListener('click', explainRfqTriage);
   document.getElementById('rp-filter').addEventListener('change', drawRfqList);
+
+  document.getElementById('pr-build').addEventListener('click', prBuildDraft);
+  document.querySelectorAll('[data-panel="hr_payroll_native"] [data-goto]').forEach(function(a){
+    a.addEventListener('click', function(){ go(a.dataset.goto); });
+  });
   document.querySelectorAll('[data-panel="profile"] [data-goto]').forEach(function(a){
     a.addEventListener('click', function(){ go(a.dataset.goto); });
   });

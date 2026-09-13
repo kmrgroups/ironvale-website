@@ -2823,3 +2823,61 @@ than weakening the assertion.
 **Unchanged**: Payroll and the 15 pure website-design tabs. Full suite (40
 files) clean throughout — same 2 pre-existing, unrelated smoketest
 failures.
+
+## Payroll — native, with the engine proved identical before any UI was built
+
+The one screen deliberately held back all session, on the grounds that a
+mistake here does not show as a wrong number on a dashboard — it shows in
+someone's bank account.
+
+**A real gap found first, which would have caused silent miscalculation.**
+The statutory rules Payroll reads include `enabled` toggles on PF/ESI/PT
+(`if(pf.enabled && emp.pfApplicable!==false)`) plus LWF, overtime
+multiplier/basis, and gratuity/bonus accrual — none of which the earlier
+Statutory & Masters build captured. Had Payroll been built on it as it
+stood, `pf.enabled` would have been `undefined` and **PF, ESI and PT would
+have silently not been deducted at all**. Extended Statutory & Masters with
+those fields first (+4 tests), before touching Payroll.
+
+**The engine was ported line-for-line, then proved, before any UI existed.**
+`calcPayslip()` and its four helpers (`slabTax`, `surchargeRate`,
+`annualTaxBeforeCess`, `grossMonthly`) became `prCalcPayslip`/`prSlabTax`/
+`prSurchargeRate`/`prAnnualTaxBeforeCess`/`prGrossMonthly`. This code
+computes marginal relief on *both* the 87A rebate and the surcharge —
+subtle, legally-specific arithmetic where a plausible-looking
+reimplementation is worse than useless. A throwaway harness extracted both
+implementations from their real source files and ran them against identical
+inputs across ten cases: low earner, LOP + overtime, above the ESI limit
+with the PF ceiling biting, just under and just over the 87A rebate limit
+(the marginal-relief boundary), a surcharge band, the surcharge
+marginal-relief edge, a manual TDS override, per-employee PF/ESI/PT
+opt-outs, and a zero structure. **All ten byte-identical.** Only then was
+the screen built on top.
+
+**The screen** (`hr_payroll_native`, replacing `e:payroll` in HP_TILES):
+a readiness guard listing what to fix before approving (missing structures,
+unconfirmed tax slabs, no recorded reviewer), draft building from the real
+attendance register, an editable pay register with every deduction shown
+per line, approval with a stated reason, and a printable pay register.
+Payable days come from attendance; anyone with no attendance marked is
+included at full days and flagged `fromAttendance:false` rather than
+quietly omitted from their own payslip. Approved runs render read-only with
+no Save/Approve/Discard, matching the server's own rules (already enforced
+in `api/hr.js` — approved runs cannot be edited, reopened or deleted), and
+a period with an approved run refuses a second one.
+
+Tested in `tests/payrolltest.mjs` (22 checks) against hand-calculated
+figures — Asha at 28/30 days on a 15,000 structure with 4 OT hours gives
+gross 14,267, PF 896, ESI 108, asserted to the rupee — plus the
+immutability rules and the exited-employee exclusion. `hrpayrolltest.mjs`
+had one assertion still expecting the old iframe behaviour; updated to
+assert the native screen, the same way every other migrated tile's test
+was.
+
+**Remaining, and honestly stated**: RFQ Pipeline Phase 2 (drawing reading,
+costing, the line-item quotation builder with its own PDF), the 15 pure
+website-design tabs (Hero, Gallery, Founders, Brand, Design, Sizing,
+Capabilities, Process, Stats, Industries, Certifications, AI Chatbot,
+Testimonial, Contact, Sections — an image-heavy CMS with no IDMS
+equivalent concept), and the website-side setup wizard. Full suite (42
+files) clean — same 2 pre-existing, unrelated smoketest failures.

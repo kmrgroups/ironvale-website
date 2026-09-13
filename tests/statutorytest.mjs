@@ -168,6 +168,24 @@ check('the review record (reviewer, date) is saved into statutory',
   revCall.body.data.statutory.lastReviewedOn === '2026-04-01',
   revCall && JSON.stringify(revCall.body.data.statutory.lastReviewedBy));
 
+// ---------- enabled toggles and the LWF/OT/Gratuity/Bonus fields Payroll reads ----------
+nav('hr_statutory');
+await wait(200);
+check('PF enabled defaults to yes when not explicitly set', $('sm-pf-enabled').value === 'yes');
+window.document.getElementById('sm-esi-enabled').value = 'no';
+window.document.getElementById('sm-lwf-enabled').value = 'yes';
+set('sm-lwf-emp', '20'); set('sm-lwf-empr', '40');
+set('sm-ot-mult', '2'); set('sm-gr-pct', '4.81'); set('sm-bo-pct', '8.33'); set('sm-bo-ceil', '21000');
+click($('sm-save'));
+await wait(200);
+const extCall = calls.filter(c => c.kind === 'content-save').pop();
+check('ESI can be explicitly disabled and it is saved as a real false', extCall && extCall.body.data.statutory.esi.enabled === false,
+  extCall && extCall.body.data.statutory.esi.enabled);
+check('LWF enabled + amounts are saved', extCall && extCall.body.data.statutory.lwf.enabled === true &&
+  extCall.body.data.statutory.lwf.employee === 20 && extCall.body.data.statutory.lwf.employer === 40);
+check('gratuity and bonus accrual settings are saved', extCall && extCall.body.data.statutory.gratuity.accrualPct === 4.81 &&
+  extCall.body.data.statutory.bonus.wageCeiling === 21000);
+
 check('no console errors while any of this ran', pageErrors.length === 0, pageErrors.join(' | '));
 
 const failed = results.filter(([, ok]) => !ok);

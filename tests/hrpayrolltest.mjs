@@ -137,8 +137,14 @@ check('today at a glance shows devices reporting and unmatched IDs', /1 \/ 1/.te
   /not registered/.test($('hp-status').textContent), $('hp-status').textContent);
 
 const tileByKey = k => window.document.querySelector('.hp-tile[data-key="' + k + '"]');
-click(tileByKey('payroll')); await wait(100);
-check('Payroll opens inside the workspace, one HR screen only', $('hp-frame').getAttribute('src') === '/?embed=hr&tab=payroll' && $('hp-v-frame').style.display === '');
+/* Payroll used to open the website's HR engine in an iframe here
+   (`/?embed=hr&tab=payroll`). It is now a native IDMS screen, so the tile
+   navigates instead of framing — the same change Leave, Recruitment,
+   Statutory and the rest already went through. */
+click(tileByKey('payroll')); await wait(200);
+check('Payroll opens the native screen, not a framed website page', onPanel() === 'hr_payroll_native');
+check('no website iframe is loaded for Payroll any more',
+  $('hp-frame').getAttribute('src') !== '/?embed=hr&tab=payroll');
 check('the website hides its own tab bar for a one-screen embed', /body\.embed-onetab #hr-groups, body\.embed-onetab \.hr-tabbar\{display:none/.test(site) &&
   /embed==='hr'&&one/.test(site));
 click($('hp-back')); await wait(100);

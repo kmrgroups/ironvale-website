@@ -2735,3 +2735,38 @@ actually just saved.
 tabs (Company Profile and Setup/Connections are the two done so far), and
 the website-side wizard. Full suite (37 files) clean throughout — same 2
 pre-existing, unrelated smoketest failures.
+
+## Quoting & Costing Setup — Cost Base, Quotation terms, Machines/Labour/Materials
+
+Continuing straight through the Website Content tabs, as directed. Checked
+the underlying data shapes in the website's own source before building
+anything, same discipline as every screen before this one:
+`data.costBase` (13 fields), `data.quoteCfg` (16 fields — numbering,
+currency, tax, payment/delivery/warranty terms), and three arrays —
+`data.machines`, `data.labourGrades`, `data.materials` — that feed the RFQ
+Pipeline's "Work out cost with AI" and "AI draft quote". These are
+deliberately a separate, simplified list from Machine Addition / Parts
+Addition (by original design, noted on the screen itself) — quick costing
+needs far less than full engineering does, and merging the two would have
+been a bigger, riskier change than porting the screen as it already works.
+
+Built as `admin_quoting`, same whole-object-preserving save pattern as
+Company Profile and Statutory & Masters (`/api/content` overwrites
+everything; read the full record first, change only these five keys).
+Array editing (add/edit/delete row) follows the same table pattern
+Statutory & Masters already established for shifts/holidays/leave types.
+
+Tested in `tests/quotingsetuptest.mjs` (17 checks): existing values load
+into all three tables correctly, add/delete on the array editors, numeric
+and boolean fields are saved as real numbers/booleans rather than strings
+(`downtimePct: 18` not `"18"`, `showTax: false` not `"no"`), and — the one
+that matters most on every one of these screens — saving Quoting & Costing
+Setup does not clobber the unrelated Company Profile living in the same
+`site_content` record.
+
+**Unchanged**: Payroll, RFQ Pipeline, the 15 pure website-design tabs (Hero,
+Gallery, Founders, Brand, Design, Sizing, Capabilities, Process, Stats,
+Industries, Certifications, AI Chatbot, Testimonial, Contact, Sections —
+none of which have an IDMS equivalent concept), and the website-side
+wizard. Full suite (39 files) clean throughout — same 2 pre-existing,
+unrelated smoketest failures.

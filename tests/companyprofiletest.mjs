@@ -107,6 +107,26 @@ check('unrelated pricing settings are NOT clobbered by saving the company profil
 check('unrelated hrMasters settings are NOT clobbered either',
   saveCall && saveCall.body.data.hrMasters && saveCall.body.data.hrMasters.empIdPrefix === 'EMP');
 
+// ---------- Social & Map, and RFQ Notifications — new this pass ----------
+calls.length = 0;
+nav('profile');
+await wait(200);
+set('cp-soc-linkedin', 'https://linkedin.com/company/testco'); input($('cp-soc-linkedin'));
+set('cp-notifyEmail', 'alerts@test.com'); input($('cp-notifyEmail'));
+window.document.getElementById('cp-autoQuote').value = 'yes';
+click($('cp-save'));
+await wait(200);
+const socialCall = calls.filter(c => c.kind === 'content-save').pop();
+check('a social link is saved into data.social, not a top-level field',
+  socialCall && socialCall.body.data.social.linkedin === 'https://linkedin.com/company/testco',
+  socialCall && JSON.stringify(socialCall.body.data.social));
+check('the notify email is saved at the top level, matching the website\'s own shape',
+  socialCall && socialCall.body.data.notifyEmail === 'alerts@test.com');
+check('the auto-quote toggle is saved as a real boolean, not the string "yes"',
+  socialCall && socialCall.body.data.autoQuote === true, socialCall && typeof socialCall.body.data.autoQuote);
+check('unrelated pricing settings still survive this second save',
+  socialCall && socialCall.body.data.pricing.markupPct === 18);
+
 check('no console errors while any of this ran', pageErrors.length === 0, pageErrors.join(' | '));
 
 const failed = results.filter(([, ok]) => !ok);

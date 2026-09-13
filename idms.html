@@ -2007,6 +2007,93 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       </div>
     </div>
 
+    <div class="panel" data-panel="admin_quoting">
+      <div class="card">
+        <h4>Quoting &amp; Costing Setup</h4>
+        <div class="hint" style="margin-bottom:10px;">Feeds the RFQ Pipeline's "Work out cost with AI"
+          and "AI draft quote" — a separate, simplified machine/labour/material list kept for fast
+          quoting, deliberately not the same records as Machine Addition or Parts Addition, which
+          carry far more than a quotation needs. One save writes the whole set.</div>
+        <button class="btn gold" id="qs-refresh">Refresh</button>
+        <div class="note" id="qs-msg" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <h4>Cost base</h4>
+        <div class="hint" style="margin-bottom:10px;">Drives every machine hour rate below. Take care
+          with Planned Downtime — it matters more than any other figure here.</div>
+        <div class="row four">
+          <div><label>Working days / year</label><input class="num" id="qs-cb-workingDays"></div>
+          <div><label>Shifts / day</label><input class="num" id="qs-cb-shiftsPerDay"></div>
+          <div><label>Hours / shift</label><input class="num" id="qs-cb-hoursPerShift"></div>
+          <div><label>Planned downtime %</label><input class="num" id="qs-cb-downtimePct"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Electricity tariff / kWh</label><input class="num" id="qs-cb-powerTariff"></div>
+          <div><label>Factory rent / month</label><input class="num" id="qs-cb-factoryRent"></div>
+          <div><label>Factory area (sq ft)</label><input class="num" id="qs-cb-factoryArea"></div>
+          <div><label>Factory overhead / month</label><input class="num" id="qs-cb-factoryOverhead"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Admin overhead %</label><input class="num" id="qs-cb-adminPct"></div>
+          <div><label>Finance cost %</label><input class="num" id="qs-cb-financePct"></div>
+          <div><label>Scrap / rejection %</label><input class="num" id="qs-cb-scrapPct"></div>
+          <div><label>Contingency %</label><input class="num" id="qs-cb-contingencyPct"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;"><div><label>Target profit margin %</label><input class="num" id="qs-cb-profitPct"></div></div>
+      </div>
+
+      <div class="card">
+        <h4>Quotation numbering, currency &amp; terms</h4>
+        <div class="row four">
+          <div><label>Prefix</label><input id="qs-qc-prefix" placeholder="QTN"></div>
+          <div><label>Number format</label><input id="qs-qc-numberFormat" placeholder="{PREFIX}-{YYYY}-{SEQ}"></div>
+          <div><label>Next sequence</label><input class="num" id="qs-qc-nextSeq"></div>
+          <div><label>Sequence digits</label><input class="num" id="qs-qc-seqPad"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Currency code</label><input id="qs-qc-currency" placeholder="INR"></div>
+          <div><label>Currency symbol</label><input id="qs-qc-currencySymbol" placeholder="₹"></div>
+          <div><label>Validity (days)</label><input class="num" id="qs-qc-validityDays"></div>
+          <div><label>Show tax line</label><select id="qs-qc-showTax"><option value="yes">Yes</option><option value="no">No</option></select></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Tax label</label><input id="qs-qc-taxLabel" placeholder="GST"></div>
+          <div><label>Tax percent</label><input class="num" id="qs-qc-taxPercent"></div>
+          <div><label>Incoterms</label><input id="qs-qc-incoterms"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div><label>Payment terms</label><textarea id="qs-qc-paymentTerms" rows="2"></textarea></div></div>
+        <div class="row" style="margin-top:9px;"><div><label>Delivery terms</label><textarea id="qs-qc-deliveryTerms" rows="2"></textarea></div></div>
+        <div class="row" style="margin-top:9px;"><div><label>Freight terms</label><textarea id="qs-qc-freightTerms" rows="2"></textarea></div></div>
+        <div class="row" style="margin-top:9px;"><div><label>Warranty terms</label><textarea id="qs-qc-warrantyTerms" rows="2"></textarea></div></div>
+        <div class="row" style="margin-top:9px;"><div><label>Confidentiality note</label><textarea id="qs-qc-confidentiality" rows="2"></textarea></div></div>
+        <div class="row" style="margin-top:9px;"><div><label>Extra footer note</label><textarea id="qs-qc-footerNote" rows="2"></textarea></div></div>
+      </div>
+
+      <div class="card">
+        <h4>Machines (for quoting only)</h4>
+        <div id="qs-machines"></div>
+        <button class="btn" id="qs-mc-add" style="margin-top:8px;">+ Add machine</button>
+      </div>
+
+      <div class="card">
+        <h4>Labour grades</h4>
+        <div id="qs-labour"></div>
+        <button class="btn" id="qs-lb-add" style="margin-top:8px;">+ Add grade</button>
+      </div>
+
+      <div class="card">
+        <h4>Materials</h4>
+        <div id="qs-materials"></div>
+        <button class="btn" id="qs-mt-add" style="margin-top:8px;">+ Add material</button>
+      </div>
+
+      <div class="card">
+        <button class="btn gold" id="qs-save">Save Quoting &amp; Costing Setup</button>
+        <div class="note" id="qs-save-msg" style="display:none;"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="admin_backup">
       <div class="card">
         <h4>Backup &amp; Restore</h4>
@@ -4512,6 +4599,51 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       </div>
 
       <div class="card">
+        <h4>Social &amp; map</h4>
+        <div class="hint" style="margin-bottom:10px;">Paste the full address of each page — leave a
+          field blank to hide that button on the website. Buttons appear in the Contact section and
+          the footer.</div>
+        <div class="row four">
+          <div><label>YouTube</label><input id="cp-soc-youtube" placeholder="https://youtube.com/@yourchannel"></div>
+          <div><label>Instagram</label><input id="cp-soc-instagram" placeholder="https://instagram.com/yourpage"></div>
+          <div><label>Facebook</label><input id="cp-soc-facebook" placeholder="https://facebook.com/yourpage"></div>
+          <div><label>LinkedIn</label><input id="cp-soc-linkedin" placeholder="https://linkedin.com/company/yourcompany"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>X (Twitter)</label><input id="cp-soc-twitter" placeholder="https://x.com/yourhandle"></div>
+          <div><label>WhatsApp</label><input id="cp-soc-whatsapp" placeholder="919902009152 or a wa.me link"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div>
+          <label>Show map on the website</label><select id="cp-showMap"><option value="yes">Yes</option><option value="no">No</option></select>
+        </div></div>
+        <div class="row" style="margin-top:9px;"><div>
+          <label>Map embed code or URL</label><textarea id="cp-mapEmbed" rows="3" placeholder="Paste the whole <iframe> from Google Maps → Share → Embed a map"></textarea>
+          <div class="hint">In Google Maps: search your address → Share → Embed a map → Copy HTML. Pasting just the link also works.</div>
+        </div></div>
+        <div class="row" style="margin-top:9px;"><div>
+          <label>"Open in Google Maps" link</label><input id="cp-mapLink" placeholder="https://maps.app.goo.gl/...">
+        </div></div>
+      </div>
+
+      <div class="card">
+        <h4>RFQ notifications</h4>
+        <div class="hint" style="margin-bottom:10px;">Where a new RFQ alert goes, and how the pipeline
+          reacts to it — separate from the provider keys on the
+          <a data-goto="admin_wizard" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Setup Wizard's Connections step</a>,
+          which is where email/WhatsApp actually gets turned on.</div>
+        <div class="row four">
+          <div><label>Notify email</label><input id="cp-notifyEmail"></div>
+          <div><label>Notify WhatsApp number</label><input id="cp-notifyWhatsapp" placeholder="919902009152"></div>
+          <div><label>Live site address</label><input id="cp-siteUrl" placeholder="https://yourcompany.com"></div>
+          <div><label>Quote sender name</label><input id="cp-quoteSender"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Auto-draft quote with AI on new RFQ</label><select id="cp-autoQuote"><option value="no">No</option><option value="yes">Yes</option></select></div>
+          <div><label>Send an automatic acknowledgement to the customer</label><select id="cp-autoAck"><option value="yes">Yes</option><option value="no">No</option></select></div>
+        </div>
+      </div>
+
+      <div class="card">
         <button class="btn gold" id="cp-save">Save company profile</button>
         <div class="note" id="cp-save-msg" style="display:none;"></div>
       </div>
@@ -5105,6 +5237,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['cnc_setup','🧭','Setup Guide — Connect a Machine',1]]],
     ['admin','⚙','Admin','Settings and the website',[
       ['admin_wizard','🧙','Setup Wizard',1],
+      ['admin_quoting','🧮','Quoting & Costing Setup',1],
       ['admin_site','🌐','Website Content',1],
       ['admin_banner','🖼','Home Banner',1],
       ['login_screen','🔐','Login Screen',1],
@@ -5374,6 +5507,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'agent_runs')     loadAgentRuns();
     if (s === 'profile') loadProfileScreen();
     if (s === 'admin_wizard') loadSetupWizard();
+    if (s === 'admin_quoting') loadQuotingSetup();
     if (s === 'dwm')                   loadDwm();
     if (s === 'task_list')             loadTasks();
     if (s === 'users')                 loadUsers();
@@ -25922,6 +26056,119 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     wizDrawConnections();
   }
 
+  /* ---------------- Quoting & Costing Setup (native) ----------------
+     A deliberately separate, simplified machine/labour/material list from
+     Machine Addition / Parts Addition — this feeds quick RFQ costing before
+     full engineering exists, by original design (see the note on screen).
+     Same whole-object-preserving save pattern as Company Profile and
+     Statutory & Masters — /api/content overwrites everything, so this reads
+     the full record first and only changes its own keys. */
+  var qsContent = null;
+  async function loadQuotingSetup(){
+    try { qsContent = (await C.api('/api/content')).data || {}; } catch(e){ qsContent = {}; }
+    qsContent.costBase = qsContent.costBase || {};
+    qsContent.quoteCfg = qsContent.quoteCfg || {};
+    qsContent.machines = qsContent.machines || [];
+    qsContent.labourGrades = qsContent.labourGrades || [];
+    qsContent.materials = qsContent.materials || [];
+    var cb = qsContent.costBase, qc = qsContent.quoteCfg;
+    var set = function(id, v){ document.getElementById(id).value = (v === undefined || v === null) ? '' : v; };
+    ['workingDays','shiftsPerDay','hoursPerShift','downtimePct','powerTariff','factoryRent',
+     'factoryArea','factoryOverhead','adminPct','financePct','scrapPct','contingencyPct','profitPct']
+      .forEach(function(k){ set('qs-cb-'+k, cb[k]); });
+    ['prefix','numberFormat','nextSeq','seqPad','currency','currencySymbol','validityDays',
+     'taxLabel','taxPercent','incoterms','paymentTerms','deliveryTerms','freightTerms',
+     'warrantyTerms','confidentiality','footerNote'].forEach(function(k){ set('qs-qc-'+k, qc[k]); });
+    document.getElementById('qs-qc-showTax').value = qc.showTax === false ? 'no' : 'yes';
+    document.getElementById('qs-msg').style.display = 'none';
+    qsDrawMachines(); qsDrawLabour(); qsDrawMaterials();
+  }
+
+  function qsDrawMachines(){
+    var host = document.getElementById('qs-machines');
+    var cols = [['name','Name'],['type','Type'],['cost','Cost'],['lifeYears','Life (yrs)'],
+      ['salvage','Salvage'],['kw','kW'],['loadFactor','Load %'],['area','Area sqft'],
+      ['maintenance','Maint./yr'],['operators','Operators']];
+    host.innerHTML = qsContent.machines.length ? '<div class="scroll-x"><table class="t"><thead><tr>' +
+      cols.map(function(c){ return '<th>'+c[1]+'</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
+      qsContent.machines.map(function(m,i){
+        return '<tr>' + cols.map(function(c){
+          return '<td><input class="'+(c[0]==='name'||c[0]==='type'?'':'num ')+'qs-mc-f" data-i="'+i+'" data-k="'+c[0]+'" value="'+esc(m[c[0]])+'" style="width:90px;"></td>';
+        }).join('') + '<td><button class="btn del qs-mc-del" data-i="'+i+'">×</button></td></tr>';
+      }).join('') + '</tbody></table></div>' : '<div class="empty"><b>No machines yet</b></div>';
+    host.querySelectorAll('.qs-mc-f').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        qsContent.machines[+inp.dataset.i][inp.dataset.k] = inp.classList.contains('num') ? C.num(inp.value) : inp.value;
+      });
+    });
+    host.querySelectorAll('.qs-mc-del').forEach(function(b){
+      b.addEventListener('click', function(){ qsContent.machines.splice(+b.dataset.i,1); qsDrawMachines(); });
+    });
+  }
+  function qsDrawLabour(){
+    var host = document.getElementById('qs-labour');
+    var cols = [['grade','Grade'],['wage','Monthly wage'],['statutoryPct','Statutory %'],
+      ['paidDays','Paid days/mo'],['hoursPerDay','Hours/day']];
+    host.innerHTML = qsContent.labourGrades.length ? '<table class="t"><thead><tr>' +
+      cols.map(function(c){ return '<th>'+c[1]+'</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
+      qsContent.labourGrades.map(function(l,i){
+        return '<tr>' + cols.map(function(c){
+          return '<td><input class="'+(c[0]==='grade'?'':'num ')+'qs-lb-f" data-i="'+i+'" data-k="'+c[0]+'" value="'+esc(l[c[0]])+'"></td>';
+        }).join('') + '<td><button class="btn del qs-lb-del" data-i="'+i+'">×</button></td></tr>';
+      }).join('') + '</tbody></table>' : '<div class="empty"><b>No labour grades yet</b></div>';
+    host.querySelectorAll('.qs-lb-f').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        qsContent.labourGrades[+inp.dataset.i][inp.dataset.k] = inp.classList.contains('num') ? C.num(inp.value) : inp.value;
+      });
+    });
+    host.querySelectorAll('.qs-lb-del').forEach(function(b){
+      b.addEventListener('click', function(){ qsContent.labourGrades.splice(+b.dataset.i,1); qsDrawLabour(); });
+    });
+  }
+  function qsDrawMaterials(){
+    var host = document.getElementById('qs-materials');
+    var cols = [['name','Name'],['grade','Grade'],['rate','Rate/unit'],['unit','Unit'],
+      ['density','Density'],['leadTimeDays','Lead days'],['confidence','Confidence']];
+    host.innerHTML = qsContent.materials.length ? '<div class="scroll-x"><table class="t"><thead><tr>' +
+      cols.map(function(c){ return '<th>'+c[1]+'</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
+      qsContent.materials.map(function(m,i){
+        return '<tr>' + cols.map(function(c){
+          var isNum = ['rate','density','leadTimeDays'].indexOf(c[0]) >= 0;
+          return '<td><input class="'+(isNum?'num ':'')+'qs-mt-f" data-i="'+i+'" data-k="'+c[0]+'" value="'+esc(m[c[0]])+'" style="width:90px;"></td>';
+        }).join('') + '<td><button class="btn del qs-mt-del" data-i="'+i+'">×</button></td></tr>';
+      }).join('') + '</tbody></table></div>' : '<div class="empty"><b>No materials yet</b></div>';
+    host.querySelectorAll('.qs-mt-f').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        qsContent.materials[+inp.dataset.i][inp.dataset.k] = inp.classList.contains('num') ? C.num(inp.value) : inp.value;
+      });
+    });
+    host.querySelectorAll('.qs-mt-del').forEach(function(b){
+      b.addEventListener('click', function(){ qsContent.materials.splice(+b.dataset.i,1); qsDrawMaterials(); });
+    });
+  }
+  function qsCollectSimpleFields(){
+    var g = fieldVal, cb = qsContent.costBase, qc = qsContent.quoteCfg;
+    ['workingDays','shiftsPerDay','hoursPerShift','downtimePct','powerTariff','factoryRent',
+     'factoryArea','factoryOverhead','adminPct','financePct','scrapPct','contingencyPct','profitPct']
+      .forEach(function(k){ cb[k] = C.num(g('qs-cb-'+k)); });
+    ['prefix','numberFormat','currency','currencySymbol','taxLabel','incoterms','paymentTerms',
+     'deliveryTerms','freightTerms','warrantyTerms','confidentiality','footerNote']
+      .forEach(function(k){ qc[k] = g('qs-qc-'+k); });
+    ['nextSeq','seqPad','validityDays','taxPercent'].forEach(function(k){ qc[k] = C.num(g('qs-qc-'+k)); });
+    qc.showTax = document.getElementById('qs-qc-showTax').value !== 'no';
+  }
+  async function saveQuotingSetup(){
+    qsCollectSimpleFields();
+    var msg = document.getElementById('qs-save-msg'), say = noteWriter(msg);
+    var btn = document.getElementById('qs-save');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      await C.api('/api/content', { method:'POST', body:JSON.stringify({ data: qsContent }) });
+      say('Saved. The RFQ Pipeline\'s costing and quotation drafting read this immediately.', true);
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Save Quoting & Costing Setup';
+  }
+
   async function loadProfileScreen(){
     try { cpContent = (await C.api('/api/content')).data || {}; } catch(e){ cpContent = {}; }
     var co = cpContent.company || {};
@@ -25942,6 +26189,19 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     cpShowImg('cp-sign-preview', co.signatureImg);
     cpShowImg('cp-seal-preview', co.sealImg);
     document.getElementById('cp-use-website-logo').checked = co.useWebsiteLogo !== false;
+
+    var soc = cpContent.social || {};
+    set('cp-soc-youtube', soc.youtube); set('cp-soc-instagram', soc.instagram);
+    set('cp-soc-facebook', soc.facebook); set('cp-soc-linkedin', soc.linkedin);
+    set('cp-soc-twitter', soc.twitter); set('cp-soc-whatsapp', soc.whatsapp);
+    document.getElementById('cp-showMap').value = cpContent.showMap === false ? 'no' : 'yes';
+    set('cp-mapEmbed', cpContent.mapEmbed); set('cp-mapLink', cpContent.mapLink);
+
+    set('cp-notifyEmail', cpContent.notifyEmail); set('cp-notifyWhatsapp', cpContent.notifyWhatsapp);
+    set('cp-siteUrl', cpContent.siteUrl); set('cp-quoteSender', cpContent.quoteSender);
+    document.getElementById('cp-autoQuote').value = cpContent.autoQuote ? 'yes' : 'no';
+    document.getElementById('cp-autoAck').value = cpContent.autoAcknowledge === false ? 'no' : 'yes';
+
     document.getElementById('cp-msg').style.display = 'none';
 
     var host = document.getElementById('audit-list');
@@ -25989,6 +26249,18 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     co.bankAccName = g('cp-bankAccName'); co.bankAccNo = g('cp-bankAccNo'); co.bankIfsc = g('cp-bankIfsc');
     co.signatoryName = g('cp-signatoryName'); co.signatoryTitle = g('cp-signatoryTitle');
     co.useWebsiteLogo = document.getElementById('cp-use-website-logo').checked;
+
+    cpContent.social = {
+      youtube: g('cp-soc-youtube'), instagram: g('cp-soc-instagram'), facebook: g('cp-soc-facebook'),
+      linkedin: g('cp-soc-linkedin'), twitter: g('cp-soc-twitter'), whatsapp: g('cp-soc-whatsapp')
+    };
+    cpContent.showMap = document.getElementById('cp-showMap').value !== 'no';
+    cpContent.mapEmbed = g('cp-mapEmbed'); cpContent.mapLink = g('cp-mapLink');
+    cpContent.notifyEmail = g('cp-notifyEmail'); cpContent.notifyWhatsapp = g('cp-notifyWhatsapp');
+    cpContent.siteUrl = g('cp-siteUrl'); cpContent.quoteSender = g('cp-quoteSender');
+    cpContent.autoQuote = document.getElementById('cp-autoQuote').value === 'yes';
+    cpContent.autoAcknowledge = document.getElementById('cp-autoAck').value !== 'no';
+
     var msg = document.getElementById('cp-save-msg'), say = noteWriter(msg);
     var btn = document.getElementById('cp-save');
     btn.disabled = true; btn.textContent = 'Saving…';
@@ -26699,6 +26971,20 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('cp-sign-file').addEventListener('change', function(){ cpUploadTo('cp-sign-file', 'cp-sign-preview', 'signatureImg'); });
   document.getElementById('cp-seal-file').addEventListener('change', function(){ cpUploadTo('cp-seal-file', 'cp-seal-preview', 'sealImg'); });
   document.getElementById('cp-save').addEventListener('click', saveCompanyProfile);
+
+  document.getElementById('qs-refresh').addEventListener('click', loadQuotingSetup);
+  document.getElementById('qs-mc-add').addEventListener('click', function(){
+    qsContent.machines.push({ name:'New Machine', type:'', cost:0, lifeYears:10, salvage:0,
+      kw:0, loadFactor:60, area:0, maintenance:0, operators:1 }); qsDrawMachines(); });
+  document.getElementById('qs-lb-add').addEventListener('click', function(){
+    qsContent.labourGrades.push({ grade:'New Grade', wage:0, statutoryPct:22, paidDays:26, hoursPerDay:8 }); qsDrawLabour(); });
+  document.getElementById('qs-mt-add').addEventListener('click', function(){
+    qsContent.materials.push({ name:'New Material', grade:'', rate:0, unit:'kg', density:0,
+      leadTimeDays:7, source:'', sourceDate:'', confidence:'Manual' }); qsDrawMaterials(); });
+  document.getElementById('qs-save').addEventListener('click', saveQuotingSetup);
+  document.querySelectorAll('[data-panel="profile"] [data-goto]').forEach(function(a){
+    a.addEventListener('click', function(){ go(a.dataset.goto); });
+  });
 
   async function wizSaveStep1(){
     var name = fieldVal('wz-legalName'), prefix = fieldVal('wz-docPrefix');

@@ -2094,6 +2094,44 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       </div>
     </div>
 
+    <div class="panel" data-panel="rfq_pipeline">
+      <div class="card">
+        <h4>RFQ Pipeline</h4>
+        <div class="hint" style="margin-bottom:10px;">Every enquiry the website has received, and
+          where it stands. <b>Phase 1 of moving this off the website</b>: seeing the queue, triaging
+          it, and moving a stage by hand are native here. Reading a drawing, working out a cost,
+          drafting the line-item quotation, and sending it are still done from the website's own RFQ
+          Pipeline for now — a line-item quotation builder with its own PDF output is a substantial
+          piece of work in its own right, and belongs in its own pass rather than a rushed corner of
+          this one.</div>
+        <div class="stat" id="rp-kpi"></div>
+      </div>
+
+      <div class="card">
+        <h4>Triage</h4>
+        <div class="hint" style="margin-bottom:10px;">The same fixed rules as the website's own
+          triage — nothing here is guessed. A quotation still being worked out on the website will
+          correctly show as "not costed yet" until that catches up.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="rp-tri-run">Triage the pipeline</button>
+          <button class="btn ai-btn" id="rp-tri-explain">Ask the AI to prioritise</button>
+        </div>
+        <div class="note" id="rp-tri-msg" style="display:none;margin-top:10px;"></div>
+        <div id="rp-tri-narrative" style="margin-top:10px;"></div>
+        <div id="rp-tri-list" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <h4>Enquiries</h4>
+        <div class="row four" style="margin-bottom:8px;">
+          <div><label>Show</label><select id="rp-filter"><option value="">All open</option>
+            <option>Received</option><option>Quote Drafted</option><option>Awaiting Approval</option>
+            <option>Approved &amp; Sent</option><option>Won</option><option>Closed</option></select></div>
+        </div>
+        <div id="rp-list"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="admin_backup">
       <div class="card">
         <h4>Backup &amp; Restore</h4>
@@ -5152,7 +5190,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['bulk_upload','⬆','Bulk Upload',1]]],
     ['marketing','📣','Marketing','Enquiry to order',[
       ['dash_marketing','📊','Marketing Dashboard',1],
-      ['emb_pipeline','📨','RFQ Pipeline',1]]],
+      ['rfq_pipeline','📨','RFQ Pipeline',1]]],
     ['npd','🗂','NPD','New product development',[
       ['dash_npd','📊','NPD Dashboard',1],
       ['dash_engineering','📐','Engineering Dashboard',1],
@@ -5508,6 +5546,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'profile') loadProfileScreen();
     if (s === 'admin_wizard') loadSetupWizard();
     if (s === 'admin_quoting') loadQuotingSetup();
+    if (s === 'rfq_pipeline') loadRfqPipeline();
     if (s === 'dwm')                   loadDwm();
     if (s === 'task_list')             loadTasks();
     if (s === 'users')                 loadUsers();
@@ -14178,8 +14217,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     { screen:'change_4m', dept:'Quality Assurance', icon:'🔁', label:'4M Change',
       desc:'Drafts which documents likely need re-checking after a change — open it, fill in the change, then draft.',
       kind:'open' },
-    { screen:'emb_pipeline', dept:'Marketing', icon:'📨', label:'RFQ Pipeline',
-      desc:'Triage, drawing reading, cost working and quotation drafting for open enquiries.', kind:'open' }
+    { screen:'rfq_pipeline', dept:'Marketing', icon:'📨', label:'RFQ Pipeline',
+      desc:'Ranks which open enquiry to act on first.', kind:'auto',
+      load:function(){ return loadRfqPipeline(); }, run:function(){ return explainRfqTriage(); },
+      gap:function(){ var n = rfqTriFindings.filter(function(f){ return f.sev === 'high'; }).length;
+        return { n:n, label:n + ' urgent item(s) in the RFQ pipeline' }; } }
   ];
 
   function aaGroupOrder(){
@@ -26169,6 +26211,171 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     btn.disabled = false; btn.textContent = 'Save Quoting & Costing Setup';
   }
 
+  /* ---------------- RFQ Pipeline — Phase 1 (native) ----------------
+     Reuses the website's own /api/rfqs — the enquiries themselves have
+     always lived there, never duplicated. triageRfqs() below is the exact
+     same fixed-rule logic the website's version runs (ported line for
+     line, not reinvented), so a "not costed yet" flag here can never
+     disagree with what the website would say about the same enquiry.
+     Deliberately NOT built this phase: reading a drawing, working out a
+     cost, drafting a line-item quotation with its own PDF, and sending it
+     — each touches AI/document-generation machinery substantial enough to
+     deserve its own pass, the same reasoning Recruitment's phase split
+     used. Those still run from the website's own RFQ Pipeline. */
+  var RFQ_STAGES = ['Received','Quote Drafted','Awaiting Approval','Approved & Sent','Won','Closed'];
+  var RFQ_TRI_SEV = { high:{ rank:3, label:'Do today', cls:'' }, med:{ rank:2, label:'This week', cls:'sample' },
+    low:{ rank:1, label:'When you can', cls:'series' } };
+  var rfqRows = [], rfqTriFindings = [], rfqTriNarrative = '';
+
+  async function loadRfqPipeline(){
+    try { rfqRows = (await C.api('/api/rfqs')).rfqs || []; } catch(e){ rfqRows = []; toast(e.message); }
+    rfqTriFindings = []; rfqTriNarrative = '';
+    document.getElementById('rp-tri-narrative').innerHTML = '';
+    document.getElementById('rp-tri-list').innerHTML = '';
+    drawRfqKpi();
+    drawRfqList();
+  }
+  function rfqDaysSince(d){
+    var t = new Date(d || 0).getTime();
+    return t ? Math.floor((Date.now() - t) / 86400000) : null;
+  }
+  function drawRfqKpi(){
+    var counts = RFQ_STAGES.map(function(s){ return rfqRows.filter(function(r){ return (r.status||'Received') === s; }).length; });
+    document.getElementById('rp-kpi').innerHTML =
+      [['Total', rfqRows.length]].concat(RFQ_STAGES.map(function(s,i){ return [s, counts[i]]; }))
+      .map(function(x){ return '<div class="b"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'; }).join('');
+  }
+  function drawRfqList(){
+    var f = document.getElementById('rp-filter').value;
+    var rows = rfqRows.filter(function(r){
+      if (!f) return (r.status||'Received') !== 'Closed';
+      return (r.status||'Received') === f;
+    });
+    var host = document.getElementById('rp-list');
+    if (!rows.length){ host.innerHTML = '<div class="empty"><b>Nothing to show</b></div>'; return; }
+    host.innerHTML = rows.map(function(r){
+      var age = rfqDaysSince(r.createdAt || r.at || r.date);
+      return '<div class="card" style="margin-bottom:10px;"><h4>'+esc(r.ref)+' — '+esc(r.name||'')+
+        (r.company?' · '+esc(r.company):'')+' <span class="badge">'+esc(r.status||'Received')+'</span></h4>' +
+        '<div class="hint">'+esc(r.email||'')+(r.phone?' · '+esc(r.phone):'')+
+        (age !== null ? ' · '+age+' day(s) old' : '')+'</div>' +
+        '<div style="margin-top:6px;">'+esc(r.message||'—')+'</div>' +
+        (r.fileName ? '<div class="hint" style="margin-top:6px;">📎 '+esc(r.fileName)+'</div>' : '') +
+        '<div class="row four" style="margin-top:10px;">' +
+        '<div><label>Stage</label><select class="rp-stage" data-ref="'+esc(r.ref)+'">' +
+        RFQ_STAGES.map(function(s){ return '<option'+((r.status||'Received')===s?' selected':'')+'>'+s+'</option>'; }).join('') +
+        '</select></div><div style="align-self:end;"><button class="btn del rp-del" data-ref="'+esc(r.ref)+'">Delete</button></div></div>' +
+        '</div>';
+    }).join('');
+    host.querySelectorAll('.rp-stage').forEach(function(sel){
+      sel.addEventListener('change', async function(){
+        try {
+          await C.api('/api/rfqs', { method:'PATCH', body:JSON.stringify({ ref:sel.dataset.ref,
+            patch:{ status:sel.value } }) });
+          loadRfqPipeline();
+        } catch(e){ toast(e.message); }
+      });
+    });
+    host.querySelectorAll('.rp-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Deleting RFQ ' + b.dataset.ref + '. Why?'); if (!why) return;
+        try {
+          await C.api('/api/rfqs', { method:'PATCH', body:JSON.stringify({ ref:b.dataset.ref, remove:true }) });
+          loadRfqPipeline();
+        } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
+  /* Ported line for line from the website's own triageRfqs() — the same
+     eight checks, the same order, the same wording, so "why" an item is
+     flagged reads identically wherever it is seen. */
+  function rfqTriage(){
+    var out = [];
+    (rfqRows||[]).forEach(function(r){
+      if (r.status === 'Closed') return;
+      var age = rfqDaysSince(r.createdAt || r.at || r.date);
+      var x = r.extract || {}, part = x.part || {};
+      var has = function(k){ return String(part[k]||'').trim().length > 0; };
+      var add = function(sev, what, why){ out.push({ ref:r.ref, who:r.company||r.name||'',
+        status:r.status||'', age:age, sev:sev, what:what, why:why }); };
+
+      if (!r.fileName && !r.cvText && !x.readAt)
+        add('med','No drawing has been read',
+          'Nothing can be costed from a description alone. Ask for the drawing before anything else.');
+      else if (x.readAt && !(has('number') || has('drawingNumber')))
+        add('med','The drawing was read but carries no part or drawing number',
+          'The quotation and everything after it hang off that number. Ask for it now, not after the order.');
+
+      if ((x.missing||[]).length)
+        add('med', (x.missing||[]).length + ' point(s) the drawing does not answer',
+          'Quoting around an unanswered question is how a job is won at the wrong price.');
+
+      if (!r.costing || !r.costing.material || !r.costing.material.grade)
+        add('high','Not costed yet',
+          'Until it is costed there is no basis for a price, and the clock is running.');
+      else if (!r.quoteDoc)
+        add('high','Costed but no quotation drafted',
+          'The work is done; the customer has nothing in writing.');
+      else if (!r.quoteDoc.number)
+        add('med','Quotation drafted but not numbered',
+          'An unnumbered quotation cannot be referred to later.');
+
+      if (r.status === 'Approved & Sent' && age !== null && age > 14)
+        add('med','Sent ' + age + ' days ago with no answer',
+          'Chase it. A quotation that goes quiet is usually lost to somebody who followed up.');
+
+      if (r.status === 'Won' && !(r.idmsParts||[]).length)
+        add('high','Won but never sent to the IDMS',
+          'No part, no APQP, no control plan — the works does not know this job exists.');
+
+      if (age !== null && age > 7 && r.status === 'Received')
+        add('high','Received ' + age + ' days ago and still untouched',
+          'A week of silence is how a customer decides you are not interested.');
+    });
+    out.sort(function(a,b){ return RFQ_TRI_SEV[b.sev].rank - RFQ_TRI_SEV[a.sev].rank || (b.age||0) - (a.age||0); });
+    return out;
+  }
+
+  function drawRfqTriageList(){
+    var host = document.getElementById('rp-tri-list');
+    if (!rfqTriFindings.length){ host.innerHTML = '<div class="note good">Nothing flagged — every open enquiry has what it needs for its stage.</div>'; return; }
+    host.innerHTML = '<table class="t"><thead><tr><th class="c">Priority</th><th class="r">Age</th>' +
+      '<th>Enquiry</th><th>Customer</th><th>Status</th><th>What is stopping it</th></tr></thead><tbody>' +
+      rfqTriFindings.map(function(f){
+        return '<tr><td class="c"><span class="badge '+RFQ_TRI_SEV[f.sev].cls+'">'+RFQ_TRI_SEV[f.sev].label+'</span></td>' +
+          '<td class="r">'+(f.age!==null?f.age+' d':'—')+'</td><td><b>'+esc(f.ref)+'</b></td>' +
+          '<td>'+esc(f.who)+'</td><td class="hint">'+esc(f.status)+'</td>' +
+          '<td>'+esc(f.what)+'<div class="hint">'+esc(f.why)+'</div></td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+  function runRfqTriage(){
+    rfqTriFindings = rfqTriage(); rfqTriNarrative = '';
+    document.getElementById('rp-tri-narrative').innerHTML = '';
+    drawRfqTriageList();
+  }
+  async function explainRfqTriage(){
+    var msg = document.getElementById('rp-tri-msg'), say = noteWriter(msg);
+    if (!rfqTriFindings.length) runRfqTriage();
+    if (!rfqTriFindings.length) return say('Nothing open needs prioritising right now.', true);
+    var btn = document.getElementById('rp-tri-explain');
+    btn.disabled = true; btn.textContent = 'Thinking…';
+    var list = rfqTriFindings.map(function(f,i){
+      return (i+1) + '. [' + RFQ_TRI_SEV[f.sev].label + '] ' + f.ref + ' ' + f.who + ': ' + f.what;
+    }).join('\n');
+    try {
+      var txt = await C.callAI(
+        'These are the open items in a manufacturing company\'s enquiry pipeline, found by fixed ' +
+        'rules, not by you:\n\n' + list + '\n\nIn no more than 100 words of plain prose, say which ' +
+        'to deal with first and why. Group anything that is one phone call. Name the numbers you ' +
+        'mean. Do not invent items and do not repeat the list back.', { maxTokens: 350 });
+      rfqTriNarrative = esc(C.stripMarkup(txt));
+      document.getElementById('rp-tri-narrative').innerHTML = '<div class="note"><b>What to do first.</b> ' + rfqTriNarrative + '</div>';
+      msg.style.display = 'none';
+    } catch(e){ say(esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Ask the AI to prioritise';
+  }
+
   async function loadProfileScreen(){
     try { cpContent = (await C.api('/api/content')).data || {}; } catch(e){ cpContent = {}; }
     var co = cpContent.company || {};
@@ -26982,6 +27189,10 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     qsContent.materials.push({ name:'New Material', grade:'', rate:0, unit:'kg', density:0,
       leadTimeDays:7, source:'', sourceDate:'', confidence:'Manual' }); qsDrawMaterials(); });
   document.getElementById('qs-save').addEventListener('click', saveQuotingSetup);
+
+  document.getElementById('rp-tri-run').addEventListener('click', runRfqTriage);
+  document.getElementById('rp-tri-explain').addEventListener('click', explainRfqTriage);
+  document.getElementById('rp-filter').addEventListener('change', drawRfqList);
   document.querySelectorAll('[data-panel="profile"] [data-goto]').forEach(function(a){
     a.addEventListener('click', function(){ go(a.dataset.goto); });
   });

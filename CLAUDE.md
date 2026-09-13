@@ -2770,3 +2770,56 @@ Industries, Certifications, AI Chatbot, Testimonial, Contact, Sections —
 none of which have an IDMS equivalent concept), and the website-side
 wizard. Full suite (39 files) clean throughout — same 2 pre-existing,
 unrelated smoketest failures.
+
+## RFQ Pipeline — Phase 1 (native), same phased discipline as Recruitment
+
+Investigated before building anything, same as every screen this session:
+RFQs live in their own dedicated `rfqs` table behind `/api/rfqs` (GET list,
+PATCH update/remove) — never duplicated in `hr_items` or `idms_docs`, and
+public submission from the website's contact form correctly stays exactly
+where it is (a customer submitting an enquiry is a website-facing act by
+nature, not something that belongs in an internal system).
+
+What this revealed changed the plan: `renderRfqAdmin()` alone is a genuine
+line-item quotation builder — items, HSN codes, discount, lead time, its own
+PDF generation — comparable in size to everything built in the entire HR
+migration combined. Attempting all of it in one pass risked the first
+half-broken thing shipped this session. Applied the exact same phase split
+that worked for Recruitment:
+
+**Phase 1, built now**, replacing `emb_pipeline` in the menu with native
+`rfq_pipeline` (the old embed's code — focus mode, floating bar — was left
+in place, just unreferenced, rather than deleted, in case Phase 2 wants the
+same patterns): the enquiry list with stage counts, a stage-change dropdown
+and delete calling the real shared endpoint, and the **Triage Agent**.
+`rfqTriage()` was ported line-for-line from the website's own
+`triageRfqs()` — same eight rules, same wording, same order — not
+reimplemented from a description of what it does, specifically so a "not
+costed yet" flag here can never disagree with what the website's own
+version would say about the identical enquiry.
+
+**Phase 2, deliberately not built, stated plainly on the screen itself**:
+reading a drawing, working out a cost, drafting the line-item quotation
+(with its own PDF), and sending it — still run from the website's RFQ
+Pipeline. Each is substantial AI/document-generation machinery in its own
+right and deserves its own unhurried pass.
+
+The Agentic AI hub's tile was updated to match — it now runs the Triage
+Agent directly (`kind:'auto'`, matching Maintenance/Supplier Watch/etc.)
+rather than just opening the screen, since triage operates over the whole
+pipeline the same way those do, not on one record at a time.
+
+Tested in `tests/rfqpipelinetest.mjs` (17 checks): five RFQs seeded
+specifically to exercise the ported rules — an untouched 10-day-old
+enquiry, one sent 20 days ago with no reply, one won but never sent to the
+IDMS, one fully costed/quoted/numbered with its drawing read (correctly
+flags nothing at all), and one Closed (correctly excluded from triage
+regardless of its own state). One test-fixture mistake caught along the
+way: an RFQ intended to prove "nothing gets flagged" still tripped the
+"drawing not read" rule because the fixture never set `extract.readAt` —
+a fact about the test, not the app, fixed by completing the fixture rather
+than weakening the assertion.
+
+**Unchanged**: Payroll and the 15 pure website-design tabs. Full suite (40
+files) clean throughout — same 2 pre-existing, unrelated smoketest
+failures.

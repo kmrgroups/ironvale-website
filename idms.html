@@ -2387,6 +2387,222 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       <div class="card"><div id="tw-body"></div></div>
     </div>
 
+    <div class="panel" data-panel="hr_statutory">
+      <div class="card">
+        <h4>Statutory &amp; Masters</h4>
+        <div class="hint" style="margin-bottom:10px;">The rules everything else in HR reads —
+          shifts, holidays, leave types, dropdown values, and PF/ESI/PT/TDS rates. One save writes
+          the whole set; nothing here is a calculation by itself, only the numbers Leave, Exit and
+          Payroll calculate from.
+          <span class="hint" style="display:block;margin-top:6px;">Offer-letter terms templates are
+          not here yet — they move alongside offer-letter generation itself, still on the website's
+          HR engine for now.</span></div>
+        <button class="btn gold" id="sm-refresh">Refresh</button>
+        <div class="note" id="sm-msg" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <h4>Review record</h4>
+        <div class="hint" style="margin-bottom:10px;">When these rules took effect, and who last
+          confirmed they are still current — Audit Readiness reads this to say whether statutory
+          rates have been formally reviewed within the last year.</div>
+        <div class="row four">
+          <div><label>Rules effective from</label><input type="date" id="sm-rev-eff"></div>
+          <div><label>Last reviewed by</label><input id="sm-rev-by" placeholder="CA / consultant name"></div>
+          <div><label>Reviewed on</label><input type="date" id="sm-rev-on"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Employee ID format</h4>
+        <div class="row four">
+          <div><label>Prefix</label><input id="sm-eid-prefix"></div>
+          <div><label>Next number</label><input class="num" id="sm-eid-next"></div>
+          <div><label>Digits</label><input class="num" id="sm-eid-pad"></div>
+          <div style="align-self:end;" class="hint">Next ID: <b id="sm-eid-preview">—</b></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Dropdown values</h4>
+        <div class="hint" style="margin-bottom:10px;">Fill the dropdowns on the employee and
+          recruitment screens. Removing a value does not change a record already using it.</div>
+        <div id="sm-lists"></div>
+      </div>
+
+      <div class="card">
+        <h4>Shifts</h4>
+        <div id="sm-shifts"></div>
+        <button class="btn" id="sm-shift-add" style="margin-top:8px;">+ Add shift</button>
+      </div>
+
+      <div class="card">
+        <h4>Holiday calendar</h4>
+        <div id="sm-holidays"></div>
+        <button class="btn" id="sm-hol-add" style="margin-top:8px;">+ Add holiday</button>
+      </div>
+
+      <div class="card">
+        <h4>Leave types</h4>
+        <div id="sm-leavetypes"></div>
+        <button class="btn" id="sm-lt-add" style="margin-top:8px;">+ Add leave type</button>
+      </div>
+
+      <div class="card">
+        <h4>Permission — short leave of a few hours</h4>
+        <div class="hint" style="margin-bottom:10px;">Someone stepping out for part of a day applies
+          for permission, not leave — the day still counts present. Hours beyond the free allowance
+          convert to loss of pay on the standard shift length.</div>
+        <div class="row four">
+          <div><label>Standard shift hours</label><input class="num" id="sm-pm-std"></div>
+          <div><label>Max hours per request</label><input class="num" id="sm-pm-max"></div>
+          <div><label>Free instances / month</label><input class="num" id="sm-pm-inst"></div>
+          <div><label>Free hours / month</label><input class="num" id="sm-pm-hrs"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div>
+          <label>Hours beyond the free allowance</label>
+          <select id="sm-pm-excess"><option value="lop">Deduct pro-rata as loss of pay</option>
+            <option value="halfday">Round up to a half day loss of pay</option>
+            <option value="ignore">Record only — never deduct</option></select></div></div>
+      </div>
+
+      <div class="card">
+        <h4>Provident Fund</h4>
+        <div class="row four">
+          <div><label>Employee %</label><input class="num" id="sm-pf-emp"></div>
+          <div><label>Employer %</label><input class="num" id="sm-pf-empr"></div>
+          <div><label>Wage ceiling</label><input class="num" id="sm-pf-ceil">
+            <div class="hint">0 and Apply ceiling = No applies PF on full wages</div></div>
+          <div><label>EPS %</label><input class="num" id="sm-pf-eps"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>EPS ceiling</label><input class="num" id="sm-pf-epsceil"></div>
+          <div><label>EDLI %</label><input class="num" id="sm-pf-edli"></div>
+          <div><label>Admin %</label><input class="num" id="sm-pf-admin"></div>
+          <div><label>Apply ceiling</label><select id="sm-pf-applyceil"><option value="yes">Yes</option><option value="no">No</option></select></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>ESI</h4>
+        <div class="row four">
+          <div><label>Employee %</label><input class="num" id="sm-esi-emp"></div>
+          <div><label>Employer %</label><input class="num" id="sm-esi-empr"></div>
+          <div><label>Gross limit</label><input class="num" id="sm-esi-limit">
+            <div class="hint">ESI is not deducted above this monthly gross</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Professional Tax</h4>
+        <div class="row four"><div><label>State</label><input id="sm-pt-state"></div></div>
+        <div class="hint" style="margin:8px 0;">Slabs are state-specific — the threshold and the monthly amount payable up to it.</div>
+        <div id="sm-pt-slabs"></div>
+        <button class="btn" id="sm-pt-add" style="margin-top:8px;">+ Add slab</button>
+      </div>
+
+      <div class="card">
+        <h4>Income Tax (TDS)</h4>
+        <div class="note bad" style="margin-bottom:10px;"><b>Read this before changing anything here.</b>
+          TDS liability sits with the employer under Section 201(1A). Slabs, rebate and surcharge change
+          with each Finance Act. These figures must be set and verified by your CA — slab-based
+          calculation stays locked until a named person records that they verified it.</div>
+        <div class="row four">
+          <div><label>Mode</label><select id="sm-tds-mode">
+            <option value="manual">Manual — figure per employee from your CA</option>
+            <option value="slab">Slab-based — computed from the tables below</option></select></div>
+          <div><label>Default regime</label><select id="sm-tds-regime"></select></div>
+          <div><label>Cess %</label><input class="num" id="sm-tds-cess"></div>
+          <div><label>Slabs verified by</label><input id="sm-tds-verifiedby"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Verified on</label><input type="date" id="sm-tds-verifiedon"></div>
+          <div><label>Editing regime</label><select id="sm-tds-editregime"></select></div>
+          <div><label>Standard deduction</label><input class="num" id="sm-tds-stddeduct"></div>
+          <div><label>87A rebate up to taxable income</label><input class="num" id="sm-tds-rebatelimit"></div>
+        </div>
+        <div class="row" style="margin-top:9px;"><div><label>87A rebate amount</label><input class="num" id="sm-tds-rebateamt"></div></div>
+        <div class="sub" style="margin-top:14px;">Slabs — <span id="sm-tds-slabregime">—</span> regime</div>
+        <div class="hint" style="margin-bottom:6px;">Cumulative upper limits of annual taxable income, with the rate up to each. Use a very large figure for the top band.</div>
+        <div id="sm-tds-slabs"></div>
+        <button class="btn" id="sm-tds-slab-add" style="margin-top:8px;">+ Add slab</button>
+        <div class="sub" style="margin-top:14px;">Surcharge — <span id="sm-tds-surregime">—</span> regime</div>
+        <div id="sm-tds-surcharge"></div>
+        <button class="btn" id="sm-tds-sur-add" style="margin-top:8px;">+ Add band</button>
+      </div>
+
+      <div class="card">
+        <button class="btn gold" id="sm-save">Save Statutory &amp; Masters</button>
+        <div class="note" id="sm-save-msg" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="hr_kpi">
+      <div class="card">
+        <h4>KPI &amp; Appraisal</h4>
+        <div class="hint" style="margin-bottom:10px;">A KPI is either typed in by hand or read live
+          from records already on file — never both, and a card always says which. Appraisals pull
+          the competency position straight from the Skill Matrix and Competency Mapping, so the
+          numbers here can never disagree with those screens.
+          <span class="hint" style="display:block;margin-top:6px;">Three auto sources are wired up
+          natively — attrition, competency and open tasks. On-time delivery, absenteeism and training
+          closure still read from data that has not moved off the website yet, so those sources stay
+          on HR &amp; Payroll's engine for now rather than compute something this screen cannot stand
+          behind.</span></div>
+        <div class="stat" id="kp-kpi"></div>
+      </div>
+
+      <div class="card">
+        <h4>Define a KPI</h4>
+        <div class="row four">
+          <div><label>Name</label><input id="kp-name"></div>
+          <div><label>Category</label><input id="kp-cat"></div>
+          <div><label>Level</label><select id="kp-level"><option>Company</option><option>Department</option><option>Individual</option></select></div>
+          <div><label>Owner</label><input id="kp-owner"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Target</label><input class="num" id="kp-target"></div>
+          <div><label>Unit</label><input id="kp-unit" placeholder="%, days, ₹…"></div>
+          <div><label>Direction</label><select id="kp-direction"><option value="higher">Higher is better</option><option value="lower">Lower is better</option></select></div>
+          <div><label>Source</label><select id="kp-source">
+            <option value="manual">Manual — typed in each period</option>
+            <option value="attrition">Auto — attrition rate</option>
+            <option value="competency">Auto — competency requirements met</option>
+            <option value="tasks">Auto — tasks closed</option></select></div>
+        </div>
+        <div style="margin-top:12px;"><button class="btn gold" id="kp-add">Add KPI</button></div>
+        <div class="note" id="kp-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>KPIs</h4><div id="kp-list"></div></div>
+
+      <div class="card">
+        <h4>Start an appraisal</h4>
+        <div class="row four">
+          <div><label>Employee</label><select id="ap-emp"></select></div>
+          <div><label>Period</label><input id="ap-period" placeholder="FY 2026-27, H1 2026…"></div>
+          <div style="align-self:end;"><button class="btn gold" id="ap-add">Start</button></div>
+        </div>
+        <div class="note" id="ap-msg" style="display:none;"></div>
+      </div>
+      <div class="card"><h4>Appraisals</h4><div id="ap-list"></div></div>
+    </div>
+
+    <div class="panel" data-panel="hr_audit_ready">
+      <div class="card">
+        <h4>Audit Readiness</h4>
+        <div class="hint" style="margin-bottom:10px;">Nothing to fill in — each check reads records
+          that already exist elsewhere and says, plainly, whether an auditor asking for that evidence
+          today would find it. Green means the evidence exists; amber means it exists but is
+          incomplete; red means it does not exist yet.
+          <span class="hint" style="display:block;margin-top:6px;">Training-session effectiveness is
+          not checked here yet — training sessions have not moved off the website's HR engine, and a
+          check against the wrong record would be worse than no check at all.</span></div>
+        <button class="btn gold" id="ar-refresh">Refresh</button>
+        <div class="stat" id="ar-kpi" style="margin-top:10px;"></div>
+      </div>
+      <div class="card"><div id="ar-body"></div></div>
+    </div>
+
     <div class="panel" data-panel="entry_machine">
       <div class="card">
         <h4>Machines</h4>
@@ -4611,6 +4827,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['recruitment','🧑\u200d💼','Recruitment',1],
       ['hr_policies','📜','Policies',1],
       ['hr_leave','🗓','Leave & Permission',1],
+      ['hr_statutory','📐','Statutory & Masters',1],
+      ['hr_kpi','🎯','KPI & Appraisal',1],
+      ['hr_audit_ready','🛡','Audit Readiness',1],
       ['hr_engage','🤝','Engagement',1],
       ['hr_exit','🚪','Exit & Full and Final',1],
       ['hr_tower','🗼','Control Tower',1],
@@ -4888,6 +5107,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'hr_exit')        loadHrExit();
     if (s === 'hr_tower')       loadHrTower();
     if (s === 'hr_audit_trail') loadHrAuditTrail();
+    if (s === 'hr_statutory')  loadHrStatutory();
+    if (s === 'hr_kpi')        loadHrKpi();
+    if (s === 'hr_audit_ready') loadHrAuditReady();
     if (s === 'change_4m')      load4M();
     if (s === 'maintenance')    loadMaintenance();
     if (s === 'ncr_open')       loadOpenActions();
@@ -4987,7 +5209,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     var dept = document.getElementById('dw-dept').value;
     var sel = document.getElementById('dw-emp'), keep = sel.value;
     var names = (compEmployees||[]).map(empData)
-      .filter(function(d){ return String(d.status||'Active') !== 'Left'; })
+      .filter(function(d){ return String(d.status||'Active') !== 'Exited'; })
       .filter(function(d){ return !dept || d.department === dept; })
       .map(function(d){ return d.name; })
       .filter(function(n, i, a){ return n && a.indexOf(n) === i; }).sort();
@@ -6737,7 +6959,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         var lapsed = due && due < new Date();
         var emp = compEmployees.filter(function(e){
           return String(empData(e).name||'').toLowerCase() === String(v.name||'').toLowerCase(); })[0];
-        var left = !emp || String(empData(emp||{data:{}}).status||'Active') === 'Left';
+        var left = !emp || String(empData(emp||{data:{}}).status||'Active') === 'Exited';
         return '<tr><td><b>'+esc(v.name||'')+'</b>' +
           (left ? '<div class="hint bad">not on the roll</div>' : '') + '</td>' +
           '<td class="hint">'+esc(v.fn||'')+'</td>' +
@@ -7172,7 +7394,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   function holdersOf(desig, dept){
     return (compEmployees||[]).filter(function(e){
       var d = empData(e);
-      if (String(d.status||'Active') === 'Left') return false;
+      if (String(d.status||'Active') === 'Exited') return false;
       if (String(d.designation||'') !== desig) return false;
       if (dept && String(d.department||'') !== dept) return false;
       return true;
@@ -7199,7 +7421,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     ocNodes = ocNodes.filter(function(n){ return !(n.data||{}).removed; });
 
     var names = (compEmployees||[]).map(empData)
-      .filter(function(d){ return String(d.status||'Active') !== 'Left'; })
+      .filter(function(d){ return String(d.status||'Active') !== 'Exited'; })
       .map(function(d){ return d.name; }).filter(Boolean);
     ['oc-prep-by','oc-rev-by','oc-app-by'].forEach(function(id){
       var sel = document.getElementById(id), keep = sel.value;
@@ -7238,7 +7460,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       if (keep && deps.indexOf(keep) >= 0) sel.value = keep;
     });
     document.getElementById('oc-people').innerHTML = (compEmployees||[]).map(empData)
-      .filter(function(d){ return String(d.status||'Active') !== 'Left'; })
+      .filter(function(d){ return String(d.status||'Active') !== 'Exited'; })
       .map(function(d){ return '<option value="'+esc(d.name||'')+'">'; }).join('');
     ocFillParents();
     drawOrgChart();
@@ -7278,7 +7500,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       if (!rec) out.push('not on the employee records');
       else if (v.department && rec.department && rec.department !== v.department)
         out.push('their record says ' + rec.department);
-      else if (rec && String(rec.status||'Active') === 'Left')
+      else if (rec && String(rec.status||'Active') === 'Exited')
         out.push('their record says they have left');
     }
     return out;
@@ -7339,7 +7561,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     var onChart = {};
     ocNodes.forEach(function(n){ if ((n.data||{}).who) onChart[(n.data||{}).who] = 1; });
     var off = (compEmployees||[]).map(empData)
-      .filter(function(d){ return String(d.status||'Active') !== 'Left'; })
+      .filter(function(d){ return String(d.status||'Active') !== 'Exited'; })
       .filter(function(d){ return d.name && !onChart[d.name]; })
       .filter(function(d){ return !only || d.department === only; });
 
@@ -7459,7 +7681,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     var onChart = {};
     ocNodes.forEach(function(n){ if ((n.data||{}).who) onChart[(n.data||{}).who] = 1; });
     var off = (compEmployees||[]).map(empData)
-      .filter(function(d){ return String(d.status||'Active') !== 'Left' && d.name && !onChart[d.name]; })
+      .filter(function(d){ return String(d.status||'Active') !== 'Exited' && d.name && !onChart[d.name]; })
       .filter(function(d){ return !deptOnly || d.department === deptOnly; });
 
     var g = fieldVal;
@@ -7544,7 +7766,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     var d = document.getElementById('rr-desig').value;
     var people = compEmployees.filter(function(e){
       var x = empData(e);
-      return String(x.status||'Active') !== 'Left' && String(x.designation||'') === d;
+      return String(x.status||'Active') !== 'Exited' && String(x.designation||'') === d;
     }).map(function(e){ return empData(e); });
     var host = document.getElementById('rr-holders');
     host.innerHTML = people.length
@@ -7623,7 +7845,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     var v = roleOpen ? (roleOpen.data||{}) : {};
     var people = compEmployees.filter(function(e){
       var x = empData(e);
-      return String(x.status||'Active') !== 'Left' && String(x.designation||'') === f.designation;
+      return String(x.status||'Active') !== 'Exited' && String(x.designation||'') === f.designation;
     }).map(function(e){ return empData(e).name; });
     C.openReport({ title:'Role & Responsibilities — ' + f.designation, sections:[
       { type:'pairs', title:'The role', rows:[
@@ -7815,7 +8037,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (!emp) return say('<b>'+esc(name)+'</b> is not on the employee records. A succession plan ' +
       'naming somebody who does not work here is worse than an empty one.');
     var ed = empData(emp);
-    if (String(ed.status||'Active') === 'Left')
+    if (String(ed.status||'Active') === 'Exited')
       return say(esc(name) + ' has left.');
 
     var cands = ((succOpen && (succOpen.data||{}).candidates) || []).slice();
@@ -8658,12 +8880,317 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     });
     host.querySelectorAll('.ex-settle').forEach(function(b){
       b.addEventListener('click', async function(){
-        if (!confirm('Mark this exit settled? This is a record that payment has been made, not a calculation.')) return;
-        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
-          itemId:b.dataset.id, status:'Settled', reason:'marked settled' }) });
-          loadHrExit(); } catch(e){ toast(e.message); }
+        var x = hrExits.filter(function(v){ return v.item_id === b.dataset.id; })[0]; if (!x) return;
+        var pending = Object.keys(x.clearance||{}).filter(function(k){ return !x.clearance[k]; });
+        if (!confirm('Mark settled and set the employee to Exited?' +
+          (pending.length ? '\n\nClearance still pending on some items.' : ''))) return;
+        try {
+          var emp = hrEmpForExit.filter(function(e){ return e.empId === x.empId; })[0];
+          if (emp){
+            emp.status = 'Exited';
+            await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'employees',
+              employee:emp, reason:'exited — settlement ' + x.item_id }) });
+          }
+          await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+            itemId:x.item_id, status:'Settled', reason:'full and final settled' }) });
+          toast('Settled.');
+          loadHrExit();
+        } catch(e){ toast(e.message); }
       });
     });
+  }
+
+  /* ---------------- KPI & Appraisal (native) ----------------
+     A KPI is either typed in (kind:'kpi', source:'manual') or computed live
+     from records already on file — never both, and never silently guessed:
+     an auto source with nothing behind it yet returns "no data" rather than
+     zero. Appraisals reuse computeGaps() unmodified, so an appraisal's
+     competency table can never show a different number from the Skill Gap
+     Analysis screen for the same person on the same day. */
+  var kpiRows = [], kpiTasks = [], apprList = [], apprEmployees = [];
+
+  async function loadHrKpi(){
+    try { await compLoad(); } catch(e){}
+    apprEmployees = await hrAllEmployees();
+    document.getElementById('ap-emp').innerHTML = hrEmpSelectOptions(apprEmployees.filter(function(e){ return e.status !== 'Exited'; }));
+    try {
+      var j = await C.api('/api/hr?what=items');
+      var all = j.items || [];
+      kpiRows = all.filter(function(x){ return x.kind === 'kpi'; }).map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
+      apprList = all.filter(function(x){ return x.kind === 'appraisal'; }).map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
+    } catch(e){ kpiRows = []; apprList = []; }
+    try { kpiTasks = await C.idms.docs('task'); } catch(e){ kpiTasks = []; }
+    drawKpis();
+    drawAppraisals();
+  }
+
+  function kpiAutoValue(source){
+    var active = apprEmployees.filter(function(e){ return e.status !== 'Exited'; });
+    if (source === 'attrition'){
+      var exited = apprEmployees.filter(function(e){ return e.status === 'Exited'; }).length;
+      if (!apprEmployees.length) return null;
+      return { value: Math.round(exited/apprEmployees.length*1000)/10, basis: exited + ' exit(s) of ' + apprEmployees.length + ' record(s)' };
+    }
+    if (source === 'competency'){
+      var gaps = computeGaps(), need = gaps.length, met = gaps.filter(function(g){ return g.gap === 0; }).length;
+      if (!need) return null;
+      return { value: Math.round(met/need*100), basis: met + ' of ' + need + ' role requirement(s) met' };
+    }
+    if (source === 'tasks'){
+      if (!kpiTasks.length) return null;
+      var closed = kpiTasks.filter(function(t){ return t.status === 'Closed'; }).length;
+      return { value: Math.round(closed/kpiTasks.length*100), basis: closed + ' of ' + kpiTasks.length + ' task(s) closed' };
+    }
+    return null;
+  }
+  function kpiEvalStatus(k, actual){
+    if (actual === null || actual === undefined || actual === '') return { cls:'', label:'No data' };
+    var t = C.num(k.target), a = C.num(actual);
+    var hit = k.direction === 'lower' ? a <= t : a >= t;
+    if (hit) return { cls:'series', label:'On target' };
+    var off = t ? Math.abs(a-t)/Math.abs(t)*100 : 100;
+    return off <= 10 ? { cls:'sample', label:'Near target' } : { cls:'', label:'Below target' };
+  }
+
+  function drawKpis(){
+    var evaluated = kpiRows.map(function(k){
+      var auto = k.source && k.source !== 'manual' ? kpiAutoValue(k.source) : null;
+      var actual = auto ? auto.value : (k.actual === '' || k.actual === undefined ? null : C.num(k.actual));
+      return { k:k, auto:auto, actual:actual, st:kpiEvalStatus(k, actual) };
+    });
+    var onTarget = evaluated.filter(function(x){ return x.st.label === 'On target'; }).length;
+    var below = evaluated.filter(function(x){ return x.st.label === 'Below target'; }).length;
+    var noData = evaluated.filter(function(x){ return x.st.label === 'No data'; }).length;
+    document.getElementById('kp-kpi').innerHTML =
+      [['KPIs defined', kpiRows.length], ['On target', onTarget], ['Below target', below], ['No data yet', noData]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('');
+
+    var host = document.getElementById('kp-list');
+    if (!evaluated.length){ host.innerHTML = '<div class="empty"><b>No KPIs defined yet</b></div>'; return; }
+    host.innerHTML = '<table class="t"><thead><tr><th class="c">Status</th><th>KPI</th><th>Level / owner</th>' +
+      '<th class="r">Target</th><th>Actual</th><th>Source</th><th></th></tr></thead><tbody>' +
+      evaluated.map(function(x){
+        return '<tr><td class="c"><span class="badge '+x.st.cls+'">'+x.st.label+'</span></td>' +
+          '<td><b>'+esc(x.k.name)+'</b><div class="hint">'+esc(x.k.category||'')+'</div></td>' +
+          '<td class="hint">'+esc(x.k.level||'')+(x.k.owner?' · '+esc(x.k.owner):'')+'</td>' +
+          '<td class="r">'+esc(x.k.target)+' '+esc(x.k.unit||'')+'</td>' +
+          '<td>'+(x.auto ? '<b>'+x.auto.value+'</b> '+esc(x.k.unit||'')
+            : '<input class="num kp-actual" data-id="'+esc(x.k.item_id)+'" value="'+esc(x.k.actual===undefined?'':x.k.actual)+'">') + '</td>' +
+          '<td class="hint">'+(x.auto ? 'auto — ' + esc(x.auto.basis) : 'manual') + '</td>' +
+          '<td><button class="btn del kp-del" data-id="'+esc(x.k.item_id)+'">Delete</button></td></tr>';
+      }).join('') + '</tbody></table>';
+
+    host.querySelectorAll('.kp-actual').forEach(function(inp){
+      inp.addEventListener('change', async function(){
+        var k = kpiRows.filter(function(x){ return x.item_id === inp.dataset.id; })[0]; if (!k) return;
+        k.actual = C.num(inp.value); k.updatedOn = new Date().toISOString().slice(0,10);
+        var data = Object.assign({}, k); delete data.item_id; delete data.status;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:k.item_id,
+          patch:data, reason:'KPI actual updated' }) });
+          loadHrKpi(); } catch(e){ toast(e.message); }
+      });
+    });
+    host.querySelectorAll('.kp-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Deleting this KPI. Why?'); if (!why) return;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:b.dataset.id, remove:true, reason:why }) });
+          loadHrKpi(); } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
+  function drawAppraisals(){
+    var host = document.getElementById('ap-list');
+    if (!apprList.length){ host.innerHTML = '<div class="empty"><b>No appraisals started</b></div>'; return; }
+    var gapsAll = computeGaps();
+    host.innerHTML = apprList.map(function(a){
+      var emp = apprEmployees.filter(function(e){ return e.empId === a.empId; })[0];
+      var gaps = emp ? gapsAll.filter(function(g){ return g.empId === emp.empId; }) : [];
+      var met = gaps.filter(function(g){ return g.gap === 0; }).length;
+      var badge = a.status === 'Approved' ? 'series' : (a.status === 'Manager Review' ? 'sample' : '');
+      return '<div class="card" style="margin-bottom:10px;"><h4>'+esc(emp?emp.name:a.empId)+' — '+esc(a.period||'')+' ' +
+        '<span class="badge '+badge+'">'+esc(a.status)+'</span></h4>' +
+        '<div class="hint">'+esc(emp?emp.designation||'':'')+' · competency '+met+'/'+gaps.length+' met'+(a.rating?' · rating '+esc(a.rating):'')+'</div>' +
+        '<div class="sub" style="margin-top:10px;">Competency position (from the Skill Matrix)</div>' +
+        (gaps.length ? '<table class="t"><thead><tr><th>Competency</th><th class="c">Required</th><th class="c">Actual</th><th>Status</th></tr></thead><tbody>' +
+          gaps.map(function(g){
+            return '<tr><td>'+esc(g.thing)+'</td><td class="c">'+g.required+'</td><td class="c">'+(g.actual||'never')+'</td>' +
+              '<td><span class="badge '+(g.gap===0?'series':g.criticality!=='Ordinary'?'':'sample')+'">'+(g.gap?('short '+g.gap):'met')+'</span></td></tr>';
+          }).join('') + '</tbody></table>' : '<div class="hint">No role standard set for this designation.</div>') +
+        '<div class="sub" style="margin-top:10px;">Assessment</div>' +
+        '<div class="row"><div><label>Self assessment</label><textarea class="ap-in" data-id="'+esc(a.item_id)+'" data-k="selfText" rows="3">'+esc(a.selfText||'')+'</textarea></div>' +
+        '<div><label>Manager assessment</label><textarea class="ap-in" data-id="'+esc(a.item_id)+'" data-k="managerText" rows="3">'+esc(a.managerText||'')+'</textarea></div></div>' +
+        '<div class="row four" style="margin-top:9px;">' +
+        '<div><label>Rating</label><select class="ap-in" data-id="'+esc(a.item_id)+'" data-k="rating"><option value="">—</option>' +
+        ['Outstanding','Exceeds','Meets','Needs improvement','Unsatisfactory'].map(function(x){ return '<option'+(a.rating===x?' selected':'')+'>'+x+'</option>'; }).join('') + '</select></div>' +
+        '<div><label>Promotion recommended</label><select class="ap-in" data-id="'+esc(a.item_id)+'" data-k="promotion"><option value="">No</option><option'+(a.promotion==='Yes'?' selected':'')+'>Yes</option></select></div>' +
+        '<div><label>Increment recommended %</label><input class="num ap-in" data-id="'+esc(a.item_id)+'" data-k="incrementPct" value="'+esc(a.incrementPct||'')+'"></div>' +
+        '<div><label>Reviewed by</label><input class="ap-in" data-id="'+esc(a.item_id)+'" data-k="reviewedBy" value="'+esc(a.reviewedBy||'')+'"></div></div>' +
+        '<div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;"><label>Development plan</label>' +
+        '<textarea class="ap-in" data-id="'+esc(a.item_id)+'" data-k="devPlan" rows="2">'+esc(a.devPlan||'')+'</textarea></div></div>' +
+        '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button class="btn gold ap-save" data-id="'+esc(a.item_id)+'">Save</button>' +
+        (a.status !== 'Approved' ? '<button class="btn ap-approve" data-id="'+esc(a.item_id)+'">Approve</button>' : '') +
+        '<button class="btn del ap-del" data-id="'+esc(a.item_id)+'">Delete</button></div></div>';
+    }).join('');
+
+    host.querySelectorAll('.ap-in').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        var a = apprList.filter(function(x){ return x.item_id === inp.dataset.id; })[0]; if (a) a[inp.dataset.k] = inp.value;
+      });
+    });
+    host.querySelectorAll('.ap-save').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var a = apprList.filter(function(x){ return x.item_id === b.dataset.id; })[0]; if (!a) return;
+        var data = Object.assign({}, a); delete data.item_id; delete data.status;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:a.item_id,
+          patch:data, status:'Manager Review', reason:'appraisal updated' }) });
+          toast('Saved.'); loadHrKpi(); } catch(e){ toast(e.message); }
+      });
+    });
+    host.querySelectorAll('.ap-approve').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var a = apprList.filter(function(x){ return x.item_id === b.dataset.id; })[0]; if (!a) return;
+        if (!a.rating) { toast('Set a rating before approving.'); return; }
+        var reason = prompt('Approving this appraisal. Note for the record:'); if (!reason) return;
+        var data = Object.assign({}, a); delete data.item_id; delete data.status;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:a.item_id,
+          patch:data, status:'Approved', reason:reason }) });
+          toast('Approved.'); loadHrKpi(); } catch(e){ toast(e.message); }
+      });
+    });
+    host.querySelectorAll('.ap-del').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var why = prompt('Deleting this appraisal. Why?'); if (!why) return;
+        try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+          itemId:b.dataset.id, remove:true, reason:why }) });
+          loadHrKpi(); } catch(e){ toast(e.message); }
+      });
+    });
+  }
+
+  /* ---------------- Audit Readiness (native) ----------------
+     Every check below reads a screen that already exists — Skill Matrix,
+     Competency Mapping, Skill Gap Analysis (via computeGaps, unmodified),
+     Policies, People, and Statutory & Masters' own review record — so a
+     green tick here can never disagree with what those screens themselves
+     show. Nothing is asserted that is not backed by a real count. */
+  async function loadHrAuditReady(){
+    var host = document.getElementById('ar-body');
+    host.innerHTML = '<div class="hint">Reading…</div>';
+    try {
+      await compLoad();
+      var employees = await hrAllEmployees();
+      var active = employees.filter(function(e){ return e.status !== 'Exited'; });
+      var j = await C.api('/api/hr?what=items&kind=policy');
+      var pols = (j.items||[]).filter(function(x){ return x.status === 'Published'; })
+        .map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id }); });
+      var content = (await C.api('/api/content')).data || {};
+      var st = content.statutory || {};
+      var checks = arComputeChecks(active, pols, st);
+      drawAuditReady(checks);
+    } catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; }
+  }
+
+  function arComputeChecks(active, pols, st){
+    var checks = [];
+    function add(clause, requirement, level, evidence, gap, action){
+      checks.push({ clause:clause, requirement:requirement, level:level, evidence:evidence, gap:gap, action:action });
+    }
+
+    /* --- Competence (ISO 9001 7.2, IATF 7.2.1) --- */
+    var liveComps = comps.filter(function(c){ return !(c.data||{}).withdrawn; });
+    var standardsSet = {}; liveComps.forEach(function(c){ standardsSet[String((c.data||{}).designation||'').toLowerCase()] = 1; });
+    var withRole = active.filter(function(e){ return e.designation; });
+    var rolesCovered = withRole.filter(function(e){ return standardsSet[String(e.designation).toLowerCase()]; });
+    add('7.2 Competence', 'A defined competence requirement exists for every role',
+      !Object.keys(standardsSet).length ? 'red' : (rolesCovered.length === withRole.length ? 'green' : 'amber'),
+      Object.keys(standardsSet).length + ' role standard(s) defined covering ' + rolesCovered.length + ' of ' + withRole.length + ' people',
+      withRole.length - rolesCovered.length > 0 ? (withRole.length - rolesCovered.length) + ' people have no standard for their role' : '',
+      'Set role standards on Competency Mapping');
+
+    var assessedNames = {}; compSkills.forEach(function(s){ assessedNames[String((s.data||{}).person||'').toLowerCase()] = 1; });
+    var datedNames = {}; compSkills.forEach(function(s){ var v = s.data||{}; if (v.assessedOn && v.assessedBy) datedNames[String(v.person||'').toLowerCase()] = 1; });
+    var assessed = active.filter(function(e){ return assessedNames[String(e.name).toLowerCase()]; });
+    var dated = active.filter(function(e){ return datedNames[String(e.name).toLowerCase()]; });
+    add('7.2 Competence', 'Competence is evaluated and the evaluation is recorded',
+      !assessed.length ? 'red' : (dated.length === active.length ? 'green' : 'amber'),
+      dated.length + ' of ' + active.length + ' people have a dated, named assessment',
+      active.length - dated.length > 0 ? (active.length - dated.length) + ' people have no recorded assessment' : '',
+      'Assess on the Skill Matrix screen');
+
+    var gapsAll = computeGaps();
+    var gapPeople = {}; gapsAll.forEach(function(g){ if (g.gap > 0) gapPeople[g.empId] = 1; });
+    var gapCount = Object.keys(gapPeople).length;
+    add('7.2 Competence', 'Where competence is lacking, action is taken',
+      !gapCount ? 'green' : (tniRows.length ? 'amber' : 'red'),
+      gapCount + ' people currently below their role standard; ' + tniRows.length + ' training need(s) identified',
+      gapCount && !tniRows.length ? 'Gaps exist with no training need raised against them' : '',
+      'Raise it on Training Need Identification');
+
+    /* --- Training effectiveness — deliberately not checked; see the note on screen --- */
+
+    /* --- Awareness (ISO 9001 7.3) --- */
+    var ackGap = pols.reduce(function(t,p){ return t + Math.max(0, active.length - ((p.acknowledgements||[]).length)); }, 0);
+    add('7.3 Awareness', 'Employees are aware of the policies that apply to them',
+      !pols.length ? 'red' : (ackGap === 0 ? 'green' : 'amber'),
+      pols.length + ' published policy/policies; ' + ackGap + ' acknowledgement(s) outstanding',
+      ackGap ? ackGap + ' acknowledgements still to be recorded' : '',
+      'Record acknowledgements on the Policies screen');
+
+    /* --- Documented information (ISO 9001 7.5) --- */
+    var today = new Date().toISOString().slice(0,10);
+    var reviewOverdue = pols.filter(function(p){ return p.reviewOn && p.reviewOn <= today; });
+    add('7.5 Documented information', 'Documents are version-controlled and reviewed',
+      !pols.length ? 'red' : (reviewOverdue.length ? 'amber' : 'green'),
+      'All policies carry a version, effective date and review date',
+      reviewOverdue.length ? reviewOverdue.length + ' policy/policies past their review date' : '',
+      'Revise and republish overdue policies');
+
+    /* --- Records / traceability (ISO 9001 7.5.3) --- */
+    add('7.5.3 Control of records', 'Changes to people records are traceable', 'green',
+      'Every employee change, leave decision, exit and task closure is written to an audit log with user, timestamp and reason', '',
+      'HR Audit Trail screen');
+
+    /* --- Roles and responsibilities (ISO 9001 5.3) --- */
+    var noDesig = active.filter(function(e){ return !e.designation; });
+    add('5.3 Roles and responsibilities', 'Every person has a defined role',
+      !noDesig.length ? 'green' : 'amber',
+      (active.length - noDesig.length) + ' of ' + active.length + ' have a designation recorded',
+      noDesig.length ? noDesig.length + ' people have no designation' : '',
+      'Set the designation on the People screen');
+
+    /* --- Legal & other requirements --- */
+    var reviewedRecently = st.lastReviewedOn && (Date.now() - new Date(st.lastReviewedOn)) / 86400000 < 400;
+    add('Statutory', 'Payroll rules are current and their review is recorded',
+      st.lastReviewedBy ? (reviewedRecently ? 'green' : 'amber') : 'red',
+      st.lastReviewedBy ? ('Last reviewed by ' + st.lastReviewedBy + (st.lastReviewedOn ? ' on ' + C.fmtDate(st.lastReviewedOn) : '')) : 'No reviewer recorded',
+      !st.lastReviewedBy ? 'Statutory rates have never been formally reviewed' : '',
+      'Statutory & Masters — Review record');
+
+    return checks;
+  }
+
+  function drawAuditReady(checks){
+    var green = checks.filter(function(c){ return c.level === 'green'; }).length;
+    var amber = checks.filter(function(c){ return c.level === 'amber'; }).length;
+    var red = checks.filter(function(c){ return c.level === 'red'; }).length;
+    document.getElementById('ar-kpi').innerHTML =
+      [['Checks', checks.length], ['Evidenced', green], ['Partial', amber], ['Missing', red]]
+      .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('');
+    var badge = { green:'series', amber:'sample', red:'' };
+    var host = document.getElementById('ar-body');
+    host.innerHTML = '<table class="t"><thead><tr><th class="c">Status</th><th>Clause</th><th>Requirement</th>' +
+      '<th>Evidence</th><th>Gap</th><th>Where to act</th></tr></thead><tbody>' +
+      checks.map(function(c){
+        return '<tr><td class="c"><span class="badge '+badge[c.level]+'">'+
+          (c.level==='green'?'Evidenced':c.level==='amber'?'Partial':'Missing')+'</span></td>' +
+          '<td class="hint">'+esc(c.clause)+'</td><td>'+esc(c.requirement)+'</td>' +
+          '<td class="hint">'+esc(c.evidence)+'</td>' +
+          '<td class="hint'+(c.gap?' bad':'')+'">'+esc(c.gap||'—')+'</td>' +
+          '<td class="hint">'+esc(c.action)+'</td></tr>';
+      }).join('') + '</tbody></table>';
   }
 
   /* ---------------- Control Tower (native) ----------------
@@ -8690,6 +9217,242 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     } catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; }
   }
 
+  /* ---------------- Statutory & Masters (native) ----------------
+     Everything here saves to the same one site_content record the website
+     already writes — /api/content overwrites the whole blob, so this always
+     reads the current one first and only ever changes its own keys
+     (hrMasters, shifts, holidays, leavePolicy, statutory) before writing the
+     whole thing back, exactly the way the website's own Save Masters button
+     already had to. No rate is invented — a field with nothing recorded
+     stays at 0 for someone who knows the number to fill in, not a guessed
+     example. */
+  var SM_LISTS = [['departments','Departments'],['designations','Designations'],['grades','Grades'],
+    ['employmentTypes','Employment Types'],['bloodGroups','Blood Groups'],['genders','Gender Options'],
+    ['locations','Locations'],['relationships','Relationships']];
+  var smContent = null, smTdsEditRegime = '';
+
+  async function loadHrStatutory(){
+    try { smContent = (await C.api('/api/content')).data || {}; } catch(e){ smContent = {}; }
+    smNormalise();
+    smDrawAll();
+  }
+  function smNormalise(){
+    var c = smContent;
+    c.hrMasters = c.hrMasters || {};
+    var m = c.hrMasters;
+    if (!m.empIdPrefix) m.empIdPrefix = 'ET';
+    if (!C.num(m.empIdNextSeq)) m.empIdNextSeq = 1;
+    if (!C.num(m.empIdPad)) m.empIdPad = 3;
+    SM_LISTS.forEach(function(p){ m[p[0]] = m[p[0]] || []; });
+    c.shifts = c.shifts || [];
+    c.holidays = c.holidays || [];
+    c.leavePolicy = c.leavePolicy || {};
+    c.leavePolicy.types = c.leavePolicy.types || [];
+    c.leavePolicy.permission = c.leavePolicy.permission || {};
+    c.statutory = c.statutory || {};
+    var st = c.statutory;
+    if (!st.effectiveFrom) st.effectiveFrom = '';
+    if (!st.lastReviewedBy) st.lastReviewedBy = '';
+    if (!st.lastReviewedOn) st.lastReviewedOn = '';
+    st.pf = st.pf || {}; st.esi = st.esi || {}; st.pt = st.pt || {}; st.pt.slabs = st.pt.slabs || [];
+    st.tds = st.tds || {};
+    st.tds.regimes = st.tds.regimes || {};
+    if (!Object.keys(st.tds.regimes).length)
+      st.tds.regimes = { New:{ label:'New Regime', slabs:[], surcharge:[] }, Old:{ label:'Old Regime', slabs:[], surcharge:[] } };
+    Object.keys(st.tds.regimes).forEach(function(k){
+      st.tds.regimes[k].slabs = st.tds.regimes[k].slabs || [];
+      st.tds.regimes[k].surcharge = st.tds.regimes[k].surcharge || [];
+    });
+    if (!st.tds.defaultRegime || !st.tds.regimes[st.tds.defaultRegime]) st.tds.defaultRegime = Object.keys(st.tds.regimes)[0];
+    if (!st.tds.mode) st.tds.mode = 'manual';
+    if (st.tds.cessPct === undefined || st.tds.cessPct === '') st.tds.cessPct = 4;
+    if (!smTdsEditRegime || !st.tds.regimes[smTdsEditRegime]) smTdsEditRegime = st.tds.defaultRegime;
+  }
+  function smNextEmpId(){
+    var m = smContent.hrMasters;
+    return (m.empIdPrefix||'') + String(C.num(m.empIdNextSeq)||1).padStart(C.num(m.empIdPad)||3, '0');
+  }
+
+  function smDrawAll(){
+    var m = smContent.hrMasters, st = smContent.statutory;
+    document.getElementById('sm-rev-eff').value = st.effectiveFrom;
+    document.getElementById('sm-rev-by').value = st.lastReviewedBy;
+    document.getElementById('sm-rev-on').value = st.lastReviewedOn;
+    document.getElementById('sm-eid-prefix').value = m.empIdPrefix;
+    document.getElementById('sm-eid-next').value = m.empIdNextSeq;
+    document.getElementById('sm-eid-pad').value = m.empIdPad;
+    document.getElementById('sm-eid-preview').textContent = smNextEmpId();
+
+    document.getElementById('sm-lists').innerHTML = SM_LISTS.map(function(p){
+      var key = p[0], vals = m[key];
+      return '<div class="sub" style="margin-top:10px;">'+esc(p[1])+'</div>' +
+        vals.map(function(v,i){
+          return '<div class="row" style="margin-top:4px;"><div style="grid-column:span 3;display:flex;gap:8px;">' +
+            '<input class="sm-list-val" data-k="'+key+'" data-i="'+i+'" value="'+esc(v)+'" style="flex:1;">' +
+            '<button class="btn del sm-list-del" data-k="'+key+'" data-i="'+i+'">×</button></div></div>';
+        }).join('') +
+        '<button class="btn sm-list-add" data-k="'+key+'" style="margin-top:6px;">+ Add</button>';
+    }).join('');
+
+    document.getElementById('sm-shifts').innerHTML = smContent.shifts.length
+      ? '<table class="t"><thead><tr><th>Code</th><th>Name</th><th>Start</th><th>End</th><th class="r">Break min</th><th></th></tr></thead><tbody>' +
+        smContent.shifts.map(function(sh,i){
+          return '<tr><td><input class="sm-shift" data-i="'+i+'" data-k="code" value="'+esc(sh.code)+'"></td>' +
+            '<td><input class="sm-shift" data-i="'+i+'" data-k="name" value="'+esc(sh.name)+'"></td>' +
+            '<td><input type="time" class="sm-shift" data-i="'+i+'" data-k="start" value="'+esc(sh.start)+'"></td>' +
+            '<td><input type="time" class="sm-shift" data-i="'+i+'" data-k="end" value="'+esc(sh.end)+'"></td>' +
+            '<td><input class="num sm-shift" data-i="'+i+'" data-k="breakMin" value="'+esc(sh.breakMin)+'"></td>' +
+            '<td><button class="btn del sm-shift-del" data-i="'+i+'">×</button></td></tr>';
+        }).join('') + '</tbody></table>' : '<div class="empty"><b>No shifts yet</b></div>';
+
+    document.getElementById('sm-holidays').innerHTML = smContent.holidays.length
+      ? '<table class="t"><thead><tr><th>Date</th><th>Occasion</th><th></th></tr></thead><tbody>' +
+        smContent.holidays.map(function(h,i){
+          return '<tr><td><input type="date" class="sm-hol" data-i="'+i+'" data-k="date" value="'+esc(h.date)+'"></td>' +
+            '<td><input class="sm-hol" data-i="'+i+'" data-k="name" value="'+esc(h.name)+'"></td>' +
+            '<td><button class="btn del sm-hol-del" data-i="'+i+'">×</button></td></tr>';
+        }).join('') + '</tbody></table>'
+      : '<div class="hint">No holidays set — every non-week-off day counts as working.</div>';
+
+    document.getElementById('sm-leavetypes').innerHTML = smContent.leavePolicy.types.length
+      ? '<table class="t"><thead><tr><th>Code</th><th>Name</th><th class="r">Days/yr</th><th class="c">Paid</th><th class="c">Carry fwd</th><th></th></tr></thead><tbody>' +
+        smContent.leavePolicy.types.map(function(lt,i){
+          return '<tr><td><input class="sm-lt" data-i="'+i+'" data-k="code" value="'+esc(lt.code)+'"></td>' +
+            '<td><input class="sm-lt" data-i="'+i+'" data-k="name" value="'+esc(lt.name)+'"></td>' +
+            '<td><input class="num sm-lt" data-i="'+i+'" data-k="annualDays" value="'+esc(lt.annualDays)+'"></td>' +
+            '<td class="c"><input type="checkbox" class="sm-ltb" data-i="'+i+'" data-k="paid"'+(lt.paid?' checked':'')+'></td>' +
+            '<td class="c"><input type="checkbox" class="sm-ltb" data-i="'+i+'" data-k="carryForward"'+(lt.carryForward?' checked':'')+'></td>' +
+            '<td><button class="btn del sm-lt-del" data-i="'+i+'">×</button></td></tr>';
+        }).join('') + '</tbody></table>' : '<div class="empty"><b>No leave types yet</b></div>';
+
+    var pm = smContent.leavePolicy.permission;
+    document.getElementById('sm-pm-std').value = pm.standardHours||'';
+    document.getElementById('sm-pm-max').value = pm.maxHoursPerRequest||'';
+    document.getElementById('sm-pm-inst').value = pm.freeInstancesPerMonth||'';
+    document.getElementById('sm-pm-hrs').value = pm.freeHoursPerMonth||'';
+    document.getElementById('sm-pm-excess').value = pm.excessTreatment||'lop';
+
+    document.getElementById('sm-pf-emp').value = st.pf.employeePct||'';
+    document.getElementById('sm-pf-empr').value = st.pf.employerPct||'';
+    document.getElementById('sm-pf-ceil').value = st.pf.wageCeiling||'';
+    document.getElementById('sm-pf-eps').value = st.pf.epsPct||'';
+    document.getElementById('sm-pf-epsceil').value = st.pf.epsCeiling||'';
+    document.getElementById('sm-pf-edli').value = st.pf.edliPct||'';
+    document.getElementById('sm-pf-admin').value = st.pf.adminPct||'';
+    document.getElementById('sm-pf-applyceil').value = st.pf.applyCeiling===false ? 'no' : 'yes';
+    document.getElementById('sm-esi-emp').value = st.esi.employeePct||'';
+    document.getElementById('sm-esi-empr').value = st.esi.employerPct||'';
+    document.getElementById('sm-esi-limit').value = st.esi.grossLimit||'';
+    document.getElementById('sm-pt-state').value = st.pt.state||'';
+    document.getElementById('sm-pt-slabs').innerHTML = st.pt.slabs.length
+      ? '<table class="t"><thead><tr><th class="r">Gross up to</th><th class="r">PT amount</th><th></th></tr></thead><tbody>' +
+        st.pt.slabs.map(function(sl,i){
+          return '<tr><td><input class="num sm-pt-slab" data-i="'+i+'" data-k="upTo" value="'+esc(sl.upTo)+'"></td>' +
+            '<td><input class="num sm-pt-slab" data-i="'+i+'" data-k="amount" value="'+esc(sl.amount)+'"></td>' +
+            '<td><button class="btn del sm-pt-del" data-i="'+i+'">×</button></td></tr>';
+        }).join('') + '</tbody></table>' : '<div class="empty"><b>No slabs yet</b></div>';
+
+    var t = st.tds, rg = t.regimes[smTdsEditRegime] || { slabs:[], surcharge:[] };
+    document.getElementById('sm-tds-mode').value = t.mode;
+    document.getElementById('sm-tds-cess').value = t.cessPct;
+    document.getElementById('sm-tds-verifiedby').value = t.slabsReviewedBy||'';
+    document.getElementById('sm-tds-verifiedon').value = t.slabsReviewedOn||'';
+    var regimeOpts = Object.keys(t.regimes).map(function(k){ return '<option value="'+esc(k)+'">'+esc(t.regimes[k].label||k)+'</option>'; }).join('');
+    document.getElementById('sm-tds-regime').innerHTML = regimeOpts;
+    document.getElementById('sm-tds-regime').value = t.defaultRegime;
+    document.getElementById('sm-tds-editregime').innerHTML = regimeOpts;
+    document.getElementById('sm-tds-editregime').value = smTdsEditRegime;
+    document.getElementById('sm-tds-stddeduct').value = rg.standardDeduction||'';
+    document.getElementById('sm-tds-rebatelimit').value = rg.rebateLimit||'';
+    document.getElementById('sm-tds-rebateamt').value = rg.rebateAmount||'';
+    document.getElementById('sm-tds-slabregime').textContent = smTdsEditRegime;
+    document.getElementById('sm-tds-surregime').textContent = smTdsEditRegime;
+    document.getElementById('sm-tds-slabs').innerHTML = rg.slabs.length
+      ? '<table class="t"><thead><tr><th class="r">Taxable income up to</th><th class="r">Rate %</th><th></th></tr></thead><tbody>' +
+        rg.slabs.map(function(sl,i){
+          return '<tr><td><input class="num sm-tds-slab" data-i="'+i+'" data-k="upTo" value="'+esc(sl.upTo)+'"></td>' +
+            '<td><input class="num sm-tds-slab" data-i="'+i+'" data-k="rate" value="'+esc(sl.rate)+'"></td>' +
+            '<td><button class="btn del sm-tds-slab-del" data-i="'+i+'">×</button></td></tr>';
+        }).join('') + '</tbody></table>' : '<div class="empty"><b>No slabs — nothing can be computed for this regime</b></div>';
+    document.getElementById('sm-tds-surcharge').innerHTML = rg.surcharge.length
+      ? '<table class="t"><thead><tr><th class="r">Taxable income up to</th><th class="r">Rate %</th><th></th></tr></thead><tbody>' +
+        rg.surcharge.map(function(sl,i){
+          return '<tr><td><input class="num sm-tds-sur" data-i="'+i+'" data-k="upTo" value="'+esc(sl.upTo)+'"></td>' +
+            '<td><input class="num sm-tds-sur" data-i="'+i+'" data-k="rate" value="'+esc(sl.rate)+'"></td>' +
+            '<td><button class="btn del sm-tds-sur-del" data-i="'+i+'">×</button></td></tr>';
+        }).join('') + '</tbody></table>' : '<div class="empty"><b>No surcharge bands</b></div>';
+
+    smWireAll();
+  }
+
+  function smWireAll(){
+    var host = document.querySelector('[data-panel="hr_statutory"]');
+    host.querySelectorAll('.sm-list-val').forEach(function(i){ i.addEventListener('input', function(){
+      smContent.hrMasters[i.dataset.k][+i.dataset.i] = i.value; }); });
+    host.querySelectorAll('.sm-list-del').forEach(function(b){ b.addEventListener('click', function(){
+      smContent.hrMasters[b.dataset.k].splice(+b.dataset.i,1); smCollectSimpleFields(); smDrawAll(); }); });
+    host.querySelectorAll('.sm-list-add').forEach(function(b){ b.addEventListener('click', function(){
+      smContent.hrMasters[b.dataset.k].push('New value'); smCollectSimpleFields(); smDrawAll(); }); });
+
+    host.querySelectorAll('.sm-shift').forEach(function(i){ i.addEventListener('input', function(){
+      smContent.shifts[+i.dataset.i][i.dataset.k] = i.classList.contains('num') ? C.num(i.value) : i.value; }); });
+    host.querySelectorAll('.sm-shift-del').forEach(function(b){ b.addEventListener('click', function(){
+      smContent.shifts.splice(+b.dataset.i,1); smCollectSimpleFields(); smDrawAll(); }); });
+
+    host.querySelectorAll('.sm-hol').forEach(function(i){ i.addEventListener('input', function(){
+      smContent.holidays[+i.dataset.i][i.dataset.k] = i.value; }); });
+    host.querySelectorAll('.sm-hol-del').forEach(function(b){ b.addEventListener('click', function(){
+      smContent.holidays.splice(+b.dataset.i,1); smCollectSimpleFields(); smDrawAll(); }); });
+
+    host.querySelectorAll('.sm-lt').forEach(function(i){ i.addEventListener('input', function(){
+      smContent.leavePolicy.types[+i.dataset.i][i.dataset.k] = i.classList.contains('num') ? C.num(i.value) : i.value; }); });
+    host.querySelectorAll('.sm-ltb').forEach(function(i){ i.addEventListener('change', function(){
+      smContent.leavePolicy.types[+i.dataset.i][i.dataset.k] = i.checked; }); });
+    host.querySelectorAll('.sm-lt-del').forEach(function(b){ b.addEventListener('click', function(){
+      smContent.leavePolicy.types.splice(+b.dataset.i,1); smCollectSimpleFields(); smDrawAll(); }); });
+
+    host.querySelectorAll('.sm-pt-slab').forEach(function(i){ i.addEventListener('input', function(){
+      smContent.statutory.pt.slabs[+i.dataset.i][i.dataset.k] = C.num(i.value); }); });
+    host.querySelectorAll('.sm-pt-del').forEach(function(b){ b.addEventListener('click', function(){
+      smContent.statutory.pt.slabs.splice(+b.dataset.i,1); smCollectSimpleFields(); smDrawAll(); }); });
+
+    host.querySelectorAll('.sm-tds-slab').forEach(function(i){ i.addEventListener('input', function(){
+      smContent.statutory.tds.regimes[smTdsEditRegime].slabs[+i.dataset.i][i.dataset.k] = C.num(i.value); }); });
+    host.querySelectorAll('.sm-tds-slab-del').forEach(function(b){ b.addEventListener('click', function(){
+      smContent.statutory.tds.regimes[smTdsEditRegime].slabs.splice(+b.dataset.i,1); smCollectSimpleFields(); smDrawAll(); }); });
+    host.querySelectorAll('.sm-tds-sur').forEach(function(i){ i.addEventListener('input', function(){
+      smContent.statutory.tds.regimes[smTdsEditRegime].surcharge[+i.dataset.i][i.dataset.k] = C.num(i.value); }); });
+    host.querySelectorAll('.sm-tds-sur-del').forEach(function(b){ b.addEventListener('click', function(){
+      smContent.statutory.tds.regimes[smTdsEditRegime].surcharge.splice(+b.dataset.i,1); smCollectSimpleFields(); smDrawAll(); }); });
+  }
+
+  function smCollectSimpleFields(){
+    var m = smContent.hrMasters, st = smContent.statutory;
+    st.effectiveFrom = fieldVal('sm-rev-eff'); st.lastReviewedBy = fieldVal('sm-rev-by'); st.lastReviewedOn = fieldVal('sm-rev-on');
+    m.empIdPrefix = fieldVal('sm-eid-prefix'); m.empIdNextSeq = C.num(fieldVal('sm-eid-next'));
+    m.empIdPad = C.num(fieldVal('sm-eid-pad'));
+    smContent.leavePolicy.permission = {
+      standardHours:C.num(fieldVal('sm-pm-std')), maxHoursPerRequest:C.num(fieldVal('sm-pm-max')),
+      freeInstancesPerMonth:C.num(fieldVal('sm-pm-inst')), freeHoursPerMonth:C.num(fieldVal('sm-pm-hrs')),
+      excessTreatment:document.getElementById('sm-pm-excess').value };
+    st.pf.employeePct = C.num(fieldVal('sm-pf-emp')); st.pf.employerPct = C.num(fieldVal('sm-pf-empr'));
+    st.pf.wageCeiling = C.num(fieldVal('sm-pf-ceil')); st.pf.epsPct = C.num(fieldVal('sm-pf-eps'));
+    st.pf.epsCeiling = C.num(fieldVal('sm-pf-epsceil')); st.pf.edliPct = C.num(fieldVal('sm-pf-edli'));
+    st.pf.adminPct = C.num(fieldVal('sm-pf-admin')); st.pf.applyCeiling = document.getElementById('sm-pf-applyceil').value === 'yes';
+    st.esi.employeePct = C.num(fieldVal('sm-esi-emp')); st.esi.employerPct = C.num(fieldVal('sm-esi-empr'));
+    st.esi.grossLimit = C.num(fieldVal('sm-esi-limit')); st.pt.state = fieldVal('sm-pt-state');
+    st.tds.mode = document.getElementById('sm-tds-mode').value;
+    st.tds.defaultRegime = document.getElementById('sm-tds-regime').value;
+    st.tds.cessPct = C.num(fieldVal('sm-tds-cess'));
+    st.tds.slabsReviewedBy = fieldVal('sm-tds-verifiedby'); st.tds.slabsReviewedOn = fieldVal('sm-tds-verifiedon');
+    var rg = st.tds.regimes[smTdsEditRegime];
+    if (rg){
+      rg.standardDeduction = C.num(fieldVal('sm-tds-stddeduct'));
+      rg.rebateLimit = C.num(fieldVal('sm-tds-rebatelimit'));
+      rg.rebateAmount = C.num(fieldVal('sm-tds-rebateamt'));
+    }
+  }
+
   /* ---------------- gap analysis ----------------
      Required level (from the role) minus assessed level (from the matrix). No
      third source, so there is nothing to keep in step. */
@@ -8713,7 +9476,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     var rows = [];
     compEmployees.forEach(function(e){
       var d = empData(e);
-      if (String(d.status||'Active') === 'Left') return;
+      if (String(d.status||'Active') === 'Exited') return;
       var reqs = byDesig[d.designation] || [];
       reqs.forEach(function(r){
         var have = levelOf(d.name, r.thing);
@@ -11052,7 +11815,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   function filledFor(v){
     return orgEmployees.filter(function(e){
       var d = e.data || e;
-      if (String(d.status||'Active') === 'Left') return false;
+      if (String(d.status||'Active') === 'Exited') return false;
       if (v.designation && String(d.designation||'') !== v.designation) return false;
       if (v.department && String(d.department||'') !== v.department) return false;
       return !!(v.designation || v.department);
@@ -11970,14 +12733,14 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     ['Pay', [
       ['payroll','pay','Payroll','Pay runs, payslips and approval','e:payroll'],
       ['mpcost','pay','Manpower Cost','Earned salary and statutory payables from attendance, as of today','v:mpcost'],
-      ['statutory','statutory','Statutory & Masters','PF, ESI, PT, TDS, shifts, holidays, leave rules','e:statutory'] ]],
+      ['statutory','statutory','Statutory & Masters','PF, ESI, PT, TDS, shifts, holidays, leave rules','s:hr_statutory'] ]],
     ['Capability & compliance', [
       ['dwm','dwm','DWM & Tasks','Daily work management boards','s:dwm'],
       ['skills','skills','Competency','Competency mapping','s:competency_map'],
       ['training','training','Training','Training plan against actual','s:training_plan_actual'],
-      ['kpi','kpi','KPI & Appraisal','Goals and appraisal cycles','e:kpi'],
+      ['kpi','kpi','KPI & Appraisal','Goals and appraisal cycles','s:hr_kpi'],
       ['policies','policies','Policies','HR policies and acknowledgements','s:hr_policies'],
-      ['auditready','auditready','Audit Readiness','What an auditor will ask for','e:audit-ready'],
+      ['auditready','auditready','Audit Readiness','What an auditor will ask for','s:hr_audit_ready'],
       ['audit','audit','Audit Trail','Every HR change, who and why','s:hr_audit_trail'] ]]
   ];
   var hpState = { view:'', content:null, employees:[], att:{}, leave:[], month:'', sel:null };
@@ -25364,9 +26127,69 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     this.disabled = false;
   });
   document.getElementById('tw-refresh').addEventListener('click', loadHrTower);
+
+  document.getElementById('sm-refresh').addEventListener('click', loadHrStatutory);
+  document.getElementById('sm-shift-add').addEventListener('click', function(){
+    smContent.shifts.push({ code:'', name:'New Shift', start:'09:00', end:'17:30', breakMin:30 }); smCollectSimpleFields(); smDrawAll(); });
+  document.getElementById('sm-hol-add').addEventListener('click', function(){
+    smContent.holidays.push({ date:'', name:'' }); smCollectSimpleFields(); smDrawAll(); });
+  document.getElementById('sm-lt-add').addEventListener('click', function(){
+    smContent.leavePolicy.types.push({ code:'XX', name:'New Leave', annualDays:0, paid:true, carryForward:false }); smCollectSimpleFields(); smDrawAll(); });
+  document.getElementById('sm-pt-add').addEventListener('click', function(){
+    smContent.statutory.pt.slabs.push({ upTo:0, amount:0 }); smCollectSimpleFields(); smDrawAll(); });
+  document.getElementById('sm-tds-slab-add').addEventListener('click', function(){
+    smContent.statutory.tds.regimes[smTdsEditRegime].slabs.push({ upTo:0, rate:0 }); smCollectSimpleFields(); smDrawAll(); });
+  document.getElementById('sm-tds-sur-add').addEventListener('click', function(){
+    smContent.statutory.tds.regimes[smTdsEditRegime].surcharge.push({ upTo:0, rate:0 }); smCollectSimpleFields(); smDrawAll(); });
+  document.getElementById('sm-tds-editregime').addEventListener('change', function(){
+    smCollectSimpleFields(); smTdsEditRegime = this.value; smDrawAll(); });
+  document.getElementById('sm-save').addEventListener('click', async function(){
+    smCollectSimpleFields();
+    var msg = document.getElementById('sm-save-msg'), say = noteWriter(msg);
+    this.disabled = true; this.textContent = 'Saving…';
+    try {
+      await C.api('/api/content', { method:'POST', body:JSON.stringify({ data: smContent }) });
+      say('Saved. Dropdowns, shifts, holidays and rates are updated everywhere that reads them.', true);
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false; this.textContent = 'Save Statutory & Masters';
+  });
   document.querySelectorAll('[data-panel="hr_exit"] [data-goto]').forEach(function(a){
     a.addEventListener('click', function(){ go(a.dataset.goto); });
   });
+
+  document.getElementById('kp-add').addEventListener('click', async function(){
+    var name = fieldVal('kp-name'), msg = document.getElementById('kp-msg'), say = noteWriter(msg);
+    if (!name) return say('Give the KPI a name.');
+    var item = { itemId:'KPI-'+Date.now().toString(36).toUpperCase(), kind:'kpi', status:'Active',
+      name:name, category:fieldVal('kp-cat'), level:document.getElementById('kp-level').value,
+      owner:fieldVal('kp-owner'), target:C.num(fieldVal('kp-target')), unit:fieldVal('kp-unit'),
+      direction:document.getElementById('kp-direction').value, source:document.getElementById('kp-source').value, actual:'' };
+    this.disabled = true;
+    try {
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item, reason:'KPI defined' }) });
+      ['kp-name','kp-cat','kp-owner','kp-target','kp-unit'].forEach(function(id){ document.getElementById(id).value = ''; });
+      say('Added.', true);
+      loadHrKpi();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+  document.getElementById('ap-add').addEventListener('click', async function(){
+    var empId = document.getElementById('ap-emp').value, period = fieldVal('ap-period');
+    var msg = document.getElementById('ap-msg'), say = noteWriter(msg);
+    if (!empId || !period) return say('Choose the employee and name the period.');
+    var item = { itemId:'APR-'+Date.now().toString(36).toUpperCase(), kind:'appraisal', status:'Self Assessment',
+      empId:empId, period:period };
+    this.disabled = true;
+    try {
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item, reason:'appraisal started' }) });
+      document.getElementById('ap-period').value = '';
+      say('Started.', true);
+      loadHrKpi();
+    } catch(e){ say(esc(e.message)); }
+    this.disabled = false;
+  });
+
+  document.getElementById('ar-refresh').addEventListener('click', loadHrAuditReady);
 
   document.querySelectorAll('[data-panel="agentic_ai"] [data-goto]').forEach(function(a){
     a.addEventListener('click', function(){ go(a.dataset.goto); });

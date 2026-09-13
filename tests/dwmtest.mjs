@@ -23,7 +23,7 @@ const employees = [
   { data: { empId: 'E1', name: 'R Kumar', designation: 'CNC Operator', department: 'Machining', status: 'Active' } },
   { data: { empId: 'E2', name: 'S Babu', designation: 'Shift Supervisor', department: 'Machining', status: 'Active' } },
   { data: { empId: 'E3', name: 'M Iyer', designation: 'Quality Engineer', department: 'Quality', status: 'Active' } },
-  { data: { empId: 'E4', name: 'P Left', designation: 'CNC Operator', department: 'Machining', status: 'Left' } },
+  { data: { empId: 'E4', name: 'P Left', designation: 'CNC Operator', department: 'Machining', status: 'Exited' } },
   { data: { empId: 'E5', name: 'K Nair', designation: 'Storekeeper', department: 'Machining', status: 'Active' } }
 ];
 

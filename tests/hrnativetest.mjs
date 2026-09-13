@@ -49,6 +49,12 @@ window.fetch = async (path, opts = {}) => {
   if (url.startsWith('/api/hr')) {
     if (url.includes('what=audit')) { calls.push({ kind: 'audit-read' }); return ok({ audit: auditRows }); }
     if (url.includes('what=employees') && (!opts.method || opts.method === 'GET')) return ok({ employees });
+    if (opts.method === 'POST' && body.what === 'employees') {
+      calls.push({ kind: 'emp-save', body });
+      const i = employees.findIndex(e => e.empId === body.employee.empId);
+      if (i >= 0) employees[i] = body.employee; else employees.push(body.employee);
+      return ok({ empId: body.employee.empId });
+    }
     if (url.includes('what=items') && (!opts.method || opts.method === 'GET')) {
       const kind = (url.match(/kind=([^&]+)/) || [, ''])[1];
       const filtered = kind ? items.filter(x => x.kind === kind) : items;
@@ -192,6 +198,17 @@ await wait(200);
 const exSaveCall = calls.find(c => c.kind === 'item-patch' && c.body.itemId === exitId);
 check('saving the exit patches its clearance', exSaveCall && exSaveCall.body.patch.clearance['Tools returned'] === 'yes',
   JSON.stringify(exSaveCall));
+
+// ---------- settling an exit must mark the employee Exited, not just the exit record ----------
+calls.length = 0;
+click(window.document.querySelector('.ex-settle[data-id="' + exitId + '"]'));
+await wait(200);
+const settleEmpCall = calls.find(c => c.kind === 'emp-save' && c.body.employee.empId === 'EMP001');
+check('marking an exit settled also updates the employee record', !!settleEmpCall, JSON.stringify(calls));
+check('the employee is set to Exited, not left Active', settleEmpCall && settleEmpCall.body.employee.status === 'Exited',
+  settleEmpCall && settleEmpCall.body.employee.status);
+const settleItemCall = calls.find(c => c.kind === 'item-patch' && c.body.status === 'Settled');
+check('the exit record itself is marked Settled', !!settleItemCall);
 
 // ---------- Control Tower ----------
 nav('hr_tower');

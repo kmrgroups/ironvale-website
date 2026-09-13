@@ -2577,3 +2577,71 @@ title bar z-index above the menu bar's), `employeecrudtest.mjs` (+2:
 row-level Delete button present, row button reads "Edit" not "Open").
 Full suite (32 files) clean throughout — same 2 pre-existing, unrelated
 smoketest failures, nothing new broken.
+
+## KPI & Appraisal, Audit Readiness, and two more gaps found along the way
+
+Continuing the HR migration directly after Statutory & Masters.
+
+**KPI & Appraisal** (`hr_kpi`). Manual KPIs plus three genuine auto-sources —
+attrition, competency, tasks — each computed from the real native records
+(employees, `computeGaps()`, `C.idms.docs('task')`), never guessed. On-time-
+delivery, absenteeism and training-closure auto-sources are explicitly not
+offered: they depend on data models (website order planning, website
+attendance, website training sessions) that have not moved here, and a
+source that silently computed the wrong thing would be worse than one that
+is not offered at all. Appraisals reuse `computeGaps()` completely
+unmodified for the competency table, so an appraisal can never show a
+number Skill Gap Analysis itself would disagree with. Approving now
+requires a rating AND a non-empty reason — slightly stricter than the
+website's version (which allowed an empty reason), matching the
+reason-required convention every other approval on this platform already
+follows.
+
+**A real, wide-reaching bug found while testing KPI's competency
+auto-source**: the "has this person left" check, used across Org Chart,
+Succession Planning, CFT Membership, Skill Matrix, Competency Mapping and
+Skill Gap Analysis, compared employee status against the literal string
+`'Left'` — but nothing that actually sets a status (Recruitment's
+convert-to-employee, Exit settle) ever writes `'Left'`; they write
+`'Exited'`. The check never matched real data, so an exited employee was
+silently still counted as active in all six of those already-shipped
+screens. Fixed all 13 occurrences to check `'Exited'`, then found and fixed
+the one existing test (`dwmtest.mjs`) whose own fixture had encoded the
+same stale assumption.
+
+**A second real gap, found while porting Exit's settle button last
+session**: settling an exit patched the exit record's own status but never
+actually set the employee's status to `Exited` — the website's original
+version does both together (and warns if clearance is still pending).
+Fixed to match, covered by a dedicated test in `hrnativetest.mjs`.
+
+**Audit Readiness** (`hr_audit_ready`). Every check reads a screen that
+already exists — Competency Mapping and Skill Matrix (via the same
+`comps`/`compSkills` compLoad() already loads), `computeGaps()` unmodified,
+Policies, People, and Statutory & Masters' own review record — so a green
+tick here can never disagree with what those screens themselves show.
+Building this exposed a third gap: the native Statutory & Masters screen
+never carried the "Rules effective from / Last reviewed by / Reviewed on"
+fields the website's version had, which this screen needs to judge whether
+statutory rates have been formally reviewed. Added a **Review record** card
+to Statutory & Masters to close that gap before building on top of it.
+Training-effectiveness is explicitly not checked — training sessions
+haven't moved off the website yet, and checking against the wrong record
+would be worse than admitting the gap plainly, which the screen does.
+
+Tested in `tests/kpitest.mjs` (12 checks — including that a low match
+never auto-moves an appraisal's status, keeping the human decision human)
+and `tests/auditreadytest.mjs` (9 checks — seeded to produce one green, one
+amber and one red check on purpose, and asserting the screen reports
+exactly those three outcomes, not a plausible-looking guess). Full suite
+(35 files) clean throughout — same 2 pre-existing, unrelated smoketest
+failures, nothing new broken.
+
+**Left deliberately for its own pass**: Payroll. Everything above computes
+counts and ratios from records; Payroll computes what somebody is actually
+paid — gross-up, PF/ESI/TDS deduction, LOP from attendance, payslip
+generation, approval. Wrong there costs real money, not a wrong percentage
+on a dashboard, and it depends on nearly everything else in this HR
+migration (Statutory rates, Leave, Attendance) being right first — which is
+now the case, but the calculation engine itself still deserves its own
+careful pass rather than being rushed in at the end of this one.

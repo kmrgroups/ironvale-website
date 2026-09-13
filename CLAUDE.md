@@ -2975,3 +2975,42 @@ inside IDMS to no benefit.
 **What genuinely remains**: quotation email sending with its
 customer-facing PDF template, and the website-side setup wizard. Full suite
 (43 files) clean — same 2 pre-existing, unrelated smoketest failures.
+
+## Sending the quotation — and a caution that turned out to be overstated
+
+I had twice deferred this as "touches the send path and its customer-facing
+PDF template, which is its own piece of work." Reading the actual code
+showed that was wrong on the substantive point: **there is no PDF
+attachment pipeline on either side.** The website's own `mailquote` action
+builds a plain-text body from `quoteDoc` and posts it to `/api/notify` —
+the same endpoint already used for RFQ acknowledgements and owner alerts,
+already handling Resend and the WhatsApp Cloud API, already reachable with
+the session the IDMS holds. So this was a small, well-understood addition,
+not a document-generation project.
+
+Built as a **Send to customer** button on the native RFQ Pipeline, which:
+- is gated behind a `confirm()` naming the customer, the quotation number
+  and the total. This is the one action in the platform that puts a price
+  in front of a customer and cannot be taken back, so it gets the same
+  deliberate friction Payroll approval does — and if the quotation has been
+  sent before, the confirmation says so and when;
+- builds the body from the quotation itself (part, quantity, unit price,
+  subtotal, tax at the configured rate, total, validity, payment and
+  delivery terms), not just the AI's covering text;
+- **reads the send result and refuses to lie about it** — `/api/notify`
+  returns per-channel result strings, so a response without `EMAIL SENT`
+  raises the error and the quotation is *not* marked as sent. A send that
+  silently looked successful would be worse than one that plainly failed;
+- records `sentAt`/`sentTo` on success and moves the stage to Approved &
+  Sent.
+
+`tests/rfqpipelinetest.mjs` grew to 40 checks, covering both failure paths
+explicitly: declining the confirmation sends nothing at all, and a server
+refusal surfaces as an error without marking the quotation sent.
+
+**What is actually left**: the website-side setup wizard — the website's
+own Setup tab is a self-checking checklist rather than a linear
+step-through, and whether to convert it is a judgement about that screen,
+not an unfinished migration. Everything else the IDMS should own now lives
+in the IDMS. Full suite (43 files) clean — same 2 pre-existing, unrelated
+smoketest failures.

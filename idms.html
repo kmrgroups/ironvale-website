@@ -2135,9 +2135,10 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           native here — the costing arithmetic runs entirely on your own figures from
           <a data-goto="admin_quoting" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Quoting &amp; Costing Setup</a>;
           the AI proposes the route and the times, never a price.
-          <span class="hint" style="display:block;margin-top:6px;">Sending the quotation by email and
-          the customer-facing PDF layout still run from the website's own RFQ Pipeline — those touch
-          the send path and its document template, which is its own piece of work.</span></div>
+          <span class="hint" style="display:block;margin-top:6px;">Sending goes out through the same
+          email and WhatsApp settings as everything else — set those up on the
+          <a data-goto="admin_wizard" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Setup Wizard's Connections step</a>
+          if a send is refused.</span></div>
         <div class="stat" id="rp-kpi"></div>
       </div>
 
@@ -26657,8 +26658,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       var content = (await C.api('/api/content')).data || {};
       rfqCfg = { costBase:content.costBase||{}, machines:content.machines||[],
         labourGrades:content.labourGrades||[], materials:content.materials||[],
-        quoteCfg:content.quoteCfg||{}, company:content.company||{} };
-    } catch(e){ rfqCfg = { costBase:{}, machines:[], labourGrades:[], materials:[], quoteCfg:{}, company:{} }; }
+        quoteCfg:content.quoteCfg||{}, company:content.company||{},
+        quoteSender:content.quoteSender||'Sales' };
+    } catch(e){ rfqCfg = { costBase:{}, machines:[], labourGrades:[], materials:[], quoteCfg:{}, company:{}, quoteSender:'Sales' }; }
     try { rfqRows = (await C.api('/api/rfqs')).rfqs || []; } catch(e){ rfqRows = []; toast(e.message); }
     rfqTriFindings = []; rfqTriNarrative = '';
     document.getElementById('rp-tri-narrative').innerHTML = '';
@@ -26783,9 +26785,14 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         ['Validity', esc(q.validityDays||'—')+' days']]
         .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') + '</div>' +
         '<div style="white-space:pre-wrap;margin-top:8px;font-size:13px;">'+esc(q.body||'')+'</div>' +
+        (q.sentAt ? '<div class="note good" style="margin-top:8px;">Sent to '+esc(q.sentTo||'')+' on '+esc(q.sentAt)+'.</div>' : '') +
         '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">' +
         '<button class="btn ai-btn rp-quote" data-ref="'+esc(r.ref)+'">Redraft</button>' +
-        '<button class="btn rp-quoteprint" data-ref="'+esc(r.ref)+'">Print quotation</button></div>';
+        '<button class="btn rp-quoteprint" data-ref="'+esc(r.ref)+'">Print quotation</button>' +
+        (r.email ? '<button class="btn gold rp-send" data-ref="'+esc(r.ref)+'">' +
+          (q.sentAt ? 'Send again' : 'Send to customer') + '</button>'
+                  : '<span class="hint" style="align-self:center;">No customer email on this enquiry.</span>') +
+        '</div>';
     }
 
     h += '<div class="row four" style="margin-top:14px;">' +
@@ -26832,6 +26839,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     });
     host.querySelectorAll('.rp-quoteprint').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); rfqPrintQuote(b.dataset.ref); });
+    });
+    host.querySelectorAll('.rp-send').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); rfqSendQuote(b); });
     });
   }
 
@@ -27162,8 +27172,58 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ].filter(Boolean) });
   }
 
-  function rfqPrintQuote(ref){
+  /* Sending goes through the same /api/notify the website already uses — one
+     send path, one place a failure can be diagnosed. The quotation goes as
+     text in the body, exactly as the website's own version sent it; there is
+     no PDF attachment pipeline on either side, and inventing one here would
+     have meant a customer-facing document nobody had reviewed.
+     Deliberately gated behind a confirm(): this is the one action in the
+     whole platform that puts a price in front of a customer, and it cannot
+     be taken back. */
+  async function rfqSendQuote(btn){
+    var ref = btn.dataset.ref;
     var r = rfqRows.filter(function(x){ return x.ref === ref; })[0];
+    if (!r || !r.quoteDoc) return;
+    if (!r.email) return rfqSay(ref, 'There is no customer email on this enquiry.');
+    var q = r.quoteDoc;
+    if (!confirm('Send quotation ' + (q.number||'') + ' for ' + C.inr(q.total) + ' to ' + r.email + '?' +
+      (q.sentAt ? '\n\nIt was already sent on ' + q.sentAt + '. This will send it again.' : '') +
+      '\n\nThis goes to the customer and cannot be taken back.')) return;
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      var co = rfqCfg.company || {};
+      var body = [q.body || '', '',
+        q.partLine ? ('Part: ' + q.partLine) : '',
+        'Quantity: ' + q.qty,
+        'Unit price: ' + (q.currencySymbol||'') + C.qty(q.unitPrice),
+        'Subtotal: ' + (q.currencySymbol||'') + C.qty(q.subtotal),
+        q.taxPct ? (q.taxLabel + ' @ ' + q.taxPct + '%: ' + (q.currencySymbol||'') + C.qty(q.tax)) : '',
+        'Total: ' + (q.currencySymbol||'') + C.qty(q.total), '',
+        q.validityDays ? ('Valid for ' + q.validityDays + ' days.') : '',
+        q.paymentTerms ? ('Payment: ' + q.paymentTerms) : '',
+        q.deliveryTerms ? ('Delivery: ' + q.deliveryTerms) : '',
+        '', 'Reference: ' + r.ref + (q.number ? '\nQuotation No: ' + q.number : ''),
+        '— ' + (rfqCfg.quoteSender || 'Sales'), co.legalName || co.displayName || ''
+      ].filter(function(x){ return x !== ''; }).join('\n');
+
+      var res = await C.api('/api/notify', { method:'POST', body:JSON.stringify({
+        event:'custom', payload:{ to:r.email, whatsapp:r.phone||'',
+          subject:'Quotation ' + (q.number || r.ref) + ' — ' + (co.legalName || co.displayName || ''),
+          text:body } }) });
+      var lines = (res && res.results) || [];
+      var emailLine = lines.filter(function(x){ return /EMAIL/i.test(x); })[0] || '';
+      if (!/EMAIL SENT/i.test(emailLine))
+        throw new Error('Not sent — ' + (emailLine || 'the server gave no response. Check the email ' +
+          'settings on the Setup Wizard\'s Connections step.'));
+      var sent = Object.assign({}, q, { sentAt:new Date().toLocaleString(), sentTo:r.email });
+      await rfqPatch(ref, { quoteDoc:sent,
+        status: (r.status === 'Received' || r.status === 'Quote Drafted') ? 'Approved & Sent' : r.status });
+      loadRfqPipeline();
+    } catch(e){ rfqSay(ref, esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Send to customer';
+  }
+
+  function rfqPrintQuote(ref){    var r = rfqRows.filter(function(x){ return x.ref === ref; })[0];
     if (!r || !r.quoteDoc) return;
     var q = r.quoteDoc, co = rfqCfg.company || {};
     C.openReport({ title:'Quotation ' + (q.number||''), kind:'Quotation',

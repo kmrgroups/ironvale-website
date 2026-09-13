@@ -14,7 +14,7 @@ const kpi = fs.readFileSync('kpi.js', 'utf8');
 const daysAgo = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString(); };
 let rfqs = [
   // received 10 days ago, never touched at all -> high: "Received ... untouched"
-  { ref: 'RFQ-0001', name: 'Alpha Co', email: 'a@alpha.com', status: 'Received', createdAt: daysAgo(10), message: 'Need a quote' },
+  { ref: 'RFQ-0001', name: 'Alpha Co', email: 'buyer@acme.test', status: 'Received', createdAt: daysAgo(10), message: 'Need a quote' },
   // costed and quoted and numbered, drawing already read with a part number -> nothing flagged
   { ref: 'RFQ-0002', name: 'Beta Ltd', email: 'b@beta.com', status: 'Quote Drafted', createdAt: daysAgo(2),
     fileName: 'drawing.pdf', extract: { readAt: daysAgo(2), part: { number: 'P-123' }, missing: [] },
@@ -235,6 +235,60 @@ check('the total is subtotal plus that tax, to the rupee',
 check('our payment terms are carried onto the quotation', q && /50% advance/.test(q.paymentTerms));
 check('the AI was asked for covering text only, and told not to restate the price',
   /Do not restate the price/.test(aiPrompts.join('')));
+
+// ---------- sending the quotation to the customer ----------
+calls.length = 0;
+let notifyBodies = [];
+let notifyOk = true;
+window.fetch = async (path, opts) => {
+  if (String(path).startsWith('/api/notify')) {
+    notifyBodies.push(opts && opts.body ? JSON.parse(opts.body) : {});
+    return { ok: true, status: 200, json: async () => ({ ok: true,
+      results: notifyOk ? ['EMAIL SENT to buyer@acme.test'] : ['EMAIL FAILED: no API key'] }) };
+  }
+  return realFetch2(path, opts);
+};
+if (!window.document.querySelector('.rp-send[data-ref="RFQ-0001"]')){
+  click(window.document.querySelector('.rp-head[data-ref="RFQ-0001"]'));
+  await wait(200);
+}
+/* a send is gated behind a confirm() — prove that refusing it sends nothing */
+window.confirm = () => false;
+click(window.document.querySelector('.rp-send[data-ref="RFQ-0001"]'));
+await wait(200);
+check('declining the confirmation sends nothing at all', notifyBodies.length === 0);
+
+window.confirm = () => true;
+click(window.document.querySelector('.rp-send[data-ref="RFQ-0001"]'));
+await wait(300);
+check('confirming sends through /api/notify', notifyBodies.length === 1, JSON.stringify(notifyBodies));
+const sentBody = notifyBodies[0] || {};
+check('it is addressed to the customer on the enquiry',
+  sentBody.payload && sentBody.payload.to === 'buyer@acme.test', JSON.stringify(sentBody.payload && sentBody.payload.to));
+check('the subject carries the quotation number',
+  sentBody.payload && /QTN-/.test(sentBody.payload.subject), sentBody.payload && sentBody.payload.subject);
+check('the body carries the total, not just the covering text',
+  sentBody.payload && /Total:/.test(sentBody.payload.text));
+check('the body carries our payment terms',
+  sentBody.payload && /50% advance/.test(sentBody.payload.text));
+const sentCall = calls.find(c => c.kind === 'rfq-patch' && c.body.patch && c.body.patch.quoteDoc);
+check('the quotation is marked as sent, with who and when',
+  sentCall && sentCall.body.patch.quoteDoc.sentAt && sentCall.body.patch.quoteDoc.sentTo === 'buyer@acme.test');
+check('a successful send moves the stage to Approved & Sent',
+  sentCall && sentCall.body.patch.status === 'Approved & Sent', sentCall && sentCall.body.patch.status);
+
+/* a refusal from the server must surface, not be swallowed as success */
+calls.length = 0; notifyBodies = []; notifyOk = false;
+if (!window.document.querySelector('.rp-send[data-ref="RFQ-0001"]')){
+  click(window.document.querySelector('.rp-head[data-ref="RFQ-0001"]'));
+  await wait(200);
+}
+click(window.document.querySelector('.rp-send[data-ref="RFQ-0001"]'));
+await wait(300);
+check('a failed send is reported, not silently treated as sent',
+  /Not sent/.test($('rp-msg-RFQ-0001').textContent), $('rp-msg-RFQ-0001').textContent);
+check('a failed send does not mark the quotation as sent',
+  !calls.some(c => c.kind === 'rfq-patch' && c.body.patch && c.body.patch.quoteDoc));
 window.fetch = realFetch2;
 
 check('no console errors while any of this ran', pageErrors.length === 0, pageErrors.join(' | '));

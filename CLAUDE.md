@@ -3095,6 +3095,7 @@ So: editing is native (`admin_theme`), previewing is the real site in a
 frame beside it. Six colours, twelve spacing sliders, brand name/suffix and
 two toggles — small and regular, like the design tabs turned out to be.
 
+**Unsaved changes show in the preview without being published.** Moving a
 control pushes CSS variables straight into the frame using the same names
 and the same derived shades `applyVars()` uses on the site itself
 (`--sky-light` from `--sky`, `--radius-sm` from `--radius`, and so on), so

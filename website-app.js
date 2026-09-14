@@ -620,9 +620,13 @@
     lw.classList.toggle('logo-glow',!!data.logoGlow);
     lw.innerHTML=data.logoDataUrl?`<img src="${data.logoDataUrl}" alt="logo" decoding="async" draggable="false">`
       :`<div class="logo-fallback">${esc(data.brandName.charAt(0))}</div>`;
-    // Use the uploaded company logo as the browser tab icon when available;
-    // the bundled favicon remains the instant-loading fallback.
-    setDynamicFavicon(data.logoDataUrl||'');
+    // Use the effective document logo as the browser tab icon — the same
+    // resolution every PDF uses (documentLogo(): the website logo, unless
+    // "Use the website's own logo on documents" is unticked in Company
+    // Profile, in which case the letterhead upload wins). Kept as one
+    // function so the tab icon can never drift from what prints on paper.
+    // The bundled favicon remains the instant-loading fallback.
+    setDynamicFavicon(documentLogo()||'');
     document.getElementById('brand-text').style.display=data.showBrandText?'':'none';
     document.getElementById('hero-bg').style.backgroundImage=data.heroBannerDataUrl?`url('${data.heroBannerDataUrl}')`:'none';
     renderHeroVisual();
@@ -8962,7 +8966,7 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     document.getElementById('uselogo-switch').addEventListener('click',function(){
       data.company.useWebsiteLogo=data.company.useWebsiteLogo===false;
       this.classList.toggle('on',data.company.useWebsiteLogo!==false);
-      updateLogoNote(); markDirty();
+      updateLogoNote(); render(); markDirty();
     });
     document.getElementById('add-plants').addEventListener('click',()=>{
       data.company.plants=data.company.plants||[];

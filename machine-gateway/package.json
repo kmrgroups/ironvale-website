@@ -1,0 +1,7 @@
+{
+  "name": "ironvale-universal-cnc-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node gateway.mjs" }
+}

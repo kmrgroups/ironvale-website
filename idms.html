@@ -2586,7 +2586,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           WhatsApp and offer-letter generation still run from the website's HR engine for now — open
           <a data-goto="hr_payroll" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">HR &amp; Payroll</a>
           for those, until they move here too.</span></div>
-        <div class="stat" id="rc-stats"></div>
+        <button class="btn" id="rc-print">Print recruitment status</button>
+        <div class="stat" id="rc-stats" style="margin-top:10px;"></div>
       </div>
 
       <div class="card">
@@ -2663,7 +2664,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         <div class="hint" style="margin-bottom:10px;">A policy is drafted, then published — publishing
           starts acknowledgements over from zero and marks anything it supersedes read-only. A
           published policy's own text cannot be edited; a correction is a new version.</div>
-        <div class="stat" id="pl-kpi"></div>
+        <button class="btn" id="pl-print">Print policy register</button>
+        <div class="stat" id="pl-kpi" style="margin-top:10px;"></div>
       </div>
       <div class="card">
         <h4>Draft a policy</h4>
@@ -2720,6 +2722,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           <div><label>Show</label><select id="lv-filter">
             <option value="">Everyone</option><option>Pending</option><option>Approved</option>
             <option>Rejected</option></select></div>
+          <div style="align-self:end;"><button class="btn" id="lv-print">Print leave register</button></div>
         </div>
         <div id="lv-list"></div>
       </div>
@@ -2731,7 +2734,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         <div class="hint" style="margin-bottom:10px;">Recognition and surveys — two different kinds of
           "how people are doing" evidence, kept in one place because they are the kind an engagement
           review or an exit interview ends up referring back to.</div>
-        <div class="stat" id="eg-kpi"></div>
+        <button class="btn" id="eg-print">Print recognition report</button>
+        <div class="stat" id="eg-kpi" style="margin-top:10px;"></div>
       </div>
       <div class="card">
         <h4>Record recognition</h4>
@@ -2999,7 +3003,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           closure still read from data that has not moved off the website yet, so those sources stay
           on HR &amp; Payroll's engine for now rather than compute something this screen cannot stand
           behind.</span></div>
-        <div class="stat" id="kp-kpi"></div>
+        <button class="btn" id="kp-print">Print KPI report</button>
+        <div class="stat" id="kp-kpi" style="margin-top:10px;"></div>
       </div>
 
       <div class="card">
@@ -3048,6 +3053,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           not checked here yet — training sessions have not moved off the website's HR engine, and a
           check against the wrong record would be worse than no check at all.</span></div>
         <button class="btn gold" id="ar-refresh">Refresh</button>
+        <button class="btn" id="ar-print">Print evidence pack</button>
         <div class="stat" id="ar-kpi" style="margin-top:10px;"></div>
       </div>
       <div class="card"><div id="ar-body"></div></div>
@@ -4682,7 +4688,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <option>Notice</option><option>Exited</option></select></div>
           <div style="align-self:end;"><button class="btn" id="hr-refresh">Refresh</button>
             <button class="btn gold" id="hr-add" style="margin-left:6px;">Add employee</button>
-            <button class="btn" id="hr-bulk" style="margin-left:6px;">Bulk upload employees</button></div>
+            <button class="btn" id="hr-bulk" style="margin-left:6px;">Bulk upload employees</button>
+            <button class="btn" id="hr-print" style="margin-left:6px;">Print employee master</button></div>
         </div>
         <div id="hr-list"></div>
       </div>
@@ -4709,6 +4716,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           <div><label>Location</label><input id="he-loc"></div>
           <div><label>Grade</label><input id="he-grade"></div>
         </div>
+        <div class="row four" style="margin-top:9px;">
+          <div><label>Blood group</label><input id="he-blood" placeholder="O+"></div>
+          <div><label>Emergency contact name</label><input id="he-emg-name"></div>
+          <div><label>Emergency contact phone</label><input id="he-emg-phone"></div>
+        </div>
         <div class="sub">Pay</div>
         <div class="row four">
           <div><label>Monthly gross</label><input class="num" id="he-gross" readonly></div>
@@ -4722,6 +4734,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn gold" id="he-save">Save</button>
           <button class="btn" id="he-card">Print details</button>
+          <button class="btn" id="he-idcard">Print ID card</button>
           <button class="btn del" id="he-delete">Delete employee</button>
           <button class="btn" id="he-close">Close</button>
         </div>
@@ -8987,6 +9000,30 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     });
   }
 
+  /* Recruitment Status (the website's REPORTS.recruit) — open positions and
+     the candidate pipeline, in the two tables the website prints. */
+  function rcPrintStatus(){
+    C.openReport({ title:'Recruitment Status', kind:'Report',
+      sections:[
+        { type:'table', title:'Open Positions',
+          columns:[{ label:'Position' }, { label:'Department' }, { label:'Positions', align:'c' },
+            { label:'Candidates', align:'c' }, { label:'Needed By' }, { label:'Status' }],
+          rows: rcReqs.map(function(r){
+            return [esc(r.title), esc(r.department||''), r.count||1,
+              rcCands.filter(function(c){ return c.reqId === r.item_id; }).length,
+              C.fmtDate(r.neededBy), esc(r.status)];
+          }) },
+        { type:'table', title:'Candidates',
+          columns:[{ label:'Name' }, { label:'Position' }, { label:'Experience', align:'c' },
+            { label:'Expected CTC', align:'r' }, { label:'Stage' }],
+          rows: rcCands.map(function(c){
+            var req = rcReqs.filter(function(r){ return r.item_id === c.reqId; })[0];
+            return [esc(c.name), esc(req?req.title:(c.designation||'')), (c.experience||0)+' yrs',
+              c.expectedCtc ? C.inr(c.expectedCtc) : '\u2014', esc(c.status)];
+          }) }
+      ]});
+  }
+
   function rcStructure(annualCtc){
     return C.api('/api/content').then(function(j){
       var t = ((j.data||{}).salaryStructure) || {}, m = C.num(annualCtc) / 12;
@@ -9432,6 +9469,20 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     });
   }
 
+  /* Policy Register (the website's REPORTS.policies) — draft, published and
+     superseded versions all listed, so an auditor sees the whole history. */
+  function plPrintRegister(){
+    var active = hrEmpForPolicy.filter(function(e){ return e.status !== 'Exited'; });
+    C.openReport({ title:'Policy Register', kind:'Register',
+      sections:[{ type:'table', title:'Policies',
+        columns:[{ label:'Policy' }, { label:'Version', align:'c' }, { label:'Effective' },
+          { label:'Acknowledged', align:'c' }, { label:'Next Review' }, { label:'Status' }],
+        rows: hrPolicies.map(function(p){
+          return [esc(p.title), esc(p.version), C.fmtDate(p.effectiveFrom),
+            (p.acknowledgements||[]).length + ' of ' + active.length, C.fmtDate(p.reviewOn), esc(p.status)];
+        }) }] });
+  }
+
   /* ---------------- Leave & Permission (native) ----------------
      Balances (how many days a person has left) are not shown here yet —
      that depends on the leave-rule masters (entitlement, carry-forward),
@@ -9490,6 +9541,19 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     });
   }
 
+  /* Leave Register (the website's REPORTS.leave) — every request on file,
+     not filtered by the on-screen Show selector. */
+  function lvPrintRegister(){
+    C.openReport({ title:'Leave Register', kind:'Register',
+      sections:[{ type:'table', title:'Leave Requests',
+        columns:[{ label:'Employee' }, { label:'Type' }, { label:'From' }, { label:'To' }, { label:'Days', align:'r' }, { label:'Status' }],
+        rows: hrLeaveList.map(function(l){
+          var emp = hrEmpForLeave.filter(function(e){ return e.empId === l.empId; })[0];
+          var days = (l.from && l.to) ? (Math.round((new Date(l.to) - new Date(l.from)) / 86400000) + 1) : '\u2014';
+          return [esc(emp?emp.name:l.empId), esc(l.type||''), C.fmtDate(l.from), C.fmtDate(l.to), days, esc(l.status)];
+        }) }] });
+  }
+
   /* ---------------- Engagement: recognition + surveys (native) ---------------- */
   var hrRewards = [], hrSurveys = [], hrEmpForEngage = [];
   async function loadHrEngage(){
@@ -9525,6 +9589,18 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           loadHrEngage(); } catch(e){ toast(e.message); }
       });
     });
+  }
+
+  /* Recognition & Engagement (the website's REPORTS.engage) — the awards
+     list; surveys aren't on the website's version of this report either. */
+  function egPrintReport(){
+    C.openReport({ title:'Recognition & Engagement', kind:'Report',
+      sections:[{ type:'table', title:'Recognition',
+        columns:[{ label:'Employee' }, { label:'Award' }, { label:'Period' }, { label:'Citation' }],
+        rows: hrRewards.map(function(r){
+          var emp = hrEmpForEngage.filter(function(e){ return e.empId === r.empId; })[0];
+          return [esc(emp?emp.name:r.empId), esc(r.type||''), esc(r.period||''), esc(r.note||'')];
+        }) }] });
   }
   function drawSurveys(){
     var host = document.getElementById('eg-sv-list');
@@ -9790,6 +9866,22 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     });
   }
 
+  /* KPI Performance (the website's REPORTS.kpi) — target vs actual for
+     every KPI on file, auto-sourced ones marked as such the same way the
+     screen itself does. */
+  function kpPrintReport(){
+    C.openReport({ title:'KPI Performance', kind:'Report',
+      sections:[{ type:'table', title:'Key Performance Indicators',
+        columns:[{ label:'KPI' }, { label:'Level' }, { label:'Target', align:'r' }, { label:'Actual', align:'r' },
+          { label:'Status' }, { label:'Source' }],
+        rows: kpiRows.map(function(k){
+          var auto = k.source && k.source !== 'manual' ? kpiAutoValue(k.source) : null;
+          var actual = auto ? auto.value : (k.actual === '' || k.actual === undefined ? null : C.num(k.actual));
+          return [esc(k.name), esc(k.level||''), esc(k.target)+' '+esc(k.unit||''),
+            actual === null ? '\u2014' : actual+' '+(k.unit||''), kpiEvalStatus(k, actual).label, auto ? 'Auto' : 'Manual'];
+        }) }] });
+  }
+
   function drawAppraisals(){
     var host = document.getElementById('ap-list');
     if (!apprList.length){ host.innerHTML = '<div class="empty"><b>No appraisals started</b></div>'; return; }
@@ -9866,6 +9958,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      Policies, People, and Statutory & Masters' own review record — so a
      green tick here can never disagree with what those screens themselves
      show. Nothing is asserted that is not backed by a real count. */
+  var arLast = { checks:[], active:[], pols:[] };
   async function loadHrAuditReady(){
     var host = document.getElementById('ar-body');
     host.innerHTML = '<div class="hint">Reading…</div>';
@@ -9879,8 +9972,59 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       var content = (await C.api('/api/content')).data || {};
       var st = content.statutory || {};
       var checks = arComputeChecks(active, pols, st);
+      arLast = { checks:checks, active:active, pols:pols };
       drawAuditReady(checks);
     } catch(e){ host.innerHTML = '<div class="note bad">'+esc(e.message)+'</div>'; }
+  }
+
+  /* Evidence pack (§ on the website, printAuditPack()) — the same three
+     supporting tables (competence, policies) behind the checks above, plus
+     the checks themselves. Training & effectiveness is left out: that
+     table hasn't moved off the website (see the note on this screen), and a
+     pack that showed it here would show whichever session list happened to
+     be cached, not a real count — worse than leaving it out. */
+  function printAuditPack(){
+    var pr = C.getProfile(), w = window.open('', '_blank');
+    if (!w){ toast('Allow pop-ups for this site.'); return; }
+    var checks = arLast.checks, active = arLast.active, pols = arLast.pols;
+    var gapsAll = computeGaps();
+    var byEmp = {}; gapsAll.forEach(function(g){ (byEmp[g.empId] = byEmp[g.empId] || []).push(g); });
+    var compRows = active.map(function(e){ return (byEmp[e.empId] || []).map(function(g){
+      return '<tr><td>' + esc(e.name) + '</td><td>' + esc(e.designation || '') + '</td><td>' + esc(g.thing) + '</td>' +
+        '<td>' + g.required + '</td><td>' + (g.actual || '\u2014') + '</td><td>\u2014</td><td>\u2014</td></tr>'; }).join(''); }).join('');
+    var polRows = pols.map(function(p){
+      return '<tr><td>' + esc(p.title) + '</td><td>' + esc(p.version) + '</td><td>' + esc(p.effectiveFrom || '') + '</td>' +
+        '<td>' + (p.acknowledgements || []).length + ' of ' + active.length + '</td><td>' + esc(p.reviewOn || '\u2014') + '</td></tr>'; }).join('');
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>HR Evidence Pack</title>' +
+'<style>@page{size:A4;margin:14mm;}body{font-family:Arial,sans-serif;font-size:9pt;color:#12233f;margin:0;}' +
+'h1{font-size:14pt;color:#0B2A5B;margin:0 0 4px;}h2{font-size:10pt;color:#8E6A19;margin:18px 0 6px;text-transform:uppercase;letter-spacing:1pt;border-bottom:.7pt solid #e2e9f2;padding-bottom:3px;}' +
+'table{width:100%;border-collapse:collapse;font-size:8pt;margin-bottom:10px;}' +
+'th{background:#0B2A5B;color:#fff;text-align:left;padding:5px;font-size:7.5pt;text-transform:uppercase;}' +
+'td{padding:4px 5px;border-bottom:.6pt solid #e2e9f2;vertical-align:top;}' +
+'.g{color:#1F9D6B;font-weight:700;}.a{color:#8E6A19;font-weight:700;}.r{color:#B03A2E;font-weight:700;}' +
+'.head{display:flex;gap:14px;align-items:center;border-bottom:2pt solid #0B2A5B;padding-bottom:8px;margin-bottom:12px;}' +
+'.head img{max-height:52px;max-width:130px;object-fit:contain;}' +
+'.note{background:#FFF6E0;border:.7pt solid #e0c37a;padding:8px 10px;font-size:7.5pt;color:#7a5c14;margin-top:14px;}' +
+'.noprint{text-align:center;padding:14px;background:#0B2A5B;color:#fff;}' +
+'.noprint button{background:#E0B44E;color:#0B2A5B;border:none;padding:10px 24px;border-radius:100px;font-weight:700;cursor:pointer;}' +
+'@media print{.noprint{display:none;}}</style></head><body>' +
+'<div class="noprint"><button onclick="window.print()">Save as PDF / Print</button></div>' +
+'<div class="head">' + (pr.logo ? '<img src="' + pr.logo + '">' : '') +
+'<div><h1>' + esc(pr.name || '') + '</h1><div>HR Evidence Pack \u2014 generated ' + new Date().toLocaleString() + '</div></div></div>' +
+'<h2>Evidence Summary</h2><table><thead><tr><th style="width:60px">Status</th><th style="width:90px">Clause</th><th>Requirement</th><th>Evidence held</th><th>Gap</th></tr></thead><tbody>' +
+checks.map(function(c){ return '<tr><td class="' + c.level[0] + '">' + (c.level==='green'?'OK':c.level==='amber'?'PARTIAL':'MISSING') + '</td>' +
+  '<td>' + esc(c.clause) + '</td><td>' + esc(c.requirement) + '</td><td>' + esc(c.evidence) + '</td><td>' + esc(c.gap || '\u2014') + '</td></tr>'; }).join('') +
+'</tbody></table>' +
+'<h2>Competence Records</h2><table><thead><tr><th>Employee</th><th>Role</th><th>Competency</th><th>Required</th><th>Actual</th><th>Assessed By</th><th>Date</th></tr></thead><tbody>' +
+(compRows || '<tr><td colspan="7">No competence records.</td></tr>') + '</tbody></table>' +
+'<h2>Policies &amp; Awareness</h2><table><thead><tr><th>Policy</th><th>Version</th><th>Effective</th><th>Acknowledged</th><th>Next Review</th></tr></thead><tbody>' +
+(polRows || '<tr><td colspan="5">No published policies.</td></tr>') + '</tbody></table>' +
+'<div class="note"><b>Scope of this document.</b> It reports which records exist in the HR system on the date shown. ' +
+'It does not assess whether those records are adequate, and it makes no claim of conformity or certification to ISO 9001, ' +
+'IATF 16949 or any other standard. Adequacy is a matter for the auditor. Training-session effectiveness is not yet covered here \u2014 ' +
+'see the note on the Audit Readiness screen.</div>' +
+'</body></html>');
+    w.document.close();
   }
 
   function arComputeChecks(active, pols, st){
@@ -13766,7 +13910,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         return '<td' + (dCls === 'sat' || dCls === 'sun' ? ' class="' + dCls + '"' : '') + '>' + inner + '</td>';
       }).join('');
       return '<tr><td class="nm"><b>' + esc(e.name) + '</b><div class="hint">' + esc(e.empId) +
-        (e.shift ? ' · ' + esc(e.shift) : '') + '</div></td>' + cells +
+        (e.shift ? ' · ' + esc(e.shift) : '') + '</div>' +
+        '<button type="button" class="btn ha-card" data-emp="' + esc(e.empId) + '" style="margin-top:4px;font-size:11px;padding:2px 8px;">Card</button></td>' + cells +
         '<td class="sum">' + pres + '</td><td class="sum">' + (late || '') + '</td><td class="sum">' + (miss || '') + '</td>' +
         '<td class="sum">' + (ot || '') + '</td><td class="sum">' + (otw || '') + '</td></tr>';
     }).join('');
@@ -13778,6 +13923,46 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         haDetail(b.dataset.emp, b.dataset.day);
       });
     });
+    host.querySelectorAll('.ha-card').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); haPrintCard(b.dataset.emp); });
+    });
+  }
+
+  /* Individual Attendance Record (§ on the website, printAttendanceCard()),
+     ported to read the same per-day marks the muster roll already computes
+     with haCell()/haLeaveMap() — a card can never disagree with the grid it
+     was printed from, because it is built from the same function calls. */
+  function haPrintCard(empId){
+    if (!hpState.month) return;
+    var e = hpState.employees.filter(function(x){ return x.empId === empId; })[0]; if (!e) return;
+    var days = haDays(), lmap = haLeaveMap(empId);
+    var DN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var pres = 0, paidLeave = 0, weekOff = 0, holiday = 0, absent = 0, ot = 0;
+    var rows = days.map(function(d){
+      var c = haCell(e, d, lmap), r = c.rec, status;
+      if (c.cls === 'hol'){ status = 'Holiday' + (c.title ? ' \u2014 ' + c.title : ''); holiday++; }
+      else if (c.cls === 'w'){ status = 'Weekly off'; weekOff++; }
+      else if (c.cls === 'lv'){ status = 'Leave \u2014 ' + c.code; paidLeave++; }
+      else if (r && r.status === 'Present'){ status = C.num(r.dayFraction || 1) < 1 ? 'Half day' : 'Present'; pres += C.num(r.dayFraction || 1); }
+      else { status = 'Absent'; absent++; }
+      if (r) ot += C.num(r.otHours);
+      var dow = new Date(d + 'T00:00:00').getDay();
+      return [d.split('-').reverse().join('/'), DN[dow], esc(status), (r && C.num(r.otHours)) ? C.num(r.otHours) : '\u2014'];
+    });
+    var payable = Math.max(0, days.length - absent);
+    C.openReport({ title:'Attendance Record', kind:'Record', subtitle: esc(e.name) + ' (' + esc(e.empId) + ') \u00b7 ' + hpState.month,
+      sections:[
+        { type:'pairs', title:'Employee', rows:[
+          ['Employee', esc(e.name) + ' (' + esc(e.empId) + ')'], ['Designation', esc(e.designation || '\u2014')],
+          ['Department', esc(e.department || '\u2014')], ['Date of joining', C.fmtDate(e.doj)],
+          ['Period', esc(hpState.month)], ['Shift', esc(e.shift || '\u2014')]] },
+        { type:'table', title:'Day by day',
+          columns:[{ label:'Date' }, { label:'Day' }, { label:'Status' }, { label:'OT hrs', align:'r' }], rows: rows },
+        { type:'pairs', title:'Month summary', rows:[
+          ['Days in month', days.length], ['Present', pres], ['Paid leave', paidLeave],
+          ['Weekly offs', weekOff], ['Holidays', holiday], ['Absent / unmarked', absent],
+          ['Overtime', ot + ' hours'], ['<b>Payable days</b>', '<b>' + payable + '</b>']] }
+      ]});
   }
 
   async function haDetail(empId, day){
@@ -26474,6 +26659,21 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     });
   }
 
+  /* Employee Master (the website's REPORTS.people), same columns — every
+     employee on file, not just the ones the current search/filter shows. */
+  function hrPrintMaster(){
+    C.openReport({ title:'Employee Master', kind:'Report', landscape:true,
+      subtitle: hrPeople.filter(function(p){ return p.status !== 'Exited'; }).length + ' active employees',
+      sections:[{ type:'table', title:'Employee Master',
+        columns:[{ label:'ID' }, { label:'Name' }, { label:'Designation' }, { label:'Department' },
+          { label:'Grade' }, { label:'Joined' }, { label:'Status' }, { label:'Gross', align:'r' }],
+        rows: hrPeople.map(function(p){
+          var st = p.structure || {}, gross = C.num(st.basic)+C.num(st.da)+C.num(st.hra)+C.num(st.conveyance)+C.num(st.special)+C.num(st.otherAllow);
+          return [esc(p.empId), esc(p.name), esc(p.designation||''), esc(p.department||''),
+            esc(p.grade||''), C.fmtDate(p.doj), esc(p.status||''), gross ? C.inr(gross) : '\u2014'];
+        }) }] });
+  }
+
   /* Shared by the Delete button in the list (no need to open the profile
      first) and the Delete button inside an opened profile — one path, one
      reason prompt, so the two can never behave differently. */
@@ -26507,6 +26707,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     set('he-dept',p.department); set('he-doj',p.doj?String(p.doj).slice(0,10):'');
     set('he-reports',p.reportsTo); set('he-shift',p.shift); set('he-bio',p.biometricId); set('he-phone',p.phone);
     set('he-email',p.email); set('he-loc',p.location); set('he-grade',p.grade);
+    set('he-blood',p.bloodGroup); set('he-emg-name',p.emergencyName); set('he-emg-phone',p.emergencyPhone);
     set('he-gross',gross?C.inr(gross):''); set('he-basic',st.basic?C.inr(st.basic):'');
     set('he-regime',p.taxRegime||'');
     set('he-pfesi',(p.pfApplicable===false?'PF no':'PF yes')+' · '+(p.esiApplicable===false?'ESI no':'ESI yes'));
@@ -26537,6 +26738,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     set('he-doj', new Date().toISOString().slice(0,10));
     set('he-reports',''); set('he-shift',''); set('he-bio',''); set('he-phone','');
     set('he-email',''); set('he-loc',''); set('he-grade','');
+    set('he-blood',''); set('he-emg-name',''); set('he-emg-phone','');
     set('he-gross',''); set('he-basic','');
     set('he-regime','set from Statutory & Masters once saved');
     set('he-pfesi','set from Statutory & Masters once saved');
@@ -26570,6 +26772,91 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
                   C.num(st.conveyance)+C.num(st.special)+C.num(st.otherAllow))+'</b>'}]],
           note:'Statutory deductions are computed at pay run from the rules in force on the day.'}
       ]});
+  }
+
+  /* Employee ID card (§7 on the website), ported from its printIdCard() —
+     same CR80 front/back layout, front head, photo box, name, ID band, info
+     strip, back emergency panel, conditions of use, validity strip. Two
+     honest differences from the website version: there is no photo field on
+     the native employee record yet, so the photo box always shows the
+     placeholder (never a stale or wrong photo); and there is no self-service
+     portal to link from a QR code, so the header carries the company mark
+     alone rather than a code. Everything the record does have — blood
+     group, department, date of joining, emergency contact — matches the
+     website's card field for field. */
+  function printIdCard(p){
+    var pr = C.getProfile(), w = window.open('', '_blank');
+    if (!w){ toast('Allow pop-ups for this site.'); return; }
+    var emgName = p.emergencyName || '', emgPhone = p.emergencyPhone || '';
+    var valid = new Date(); valid.setFullYear(valid.getFullYear() + 3);
+    var navy = '#0B2A5B', gold = '#C2932E';
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>ID Card — ' + esc(p.name) + '</title>' +
+'<style>@page{size:A4;margin:15mm;}*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+'body{font-family:Arial,Helvetica,sans-serif;color:#12233f;background:#fff;}' +
+'.sheet{display:flex;gap:10mm;flex-wrap:wrap;}' +
+'.card{width:54mm;height:85.6mm;border:0.25mm solid #d5dee9;border-radius:3mm;overflow:hidden;page-break-inside:avoid;display:flex;flex-direction:column;background:#fff;}' +
+'.f-head{height:20mm;flex:0 0 20mm;background:' + navy + ';display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1mm;padding:2mm;}' +
+'.f-head img{max-height:9mm;max-width:80%;object-fit:contain;}' +
+'.f-head .fb{color:#fff;font-size:9pt;font-weight:800;letter-spacing:.4pt;text-align:center;}' +
+'.f-head .cn{color:rgba(255,255,255,.92);font-size:5pt;font-weight:600;letter-spacing:.5pt;text-transform:uppercase;text-align:center;margin-top:1mm;}' +
+'.f-photo{height:28mm;flex:0 0 28mm;display:flex;align-items:center;justify-content:center;background:#f2f5f9;padding:1.2mm;}' +
+'.f-photo .box{width:22mm;height:25.5mm;border-radius:1.5mm;background:#e3e9f1;border:0.4mm solid #fff;box-shadow:0 0.4mm 1.2mm rgba(11,42,91,.18);display:flex;align-items:center;justify-content:center;}' +
+'.f-photo span{font-size:5pt;color:#9fb0c4;letter-spacing:.4pt;}' +
+'.f-name{height:12mm;flex:0 0 12mm;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 2mm;text-align:center;}' +
+'.f-name .n{font-size:11pt;font-weight:800;color:' + navy + ';line-height:1.1;}' +
+'.f-name .d{font-size:6.6pt;color:#6b7c95;margin-top:0.6mm;}' +
+'.f-id{height:7mm;flex:0 0 7mm;background:' + gold + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5pt;font-weight:800;letter-spacing:1.8pt;}' +
+'.f-info{height:13.6mm;flex:0 0 13.6mm;padding:1.2mm 3.5mm;display:flex;flex-direction:column;justify-content:center;gap:0.8mm;}' +
+'.f-info .r{display:flex;justify-content:space-between;align-items:center;font-size:6.6pt;}' +
+'.f-info .k{color:#93a2b8;} .f-info .v{font-weight:700;color:#12233f;}' +
+'.f-info .bg{background:#B03A2E;color:#fff;padding:0.3mm 1.8mm;border-radius:0.8mm;font-size:7pt;font-weight:800;letter-spacing:.3pt;}' +
+'.f-foot{height:5mm;flex:0 0 5mm;background:' + navy + ';display:flex;align-items:center;justify-content:center;padding:0 3mm;}' +
+'.f-foot div{color:#fff;font-size:4.6pt;letter-spacing:.5pt;text-transform:uppercase;}' +
+'.b-head{height:8mm;flex:0 0 8mm;background:' + navy + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:5.8pt;font-weight:700;letter-spacing:1pt;}' +
+'.b-emg{height:26mm;flex:0 0 26mm;background:#fff5f4;border-bottom:0.25mm solid #f2cdc8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2mm;text-align:center;}' +
+'.b-emg .l{font-size:4.8pt;color:#B03A2E;letter-spacing:.7pt;font-weight:700;}' +
+'.b-emg .n{font-size:9pt;font-weight:800;color:#12233f;margin-top:1mm;line-height:1.1;}' +
+'.b-emg .t{font-size:11.5pt;font-weight:800;color:#B03A2E;margin-top:1.2mm;letter-spacing:.4pt;}' +
+'.b-body{height:43.6mm;flex:0 0 43.6mm;padding:2.4mm 3.2mm;font-size:5.4pt;color:#5f7189;line-height:1.45;overflow:hidden;}' +
+'.b-body h5{font-size:5.2pt;color:' + navy + ';letter-spacing:.6pt;margin-bottom:0.8mm;font-weight:800;}' +
+'.b-body .ad{margin-bottom:2mm;padding-bottom:2mm;border-bottom:0.18mm solid #eef2f7;}' +
+'.b-body ol{margin-left:3mm;} .b-body li{margin-bottom:0.4mm;}' +
+'.b-valid{height:8mm;flex:0 0 8mm;background:' + navy + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:5pt;letter-spacing:.5pt;}' +
+'.noprint{text-align:center;padding:16px;background:' + navy + ';color:#fff;margin-bottom:9mm;}' +
+'.noprint button{background:#E0B44E;color:' + navy + ';border:none;padding:10px 26px;border-radius:100px;font-weight:700;cursor:pointer;font-size:13px;}' +
+'.noprint p{font-size:11px;opacity:.85;margin-top:8px;line-height:1.6;}' +
+'@media print{.noprint{display:none;}}</style></head><body>' +
+'<div class="noprint"><button onclick="window.print()">Save as PDF / Print</button>' +
+'<p>Standard CR80 card, 54 &times; 85.6 mm. Front and back print side by side.<br>' +
+'In the print dialog: <b>Save as PDF</b> &middot; untick <b>Headers and footers</b> &middot; <b>Margins: None</b> &middot; tick <b>Background graphics</b>.</p></div>' +
+'<div class="sheet"><div class="card"><div class="f-head">' +
+(pr.logo ? '<img src="' + pr.logo + '">' : '<div class="fb">' + esc((pr.name || '').slice(0,20)) + '</div>') +
+'<div class="cn">' + esc(pr.name || '') + '</div></div>' +
+'<div class="f-photo"><div class="box"><span>PHOTO</span></div></div>' +
+'<div class="f-name"><div class="n">' + esc(p.name) + '</div><div class="d">' + esc(p.designation || '') + '</div></div>' +
+'<div class="f-id">' + esc(p.empId) + '</div>' +
+'<div class="f-info">' +
+'<div class="r"><span class="k">BLOOD GROUP</span><span class="bg">' + esc(p.bloodGroup || '\u2014') + '</span></div>' +
+'<div class="r"><span class="k">DEPARTMENT</span><span class="v">' + esc(p.department || '\u2014') + '</span></div>' +
+'<div class="r"><span class="k">DATE OF JOINING</span><span class="v">' + C.fmtDate(p.doj) + '</span></div></div>' +
+'<div class="f-foot"><div>Property of ' + esc((pr.name || '').slice(0,30)) + '</div></div></div>' +
+'<div class="card"><div class="b-head">EMERGENCY CONTACT</div>' +
+'<div class="b-emg">' + (emgName ?
+  '<div class="l">IN CASE OF EMERGENCY CALL</div><div class="n">' + esc(emgName) + '</div><div class="t">' + esc(emgPhone || '\u2014') + '</div>'
+  : '<div class="l">NOT RECORDED</div><div class="n" style="font-size:6.5pt;font-weight:400;margin-top:1.5mm;">Add an emergency contact on the employee record.</div>') +
+'</div>' +
+'<div class="b-body"><div class="ad"><h5>IF FOUND, RETURN TO</h5><b>' + esc(pr.name || '') + '</b><br>' +
+esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
+(pr.phone ? '<br>Tel: ' + esc(pr.phone) : '') + (pr.email ? (pr.phone ? ' &middot; ' : '<br>') + esc(pr.email) : '') + '</div>' +
+'<h5>CONDITIONS OF USE</h5><ol>' +
+'<li>This card remains the property of the company.</li>' +
+'<li>Wear it visibly at all times on the premises.</li>' +
+'<li>It is not transferable to any other person.</li>' +
+'<li>Report loss or damage to HR immediately.</li>' +
+'<li>Surrender it on your last working day.</li></ol></div>' +
+'<div class="b-valid">VALID UNTIL ' + valid.toLocaleDateString('en-GB') + ' &nbsp;&middot;&nbsp; ' + esc(p.empId) + '</div>' +
+'</div></div></body></html>');
+    w.document.close();
   }
 
   /* ---------------- profile ---------------- */
@@ -29355,6 +29642,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     } catch(e){ say(esc(e.message)); }
     this.disabled = false;
   });
+  document.getElementById('rc-print').addEventListener('click', rcPrintStatus);
   document.getElementById('rc-cd-add').addEventListener('click', async function(){
     var name = fieldVal('rc-cd-name'), reqId = document.getElementById('rc-cd-req').value;
     var msg = document.getElementById('rc-cd-msg'), say = noteWriter(msg);
@@ -29397,6 +29685,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     } catch(e){ say(esc(e.message)); }
     this.disabled = false;
   });
+  document.getElementById('pl-print').addEventListener('click', plPrintRegister);
 
   document.getElementById('lv-apply').addEventListener('click', async function(){
     var empId = document.getElementById('lv-emp').value, msg = document.getElementById('lv-msg'), say = noteWriter(msg);
@@ -29415,6 +29704,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     this.disabled = false;
   });
   document.getElementById('lv-filter').addEventListener('change', drawLeaveList);
+  document.getElementById('lv-print').addEventListener('click', lvPrintRegister);
 
   document.getElementById('eg-rw-add').addEventListener('click', async function(){
     var empId = document.getElementById('eg-rw-emp').value, msg = document.getElementById('eg-rw-msg'), say = noteWriter(msg);
@@ -29431,6 +29721,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     } catch(e){ say(esc(e.message)); }
     this.disabled = false;
   });
+  document.getElementById('eg-print').addEventListener('click', egPrintReport);
   document.getElementById('eg-sv-add').addEventListener('click', async function(){
     var title = fieldVal('eg-sv-title'), msg = document.getElementById('eg-sv-msg'), say = noteWriter(msg);
     var qs = fieldVal('eg-sv-qs').split('\n').map(function(x){ return x.trim(); }).filter(Boolean);
@@ -29510,6 +29801,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     } catch(e){ say(esc(e.message)); }
     this.disabled = false;
   });
+  document.getElementById('kp-print').addEventListener('click', kpPrintReport);
   document.getElementById('ap-add').addEventListener('click', async function(){
     var empId = document.getElementById('ap-emp').value, period = fieldVal('ap-period');
     var msg = document.getElementById('ap-msg'), say = noteWriter(msg);
@@ -29527,6 +29819,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   });
 
   document.getElementById('ar-refresh').addEventListener('click', loadHrAuditReady);
+  document.getElementById('ar-print').addEventListener('click', printAuditPack);
 
   document.getElementById('cp-refresh').addEventListener('click', loadProfileScreen);
   document.getElementById('cp-logo-file').addEventListener('change', function(){ cpUploadTo('cp-logo-file', 'cp-logo-preview', 'letterheadLogo'); });
@@ -30432,10 +30725,12 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('hr-refresh').addEventListener('click', loadHrm);
   document.getElementById('hr-add').addEventListener('click', addPerson);
   document.getElementById('hr-bulk').addEventListener('click', function(){ openBulkUpload('employee'); });
+  document.getElementById('hr-print').addEventListener('click', hrPrintMaster);
   document.getElementById('he-close').addEventListener('click', function(){
     document.getElementById('hr-record').style.display='none'; hrOpen=null;
   });
   document.getElementById('he-card').addEventListener('click', printPerson);
+  document.getElementById('he-idcard').addEventListener('click', function(){ if (hrOpen) printIdCard(hrOpen); });
 
   document.getElementById('he-save').addEventListener('click', async function(){
     if (!hrOpen && !hrIsNew) return;
@@ -30460,7 +30755,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       name:g('he-name'), designation:g('he-desig'), department:g('he-dept'),
       doj:g('he-doj'), status:document.getElementById('he-status').value,
       reportsTo:g('he-reports'), shift:g('he-shift'), biometricId:bio,
-      phone:g('he-phone'), email:g('he-email'), location:g('he-loc'), grade:g('he-grade')
+      phone:g('he-phone'), email:g('he-email'), location:g('he-loc'), grade:g('he-grade'),
+      bloodGroup:g('he-blood'), emergencyName:g('he-emg-name'), emergencyPhone:g('he-emg-phone')
     });
     this.disabled = true;
     try {

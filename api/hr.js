@@ -58,7 +58,13 @@ export default async function handler(req, res) {
        attendance and leave. 'me' and the IDMS lookup used to carry two copies
        of this query and would silently drift apart the next time either one
        was edited. Only the gate in front of it differs. */
-    async function attendancePacket(empId, periodIn) {
+    /* `full` controls whether restricted statutory/bank identifiers are
+       included. The public/self-service 'me' route must NEVER receive PAN,
+       bank details, PF/ESI numbers etc — only an authorised HR/Payroll
+       lookup (role-gated below) gets the restricted block, and even then it
+       is nested separately so callers can't accidentally spread it into a
+       UI meant for the public packet. */
+    async function attendancePacket(empId, periodIn, full) {
       const rows = await sql`SELECT data FROM hr_employees WHERE upper(emp_id) = ${empId}`;
       const emp = rows.length ? rows[0].data : null;
       if (!emp) return null;
@@ -69,7 +75,7 @@ export default async function handler(req, res) {
                             AND day >= ${period + '-01'} AND day <= ${period + '-' + String(last).padStart(2, '0')}
                             ORDER BY day`;
       const lv = await sql`SELECT data, status FROM hr_leave WHERE emp_id = ${emp.empId}`;
-      return {
+      const packet = {
         employee: {
           empId: emp.empId, name: emp.name, designation: emp.designation,
           department: emp.department, doj: emp.doj, photo: emp.photo || '',
@@ -77,14 +83,19 @@ export default async function handler(req, res) {
           structure: emp.structure || {}, monthlyTds: emp.monthlyTds || 0,
           otherDeduction: emp.otherDeduction || 0,
           taxRegime: emp.taxRegime || 'New', declaredDeductions: emp.declaredDeductions || 0,
-          uan: emp.uan || '', pfNumber: emp.pfNumber || '', esiNumber: emp.esiNumber || '',
-          pan: emp.pan || '', bankName: emp.bankName || '', bankAcc: emp.bankAcc || '', ifsc: emp.ifsc || '',
           pfApplicable: emp.pfApplicable !== false, esiApplicable: emp.esiApplicable !== false
         },
         attendance: att.map(r => r.data),
         leave: lv.map(r => Object.assign({}, r.data, { status: r.status })),
         period, dob: String(emp.dob || '')
       };
+      if (full) {
+        packet.employee.restricted = {
+          uan: emp.uan || '', pfNumber: emp.pfNumber || '', esiNumber: emp.esiNumber || '',
+          pan: emp.pan || '', bankName: emp.bankName || '', bankAcc: emp.bankAcc || '', ifsc: emp.ifsc || ''
+        };
+      }
+      return packet;
     }
 
     if (askedFor === 'me' && req.method === 'POST') {
@@ -92,7 +103,7 @@ export default async function handler(req, res) {
       const dob = String(preBody.dob || '').trim();
       if (!empId || !dob)
         return res.status(400).json({ ok: false, error: 'Employee ID and date of birth are required.' });
-      const packet = await attendancePacket(empId, preBody.period);
+      const packet = await attendancePacket(empId, preBody.period, false);
       // one message for both failures, so the form cannot be used to discover valid IDs
       if (!packet || packet.dob !== dob)
         return res.status(401).json({ ok: false, error: 'Those details do not match our records.' });
@@ -102,14 +113,15 @@ export default async function handler(req, res) {
 
     /* ---- IDMS: the same packet, for a staff member who is signed in and does
        not know (and should not need to know) the employee's date of birth.
-       Pay figures are in this response, so it is gated the same way the rest
-       of HR & Payroll already is: the developer login only. ---- */
+       Pay figures — and, for this authorised route only, restricted
+       statutory/bank identifiers — are in this response, so it is gated the
+       same way the rest of HR & Payroll already is: the developer login only. ---- */
     if (askedFor === 'lookup' && req.method === 'POST') {
       if (!(await checkRole(req.headers['x-auth-token'] || '', ['developer'])))
         return res.status(403).json({ ok: false, error: 'Attendance lookup needs the administrator login.' });
       const empId = String(preBody.empId || '').trim().toUpperCase();
       if (!empId) return res.status(400).json({ ok: false, error: 'Choose an employee.' });
-      const packet = await attendancePacket(empId, preBody.period);
+      const packet = await attendancePacket(empId, preBody.period, true);
       if (!packet) return res.status(404).json({ ok: false, error: 'No employee with that ID.' });
       delete packet.dob;
       return res.status(200).json(Object.assign({ ok: true }, packet));

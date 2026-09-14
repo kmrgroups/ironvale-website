@@ -2695,13 +2695,11 @@ ${sections}
       <div class="qb" style="margin-bottom:18px;">
         <h4>My details on record</h4>
         <table class="cs-t"><tbody>
-          <tr><td>Employee ID</td><td><b>${esc(e.empId)}</b></td><td>UAN</td><td><b>${esc(e.uan||'—')}</b></td></tr>
-          <tr><td>PF Number</td><td><b>${esc(e.pfNumber||'—')}</b></td><td>ESI Number</td><td><b>${esc(e.esiNumber||'—')}</b></td></tr>
-          <tr><td>PAN</td><td><b>${esc(e.pan||'—')}</b></td><td>Tax Regime</td><td><b>${esc(e.taxRegime||'New')}</b></td></tr>
-          <tr><td>Bank</td><td><b>${esc(e.bankName||'—')}</b></td><td>Account</td><td><b>${esc(e.bankAcc||'—')}</b></td></tr>
-          <tr><td>IFSC</td><td><b>${esc(e.ifsc||'—')}</b></td><td>Date of Joining</td><td><b>${e.doj?new Date(e.doj).toLocaleDateString('en-GB'):'—'}</b></td></tr>
+          <tr><td>Employee ID</td><td><b>${esc(e.empId)}</b></td><td>Tax Regime</td><td><b>${esc(e.taxRegime||'New')}</b></td></tr>
+          <tr><td>Date of Joining</td><td><b>${e.doj?new Date(e.doj).toLocaleDateString('en-GB'):'—'}</b></td><td></td><td></td></tr>
         </tbody></table>
-        <div class="field-hint" style="margin-top:8px;">If anything here is wrong, tell HR — you cannot change it yourself.</div>
+        <div class="field-hint" style="margin-top:8px;">Bank, PAN and statutory ID numbers are not shown here for your
+          security. If anything on your payslip looks wrong, contact HR — you cannot change these yourself.</div>
       </div>
 
       ${bal.length?`<div class="qb" style="margin-bottom:18px;"><h4>Leave balance</h4>

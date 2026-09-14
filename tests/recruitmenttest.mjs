@@ -80,6 +80,19 @@ window.fetch = async (path, opts = {}) => {
     }
     return ok({});
   }
+  if (url.startsWith('/api/notify')) {
+    calls.push({ kind: 'notify', body });
+    return ok({ results: ['EMAIL SENT to ' + (body.payload || {}).to, 'WHATSAPP SKIPPED (no number configured)'] });
+  }
+  if (url.startsWith('/api/assets')) {
+    if (opts.method === 'POST') {
+      calls.push({ kind: 'asset-upload', body });
+      return ok({ id: 'AST1', url: '/api/assets?id=AST1', bytes: 1234 });
+    }
+    // GET: serve the file back, exactly as api/assets.js does
+    return { ok: true, status: 200,
+      blob: async () => new window.Blob(['%PDF-1.4 fake resume content'], { type: 'application/pdf' }) };
+  }
   return ok({});
 };
 
@@ -123,7 +136,7 @@ calls.length = 0;
 const reqId = items.find(i => i.kind === 'requisition').item_id;
 $('rc-cd-req').value = reqId;
 set('rc-cd-name', 'Vikram Shah'); set('rc-cd-qual', 'ITI');
-set('rc-cd-exp', '1'); set('rc-cd-ectc', '25000');
+set('rc-cd-exp', '1'); set('rc-cd-ectc', '25000'); set('rc-cd-phone', '9876543210');
 click($('rc-cd-add'));
 await wait(200);
 const candCall = calls.find(c => c.kind === 'item-save' && c.body.item.kind === 'candidate');
@@ -150,6 +163,28 @@ check('a candidate still at Applied moves to Screened once screened',
   patchAfterScreen && patchAfterScreen.body.status === 'Screened');
 check('the AI never decides the outcome — no auto stage jump to Selected/Rejected',
   patchAfterScreen && patchAfterScreen.body.status !== 'Selected' && patchAfterScreen.body.status !== 'Rejected');
+
+// ---------- interview invitation ----------
+calls.length = 0;
+const ivDateInput = window.document.querySelector('.rc-cd-in[data-id="' + candId + '"][data-k="ivDate"]');
+const ivVenueInput = window.document.querySelector('.rc-cd-in[data-id="' + candId + '"][data-k="ivVenue"]');
+check('an interview date field exists on the candidate card', !!ivDateInput);
+ivDateInput.value = '2026-10-05'; ivDateInput.dispatchEvent(new window.Event('input', { bubbles: true }));
+ivVenueInput.value = 'Factory HR office'; ivVenueInput.dispatchEvent(new window.Event('input', { bubbles: true }));
+const inviteBtn = window.document.querySelector('.rc-cd-invite[data-id="' + candId + '"]');
+check('a Send Interview Invitation button is offered', !!inviteBtn);
+click(inviteBtn);
+await wait(250);
+const notifyCall = calls.find(c => c.kind === 'notify');
+check('sending the invitation calls the same /api/notify path as the rest of the platform', !!notifyCall, JSON.stringify(calls));
+check('the venue typed on screen reaches the message text',
+  notifyCall && /Factory HR office/.test(notifyCall.body.payload.text), notifyCall && notifyCall.body.payload.text);
+check('the requirement wording (position title) is in the invitation',
+  notifyCall && /CNC Operator/.test(notifyCall.body.payload.text));
+const inviteStagePatch = calls.find(c => c.kind === 'item-patch' && c.body.status === 'Interview');
+check('a Screened candidate moves to the Interview stage once invited', !!inviteStagePatch, JSON.stringify(calls));
+check('the invitation timestamp is recorded so HR can see it was actually sent',
+  inviteStagePatch && !!inviteStagePatch.body.patch.interviewInvitedOn);
 
 // ---------- move the stage by hand, then convert to employee ----------
 calls.length = 0;
@@ -182,6 +217,74 @@ check('the salary structure is broken up from the offered CTC — basic',
   /25,000|25000/.test(offerDoc), offerDoc.slice(0, 400));
 check('the salary structure is broken up from the offered CTC — HRA',
   /10,000|10000/.test(offerDoc));
+
+// ---------- AI-drafted offer terms ----------
+calls.length = 0;
+const termsBtn = window.document.querySelector('.rc-cd-terms[data-id="' + candId + '"]');
+check('an AI draft terms button is offered once a CTC exists', !!termsBtn);
+click(termsBtn);
+await wait(250);
+const termsAiCall = calls.find(c => c.kind === 'ai');
+check('drafting terms calls the AI gateway', !!termsAiCall, JSON.stringify(calls));
+check('the position reaches the terms prompt', termsAiCall && /CNC Operator/.test(termsAiCall.body.prompt || ''));
+check('the prompt tells the AI not to invent salary/loan figures',
+  termsAiCall && /not invent salary/i.test(termsAiCall.body.prompt || ''));
+const termsBox = window.document.querySelector('.rc-cd-terms-box[data-id="' + candId + '"]');
+check('the drafted text lands in the editable terms box, not straight onto the letter',
+  termsBox && termsBox.value.length > 0, termsBox && termsBox.value.slice(0, 80));
+calls.length = 0;
+click(window.document.querySelector('.rc-cd-save[data-id="' + candId + '"]'));
+await wait(200);
+const termsSavePatch = calls.find(c => c.kind === 'item-patch' && c.body.patch && c.body.patch.offerTerms);
+check('saving carries the drafted terms into the stored candidate record', !!termsSavePatch, JSON.stringify(calls));
+opened.length = 0;
+click(window.document.querySelector('.rc-cd-offer[data-id="' + candId + '"]'));
+await wait(150);
+check('the offer letter now prints the edited terms, not the fallback default',
+  /Requirements evidenced/.test(opened[0] || ''), (opened[0] || '').slice(0, 200));
+check('the fallback default template text is no longer on the letter once terms were edited',
+  !/1\. APPOINTMENT/.test(opened[0] || ''));
+
+// ---------- CV file upload — a second, PDF-carrying candidate ----------
+calls.length = 0;
+$('rc-cd-req').value = reqId;
+set('rc-cd-name', 'Meera Iyer'); set('rc-cd-qual', 'Diploma'); set('rc-cd-phone', '9123456789');
+const pdfFile = new window.File(['%PDF-1.4 fake resume content'], 'meera-cv.pdf', { type: 'application/pdf' });
+Object.defineProperty($('rc-cd-cvfile'), 'files', { value: [pdfFile], configurable: true });
+$('rc-cd-cvfile').dispatchEvent(new window.Event('change', { bubbles: true }));
+await wait(200);
+const uploadCall = calls.find(c => c.kind === 'asset-upload');
+check('selecting a PDF uploads it through the existing asset store (/api/assets), not a new pipeline', !!uploadCall, JSON.stringify(calls));
+check('the uploaded-file message confirms the AI will read it',
+  /AI will read this file/.test($('rc-cd-cvfile-msg').textContent), $('rc-cd-cvfile-msg').textContent);
+click($('rc-cd-add'));
+await wait(200);
+const cand2Call = calls.find(c => c.kind === 'item-save' && c.body.item.kind === 'candidate' && c.body.item.name === 'Meera Iyer');
+check('the new candidate record carries the uploaded file name and URL, not just pasted text',
+  cand2Call && cand2Call.body.item.cvFileName === 'meera-cv.pdf' && cand2Call.body.item.cvFileUrl === '/api/assets?id=AST1',
+  JSON.stringify(cand2Call));
+
+const cand2Id = items.find(i => i.kind === 'candidate' && i.data.name === 'Meera Iyer').item_id;
+click(window.document.querySelector('.rc-cand-head[data-cand="' + cand2Id + '"]'));
+await wait(100);
+check('the attached CV shows a download link on the candidate card',
+  window.document.querySelector('#rc-cand-list a[href="/api/assets?id=AST1"]') !== null);
+calls.length = 0;
+click(window.document.querySelector('.rc-cd-screen[data-id="' + cand2Id + '"]'));
+await wait(250);
+const fileAiCall = calls.find(c => c.kind === 'ai');
+check('screening a candidate with an attached PDF sends it to the AI gateway as a real attachment, not pasted text',
+  fileAiCall && fileAiCall.body.attachment && fileAiCall.body.attachment.mime === 'application/pdf' &&
+  fileAiCall.body.attachment.b64 && fileAiCall.body.attachment.b64.length > 0, JSON.stringify(fileAiCall && fileAiCall.body.attachment));
+check('the prompt tells the AI it is reading the attached file, not the form or pasted text',
+  fileAiCall && /the attached CV file/.test(fileAiCall.body.prompt || ''));
+const fileScreenPatch = calls.find(c => c.kind === 'item-patch' && c.body.patch && c.body.patch.screenedFrom);
+check('the screening record is tagged as coming from the file, for the audit trail',
+  fileScreenPatch && fileScreenPatch.body.patch.screenedFrom === 'file', JSON.stringify(fileScreenPatch));
+
+// re-expand the original candidate's card before continuing its own flow
+click(window.document.querySelector('.rc-cand-head[data-cand="' + candId + '"]'));
+await wait(100);
 
 calls.length = 0;
 await wait(150);

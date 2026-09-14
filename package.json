@@ -8,5 +8,8 @@
   },
   "scripts": {
     "test": "node tests/run-all.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
   }
 }

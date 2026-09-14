@@ -2634,7 +2634,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           <div><label>Expected CTC</label><input class="num" id="rc-cd-ectc"></div>
         </div>
         <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
-          <label>CV text (paste here — there is no file upload on this screen yet)</label>
+          <label>CV / resume file (PDF or image — read directly by AI; Word files can be attached but only the pasted text below is read)</label>
+          <input type="file" id="rc-cd-cvfile" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
+          <div class="hint" id="rc-cd-cvfile-msg"></div></div></div>
+        <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
+          <label>CV text (paste here if no readable file was attached, or to supplement it)</label>
           <textarea id="rc-cd-cv" rows="4"></textarea></div></div>
         <div style="margin-top:12px;"><button class="btn gold" id="rc-cd-add">Add candidate</button></div>
         <div class="note" id="rc-cd-msg" style="display:none;"></div>
@@ -8925,11 +8929,13 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      the existing generic hr_items table and its /api/hr?what=items endpoint
      — nothing new on the server, the same storage the website's HR engine
      already used, so nothing here is a second, competing copy of anyone's
-     hiring history. What this phase does NOT cover, on purpose, deferred to
-     a second pass: interview invitations by email/WhatsApp, offer-letter
-     generation with terms templates, and the quick-message-templates —
-     those still run from HR & Payroll's website-embedded engine until they
-     are moved here too (see the note on the screen itself). */
+     hiring history. Interview invitations (email/WhatsApp, via the same
+     /api/notify the rest of the platform uses) and offer-letter terms
+     (default template + AI draft, same rules as every other AI feature
+     here — wording only, no invented salary/statutory figures) now live
+     here too. Quick free-text/template messaging to a candidate is still
+     on the website's HR & Payroll engine pending a second pass; nothing
+     else should be added there going forward. */
   var rcReqs = [], rcCands = [], rcExpanded = null, RC_STAGES = ['Applied','Screened','Interview','Selected','Offer Made','Joined','Rejected'];
 
   async function loadRecruitment(){
@@ -9121,7 +9127,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       '<div class="card" style="margin-top:8px;"><div class="kpi-src"><b>Match against stated requirements</b> · ' +
       esc(c.screenedOn||'') + '</div>' +
       '<div class="hint" style="margin-bottom:6px;">Measured against ' +
-      (c.screenedFrom === 'form' ? 'the application form details — no CV text was entered' : 'the pasted CV text') + '.</div>' +
+      (c.screenedFrom === 'form' ? 'the application form details — no CV was on file' :
+        c.screenedFrom === 'file' ? 'the attached CV file' : 'the pasted CV text') + '.</div>' +
       (c.matchPct != null ? '<div class="note ' + (c.matchPct>=70?'good':c.matchPct>=40?'':'bad') + '" style="margin-bottom:8px;">' +
         '<b>' + c.matchPct + '% of stated requirements evidenced</b><br>' + esc(c.recommendation||'') + '</div>' : '') +
       '<div style="white-space:pre-wrap;font-size:13px;">' + esc(c.screening) + '</div></div>'
@@ -9134,9 +9141,24 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       (open ? (
         '<div style="margin-top:12px;">' +
         '<div class="hint">'+esc(c.phone||'')+(c.email?' · '+esc(c.email):'')+' · '+esc(c.qualification||'qualification not recorded')+'</div>' +
+        (c.cvFileName ? (
+          '<div class="hint" style="margin-top:6px;">📎 '+esc(c.cvFileName)+
+          (c.cvFileUrl ? ' · <a href="'+esc(c.cvFileUrl)+'" target="_blank" rel="noopener">download</a>' : '') +
+          (/^(application\/pdf|image\/)/.test(c.cvMime||'') ? '' : ' <span class="hint">(cannot be read by AI — paste the CV text below too)</span>') +
+          '</div>'
+        ) : '') +
+        '<div style="margin-top:8px;"><label>Attach/replace CV file</label><input type="file" class="rc-cd-cvfile-existing" data-id="'+esc(c.item_id)+'" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"></div>' +
         '<div style="margin-top:8px;"><label>CV text</label><textarea class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="cvText" rows="3">'+esc(c.cvText||'')+'</textarea></div>' +
         '<div style="margin-top:8px;"><button class="btn ai-btn rc-cd-screen" data-id="'+esc(c.item_id)+'">Evaluate against the role</button></div>' +
         screeningHtml +
+        '<div class="sub" style="margin-top:12px;">Invite to interview</div>' +
+        '<div class="row four">' +
+        '<div><label>Date</label><input type="date" class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="ivDate" value="'+esc(c.ivDate||'')+'"></div>' +
+        '<div><label>Time</label><input type="time" class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="ivTime" value="'+esc(c.ivTime||'10:00')+'"></div>' +
+        '<div style="grid-column:span 2;"><label>Venue / meeting link</label><input class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="ivVenue" value="'+esc(c.ivVenue||'')+'"></div>' +
+        '</div>' +
+        '<div style="margin-top:8px;"><button class="btn rc-cd-invite" data-id="'+esc(c.item_id)+'">Send Interview Invitation — email &amp; WhatsApp</button>' +
+        (c.interviewInvitedOn ? ' <span class="hint">Last sent '+esc(c.interviewInvitedOn)+'</span>' : '')+'</div>' +
         '<div class="sub" style="margin-top:12px;">Interview &amp; assessment</div>' +
         '<div class="row four">' +
         '<div><label>Interview date</label><input type="date" class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="interviewDate" value="'+esc(c.interviewDate||'')+'"></div>' +
@@ -9153,6 +9175,15 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         '<div><label>Joining date</label><input type="date" class="rc-cd-in" data-id="'+esc(c.item_id)+'" data-k="joiningDate" value="'+esc(c.joiningDate||'')+'"></div>' +
         '</div>' +
         '<div class="hint" id="rc-struct-'+esc(c.item_id)+'" style="margin-top:6px;"></div>' +
+        (c.offerCtc ? (
+          '<div class="sub" style="margin-top:12px;">Offer terms &amp; conditions</div>' +
+          '<div style="margin-bottom:8px;"><button class="btn ai-btn rc-cd-terms" data-id="'+esc(c.item_id)+'">AI draft terms</button> ' +
+          '<button class="btn rc-cd-terms-reset" data-id="'+esc(c.item_id)+'">Reset to default</button> ' +
+          '<span class="hint">'+(c.offerTerms?'Edited for this candidate':'Using the default template')+'</span></div>' +
+          '<textarea class="rc-cd-terms-box" data-id="'+esc(c.item_id)+'" rows="8" style="width:100%;font-family:monospace;font-size:11.5px;line-height:1.5;">'+
+          esc(c.offerTerms||RC_DEFAULT_TERMS)+'</textarea>' +
+          '<div class="hint" style="margin-top:4px;">This exact text prints on the offer letter. Edit freely, then press Save.</div>'
+        ) : '') +
         '<div class="row four" style="margin-top:12px;">' +
         '<div><label>Stage</label><select class="rc-cd-stage" data-id="'+esc(c.item_id)+'">' +
         RC_STAGES.map(function(s){ return '<option'+(c.status===s?' selected':'')+'>'+s+'</option>'; }).join('') + '</select></div>' +
@@ -9178,6 +9209,21 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         drawCandidates();
       });
     });
+    host.querySelectorAll('.rc-cd-cvfile-existing').forEach(function(inp){
+      inp.addEventListener('click', function(e){ e.stopPropagation(); });
+      inp.addEventListener('change', async function(){
+        var f = this.files[0]; if (!f) return;
+        var c = rcCands.filter(function(x){ return x.item_id === inp.dataset.id; })[0]; if (!c) return;
+        try {
+          var up = await C.uploadFile(f);
+          c.cvFileName = up.name; c.cvFileUrl = up.url; c.cvMime = up.mime;
+          var data = Object.assign({}, c); delete data.item_id; delete data.status;
+          await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+            itemId:c.item_id, patch:data, reason:'CV file attached' }) });
+          toast('CV attached.'); loadRecruitment();
+        } catch(e){ toast(e.message); }
+      });
+    });
     host.querySelectorAll('.rc-cd-in').forEach(function(inp){
       inp.addEventListener('click', function(e){ e.stopPropagation(); });
       inp.addEventListener('input', function(){
@@ -9186,8 +9232,15 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         if (inp.dataset.k === 'offerCtc') rcShowStructure(inp.dataset.id, inp.value);
       });
     });
-    host.querySelectorAll('.rc-cd-save, .rc-cd-screen, .rc-cd-join, .rc-cd-del, .rc-cd-offer').forEach(function(b){
+    host.querySelectorAll('.rc-cd-save, .rc-cd-screen, .rc-cd-join, .rc-cd-del, .rc-cd-offer, .rc-cd-invite, .rc-cd-terms, .rc-cd-terms-reset').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); });
+    });
+    host.querySelectorAll('.rc-cd-terms-box').forEach(function(t){
+      t.addEventListener('click', function(e){ e.stopPropagation(); });
+      t.addEventListener('input', function(){
+        var c = rcCands.filter(function(x){ return x.item_id === t.dataset.id; })[0];
+        if (c) c.offerTerms = t.value;
+      });
     });
     host.querySelectorAll('.rc-cd-stage').forEach(function(sel){
       sel.addEventListener('click', function(e){ e.stopPropagation(); });
@@ -9222,6 +9275,20 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     });
     host.querySelectorAll('.rc-cd-offer').forEach(function(b){
       b.addEventListener('click', function(){ rcPrintOffer(b.dataset.id); });
+    });
+    host.querySelectorAll('.rc-cd-invite').forEach(function(b){
+      b.addEventListener('click', function(){ rcSendInvite(b.dataset.id, b); });
+    });
+    host.querySelectorAll('.rc-cd-terms').forEach(function(b){
+      b.addEventListener('click', function(){ rcDraftTerms(b.dataset.id, b); });
+    });
+    host.querySelectorAll('.rc-cd-terms-reset').forEach(function(b){
+      b.addEventListener('click', function(){
+        var c = rcCands.filter(function(x){ return x.item_id === b.dataset.id; })[0]; if (!c) return;
+        if (!confirm('Put the default template back? Anything typed here is lost.')) return;
+        c.offerTerms = RC_DEFAULT_TERMS;
+        drawCandidates();
+      });
     });
     rcCands.forEach(function(c){ if (rcExpanded === c.item_id && c.offerCtc) rcShowStructure(c.item_id, c.offerCtc); });
   }
@@ -9273,18 +9340,37 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       c.currentCtc ? 'Current CTC: ' + c.currentCtc : '',
       c.expectedCtc ? 'Expected CTC: ' + c.expectedCtc : ''
     ].filter(Boolean).join('\n');
-    var fromForm = !c.cvText;
-    if (fromForm && !formFacts) { toast('No CV text and nothing on the application details — nothing to measure.'); return; }
-    btn.disabled = true; btn.textContent = 'Reading…';
+    // a PDF or image CV is read directly by the AI gateway; anything else
+    // (Word, unreadable) falls back to whatever CV text HR pasted in
+    var readableFile = c.cvFileUrl && /^(application\/pdf|image\/)/.test(c.cvMime || '');
+    var fromForm = !readableFile && !c.cvText;
+    if (fromForm && !formFacts) { toast('No CV file, no CV text, and nothing on the application details — nothing to measure.'); return; }
+    btn.disabled = true; btn.textContent = readableFile ? 'Reading the attached file…' : 'Reading…';
+    var attachment = null;
+    if (readableFile) {
+      try {
+        var res = await fetch(c.cvFileUrl);
+        var blob = await res.blob();
+        var b64 = await new Promise(function(ok, no){
+          var r = new FileReader();
+          r.onload = function(){ ok(String(r.result).split(',')[1]); };
+          r.onerror = function(){ no(new Error('Could not read the attached file.')); };
+          r.readAsDataURL(blob);
+        });
+        attachment = { mime: c.cvMime, b64: b64 };
+      } catch(e){ toast('Could not read the attached file — screening from what is on file instead.'); readableFile = false; fromForm = !c.cvText && !formFacts; }
+    }
     var prompt = 'Compare a CV against the written requirements of a role. Be factual and specific.\n\n' +
       'ROLE: ' + (req ? req.title : 'not specified') +
       '\nSTATED REQUIREMENTS (this is the only standard to measure against):\n' +
       (req ? (req.jd || 'No written requirements — say so and measure nothing.') : 'not specified') +
-      '\n\nWHAT YOU ARE MEASURING: ' + (fromForm
-        ? 'the details entered on the application form. There is no CV text. Say so in your answer, and do not assume anything the form does not state.'
-        : 'the pasted CV text.') +
+      '\n\nWHAT YOU ARE MEASURING: ' + (readableFile
+        ? 'the attached CV file.'
+        : fromForm
+          ? 'the details entered on the application form. There is no CV. Say so in your answer, and do not assume anything the form does not state.'
+          : 'the pasted CV text.') +
       '\n\nDETAILS FROM THE APPLICATION FORM:\n' + (formFacts || '(nothing entered)') +
-      (fromForm ? '' : '\nCV:\n' + (c.cvText || '(none supplied)')) +
+      (readableFile ? '' : fromForm ? '' : '\nCV:\n' + (c.cvText || '(none supplied)')) +
       '\n\nReply in EXACTLY this shape. Three labels, nothing before or after, no JSON, no code ' +
       'fences, no asterisks and no markdown of any kind:\n\n' +
       'MATCH: <a whole number 0-100, or the word null if the JD lists no requirements>\n' +
@@ -9301,7 +9387,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       '- If the CV does not state something, say it is not evidenced rather than assuming either way.\n' +
       '- A low percentage means the document lacks evidence, not that the person is unsuitable.';
     try {
-      var txt = await C.callAI(prompt, { maxTokens: 1100 });
+      var txt = await C.callAI(prompt, attachment ? { maxTokens: 1100, attachment: attachment } : { maxTokens: 1100 });
       var m = txt.match(/^\s*MATCH\s*:\s*(null|\d{1,3})/im);
       var v = txt.match(/^\s*VERDICT\s*:\s*(.+)$/im);
       var dt = txt.match(/^\s*DETAIL\s*:\s*([\s\S]*)$/im);
@@ -9309,7 +9395,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       c.matchPct = pct;
       c.recommendation = v ? v[1].trim() : '';
       c.screening = dt ? C.stripMarkup(dt[1]) : C.stripMarkup(txt);
-      c.screenedFrom = fromForm ? 'form' : 'cv';
+      c.screenedFrom = readableFile ? 'file' : (fromForm ? 'form' : 'cv');
       c.screenedOn = new Date().toLocaleString();
       var data = Object.assign({}, c); delete data.item_id; delete data.status;
       await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:c.item_id,
@@ -9319,6 +9405,79 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     } catch(e){ toast(e.message); }
     btn.disabled = false; btn.textContent = 'Evaluate against the role';
   }
+
+  /* ---------------- Interview invitation ----------------
+     Same send path as everything else that reaches outside the building
+     (RFQ quotations, etc): one call to /api/notify, one place a delivery
+     failure can be diagnosed. Sending never silently succeeds — the status
+     line comes straight from what /api/notify actually reports. */
+  async function rcSendInvite(candId, btn){
+    var c = rcCands.filter(function(x){ return x.item_id === candId; })[0]; if (!c) return;
+    var req = rcReqs.filter(function(r){ return r.item_id === c.reqId; })[0];
+    if (!c.ivDate) { toast('Pick the interview date first.'); return; }
+    if (!c.email && !c.phone) { toast('This candidate has no email or phone.'); return; }
+    var role = req ? req.title : (c.designation || 'the advertised role');
+    var when = new Date(c.ivDate + 'T' + (c.ivTime || '10:00'))
+      .toLocaleString('en-GB', { weekday:'long', day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    var co = {};
+    try { co = ((await C.api('/api/content')).data || {}).company || {}; } catch(e){}
+    var senderName = co.legalName || co.displayName || 'the company';
+    var text = 'Dear ' + c.name + ',\n\n' +
+      'Thank you for applying for the position of ' + role + ' with ' + senderName + '.\n\n' +
+      'We would like to meet you for an interview.\n\n' +
+      '  Date and time : ' + when + '\n' +
+      '  Venue         : ' + (c.ivVenue || 'to be confirmed') + '\n\n' +
+      'Please bring your original certificates, a copy of your resume and a photo identity document.\n' +
+      'Reply to this message to confirm, or to request a different time.\n\n' +
+      'Regards,\nHR Department\n' + senderName;
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      var res = await C.api('/api/notify', { method:'POST', body:JSON.stringify({ event:'custom',
+        payload:{ to:c.email||'', whatsapp:c.phone||'', subject:'Interview invitation — ' + role, text:text } }) });
+      var lines = (res && res.results) || [];
+      var emailLine = lines.filter(function(x){ return /EMAIL/i.test(x); })[0] || '';
+      var waLine = lines.filter(function(x){ return /WHATSAPP|WA/i.test(x); })[0] || '';
+      var sent = /EMAIL SENT/i.test(emailLine) || /SENT/i.test(waLine);
+      c.interviewDate = c.ivDate;
+      c.interviewInvitedOn = new Date().toLocaleString();
+      var data = Object.assign({}, c); delete data.item_id; delete data.status;
+      await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:c.item_id,
+        patch:data, status: c.status === 'Applied' || c.status === 'Screened' ? 'Interview' : c.status,
+        reason:'interview invitation sent for ' + when }) });
+      toast(sent ? 'Invitation sent.' : 'Not sent — ' + (emailLine || waLine || 'check the Setup Wizard\'s Connections step.'));
+      loadRecruitment();
+    } catch(e){ toast(e.message); }
+    btn.disabled = false; btn.textContent = 'Send Interview Invitation — email & WhatsApp';
+  }
+
+  /* ---------------- AI: draft the offer-terms clause text ----------------
+     Drafts wording only, into the editable box — it never invents salary,
+     PF/ESI/PT/TDS figures, loans or company policy; those are computed
+     elsewhere and printed onto the letter separately by rcPrintOffer(). */
+  async function rcDraftTerms(candId, btn){
+    var c = rcCands.filter(function(x){ return x.item_id === candId; })[0]; if (!c) return;
+    var req = rcReqs.filter(function(r){ return r.item_id === c.reqId; })[0];
+    btn.disabled = true; btn.textContent = 'Drafting…';
+    try {
+      var txt = await C.callAI(
+        'Draft the terms and conditions section of an employment offer letter for an Indian ' +
+        'manufacturing company.\n\nPOSITION: ' + (c.designation || (req ? req.title : '')) +
+        '\nGRADE: ' + (c.grade || 'not stated') +
+        '\n\nCover, as numbered clauses in plain language: appointment, probation, hours of work ' +
+        'and shift, leave, statutory deductions, confidentiality of drawings and customer ' +
+        'information, notice period, conduct and safety obligations, and that the offer is ' +
+        'subject to document verification.\n\nRules:\n' +
+        '- Keep it under 400 words, factual and neutral.\n' +
+        '- Do not invent salary figures, benefits, bonus schemes, loans or leave entitlements — those are set elsewhere.\n' +
+        '- Do not state anything as a legal requirement unless it plainly is one.\n' +
+        '- This is a draft for HR to review, not final legal wording.', { maxTokens: 800 });
+      var clean = C.stripMarkup(txt);
+      c.offerTerms = clean;
+      drawCandidates();
+      toast('Draft placed in the box — read and edit it, then press Save.');
+    } catch(e){ toast(e.message); btn.disabled = false; btn.textContent = 'AI draft terms'; }
+  }
+
 
   /* A candidate who has joined becomes an employee the same way Add Employee
      already assigns an ID — never typed, checked against who is actually on
@@ -23767,7 +23926,7 @@ checks.map(function(c){ return '<tr><td class="' + c.level[0] + '">' + (c.level=
       var conf = await alSiteData();
       var r = await C.api('/api/hr', { method:'POST',
         body: JSON.stringify({ what:'lookup', empId: empId, period: period }) });
-      var e = r.employee, days = alDaysInPeriod(r.period || period);
+      var e = r.employee, rst = e.restricted || {}, days = alDaysInPeriod(r.period || period);
       var recs = {}; (r.attendance || []).forEach(function(a){ recs[a.day] = a; });
       var lmap = {};
       (r.leave || []).filter(function(l){ return l.status === 'Approved'; }).forEach(function(l){
@@ -23827,10 +23986,10 @@ checks.map(function(c){ return '<tr><td class="' + c.level[0] + '">' + (c.level=
           '</tbody></table></div>' : '') +
 
         '<div class="card"><h4>On record</h4><table class="al-t"><tbody>'+
-          '<tr><td>UAN</td><td><b>'+esc(e.uan||'—')+'</b></td><td>PF Number</td><td><b>'+esc(e.pfNumber||'—')+'</b></td></tr>'+
-          '<tr><td>ESI Number</td><td><b>'+esc(e.esiNumber||'—')+'</b></td><td>PAN</td><td><b>'+esc(e.pan||'—')+'</b></td></tr>'+
-          '<tr><td>Bank</td><td><b>'+esc(e.bankName||'—')+'</b></td><td>Account</td><td><b>'+esc(e.bankAcc||'—')+'</b></td></tr>'+
-          '<tr><td>IFSC</td><td><b>'+esc(e.ifsc||'—')+'</b></td><td>Date of Joining</td><td><b>'+
+          '<tr><td>UAN</td><td><b>'+esc(rst.uan||'—')+'</b></td><td>PF Number</td><td><b>'+esc(rst.pfNumber||'—')+'</b></td></tr>'+
+          '<tr><td>ESI Number</td><td><b>'+esc(rst.esiNumber||'—')+'</b></td><td>PAN</td><td><b>'+esc(rst.pan||'—')+'</b></td></tr>'+
+          '<tr><td>Bank</td><td><b>'+esc(rst.bankName||'—')+'</b></td><td>Account</td><td><b>'+esc(rst.bankAcc||'—')+'</b></td></tr>'+
+          '<tr><td>IFSC</td><td><b>'+esc(rst.ifsc||'—')+'</b></td><td>Date of Joining</td><td><b>'+
             (e.doj?new Date(e.doj).toLocaleDateString('en-GB'):'—')+'</b></td></tr>'+
         '</tbody></table>'+
         '<div class="hint">For the full payslip breakdown (basic, HRA, PF, ESI, TDS) or to run payroll, use HR &amp; Payroll.</div>'+
@@ -29643,6 +29802,19 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     this.disabled = false;
   });
   document.getElementById('rc-print').addEventListener('click', rcPrintStatus);
+  var rcPendingCv = null;
+  document.getElementById('rc-cd-cvfile')?.addEventListener('change', async function(){
+    var f = this.files[0], m = document.getElementById('rc-cd-cvfile-msg');
+    if (!f) { rcPendingCv = null; m.textContent = ''; return; }
+    m.textContent = 'Uploading…';
+    try {
+      var up = await C.uploadFile(f);
+      rcPendingCv = { cvFileName:up.name, cvFileUrl:up.url, cvMime:up.mime };
+      m.textContent = 'Attached: ' + up.name +
+        (/^(application\/pdf|image\/)/.test(up.mime||'') ? ' — AI will read this file.' :
+          ' — this file type cannot be read by AI; paste the CV text below too.');
+    } catch(e){ rcPendingCv = null; m.textContent = e.message; }
+  });
   document.getElementById('rc-cd-add').addEventListener('click', async function(){
     var name = fieldVal('rc-cd-name'), reqId = document.getElementById('rc-cd-req').value;
     var msg = document.getElementById('rc-cd-msg'), say = noteWriter(msg);
@@ -29652,11 +29824,14 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
       qualification:fieldVal('rc-cd-qual'), experience:C.num(fieldVal('rc-cd-exp')),
       currentCtc:C.num(fieldVal('rc-cd-cctc')), expectedCtc:C.num(fieldVal('rc-cd-ectc')),
       cvText:fieldVal('rc-cd-cv') };
+    if (rcPendingCv) Object.assign(item, rcPendingCv);
     this.disabled = true;
     try {
       await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item, reason:'candidate added' }) });
       ['rc-cd-name','rc-cd-phone','rc-cd-email','rc-cd-qual','rc-cd-exp','rc-cd-cctc','rc-cd-ectc','rc-cd-cv'].forEach(function(id){
         document.getElementById(id).value = ''; });
+      document.getElementById('rc-cd-cvfile').value = ''; document.getElementById('rc-cd-cvfile-msg').textContent = '';
+      rcPendingCv = null;
       say('Candidate added.', true);
       loadRecruitment();
     } catch(e){ say(esc(e.message)); }

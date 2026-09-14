@@ -57,7 +57,12 @@ window.fetch = async (path, opts = {}) => {
         return { ok: false, status: 401, json: async () => ({ error: 'Sign in' }) };
       const e = employees.find(x => x.empId === body.empId);
       if (!e) return { ok: false, status: 404, json: async () => ({ error: 'No employee with that ID.' }) };
-      return ok({ employee: e, attendance, leave, period: body.period || '2026-08' });
+      // Restricted statutory/bank identifiers now come back nested under
+      // `restricted`, only on this role-gated lookup route — never on the
+      // public/self-service `what=me` packet. See api/hr.js attendancePacket().
+      const { uan, pfNumber, bankName, bankAcc, ifsc, ...pub } = e;
+      const employee = Object.assign({}, pub, { restricted: { uan, pfNumber, bankName, bankAcc, ifsc } });
+      return ok({ employee, attendance, leave, period: body.period || '2026-08' });
     }
     return ok({});
   }

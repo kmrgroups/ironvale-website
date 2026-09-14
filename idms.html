@@ -4777,9 +4777,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             <input type="file" id="cp-logo-file" accept="image/*">
           </div>
           <div class="hint" style="margin-top:6px;">
-            <label style="display:inline-flex;align-items:center;gap:6px;font-weight:400;">
-              <input type="checkbox" id="cp-use-website-logo"> Use the website's own logo on documents instead of the one above
-            </label>
+            This is the one logo for everything — the website header, browser tab icon, this sign-in screen and header, and every generated PDF. Upload or change it here and all of those update together.
           </div>
         </div></div>
       </div>
@@ -29188,7 +29186,6 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     cpShowImg('cp-logo-preview', co.letterheadLogo || cpContent.logoDataUrl);
     cpShowImg('cp-sign-preview', co.signatureImg);
     cpShowImg('cp-seal-preview', co.sealImg);
-    document.getElementById('cp-use-website-logo').checked = co.useWebsiteLogo !== false;
 
     var soc = cpContent.social || {};
     set('cp-soc-youtube', soc.youtube); set('cp-soc-instagram', soc.instagram);
@@ -29248,7 +29245,6 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     co.bankName = g('cp-bankName'); co.bankBranch = g('cp-bankBranch');
     co.bankAccName = g('cp-bankAccName'); co.bankAccNo = g('cp-bankAccNo'); co.bankIfsc = g('cp-bankIfsc');
     co.signatoryName = g('cp-signatoryName'); co.signatoryTitle = g('cp-signatoryTitle');
-    co.useWebsiteLogo = document.getElementById('cp-use-website-logo').checked;
 
     cpContent.social = {
       youtube: g('cp-soc-youtube'), instagram: g('cp-soc-instagram'), facebook: g('cp-soc-facebook'),

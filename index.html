@@ -1916,12 +1916,12 @@ I would recommend this company as a place to work</textarea></div></div>
     </div>
 
     <div class="admin-group" data-group="brand">
-      <div class="info-box">This is the name and logo shown on the <b>website</b>. Documents use the
-      legal name from <b>Company Profile</b> and, by default, this same logo.</div>
+      <div class="info-box">This is the name shown on the <b>website</b>. The logo itself is now set in one place —
+      <b>Company Profile → Letterhead Logo</b> — and used everywhere: website, IDMS and every PDF document.</div>
       <div class="field"><label>Company Name (website)</label><input type="text" id="in-brandName"></div>
       <div class="field"><label>Company Suffix</label><input type="text" id="in-brandSuffix"></div>
-      <div class="field"><label>Logo — used everywhere</label><div class="img-upload" id="logo-upload-wrap"></div>
-        <div class="field-hint">Website header, footer and all PDF documents pull from here.</div></div>
+      <div class="field"><label>Logo</label><div class="img-upload" id="logo-upload-wrap"></div>
+        <div class="field-hint">Fallback only, used until a Letterhead Logo is uploaded in Company Profile. Once that's set, this field is ignored.</div></div>
       <div class="toggle-row"><span>Glowing halo around logo</span><div class="switch on" id="glow-switch"></div></div>
       <div class="field" style="margin-top:16px;"><label>Glow Color</label><input type="color" id="in-glow"></div>
       <div class="toggle-row"><span>Show company name beside logo</span><div class="switch on" id="brandtext-switch"></div></div>
@@ -2050,9 +2050,8 @@ I would recommend this company as a place to work</textarea></div></div>
       <div class="field"><label>Display Name</label><input type="text" id="in-co-displayName"></div>
       <div class="field"><label>Tagline</label><input type="text" id="in-co-tagline"></div>
       <div class="field"><label>Company Registration No.</label><input type="text" id="in-co-regNumber"></div>
-      <div class="field"><label>Letterhead Logo</label><div class="img-upload" id="co-logo-wrap"></div></div>
-      <div class="toggle-row"><span>Use the website logo on documents</span><div class="switch on" id="uselogo-switch"></div></div>
-      <div class="field-hint" id="logo-source-note" style="margin-top:8px;"></div>
+      <div class="field"><label>Letterhead Logo</label><div class="img-upload" id="co-logo-wrap"></div>
+        <div class="field-hint">This is the one logo for everything — the website header, browser tab icon, the IDMS sign-in screen and header, and every generated PDF. Upload or change it here and all of those update together.</div></div>
 
       <div class="field" style="margin-top:24px;"><label>Registered Address</label></div>
       <div class="field"><label>Plant / Location Label</label><input type="text" id="in-co-plantLabel" placeholder="Plant-1 or Head Office">
@@ -3077,11 +3076,12 @@ I would recommend this company as a place to work</textarea></div></div>
     setText('d-footer-copy',data.footerCopy);
     const lw=document.getElementById('logo-wrap');
     lw.classList.toggle('logo-glow',!!data.logoGlow);
-    lw.innerHTML=data.logoDataUrl?`<img src="${data.logoDataUrl}" alt="logo" decoding="async" draggable="false">`
+    const siteLogo=documentLogo();
+    lw.innerHTML=siteLogo?`<img src="${siteLogo}" alt="logo" decoding="async" draggable="false">`
       :`<div class="logo-fallback">${esc(data.brandName.charAt(0))}</div>`;
-    // Use the uploaded company logo as the browser tab icon when available;
-    // the bundled favicon remains the instant-loading fallback.
-    setDynamicFavicon(data.logoDataUrl||'');
+    // The browser tab icon follows the same logo as the header and every
+    // PDF; the bundled favicon remains the instant-loading fallback.
+    setDynamicFavicon(siteLogo);
     document.getElementById('brand-text').style.display=data.showBrandText?'':'none';
     document.getElementById('hero-bg').style.backgroundImage=data.heroBannerDataUrl?`url('${data.heroBannerDataUrl}')`:'none';
     renderHeroVisual();
@@ -11017,9 +11017,12 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     if(/^(https?:|data:|blob:)/i.test(v)) return v;
     return location.origin+(v.startsWith('/')?'':'/')+v;
   }
+  /* The one logo used everywhere: website header/favicon, IDMS chrome and
+     every generated PDF. Company Profile's Letterhead Logo is the master —
+     the old Brand-tab logo only fills in until that's uploaded, so an
+     existing site doesn't go blank the moment this code ships. */
   function documentLogo(){
     const c=CO();
-    if(c.useWebsiteLogo!==false) return data.logoDataUrl||c.letterheadLogo||'';
     return c.letterheadLogo||data.logoDataUrl||'';
   }
   function updateInheritNotes(){
@@ -11029,19 +11032,6 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     set('addr-inherit',companyAddressLines().join(', '));
     set('phone-inherit',co.phone||co.mobile||'');
     set('email-inherit',co.rfqEmail||co.email||'');
-  }
-  function updateLogoNote(){
-    const el=document.getElementById('logo-source-note'); if(!el) return;
-    const c=CO(), using=c.useWebsiteLogo!==false;
-    if(using){
-      el.innerHTML=data.logoDataUrl
-        ? 'Documents use your <b>website logo</b> from the Brand tab. Change it there and quotations follow automatically.'
-        : '<span style="color:#B03A2E">No website logo uploaded yet — upload one in the Brand tab.</span>';
-    } else {
-      el.innerHTML=c.letterheadLogo
-        ? 'Documents use the <b>letterhead logo</b> above, separate from your website logo.'
-        : '<span style="color:#B03A2E">No letterhead logo uploaded — documents will fall back to the website logo.</span>';
-    }
   }
 
   /* ---------- plants ---------- */
@@ -11350,8 +11340,6 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     Object.keys(data.company).forEach(k=>{const el=document.getElementById('in-co-'+k); if(el) el.value=data.company[k]||'';});
     Object.keys(data.quoteCfg).forEach(k=>{const el=document.getElementById('in-qc-'+k); if(el) el.value=data.quoteCfg[k];});
     document.getElementById('bank-switch').classList.toggle('on',!!data.company.bankShow);
-    document.getElementById('uselogo-switch').classList.toggle('on',data.company.useWebsiteLogo!==false);
-    updateLogoNote();
     updateInheritNotes();
     (function(){
       const hasOverride=!!(data.contactAddress||data.contactPhone||data.contactEmail);
@@ -11410,11 +11398,6 @@ Sign off as: ${data.quoteSender||'Sales Team'}, ${data.brandName}, ${data.contac
     });
     document.getElementById('bank-switch').addEventListener('click',function(){
       data.company.bankShow=!data.company.bankShow; this.classList.toggle('on',data.company.bankShow); markDirty();
-    });
-    document.getElementById('uselogo-switch').addEventListener('click',function(){
-      data.company.useWebsiteLogo=data.company.useWebsiteLogo===false;
-      this.classList.toggle('on',data.company.useWebsiteLogo!==false);
-      updateLogoNote(); markDirty();
     });
     document.getElementById('add-plants').addEventListener('click',()=>{
       data.company.plants=data.company.plants||[];

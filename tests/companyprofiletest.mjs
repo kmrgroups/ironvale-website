@@ -83,8 +83,8 @@ check('the tax number loads correctly', $('cp-taxNumber').value === '29ABCDE1234
 check('the document prefix loads', $('cp-docPrefix').value === 'ELIX');
 check('the existing logo preview shows, using the real storage key (company.letterheadLogo)',
   $('cp-logo-preview').style.display !== 'none' && $('cp-logo-preview').src.includes('logo1'));
-check('"use website logo" defaults on when not explicitly turned off (matches the source\'s own default)',
-  $('cp-use-website-logo').checked === true);
+check('there is no "use website logo" checkbox — the letterhead logo is the single source everywhere now',
+  !$('cp-use-website-logo'));
 
 // ---------- edit some fields and save ----------
 set('cp-city', 'Bengaluru'); input($('cp-city'));

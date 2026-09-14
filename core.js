@@ -453,12 +453,10 @@
       signatoryName: co.signatoryName || '', signatoryTitle: co.signatoryTitle || '',
       /* Same resolution the website uses for documentLogo() (index.html), kept
          in sync here so the IDMS chrome (header, favicon, sign-in screen) and
-         every printed document agree on which logo is showing. Default is the
-         website's own logo; unticking "Use the website's own logo on documents"
-         in Company Profile switches everything here to the letterhead upload. */
-      logo: co.useWebsiteLogo !== false
-        ? (d.logoDataUrl || co.letterheadLogo || '')
-        : (co.letterheadLogo || d.logoDataUrl || ''),
+         every printed document agree on which logo is showing. Company
+         Profile's Letterhead Logo is the one logo for everything; the old
+         website Brand-tab logo only fills in until that's uploaded. */
+      logo: co.letterheadLogo || d.logoDataUrl || '',
       /* the prefix that used to be hard-coded into every document number */
       docPrefix: (co.docPrefix || co.shortName ||
         (co.legalName || d.brandName || 'DOC').replace(/[^A-Za-z]/g, '').slice(0, 4)).toUpperCase()

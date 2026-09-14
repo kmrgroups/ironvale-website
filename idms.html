@@ -2114,6 +2114,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         <h4 id="wc-title">—</h4>
         <div class="hint" id="wc-note" style="margin-bottom:10px;"></div>
         <div id="wc-fields"></div>
+        <div id="wc-visual" style="margin-top:6px;"></div>
         <div id="wc-list" style="margin-top:14px;"></div>
         <button class="btn" id="wc-add" style="margin-top:10px;display:none;">+ Add</button>
       </div>
@@ -26823,6 +26824,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     { key:'hero', title:'Hero banner', note:'The first thing a visitor sees.',
       fields:[['heroEyebrow','Eyebrow (small text above the headline)'],['heroHeadline','Headline'],
         ['heroSub','Sub-headline','textarea'],['ctaPrimary','Primary button'],['ctaSecondary','Secondary button']],
+      images:[['heroBannerDataUrl','Hero banner image','The background behind the headline.']],
+      visual:true,
       list:{ arr:'ticker', label:'Scrolling ticker lines', plain:true } },
     { key:'capabilities', title:'Capabilities', note:'What you can make.',
       fields:[['capTitle','Section title'],['capMenu','Menu label']],
@@ -26892,7 +26895,88 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     document.getElementById('wc-fields').querySelectorAll('.wc-f').forEach(function(el){
       el.addEventListener('input', function(){ wcContent[el.dataset.k] = el.value; });
     });
+    wcDrawVisual();
     wcDrawList();
+  }
+
+  /* The right-side hero visual: a mode, and the fields that mode needs.
+     Only the relevant ones are shown, because a video URL sitting under a
+     "signature image" choice reads as broken even when it is simply unused. */
+  function wcDrawVisual(){
+    var s = wcSpec(), host = document.getElementById('wc-visual');
+    if (!s.images && !s.visual){ host.innerHTML = ''; return; }
+    var imgRow = function(key, label, hint){
+      var url = wcContent[key] || '';
+      return '<div style="margin-bottom:12px;"><label>'+esc(label)+'</label>' +
+        (hint ? '<div class="hint" style="margin-bottom:4px;">'+esc(hint)+'</div>' : '') +
+        '<div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;">' +
+        (url ? (/\.(mp4|webm|mov)(\?|$)/i.test(url) || String(url).indexOf('data:video') === 0
+              ? '<video src="'+esc(url)+'" muted style="max-width:220px;max-height:130px;border:1px solid var(--line);border-radius:8px;"></video>'
+              : '<img src="'+esc(url)+'" style="max-width:220px;max-height:130px;border:1px solid var(--line);border-radius:8px;">')
+            : '<div class="hint">Nothing uploaded.</div>') +
+        '<div><input type="file" class="wc-vis-file" data-k="'+esc(key)+'" ' +
+        'accept="'+(key.indexOf('Video')>=0?'video/*':'image/*')+'">' +
+        (url ? '<button class="btn del wc-vis-clear" data-k="'+esc(key)+'" style="margin-top:6px;">Remove</button>' : '') +
+        '</div></div></div>';
+    };
+
+    var html = (s.images || []).map(function(im){ return imgRow(im[0], im[1], im[2]); }).join('');
+
+    if (s.visual){
+      var mode = wcContent.heroVisual || 'orb';
+      html += '<div class="sub" style="margin-top:12px;">Right-side hero visual</div>' +
+        '<div class="row four"><div><label>What to show</label>' +
+        '<select id="wc-herovisual">' +
+        [['orb','Animated graphic (default)'],['video','Promotional video'],
+         ['signature','Company signature / promo image']].map(function(o){
+          return '<option value="'+o[0]+'"'+(mode===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('') +
+        '</select></div></div>';
+      if (mode === 'video'){
+        html += '<div style="margin-top:10px;">' +
+          imgRow('heroVideoDataUrl', 'Upload a video',
+            'Short clips only — about 8 MB, enough for a 10–15 second silent loop. For anything ' +
+            'longer or higher quality use the address below instead.') +
+          '<div style="margin-bottom:12px;"><label>Or a video address</label>' +
+          '<input class="wc-f" data-k="heroVideoUrl" value="'+esc(wcContent.heroVideoUrl||'')+'" ' +
+          'placeholder="https://youtube.com/watch?v=… or a direct .mp4 link"></div>' +
+          '<div style="margin-bottom:12px;"><label>Caption under the video</label>' +
+          '<input class="wc-f" data-k="heroVideoCaption" value="'+esc(wcContent.heroVideoCaption||'')+'"></div>' +
+          '</div>';
+      } else if (mode === 'signature'){
+        html += '<div style="margin-top:10px;">' +
+          imgRow('heroSignatureImg', 'Signature or promotional image',
+            'Shown instead of the animated graphic.') + '</div>';
+      }
+    }
+    host.innerHTML = html;
+
+    host.querySelectorAll('.wc-f').forEach(function(el){
+      el.addEventListener('input', function(){ wcContent[el.dataset.k] = el.value; });
+    });
+    var sel = document.getElementById('wc-herovisual');
+    if (sel) sel.addEventListener('change', function(){
+      wcContent.heroVisual = this.value; wcDrawVisual();
+    });
+    host.querySelectorAll('.wc-vis-clear').forEach(function(b){
+      b.addEventListener('click', function(){ wcContent[b.dataset.k] = ''; wcDrawVisual(); });
+    });
+    host.querySelectorAll('.wc-vis-file').forEach(function(inp){
+      inp.addEventListener('change', async function(){
+        var f = inp.files[0]; if (!f) return;
+        var say = noteWriter(document.getElementById('wc-msg'));
+        /* the website's own limit, enforced here rather than discovered as a
+           failed save after the upload has already run */
+        if (inp.dataset.k.indexOf('Video') >= 0 && f.size > 8 * 1024 * 1024)
+          return say('That video is ' + Math.round(f.size/1024/1024) + ' MB. Direct upload is limited ' +
+                     'to about 8 MB — use the video address field instead for anything larger.');
+        try {
+          var up = await C.uploadFile(f);
+          wcContent[inp.dataset.k] = up.url;
+          wcDrawVisual();
+          say('Uploaded — press Save website content to keep it.', true);
+        } catch(e){ say(esc(e.message)); }
+      });
+    });
   }
 
   function wcDrawList(){

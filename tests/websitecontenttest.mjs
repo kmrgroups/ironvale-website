@@ -138,7 +138,62 @@ check('the founder photo url is saved under "photo"', d && d.founders[0].photo =
 check('hiding a section is saved as a real false', d && d.sections.gallery === false);
 check('the unrelated company profile survives untouched', d && d.company.legalName === 'Test Mfg');
 
-// ---------- the field names must match what the website actually reads ----------
+// ---------- the right-side hero visual: banner, video, signature ----------
+pick('hero');
+await wait(100);
+check('the hero banner image control is present',
+  !!window.document.querySelector('.wc-vis-file[data-k="heroBannerDataUrl"]'));
+const visSel = $('wc-herovisual');
+check('the right-side hero visual mode selector is present', !!visSel);
+check('it defaults to the animated graphic', visSel.value === 'orb', visSel.value);
+
+check('no video fields are shown while the mode is the animated graphic',
+  !window.document.querySelector('.wc-vis-file[data-k="heroVideoDataUrl"]'));
+visSel.value = 'video'; change(visSel);
+await wait(60);
+check('choosing video reveals the upload control',
+  !!window.document.querySelector('.wc-vis-file[data-k="heroVideoDataUrl"]'));
+check('choosing video reveals the video address field',
+  !!window.document.querySelector('.wc-f[data-k="heroVideoUrl"]'));
+check('choosing video reveals the caption field',
+  !!window.document.querySelector('.wc-f[data-k="heroVideoCaption"]'));
+
+const vUrl = window.document.querySelector('.wc-f[data-k="heroVideoUrl"]');
+vUrl.value = 'https://youtube.com/watch?v=abc123'; input(vUrl);
+const vCap = window.document.querySelector('.wc-f[data-k="heroVideoCaption"]');
+vCap.value = 'Watch our film'; input(vCap);
+
+/* an oversized upload must be refused before it is sent, not discovered as a
+   failed save afterwards */
+let uploadsBefore = calls.filter(c => c.kind === 'upload').length;
+const bigVideo = window.document.querySelector('.wc-vis-file[data-k="heroVideoDataUrl"]');
+Object.defineProperty(bigVideo, 'files', {
+  value: [{ name: 'big.mp4', size: 20 * 1024 * 1024, type: 'video/mp4' }], configurable: true });
+change(bigVideo);
+await wait(120);
+check('a video over the 8 MB limit is refused before uploading',
+  /8 MB/.test($('wc-msg').textContent) &&
+  calls.filter(c => c.kind === 'upload').length === uploadsBefore, $('wc-msg').textContent);
+
+visSel.value = 'signature'; change(visSel);
+await wait(60);
+check('choosing signature swaps to the signature image control',
+  !!window.document.querySelector('.wc-vis-file[data-k="heroSignatureImg"]') &&
+  !window.document.querySelector('.wc-vis-file[data-k="heroVideoDataUrl"]'));
+visSel.value = 'video'; change(visSel);
+await wait(60);
+
+calls.length = 0;
+click($('wc-save'));
+await wait(250);
+const heroSave = calls.find(c => c.kind === 'content-save');
+check('the hero visual mode is saved', heroSave && heroSave.body.data.heroVisual === 'video',
+  heroSave && heroSave.body.data.heroVisual);
+check('the video address is saved under the key the website reads',
+  heroSave && heroSave.body.data.heroVideoUrl === 'https://youtube.com/watch?v=abc123');
+check('the video caption is saved', heroSave && heroSave.body.data.heroVideoCaption === 'Watch our film');
+
+
 /* This is the check that matters: a key that looks right but is not read by
    index.html would save silently and change nothing on the live site. */
 const writable = [];
@@ -147,7 +202,9 @@ for (const s of [['heroEyebrow'],['heroHeadline'],['heroSub'],['ctaPrimary'],['c
   ['industriesTitle'],['industriesMenu'],['certsTitle'],['certsMenu'],['certsSub'],
   ['foundersTitle'],['foundersMenu'],['quoteText'],['quoteName'],['quoteRole'],
   ['contactTitle'],['contactSub'],['contactAddress'],['contactPhone'],['contactEmail'],
-  ['botName'],['botLauncher'],['botWelcome'],['botKnowledge']]) {
+  ['botName'],['botLauncher'],['botWelcome'],['botKnowledge'],
+  ['heroVisual'],['heroVideoDataUrl'],['heroVideoUrl'],['heroVideoCaption'],
+  ['heroSignatureImg'],['heroBannerDataUrl']]) {
   if (!site.includes(s[0])) writable.push(s[0]);
 }
 check('every text field this screen writes is a key the website actually reads',

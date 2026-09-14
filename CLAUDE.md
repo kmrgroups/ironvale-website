@@ -3236,3 +3236,36 @@ inside `run-all.mjs` (smoketest once, themetest once). It is environmental,
 not a code fault — each was re-run standalone immediately afterwards and
 passed in seconds. Worth fixing properly at some point by having run-all
 kill a child that outlives its timeout rather than waiting on it forever.
+
+## The right-side hero visual — a real gap in my own Website Content screen
+
+Asked where the hero video upload had gone. It had gone nowhere: when the
+fifteen design tabs were collapsed into the schema-driven Website Content
+screen, the hero section carried its **text** (eyebrow, headline,
+sub-headline, buttons, ticker) and none of its **visual**. Six keys were
+simply absent from the editor — `heroBannerDataUrl`, `heroVisual`,
+`heroVideoDataUrl`, `heroVideoUrl`, `heroVideoCaption`, `heroSignatureImg`.
+
+The website still reads all six, so any site already using a promotional
+video kept showing it — but there was no longer any way to change it from
+the IDMS. A gap that leaves existing content working is the easy kind to
+miss, and the cross-file key check written at the time did not catch it
+because it only verified that every key the screen *writes* is one the
+website reads — never the reverse.
+
+Added to the schema as two new capabilities, not as a hero special case:
+`images:` for plain image fields on any section, and `visual:` for the
+mode-dependent block. `wcDrawVisual()` shows only the fields the chosen
+mode needs — a video address sitting under a "signature image" choice reads
+as broken even when it is merely unused — and previews a video with
+`<video>` rather than `<img>`.
+
+The website's ~8 MB direct-upload limit is now **enforced before the upload
+runs** rather than discovered as a failure afterwards, with the message
+pointing at the URL field as the alternative, which is what the website's
+own hint says.
+
+`tests/websitecontenttest.mjs`: 20 checks → 32, including that the mode
+switch reveals and hides the right controls, that an oversized video is
+refused with no upload attempted, and that all six keys are ones
+`index.html` genuinely reads.

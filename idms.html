@@ -708,6 +708,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           is saved, assigned or closed without a person reviewing it on
           <a data-goto="agent_review" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Review Agent Work</a>.</div>
         <div class="note" id="aa-msg" style="display:none;"></div>
+        <div class="hint" id="aa-count" style="margin-top:6px;font-weight:600;"></div>
       </div>
       <div id="aa-tiles"></div>
     </div>
@@ -14443,6 +14444,41 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     return order;
   }
 
+  /* The hub is a complete index of the platform, not just of its agents.
+     AA_TILES above hand-describes the screens that can actually be *done*
+     by an agent; everything else on the menu is folded in here automatically
+     so the hub can never drift out of step with the menu the way it had
+     (30 tiles against 116 live screens). A screen with an agent offers
+     "Fix with AI"; every other screen offers "Open" so the gap can still be
+     closed by hand, which is the honest option when no agent exists. */
+  function aaAllTiles(){
+    var byScreen = {};
+    AA_TILES.forEach(function(t){ byScreen[t.screen] = t; });
+    var out = [], seen = {};
+    MENU.forEach(function(g){
+      (g[4]||[]).forEach(function(it){
+        if (!it[3]) return;                       // not built yet
+        if (it[0] === 'agentic_ai') return;       // the hub itself
+        /* a few screens are deliberately on the menu twice under different
+           names — Tools Addition / Tool History Card are one screen, as are
+           Equipment & Gauges / Calibration Report. One tile each, or the
+           second would collide on the same badge id and never resolve. */
+        if (seen[it[0]]) return;
+        seen[it[0]] = 1;
+        if (byScreen[it[0]]){
+          var t = byScreen[it[0]];
+          out.push({ screen:t.screen, dept:g[2], icon:t.icon || it[1], label:t.label || it[2],
+            desc:t.desc, kind:t.kind, gapKind:t.gapKind, gapLabel:t.gapLabel,
+            load:t.load, run:t.run, gap:t.gap });
+        } else {
+          out.push({ screen:it[0], dept:g[2], icon:it[1], label:it[2],
+            desc:'Open this screen to check it and fill in anything missing.', kind:'open' });
+        }
+      });
+    });
+    return out;
+  }
+
   function aaTileHtml(t){
     return '<button type="button" class="bu-tile aa-tile" data-screen="' + esc(t.screen) + '" ' +
       'title="' + esc(t.label) + '">' +
@@ -14450,25 +14486,30 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       '<span class="aa-badge wait" id="aa-badge-' + esc(t.screen) + '">…</span></span>' +
       '<b>' + esc(t.label) + '</b>' +
       '<span class="bu-tdesc">' + esc(t.desc) + '</span>' +
-      (t.kind === 'auto' ? '<span class="aa-fix" data-fix="' + esc(t.screen) + '">Fix with AI →</span>' : '') +
+      '<span class="aa-fix" data-fix="' + esc(t.screen) + '">' +
+      (t.kind === 'auto' ? 'Fix with AI →' : 'Open and fix →') + '</span>' +
       '</button>';
   }
 
   function drawAgenticHub(){
     var order = aaGroupOrder();
+    var tiles = aaAllTiles();
     var byDept = {};
-    AA_TILES.forEach(function(t){ (byDept[t.dept] = byDept[t.dept] || []).push(t); });
+    tiles.forEach(function(t){ (byDept[t.dept] = byDept[t.dept] || []).push(t); });
+    var agents = tiles.filter(function(t){ return t.kind === 'auto'; }).length;
+    document.getElementById('aa-count').textContent =
+      tiles.length + ' screens · ' + agents + ' can be done for you by an agent';
     var html = order.filter(function(d){ return byDept[d]; }).map(function(d){
       return '<div class="bu-group">' + esc(d) + '</div><div class="bu-tilegrid">' +
         byDept[d].map(aaTileHtml).join('') + '</div>';
     }).join('');
     document.getElementById('aa-tiles').innerHTML = html ||
-      '<div class="empty"><b>No agents to show</b></div>';
+      '<div class="empty"><b>No screens to show</b></div>';
 
     document.querySelectorAll('#aa-tiles .aa-tile').forEach(function(b){
       b.addEventListener('click', function(e){
-        /* the small "Fix with AI" link inside the tile has its own handler
-           below and must not also trigger the tile's plain "open" click */
+        /* the small action link inside the tile has its own handler below and
+           must not also trigger the tile's plain "open" click */
         if (e.target && e.target.dataset && e.target.dataset.fix) return;
         navigate(b.dataset.screen);
       });
@@ -14482,8 +14523,10 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   }
 
   async function aaFixWithAi(screen){
-    var t = AA_TILES.filter(function(x){ return x.screen === screen; })[0];
-    if (!t || !t.load || !t.run) return;
+    var t = aaAllTiles().filter(function(x){ return x.screen === screen; })[0];
+    /* no agent for this one — the honest thing is to take the person to the
+       screen so they can do it by hand, not to pretend nothing happened */
+    if (!t || t.kind !== 'auto' || !t.load || !t.run) { navigate(screen); return; }
     navigate(screen);
     /* give go()'s own call to this screen's load function (fired by the
        navigate above) a moment to finish, the same wait-then-reload pattern
@@ -14516,19 +14559,23 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       return partsGapCache[key];
     }
 
-    var results = await Promise.all(AA_TILES.map(function(t){
-      if (t.kind === 'open' && t.gapKind) return partsGap(t.gapKind, t.gapLabel).catch(function(){ return null; });
+    var tiles = aaAllTiles();
+    var results = await Promise.all(tiles.map(function(t){
+      if (t.gapKind) return partsGap(t.gapKind, t.gapLabel).catch(function(){ return null; });
       if (t.kind === 'auto' && t.load && t.gap){
         return Promise.resolve(t.load()).then(function(){ return t.gap(); }).catch(function(){ return null; });
       }
       return Promise.resolve(null);
     }));
 
-    AA_TILES.forEach(function(t, i){
+    tiles.forEach(function(t, i){
       var el = document.getElementById('aa-badge-' + t.screen);
       if (!el) return;
       var r = results[i];
-      if (!r){ el.textContent = '—'; el.className = 'aa-badge wait'; el.title = 'Not checked'; return; }
+      /* a dash means "nothing to count here", not "zero problems" — a tick
+         would claim a check that was never made */
+      if (!r){ el.textContent = '—'; el.className = 'aa-badge wait';
+        el.title = t.kind === 'auto' ? 'Not checked' : 'Nothing to count on this screen — open it to check'; return; }
       el.textContent = r.n > 99 ? '99+' : String(r.n);
       el.className = 'aa-badge ' + (r.n ? '' : 'ok');
       el.title = r.label;
@@ -15029,7 +15076,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     btn.disabled = true;
     var step = function(t){ btn.textContent = t; say(t, true); };
     var n = { customers:0, parts:0, links:0, ops:0, dims:0, gauges:0, grn:0, inward:0,
-              setups:0, production:0, orders:0, pdi:0, dc:0, sheets:0 };
+              setups:0, production:0, orders:0, pdi:0, dc:0, sheets:0,
+              suppliers:0, machines:0, tools:0, quality:0, people:0, hr:0, qms:0 };
     try {
       var already = (await C.idms.docs('customer'))
         .filter(function(c){ return (c.data||{}).demo; }).length;
@@ -15225,12 +15273,17 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         n.sheets++;
       }
 
+      await demoSeedRest(n, step);
+
       say('Loaded ' + [
-        n.customers + ' customers', n.parts + ' parts', n.links + ' priced links',
+        n.customers + ' customers', n.suppliers + ' suppliers', n.parts + ' parts',
+        n.links + ' priced links', n.machines + ' machines', n.tools + ' tools',
         n.ops + ' operations', n.dims + ' characteristics', n.gauges + ' gauges',
         n.grn + ' goods receipts', n.inward + ' inward inspections', n.setups + ' setups',
         n.production + ' production bookings', n.pdi + ' lots', n.dc + ' challans',
-        n.orders + ' orders', n.sheets + ' inspection sheet'
+        n.orders + ' orders', n.sheets + ' inspection sheet',
+        n.quality + ' quality documents', n.people + ' employees', n.hr + ' HR records',
+        n.qms + ' QMS & master records'
       ].join(', ') + '. Open the <b>Works Dashboard</b> — there is deliberately plenty wrong with ' +
         'this works for the agents to find.', true);
       loadHome();
@@ -15239,6 +15292,201 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           'there; remove it and try again.');
     }
     btn.disabled = false; btn.textContent = 'Load sample data';
+  }
+
+  /* ---------------- sample data, phase 2 ----------------
+     Phase 1 above builds the customer→part→routing→production→dispatch
+     chain. This adds everything else the menu can show, so every screen has
+     something real to look at rather than an empty state. Deliberately
+     imperfect in places — an overdue gauge, a machine never serviced, an
+     unacknowledged policy, a skill gap — because a works with nothing wrong
+     gives the agents nothing to find and proves nothing about them. */
+  async function demoSeedRest(n, step){
+    var D = demoDate, mk = function(kind, docNo, status, data, note){
+      return C.idms.saveDoc({ kind:kind, docNo:docNo, status:status||'Active',
+        data: Object.assign({ demo:true }, data) }, note || 'sample data');
+    };
+
+    step('Adding suppliers, machines and tooling');
+    for (var i = 0; i < DEMO_SUPPLIERS.length; i++){
+      await mk('supplier', DEMO_SUPPLIERS[i].code, 'Approved', DEMO_SUPPLIERS[i]); n.suppliers++;
+    }
+    var mcs = [
+      { name:'VMC-01', type:'Vertical machining centre', make:'Haas', location:'Bay 1',
+        criticality:'Critical', maintenanceDays:90, lastMaintained:D(120) },   // overdue on purpose
+      { name:'CNC-TURN-02', type:'CNC turning centre', make:'DMG', location:'Bay 1',
+        criticality:'Critical', maintenanceDays:90, lastMaintained:D(20) },
+      { name:'SURF-GRIND-01', type:'Surface grinder', make:'Chevalier', location:'Bay 2',
+        criticality:'Ordinary', maintenanceDays:180, lastMaintained:'' }       // never serviced
+    ];
+    for (i = 0; i < mcs.length; i++){ await mk('machine', mcs[i].name, 'Active', mcs[i]); n.machines++; }
+    var tools = [
+      { name:'CNMG 120408 insert', type:'Turning insert', machine:'CNC-TURN-02',
+        expectedLife:300, used:270, issuedOn:D(30) },                          // nearly spent
+      { name:'Ø12 4-flute end mill', type:'Milling cutter', machine:'VMC-01',
+        expectedLife:200, used:40, issuedOn:D(10) }
+    ];
+    for (i = 0; i < tools.length; i++){ await mk('tool', tools[i].name, 'In use', tools[i]); n.tools++; }
+    for (i = 0; i < 2; i++){
+      await mk('rawmat', 'RM-' + (i+1), 'Active',
+        { name: i ? 'EN8 bright bar Ø25' : 'EN24 forged blank', type: i ? 'Raw material' : 'Raw material',
+          uom:'Kg', rate: i ? 85 : 132, reorderLevel:200, stock: i ? 140 : 620 }); n.qms++;
+    }
+
+    step('Adding quality documents');
+    var parts = (await C.idms.parts()).filter(function(p){ return (p.data||{}).demo; });
+    var procs = (await C.idms.docs('process')).filter(function(p){ return (p.data||{}).demo; });
+    var firstPart = parts[0];
+    if (firstPart){
+      var pOps = procs.filter(function(p){ return (p.data||{}).partId === firstPart.part_id; });
+      await mk('pfmea', 'PFMEA-' + firstPart.part_no, 'Draft',
+        { partId:firstPart.part_id, byAgent:false,
+          rows: pOps.slice(0,2).map(function(o, k){
+            var v = o.data || {};
+            return { opNo:v.opNo, opName:v.name, fn:'Machine to drawing',
+              failure: k ? 'Bore oversize' : 'Diameter undersize',
+              effect:'Assembly interference at the customer', sev: k ? 7 : 8,
+              cause: k ? 'Tool wear not detected' : 'Incorrect offset entered',
+              occ:4, control:'First-off inspection and 5-piece frequency check', det:3 };
+          }) }); n.quality++;
+      await mk('control_plan', 'CP-' + firstPart.part_no, 'Draft',
+        { partId:firstPart.part_id, phase:'Production', byAgent:false,
+          rows: pOps.slice(0,2).map(function(o){
+            var v = o.data || {};
+            return { opNo:v.opNo, opName:v.name, machine:v.machine, characteristic:'Bore diameter',
+              spec:'Ø32 +0.025/-0.000', technique:'Bore gauge', sampleSize:'5 pcs', frequency:'Hourly',
+              method:'Recorded on the self-inspection sheet', reaction:'Stop, segregate, inform the supervisor' };
+          }) }); n.quality++;
+      await mk('cnc', 'CNC-' + firstPart.part_no + '-OP20', 'Released',
+        { partId:firstPart.part_id, opNo:20, machine:'VMC-01', programNo:'O2010',
+          notes:'Roughing and finishing in one setup.' }); n.quality++;
+      await mk('ppap', 'PPAP-' + firstPart.part_no, 'In preparation',
+        { partId:firstPart.part_id, level:3, submittedOn:'', items:[] }); n.quality++;
+      await mk('apqp', 'APQP-' + firstPart.part_no, 'Phase 3',
+        { partId:firstPart.part_id, phase:3 }); n.quality++;
+      await mk('msa', 'MSA-' + firstPart.part_no, 'Complete',
+        { partId:firstPart.part_id, gauge:'Bore gauge 25-50mm', characteristic:'Bore diameter',
+          appraisers:3, trials:3, partsStudied:10, grrPct:18.4, ndc:5 }); n.quality++;
+      await mk('ncr', 'NCR-0001', 'Open',
+        { partId:firstPart.part_id, source:'In-process', raisedOn:D(9), raisedBy:'Quality',
+          qty:12, d2:'Bore oversize found on 12 pieces at final inspection',
+          dueOn:D(-2) }); n.quality++;   // already overdue, on purpose
+    }
+    await mk('checksheet', 'MCS-VMC-01', 'Complete',
+      { machine:'VMC-01', date:D(1), shift:'A', checkedBy:'R Kumar',
+        rows:[{ item:'Coolant level', result:'OK' }, { item:'Way lubrication', result:'OK' },
+              { item:'Guard interlock', result:'OK' }] }); n.quality++;
+
+    step('Adding people and HR records');
+    var emps = [
+      { empId:'ET001', name:'Asha Rao', designation:'Quality Engineer', department:'Quality',
+        doj:D(900), status:'Active', biometricId:'501', uan:'100200300400',
+        structure:{ basic:18000, da:0, hra:7200, conveyance:1600, special:3200, otherAllow:0 } },
+      { empId:'ET002', name:'R Kumar', designation:'CNC Operator', department:'Production',
+        doj:D(500), status:'Active', biometricId:'502', uan:'100200300401',
+        structure:{ basic:12000, da:0, hra:4800, conveyance:1600, special:1600, otherAllow:0 } },
+      { empId:'ET003', name:'S Babu', designation:'CNC Operator', department:'Production',
+        doj:D(120), status:'Probation', biometricId:'503',
+        structure:{ basic:11000, da:0, hra:4400, conveyance:1600, special:1000, otherAllow:0 } }
+    ];
+    for (i = 0; i < emps.length; i++){
+      try { await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'employees',
+        employee: Object.assign({ demo:true }, emps[i]), reason:'sample data' }) }); n.people++; } catch(e){}
+    }
+    var items = [
+      { itemId:'POL-DEMO1', kind:'policy', status:'Published', title:'Code of Conduct', version:'1.0',
+        category:'General', effectiveFrom:D(200), owner:'HR', reviewOn:D(-30), appliesTo:'all employees',
+        body:'Behave professionally and safely at all times.', acknowledgements:[] },  // unacknowledged + overdue review
+      { itemId:'LV-DEMO1', kind:'leave-req', status:'Pending', empId:'ET002', type:'Casual',
+        from:D(-3), to:D(-2), reason:'Family function', appliedOn:D(2) },
+      { itemId:'REQ-DEMO1', kind:'requisition', status:'Open', title:'CNC Operator',
+        department:'Production', count:2, neededBy:D(-14), reason:'Expansion',
+        jd:'Operate CNC turning centres. ITI with 2 years CNC experience.' },
+      { itemId:'CAND-DEMO1', kind:'candidate', status:'Applied', name:'Vikram Shah', reqId:'REQ-DEMO1',
+        phone:'9900112233', email:'vikram@example.test', qualification:'ITI Machinist',
+        experience:3, expectedCtc:320000 },
+      { itemId:'RWD-DEMO1', kind:'reward', status:'Recorded', empId:'ET001', type:'Best Kaizen',
+        period:'Last quarter', note:'Cut changeover time on VMC-01 by 20 minutes.', recordedOn:D(40) },
+      { itemId:'SRV-DEMO1', kind:'survey', status:'Open', title:'Engagement pulse',
+        questions:['How clear are your goals?','Do you feel heard?'], anonymous:true, responses:[] },
+      { itemId:'KPI-DEMO1', kind:'kpi', status:'Active', name:'Competency coverage', category:'People',
+        level:'Company', owner:'HR', target:100, unit:'%', direction:'higher', source:'competency', actual:'' },
+      { itemId:'KPI-DEMO2', kind:'kpi', status:'Active', name:'Customer complaints', category:'Quality',
+        level:'Company', owner:'Quality', target:2, unit:'per month', direction:'lower', source:'manual', actual:4 },
+      { itemId:'APR-DEMO1', kind:'appraisal', status:'Self Assessment', empId:'ET002', period:'FY 2026-27' },
+      { itemId:'EXT-DEMO1', kind:'exit', status:'In Progress', empId:'ET003', type:'Resignation',
+        noticeDate:D(10), lastWorkingDay:D(-20), reason:'Higher studies', clearance:{}, recoveries:0 }
+    ];
+    for (i = 0; i < items.length; i++){
+      try { await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items',
+        item: Object.assign({ demo:true }, items[i]), reason:'sample data' }) }); n.hr++; } catch(e){}
+    }
+
+    step('Adding competency, training and the org');
+    var comps = [
+      { designation:'CNC Operator', thing:'CNC setting', level:3, criticality:'Quality' },
+      { designation:'CNC Operator', thing:'Drawing reading', level:3, criticality:'Quality' },
+      { designation:'Quality Engineer', thing:'Gauge calibration', level:4, criticality:'Statutory' }
+    ];
+    for (i = 0; i < comps.length; i++){ await mk('competency', 'COMP-'+(i+1), 'Active', comps[i]); n.hr++; }
+    var skills = [
+      { person:'R Kumar', thing:'CNC setting', level:3, assessedOn:D(60), assessedBy:'Production Head' },
+      { person:'R Kumar', thing:'Drawing reading', level:2, assessedOn:D(60), assessedBy:'Production Head' },
+      { person:'Asha Rao', thing:'Gauge calibration', level:4, assessedOn:D(45), assessedBy:'Plant Head' }
+    ];  // S Babu deliberately unassessed, R Kumar deliberately short on one
+    for (i = 0; i < skills.length; i++){ await mk('skill', 'SK-'+(i+1), 'Active', skills[i]); n.hr++; }
+    await mk('tni', 'TNI-0001', 'Open',
+      { person:'R Kumar', thing:'Drawing reading', required:3, actual:2,
+        identifiedOn:D(15), method:'In-house', by:'Production Head' }); n.hr++;
+    await mk('training', 'TR-0001', 'Planned',
+      { title:'Drawing reading refresher', plannedOn:D(-10), trainer:'Production Head',
+        attendees:['R Kumar'], mode:'In-house' }); n.hr++;
+    var roles = [
+      { designation:'CNC Operator', responsibilities:'Set and run CNC machines to the routing and control plan.',
+        authority:'Stop production on a suspected quality problem.' },
+      { designation:'Quality Engineer', responsibilities:'Inspection, calibration, non-conformance and customer complaints.',
+        authority:'Hold or release material.' }
+    ];
+    for (i = 0; i < roles.length; i++){ await mk('role', 'ROLE-'+(i+1), 'Active', roles[i]); n.hr++; }
+    await mk('succession', 'SUC-0001', 'Active',
+      { position:'Quality Engineer', incumbent:'Asha Rao', successor:'R Kumar',
+        readiness:'1-2 years', gap:'Needs gauge calibration to level 4.' }); n.hr++;
+    await mk('dwm', 'DWM-' + D(1), 'Closed',
+      { date:D(1), department:'Production', attendees:'R Kumar, S Babu, Asha Rao',
+        notes:'Bore oversize on OP20 discussed. Offset corrected and first-off re-checked.' }); n.hr++;
+    await mk('task', 'TASK-0001', 'Open',
+      { title:'Re-verify OP20 offsets after the bore oversize', owner:'R Kumar',
+        dueOn:D(-1), priority:'High', source:'DWM', raisedOn:D(1) }); n.hr++;
+
+    step('Adding QMS documents and masters');
+    var qms = [
+      { level:1, title:'Quality Policy', docNo:'QP-01', rev:'02', owner:'MD', issuedOn:D(400) },
+      { level:2, title:'Control of Non-conforming Output', docNo:'QSP-08', rev:'01', owner:'QA', issuedOn:D(380) },
+      { level:3, title:'CNC Turning Work Instruction', docNo:'WI-21', rev:'03', owner:'Production', issuedOn:D(200) }
+    ];
+    for (i = 0; i < qms.length; i++){ await mk('qmsdoc', qms[i].docNo, 'Active', qms[i]); n.qms++; }
+    await mk('audit', 'IA-2026-01', 'Open',
+      { type:'Internal', area:'Production', plannedOn:D(-7), auditor:'Asha Rao',
+        findings:[{ clause:'8.5.1', finding:'Setup approval not signed on one lot', severity:'Minor' }] }); n.qms++;
+    var cfts = [{ name:'Asha Rao', role:'Quality' }, { name:'R Kumar', role:'Production' }];
+    for (i = 0; i < cfts.length; i++){ await mk('cft', 'CFT-'+(i+1), 'Active', cfts[i]); n.qms++; }
+    await mk('signatory', 'SIG-1', 'Active',
+      { name:'Vijay Kumar D P', designation:'Managing Director', documents:'Quotations, PPAP' }); n.qms++;
+    await mk('docformat', 'DF-1', 'Active',
+      { kind:'Quotation', pattern:'{PREFIX}-QTN-{SEQ}', example:'ET-QTN-0001' }); n.qms++;
+    var org = [
+      { name:'Vijay Kumar D P', designation:'Managing Director', reportsTo:'' },
+      { name:'Asha Rao', designation:'Quality Engineer', reportsTo:'Vijay Kumar D P' },
+      { name:'R Kumar', designation:'CNC Operator', reportsTo:'Asha Rao' }
+    ];
+    for (i = 0; i < org.length; i++){ await mk('orgnode', 'ORG-'+(i+1), 'Active', org[i]); n.qms++; }
+    await mk('salesplan', 'SP-' + new Date().toISOString().slice(0,7), 'Active',
+      { month:new Date().toISOString().slice(0,7), planned:1800000, remarks:'Sample plan' }); n.qms++;
+    await mk('invoice', 'INV-0001', 'Raised',
+      { customer:DEMO_CUSTOMERS[0] && DEMO_CUSTOMERS[0].name, date:D(5), amount:248000,
+        currency:'INR', notes:'Against the sample dispatch.' }); n.qms++;
+    await mk('legaldoc', 'LEG-1', 'Valid',
+      { title:'Factory Licence', number:'KA/MYS/2019/4471', issuedOn:D(800), validTill:D(-60) }); n.qms++;
   }
 
   async function removeDemo(){
@@ -15251,8 +15499,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     try {
       /* children before parents, so nothing is orphaned part way through */
       var kinds = ['self_insp','production','setup','pdi','dc','inward','grn','msa','ppap',
-                   'control_plan','pfmea','dimension','process','cust_part','order','gauge',
-                   'agent_run','customer'];
+                   'control_plan','pfmea','cnc','apqp','ncr','checksheet','dimension','process',
+                   'cust_part','order','invoice','salesplan','gauge','tool','machine','rawmat',
+                   'supplier','task','dwm','skill','tni','training','competency','role',
+                   'succession','orgnode','cft','signatory','docformat','qmsdoc','audit',
+                   'legaldoc','agent_run','customer'];
       for (var i = 0; i < kinds.length; i++){
         var rows = (await C.idms.docs(kinds[i])).filter(function(x){ return (x.data||{}).demo; });
         for (var k = 0; k < rows.length; k++){
@@ -15261,6 +15512,24 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           catch(e){ kept++; }
         }
       }
+      /* HR lives behind its own endpoint, so it is cleared separately — same
+         rule, only records this seeder marked */
+      try {
+        var hrItems = ((await C.api('/api/hr?what=items')).items || [])
+          .filter(function(x){ return (x.data||{}).demo; });
+        for (i = 0; i < hrItems.length; i++){
+          try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items',
+            itemId:hrItems[i].item_id, remove:true, reason:'sample data removed' }) }); gone++; }
+          catch(e){ kept++; }
+        }
+        var hrEmps = ((await C.api('/api/hr?what=employees')).employees || [])
+          .filter(function(x){ return x.demo; });
+        for (i = 0; i < hrEmps.length; i++){
+          try { await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'employees',
+            empId:hrEmps[i].empId, remove:true, reason:'sample data removed' }) }); gone++; }
+          catch(e){ kept++; }
+        }
+      } catch(e){}
       /* deleting a part takes its records with it, which is right — but if
          anybody added real work to a sample part, that goes too, so say so */
       var demoParts = (await C.idms.parts()).filter(function(p){ return (p.data||{}).demo; });

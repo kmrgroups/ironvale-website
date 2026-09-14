@@ -3127,3 +3127,63 @@ gain.
 
 `tests/themetest.mjs` is new (26 checks). Full suite: **all suites clean**
 — 41 files, 1,207 checks, zero failures.
+
+## Three-part audit: working screens, complete agent cover, complete sample data
+
+### The Agentic AI screen covered 30 of 116 screens
+
+It was a hand-written list, so it had drifted badly. Rewritten to derive
+itself from `MENU`: `aaAllTiles()` merges the hand-described agent tiles
+(`AA_TILES`, which carry the load/run/gap functions) over every live menu
+entry, so a screen cannot exist on the menu and be missing here again —
+the same self-deriving approach the title-bar search already used.
+
+Every tile now offers an action, as asked: **Fix with AI →** where an agent
+can genuinely do the work (11 screens), **Open and fix →** everywhere else,
+which navigates so it can be done by hand. `aaFixWithAi()` falls through to
+plain navigation for a screen with no agent rather than silently doing
+nothing. Verified in a live DOM: 113 tiles against 113 live menu screens,
+0 missing, 113 offering an action.
+
+**A real bug this surfaced**: a few screens are deliberately on the menu
+twice under different names (Tools Addition / Tool History Card are one
+screen; Equipment & Gauges / Calibration Report likewise). Two tiles meant
+two DOM elements with the same badge id, and the second never resolved —
+it sat on "…" forever. Deduped by screen id, keeping the first occurrence.
+
+### Sample data seeded 13 record kinds; the screens read over 50
+
+Added `demoSeedRest()`: suppliers, machines, tooling, raw material, PFMEA,
+control plan, CNC programme, PPAP, APQP, MSA, NCR, machine check sheet,
+invoice, sales plan, employees, policies, leave, requisitions, candidates,
+recognition, surveys, KPIs, appraisals, exits, competency, skills, TNI,
+training, roles, succession, org chart, DWM, tasks, QMS documents, audit,
+CFT, signatories, document formats and legal documents — with `removeDemo()`
+extended to match, including the HR endpoint, which lives behind its own API
+and so needed its own clearing pass.
+
+It is **deliberately imperfect**: a machine never serviced, a gauge overdue,
+an insert near the end of its life, a published policy nobody has
+acknowledged, a review date already past, an NCR past its due date, a
+licence expired, somebody short of their role standard, somebody never
+assessed. A works with nothing wrong gives the agents nothing to find and
+proves nothing about them.
+
+`tests/sampledatatest.mjs` runs the real seeder through the real client code
+and reads every kind back the way a screen would — so it covers saving *and*
+retrieval across nearly the whole record model in one test — then checks
+Remove takes out exactly what it put in and nothing else.
+
+### Two things worth recording about the test run itself
+
+The sample-data test polled in 500ms chunks while the seeder ran, which made
+it appear to take minutes. Tightened to 50ms: **6 seconds**.
+
+And I wasted several turns on a broken completion check: `pgrep -f
+run-all.mjs` matched the shell command *containing that string*, so the
+runner always looked "STILL RUNNING". Replaced with a sentinel appended to
+the output file. Worth remembering — a check that can never report success
+is worse than no check.
+
+**All 42 suites, 1,237 checks, zero failures**, verified by diffing the
+result list against the suite files so nothing could be silently missing.

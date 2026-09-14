@@ -2208,6 +2208,15 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       </div>
 
       <div class="card">
+        <h4>Parts, BOM &amp; routing (for quoting)</h4>
+        <div class="hint" style="margin-bottom:10px;">A simplified part list used only for quick
+          quoting — separate from Parts Addition, which carries far more than a quotation needs.
+          Each part can hold its own bill of materials and routing.</div>
+        <div id="qs-parts"></div>
+        <button class="btn" id="qs-pt-add" style="margin-top:8px;">+ Add part</button>
+      </div>
+
+      <div class="card">
         <button class="btn gold" id="qs-save">Save Quoting &amp; Costing Setup</button>
         <div class="note" id="qs-save-msg" style="display:none;"></div>
       </div>
@@ -26861,7 +26870,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       fields:[['botName','Assistant name'],['botLauncher','Launcher text'],
         ['botWelcome','Welcome message','textarea'],
         ['botKnowledge','What it should know (facts it may state)','textarea']],
-      list:{ arr:'botChips', label:'Suggested questions', plain:true } }
+      list:{ arr:'botChips', label:'Suggested questions', plain:true } },
+    { key:'sections', title:'Custom sections', note:'Extra sections of your own beyond the built-in ' +
+        'ones — each gets its own menu button and a row of cards. Hide one to take it off the site ' +
+        'without losing what you have written.',
+      sections:true }
   ];
   var WC_TOGGLES = [['capabilities','Capabilities'],['process','Process'],['stats-section','Stats'],
     ['gallery','Gallery'],['industries','Industries'],['certs-section','Certifications'],
@@ -26982,6 +26995,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   function wcDrawList(){
     var s = wcSpec(), host = document.getElementById('wc-list');
     var addBtn = document.getElementById('wc-add');
+    if (s.sections){ wcDrawCustomSections(host, addBtn); return; }
     if (!s.list){ host.innerHTML = ''; addBtn.style.display = 'none'; return; }
     var L = s.list;
     wcContent[L.arr] = wcContent[L.arr] || [];
@@ -27063,6 +27077,89 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     });
   }
 
+  /* Custom sections are a list of lists: each section carries its own cards,
+     so this is the one place the generic list editor above does not fit. */
+  function wcDrawCustomSections(host, addBtn){
+    wcContent.customSections = wcContent.customSections || [];
+    var secs = wcContent.customSections;
+    addBtn.style.display = ''; addBtn.textContent = '+ Add a section';
+    host.innerHTML = secs.length ? secs.map(function(sec, i){
+      sec.items = sec.items || [];
+      return '<div class="card" style="margin-top:10px;">' +
+        '<div class="row four">' +
+        '<div><label>Section title</label><input class="wc-sec" data-i="'+i+'" data-k="title" value="'+esc(sec.title)+'"></div>' +
+        '<div><label>Menu button</label><input class="wc-sec" data-i="'+i+'" data-k="menu" value="'+esc(sec.menu)+'"></div>' +
+        '<div><label>Anchor (web address ending)</label><input class="wc-sec" data-i="'+i+'" data-k="anchor" value="'+esc(sec.anchor)+'"></div>' +
+        '<div><label>Shown on the site</label><select class="wc-sec-vis" data-i="'+i+'">' +
+        '<option value="yes">Shown</option><option value="no"'+(sec.visible===false?' selected':'')+'>Hidden</option></select></div>' +
+        '</div>' +
+        '<div class="row" style="margin-top:9px;"><div><label>Sub-heading</label>' +
+        '<textarea class="wc-sec" data-i="'+i+'" data-k="sub" rows="2">'+esc(sec.sub||'')+'</textarea></div></div>' +
+        '<div class="sub" style="margin-top:10px;">Cards in this section</div>' +
+        (sec.items.length ? sec.items.map(function(it, j){
+          return '<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px;margin-top:10px;">' +
+            '<div style="flex:0 0 140px;">' +
+            (it.img ? '<img src="'+esc(it.img)+'" style="max-width:140px;max-height:85px;border:1px solid var(--line);border-radius:6px;">' : '<div class="hint">No image</div>') +
+            '<input type="file" accept="image/*" class="wc-sec-img" data-i="'+i+'" data-j="'+j+'" style="margin-top:6px;max-width:140px;">' +
+            '</div><div style="flex:1;min-width:220px;">' +
+            '<div style="margin-bottom:8px;"><label>Card title</label>' +
+            '<input class="wc-sec-item" data-i="'+i+'" data-j="'+j+'" data-k="title" value="'+esc(it.title)+'"></div>' +
+            '<div><label>Description</label>' +
+            '<textarea class="wc-sec-item" data-i="'+i+'" data-j="'+j+'" data-k="desc" rows="2">'+esc(it.desc||'')+'</textarea></div>' +
+            '<button class="btn del wc-sec-item-del" data-i="'+i+'" data-j="'+j+'" style="margin-top:6px;">Remove card</button>' +
+            '</div></div>';
+        }).join('') : '<div class="hint">No cards yet.</div>') +
+        '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">' +
+        '<button class="btn wc-sec-additem" data-i="'+i+'">+ Add a card</button>' +
+        (i > 0 ? '<button class="btn wc-sec-up" data-i="'+i+'">↑</button>' : '') +
+        (i < secs.length-1 ? '<button class="btn wc-sec-down" data-i="'+i+'">↓</button>' : '') +
+        '<button class="btn del wc-sec-del" data-i="'+i+'">Remove section</button></div></div>';
+    }).join('') : '<div class="empty"><b>No custom sections yet</b>Press Add below.</div>';
+
+    host.querySelectorAll('.wc-sec').forEach(function(el){
+      el.addEventListener('input', function(){ secs[+el.dataset.i][el.dataset.k] = el.value; });
+    });
+    host.querySelectorAll('.wc-sec-vis').forEach(function(el){
+      el.addEventListener('change', function(){ secs[+el.dataset.i].visible = el.value !== 'no'; });
+    });
+    host.querySelectorAll('.wc-sec-item').forEach(function(el){
+      el.addEventListener('input', function(){ secs[+el.dataset.i].items[+el.dataset.j][el.dataset.k] = el.value; });
+    });
+    host.querySelectorAll('.wc-sec-item-del').forEach(function(b){
+      b.addEventListener('click', function(){ secs[+b.dataset.i].items.splice(+b.dataset.j,1); wcDrawList(); });
+    });
+    host.querySelectorAll('.wc-sec-additem').forEach(function(b){
+      b.addEventListener('click', function(){
+        secs[+b.dataset.i].items.push({ id:'x'+Date.now().toString(36), img:'', title:'New card', desc:'' });
+        wcDrawList();
+      });
+    });
+    host.querySelectorAll('.wc-sec-del').forEach(function(b){
+      b.addEventListener('click', function(){
+        if (!confirm('Remove this whole section and its cards?')) return;
+        secs.splice(+b.dataset.i,1); wcDrawList();
+      });
+    });
+    host.querySelectorAll('.wc-sec-up').forEach(function(b){
+      b.addEventListener('click', function(){ var i = +b.dataset.i; secs.splice(i-1,0,secs.splice(i,1)[0]); wcDrawList(); });
+    });
+    host.querySelectorAll('.wc-sec-down').forEach(function(b){
+      b.addEventListener('click', function(){ var i = +b.dataset.i; secs.splice(i+1,0,secs.splice(i,1)[0]); wcDrawList(); });
+    });
+    host.querySelectorAll('.wc-sec-img').forEach(function(inp){
+      inp.addEventListener('change', async function(){
+        var f = inp.files[0]; if (!f) return;
+        var say = noteWriter(document.getElementById('wc-msg'));
+        try {
+          var up = await C.uploadFile(f);
+          secs[+inp.dataset.i].items[+inp.dataset.j].img = up.url;
+          wcDrawList();
+          say('Image uploaded — press Save website content to keep it.', true);
+        } catch(e){ say(esc(e.message)); }
+      });
+    });
+  }
+
   function wcDrawToggles(){
     document.getElementById('wc-toggles').innerHTML = '<div class="row four">' +
       WC_TOGGLES.map(function(t){
@@ -27104,7 +27201,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      'warrantyTerms','confidentiality','footerNote'].forEach(function(k){ set('qs-qc-'+k, qc[k]); });
     document.getElementById('qs-qc-showTax').value = qc.showTax === false ? 'no' : 'yes';
     document.getElementById('qs-msg').style.display = 'none';
-    qsDrawMachines(); qsDrawLabour(); qsDrawMaterials();
+    qsContent.parts = qsContent.parts || [];
+    qsDrawMachines(); qsDrawLabour(); qsDrawMaterials(); qsDrawParts();
   }
 
   function qsDrawMachines(){
@@ -27169,6 +27267,93 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       b.addEventListener('click', function(){ qsContent.materials.splice(+b.dataset.i,1); qsDrawMaterials(); });
     });
   }
+  function qsDrawParts(){
+    var host = document.getElementById('qs-parts');
+    qsContent.parts = qsContent.parts || [];
+    var rows = qsContent.parts;
+    host.innerHTML = rows.length ? rows.map(function(p, i){
+      p.bom = p.bom || []; p.routing = p.routing || [];
+      return '<div class="card" style="margin-top:10px;">' +
+        '<div class="row four">' +
+        '<div><label>Part number</label><input class="qs-pt" data-i="'+i+'" data-k="partNo" value="'+esc(p.partNo)+'"></div>' +
+        '<div><label>Description</label><input class="qs-pt" data-i="'+i+'" data-k="description" value="'+esc(p.description)+'"></div>' +
+        '<div><label>Customer part no.</label><input class="qs-pt" data-i="'+i+'" data-k="custPartNo" value="'+esc(p.custPartNo)+'"></div>' +
+        '<div><label>Drawing no.</label><input class="qs-pt" data-i="'+i+'" data-k="drawingNo" value="'+esc(p.drawingNo)+'"></div>' +
+        '</div>' +
+        '<div class="row four" style="margin-top:9px;">' +
+        '<div><label>Drawing rev</label><input class="qs-pt" data-i="'+i+'" data-k="drawingRev" value="'+esc(p.drawingRev)+'"></div>' +
+        '<div><label>Raw material stock</label><input class="num qs-pt" data-i="'+i+'" data-k="rmStockQty" value="'+esc(p.rmStockQty)+'"></div>' +
+        '<div><label>WIP qty</label><input class="num qs-pt" data-i="'+i+'" data-k="wipQty" value="'+esc(p.wipQty)+'"></div>' +
+        '<div><label>Finished qty</label><input class="num qs-pt" data-i="'+i+'" data-k="fgQty" value="'+esc(p.fgQty)+'"></div>' +
+        '</div>' +
+        '<div class="row four" style="margin-top:9px;"><div><label>Safety stock</label>' +
+        '<input class="num qs-pt" data-i="'+i+'" data-k="safetyStockQty" value="'+esc(p.safetyStockQty)+'"></div></div>' +
+
+        '<div class="sub" style="margin-top:12px;">Bill of materials</div>' +
+        (p.bom.length ? '<table class="t"><thead><tr><th>Item</th><th>Spec</th><th class="r">Qty/part</th>' +
+          '<th>Unit</th><th class="r">Rate</th><th></th></tr></thead><tbody>' +
+          p.bom.map(function(b, j){
+            return '<tr>' +
+              ['item','spec'].map(function(k){
+                return '<td><input class="qs-bom" data-i="'+i+'" data-j="'+j+'" data-k="'+k+'" value="'+esc(b[k])+'"></td>'; }).join('') +
+              '<td><input class="num qs-bom" data-i="'+i+'" data-j="'+j+'" data-k="qtyPerPart" value="'+esc(b.qtyPerPart)+'"></td>' +
+              '<td><input class="qs-bom" data-i="'+i+'" data-j="'+j+'" data-k="unit" value="'+esc(b.unit)+'"></td>' +
+              '<td><input class="num qs-bom" data-i="'+i+'" data-j="'+j+'" data-k="rate" value="'+esc(b.rate)+'"></td>' +
+              '<td><button class="btn del qs-bom-del" data-i="'+i+'" data-j="'+j+'">×</button></td></tr>';
+          }).join('') + '</tbody></table>' : '<div class="hint">No bill of materials yet.</div>') +
+        '<button class="btn qs-bom-add" data-i="'+i+'" style="margin-top:6px;">+ Add material</button>' +
+
+        '<div class="sub" style="margin-top:12px;">Routing</div>' +
+        (p.routing.length ? '<table class="t"><thead><tr><th class="c">Op</th><th>Process</th>' +
+          '<th>Machine type</th><th class="r">Setup min</th><th class="r">Cycle min</th><th></th></tr></thead><tbody>' +
+          p.routing.map(function(o, j){
+            return '<tr><td><input class="num qs-rt" data-i="'+i+'" data-j="'+j+'" data-k="op" value="'+esc(o.op)+'" style="width:60px;"></td>' +
+              '<td><input class="qs-rt" data-i="'+i+'" data-j="'+j+'" data-k="process" value="'+esc(o.process)+'"></td>' +
+              '<td><input class="qs-rt" data-i="'+i+'" data-j="'+j+'" data-k="machineType" value="'+esc(o.machineType)+'"></td>' +
+              '<td><input class="num qs-rt" data-i="'+i+'" data-j="'+j+'" data-k="setupMin" value="'+esc(o.setupMin)+'"></td>' +
+              '<td><input class="num qs-rt" data-i="'+i+'" data-j="'+j+'" data-k="cycleMin" value="'+esc(o.cycleMin)+'"></td>' +
+              '<td><button class="btn del qs-rt-del" data-i="'+i+'" data-j="'+j+'">×</button></td></tr>';
+          }).join('') + '</tbody></table>' : '<div class="hint">No routing yet.</div>') +
+        '<button class="btn qs-rt-add" data-i="'+i+'" style="margin-top:6px;">+ Add operation</button>' +
+        '<div style="margin-top:10px;"><button class="btn del qs-pt-del" data-i="'+i+'">Remove this part</button></div>' +
+        '</div>';
+    }).join('') : '<div class="empty"><b>No quoting parts yet</b></div>';
+
+    var num = function(k){ return ['qtyPerPart','rate','op','setupMin','cycleMin','rmStockQty','wipQty','fgQty','safetyStockQty'].indexOf(k) >= 0; };
+    host.querySelectorAll('.qs-pt').forEach(function(el){
+      el.addEventListener('input', function(){
+        rows[+el.dataset.i][el.dataset.k] = num(el.dataset.k) ? C.num(el.value) : el.value; });
+    });
+    host.querySelectorAll('.qs-bom').forEach(function(el){
+      el.addEventListener('input', function(){
+        rows[+el.dataset.i].bom[+el.dataset.j][el.dataset.k] = num(el.dataset.k) ? C.num(el.value) : el.value; });
+    });
+    host.querySelectorAll('.qs-rt').forEach(function(el){
+      el.addEventListener('input', function(){
+        rows[+el.dataset.i].routing[+el.dataset.j][el.dataset.k] = num(el.dataset.k) ? C.num(el.value) : el.value; });
+    });
+    host.querySelectorAll('.qs-bom-add').forEach(function(b){
+      b.addEventListener('click', function(){
+        rows[+b.dataset.i].bom.push({ item:'', spec:'', qtyPerPart:0, unit:'kg', rate:0 }); qsDrawParts(); });
+    });
+    host.querySelectorAll('.qs-rt-add').forEach(function(b){
+      b.addEventListener('click', function(){
+        var r = rows[+b.dataset.i].routing;
+        r.push({ op:(r.length+1)*10, process:'', machineType:'', setupMin:0, cycleMin:0 }); qsDrawParts(); });
+    });
+    host.querySelectorAll('.qs-bom-del').forEach(function(b){
+      b.addEventListener('click', function(){ rows[+b.dataset.i].bom.splice(+b.dataset.j,1); qsDrawParts(); });
+    });
+    host.querySelectorAll('.qs-rt-del').forEach(function(b){
+      b.addEventListener('click', function(){ rows[+b.dataset.i].routing.splice(+b.dataset.j,1); qsDrawParts(); });
+    });
+    host.querySelectorAll('.qs-pt-del').forEach(function(b){
+      b.addEventListener('click', function(){
+        if (!confirm('Remove this part, with its bill of materials and routing?')) return;
+        rows.splice(+b.dataset.i,1); qsDrawParts(); });
+    });
+  }
+
   function qsCollectSimpleFields(){
     var g = fieldVal, cb = qsContent.costBase, qc = qsContent.quoteCfg;
     ['workingDays','shiftsPerDay','hoursPerShift','downtimePct','powerTariff','factoryRent',
@@ -29188,7 +29373,17 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     wcSection = this.value; wcDrawSection();
   });
   document.getElementById('wc-add').addEventListener('click', function(){
-    var s = wcSpec(); if (!s.list) return;
+    var s = wcSpec();
+    if (s.sections){
+      wcContent.customSections = wcContent.customSections || [];
+      var t = 'New Section';
+      wcContent.customSections.push({ id:'x'+Date.now().toString(36), label:'Section', title:t,
+        menu:'New', sub:'', anchor:t.toLowerCase().replace(/[^a-z0-9]+/g,'-'), visible:true,
+        items:[{ id:'y'+Date.now().toString(36), img:'', title:'New card', desc:'' }] });
+      wcDrawList();
+      return;
+    }
+    if (!s.list) return;
     var L = s.list;
     wcContent[L.arr] = wcContent[L.arr] || [];
     if (L.plain){ wcContent[L.arr].push(''); }
@@ -29213,6 +29408,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   document.getElementById('qs-mt-add').addEventListener('click', function(){
     qsContent.materials.push({ name:'New Material', grade:'', rate:0, unit:'kg', density:0,
       leadTimeDays:7, source:'', sourceDate:'', confidence:'Manual' }); qsDrawMaterials(); });
+  document.getElementById('qs-pt-add').addEventListener('click', function(){
+    qsContent.parts = qsContent.parts || [];
+    qsContent.parts.push({ id:'qp'+Date.now().toString(36), partNo:'', description:'', custPartNo:'',
+      drawingNo:'', drawingRev:'', rmStockQty:0, wipQty:0, fgQty:0, safetyStockQty:0,
+      bom:[], routing:[] }); qsDrawParts(); });
   document.getElementById('qs-save').addEventListener('click', saveQuotingSetup);
 
   document.getElementById('rp-tri-run').addEventListener('click', runRfqTriage);

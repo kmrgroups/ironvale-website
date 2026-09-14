@@ -117,6 +117,42 @@ check('the added machine is in the saved payload', saveCall && saveCall.body.dat
 check('the deleted-then-readded labour grade array has exactly one entry',
   saveCall && saveCall.body.data.labourGrades.length === 1);
 
+// ---------- quoting parts, with their own BOM and routing ----------
+click($('qs-pt-add'));
+await wait(80);
+check('a quoting part can be added',
+  !!window.document.querySelector('.qs-pt[data-k="partNo"]'));
+const ptNo = window.document.querySelector('.qs-pt[data-k="partNo"]');
+ptNo.value = 'Q-1001'; input(ptNo);
+click(window.document.querySelector('.qs-bom-add'));
+await wait(80);
+const bomItem = window.document.querySelector('.qs-bom[data-k="item"]');
+check('a bill of materials line can be added to that part', !!bomItem);
+bomItem.value = 'EN8 bar'; input(bomItem);
+const bomQty = window.document.querySelector('.qs-bom[data-k="qtyPerPart"]');
+bomQty.value = '1.4'; input(bomQty);
+click(window.document.querySelector('.qs-rt-add'));
+await wait(80);
+const rtProc = window.document.querySelector('.qs-rt[data-k="process"]');
+check('a routing operation can be added to that part', !!rtProc);
+rtProc.value = 'Turn'; input(rtProc);
+check('the first operation is numbered 10 automatically',
+  window.document.querySelector('.qs-rt[data-k="op"]').value === '10');
+
+calls.length = 0;
+click($('qs-save'));
+await wait(250);
+const partSave = calls.find(c => c.kind === 'content-save');
+const savedPart = partSave && partSave.body.data.parts && partSave.body.data.parts[0];
+check('the quoting part is saved under data.parts', !!savedPart,
+  partSave && JSON.stringify(partSave.body.data.parts || []).slice(0, 120));
+check('its part number is saved', savedPart && savedPart.partNo === 'Q-1001');
+check('its bill of materials is saved with a real number for quantity',
+  savedPart && savedPart.bom.length === 1 && savedPart.bom[0].qtyPerPart === 1.4,
+  savedPart && JSON.stringify(savedPart.bom));
+check('its routing is saved', savedPart && savedPart.routing.length === 1 &&
+  savedPart.routing[0].process === 'Turn');
+
 // ---------- the critical one: unrelated company profile must not be clobbered ----------
 check('the unrelated company profile survives this save untouched',
   saveCall && saveCall.body.data.company.legalName === 'Test Mfg', saveCall && JSON.stringify(saveCall.body.data.company));

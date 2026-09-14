@@ -194,6 +194,42 @@ check('the video address is saved under the key the website reads',
 check('the video caption is saved', heroSave && heroSave.body.data.heroVideoCaption === 'Watch our film');
 
 
+// ---------- custom sections: a list of sections, each with its own cards ----------
+pick('sections');
+await wait(100);
+check('the custom sections editor opens with nothing yet',
+  /No custom sections yet/.test($('wc-list').textContent), $('wc-list').textContent.slice(0, 80));
+click($('wc-add'));
+await wait(80);
+check('adding a section creates it with one starter card',
+  window.document.querySelectorAll('.wc-sec[data-k="title"]').length === 1 &&
+  window.document.querySelectorAll('.wc-sec-item[data-k="title"]').length === 1);
+const secTitle = window.document.querySelector('.wc-sec[data-k="title"]');
+secTitle.value = 'Our Accreditations'; input(secTitle);
+const secMenu = window.document.querySelector('.wc-sec[data-k="menu"]');
+secMenu.value = 'Accreditations'; input(secMenu);
+const cardTitle = window.document.querySelector('.wc-sec-item[data-k="title"]');
+cardTitle.value = 'NADCAP'; input(cardTitle);
+click(window.document.querySelector('.wc-sec-additem'));
+await wait(80);
+check('a second card can be added to the section',
+  window.document.querySelectorAll('.wc-sec-item[data-k="title"]').length === 2);
+const secVis = window.document.querySelector('.wc-sec-vis');
+secVis.value = 'no'; change(secVis);
+
+calls.length = 0;
+click($('wc-save'));
+await wait(250);
+const secSave = calls.find(c => c.kind === 'content-save');
+const savedSec = secSave && secSave.body.data.customSections && secSave.body.data.customSections[0];
+check('the custom section is saved under customSections, the key the website reads', !!savedSec,
+  secSave && JSON.stringify(secSave.body.data.customSections || []).slice(0, 120));
+check('its title, menu label and cards are saved',
+  savedSec && savedSec.title === 'Our Accreditations' && savedSec.menu === 'Accreditations' &&
+  savedSec.items.length === 2 && savedSec.items[0].title === 'NADCAP');
+check('hiding a section is saved as a real false', savedSec && savedSec.visible === false);
+check('it carries an anchor so the menu button can link to it', savedSec && !!savedSec.anchor);
+
 /* This is the check that matters: a key that looks right but is not read by
    index.html would save silently and change nothing on the live site. */
 const writable = [];
@@ -210,7 +246,7 @@ for (const s of [['heroEyebrow'],['heroHeadline'],['heroSub'],['ctaPrimary'],['c
 check('every text field this screen writes is a key the website actually reads',
   writable.length === 0, 'unknown to index.html: ' + writable.join(', '));
 
-const arrays = ['capabilities','process','stats','gallery','industries','certs','founders','ticker','botChips']
+const arrays = ['capabilities','process','stats','gallery','industries','certs','founders','ticker','botChips','customSections']
   .filter(a => !site.includes('data.' + a) && !site.includes(a + ':['));
 check('every list this screen writes is an array the website actually renders',
   arrays.length === 0, 'unknown to index.html: ' + arrays.join(', '));

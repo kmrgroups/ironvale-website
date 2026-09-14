@@ -354,6 +354,15 @@ export function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Auth-Token, X-Device-Key');
+  /* Every route calls cors() first, so this is the one place to guarantee no
+     browser, proxy or CDN sitting between a device and this function ever
+     hands back a stored copy of content, settings, parts, orders or anything
+     else here. A device that reads a moment after another device wrote must
+     always get that write, not whatever was cached the first time this route
+     was hit. There is no data served from here that is ever correct to cache. */
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
 }
 
 export function readBody(req) {

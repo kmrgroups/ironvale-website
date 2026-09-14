@@ -30328,15 +30328,32 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
         return bkSay('That file carries no settings.');
       if (!confirm('Replace this deployment\'s settings and admin data with the file?\n\n' +
                    'Parts, orders and every other record are untouched. This cannot be undone.')) return;
-      var ok = 0, bad = 0;
+      var ok = 0, bad = 0, errs = [];
       try { await C.api('/api/content', { method:'POST', body:JSON.stringify({ data: dump.content||{} }) }); ok++; }
-      catch(e){ bad++; }
+      catch(e){ bad++; errs.push('content: ' + e.message); }
       var ks = Object.keys(dump.idmsSettings || {});
       for (var i = 0; i < ks.length; i++){
-        try { await C.idms.saveSetting(ks[i], dump.idmsSettings[ks[i]]); ok++; } catch(e){ bad++; }
+        try { await C.idms.saveSetting(ks[i], dump.idmsSettings[ks[i]]); ok++; }
+        catch(e){ bad++; errs.push(ks[i] + ': ' + e.message); }
       }
-      bkSay('Restored ' + ok + ' settings record(s)' + (bad ? ', ' + bad + ' failed' : '') +
-            '. Provider keys are not carried in a backup — set those on the Setup Wizard. Reloading…', true);
+      /* A failed write must never be hidden by an automatic reload — this used
+         to say "Reloading…" and reload after 1.8s regardless of ok/bad, which
+         is exactly long enough to miss a message that really said "Restored 0,
+         4 failed" (a session that expired mid-restore, most often). Nothing
+         below reloads or clears the message until every record is confirmed
+         written, so a failed restore cannot be mistaken for a successful one,
+         and the file can safely be tried again — nothing was lost by trying. */
+      if (bad) {
+        var expired = errs.some(function(m){ return /session has ended|sign in again/i.test(m); });
+        bkSay('Restored ' + ok + ' settings record(s), <b>' + bad + ' failed</b>.' +
+              (expired
+                ? ' Your session had expired partway through — sign out, sign in again, then upload the file once more. Nothing here was lost; the page has not reloaded.'
+                : ' First error: ' + esc(errs[0]) + '. The page has not reloaded, so it is safe to try again.'),
+              false);
+        return;
+      }
+      bkSay('Restored ' + ok + ' settings record(s). Provider keys are not carried in a backup — ' +
+            'set those on the Setup Wizard. Reloading…', true);
       setTimeout(function(){ location.reload(); }, 1800);
     });
   });
@@ -30366,32 +30383,45 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
       if (!n) return bkSay('That file carries no records.');
       if (!confirm('Restore ' + n + ' record(s) into the database?\n\nRecords with the same id are ' +
                    'overwritten. Your company profile, branding and keys are untouched. This cannot be undone.')) return;
-      var ok = 0, bad = 0, i;
+      var ok = 0, bad = 0, i, errs = [];
       for (i = 0; i < (dump.parts||[]).length; i++) {
         var p = dump.parts[i];
         try { await C.idms.savePart({ partId:p.part_id, customer:p.customer, partNo:p.part_no,
                 partName:p.part_name, lifecycle:p.lifecycle, quoteRef:p.quote_ref, data:p.data },
-                'restored from a backup file'); ok++; } catch(e){ bad++; }
+                'restored from a backup file'); ok++; }
+        catch(e){ bad++; errs.push('part ' + (p.part_id||'?') + ': ' + e.message); }
       }
       for (i = 0; i < (dump.docs||[]).length; i++) {
         var dd = dump.docs[i];
         try { await C.idms.saveDoc({ docId:dd.doc_id, kind:dd.kind, partId:dd.part_id, docNo:dd.doc_no,
                 rev:dd.rev, status:dd.status, data:dd.data }, 'restored from a backup file'); ok++; }
-        catch(e){ bad++; }
+        catch(e){ bad++; errs.push('doc ' + (dd.doc_id||'?') + ': ' + e.message); }
       }
       for (i = 0; i < (dump.hrEmployees||[]).length; i++) {
         try { await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'employees',
                 employee:dump.hrEmployees[i], reason:'restored from a backup file' }) }); ok++; }
-        catch(e){ bad++; }
+        catch(e){ bad++; errs.push('employee ' + (dump.hrEmployees[i].empId||'?') + ': ' + e.message); }
       }
       for (i = 0; i < (dump.hrItems||[]).length; i++) {
         var it = dump.hrItems[i];
         try { await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items',
                 item: Object.assign({ itemId:it.item_id, kind:it.kind, status:it.status }, it.data||{}),
                 reason:'restored from a backup file' }) }); ok++; }
-        catch(e){ bad++; }
+        catch(e){ bad++; errs.push('item ' + (it.item_id||'?') + ': ' + e.message); }
       }
-      bkSay('Restored ' + ok + ' record(s)' + (bad ? ', ' + bad + ' failed' : '') + '.', true);
+      /* Same principle as the settings restore above: a partly- or wholly-
+         failed run must stay on screen, not send you back to Home looking
+         like it finished. go('home') now only happens once nothing failed. */
+      if (bad) {
+        var expired = errs.some(function(m){ return /session has ended|sign in again/i.test(m); });
+        bkSay('Restored ' + ok + ' record(s), <b>' + bad + ' failed</b>.' +
+              (expired
+                ? ' Your session had expired partway through — sign out, sign in again, then upload the file once more.'
+                : ' First error: ' + esc(errs[0]) + '. Nothing has navigated away, so it is safe to try again.'),
+              false);
+        return;
+      }
+      bkSay('Restored ' + ok + ' record(s).', true);
       go('home');
     });
   });

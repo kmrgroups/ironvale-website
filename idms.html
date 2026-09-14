@@ -2255,48 +2255,54 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     <div class="panel" data-panel="admin_backup">
       <div class="card">
         <h4>Backup &amp; Restore</h4>
-        <div class="hint" style="margin-bottom:10px;">A copy taken off-site, and a way to put it back.
-          The database remains the record — this is not where the data lives. Restoring overwrites
-          any record with the same id and cannot be undone, which is why it sits here rather than on
-          the top bar.</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn gold" id="t-export">Export JSON</button>
-          <button class="btn del" id="t-import">Import JSON</button>
-        </div>
+        <div class="hint" style="margin-bottom:10px;">Two separate halves, kept apart on purpose.
+          <b>Settings &amp; admin</b> is what makes this deployment look like your company — profile,
+          branding, website content, rates, provider keys. <b>Data &amp; records</b> is the work
+          itself — parts, orders, routings, production, quality, HR. Each half has its own download,
+          its own upload and its own flush, so you can replace one without disturbing the other.
+          Restoring overwrites any record with the same id and cannot be undone.</div>
         <div class="note" id="bk-msg" style="display:none;"></div>
       </div>
 
-      <div class="card" style="border:1px solid var(--bad,#b03a2e);">
-        <h4>Flush all data and records</h4>
-        <div class="hint" style="margin-bottom:10px;">Deletes every part, order, routing, PFMEA,
-          control plan, production booking, attendance record, punch, payslip and uploaded
-          attachment — every record this deployment has ever made. <b>Does not touch</b> your company
-          profile, branding, users, provider keys, or registered devices — the same team can carry
-          straight on entering fresh data afterwards. This cannot be undone; export a backup above
-          first if there is any chance you will want this again.</div>
-        <div class="row four">
-          <div style="grid-column:span 2;"><label>Type <code>FLUSH ALL DATA</code> to enable this</label>
-            <input id="fl-data-confirm" placeholder="FLUSH ALL DATA" autocomplete="off"></div>
-          <div style="align-self:end;"><button class="btn del" id="fl-data-go" disabled>Flush all data and records</button></div>
+      <div class="card">
+        <h4>Settings &amp; admin data</h4>
+        <div class="hint" style="margin-bottom:10px;">Company profile and branding, website content
+          and theme, login screen, quoting and costing rates, statutory rates, document numbering,
+          registered devices and provider keys. Does not contain a single part, order or employee.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="bk-exp-admin">Download settings JSON</button>
+          <button class="btn del" id="bk-imp-admin">Upload settings JSON</button>
         </div>
-        <div class="note" id="fl-data-msg" style="display:none;"></div>
-      </div>
-
-      <div class="card" style="border:1px solid var(--bad,#b03a2e);">
-        <h4>Flush all settings &amp; admin data — for a fresh deploy</h4>
-        <div class="hint" style="margin-bottom:10px;">Deletes everything that makes this deployment
-          look like this company — the company profile, logo and branding, website content and
-          pricing, print/home settings, AI/email/WhatsApp provider keys, and registered biometric
-          devices. <b>Does not touch</b> user accounts (remove those yourself from User Management)
-          and <b>does not touch any data</b> — parts, orders and every other record are untouched; use
-          Flush All Data above as well if this deployment is being handed to a brand new customer with
-          nothing carried over. This cannot be undone.</div>
-        <div class="row four">
-          <div style="grid-column:span 2;"><label>Type <code>FLUSH ALL SETTINGS</code> to enable this</label>
+        <div class="row four" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
+          <div style="grid-column:span 2;"><label>Flush it all — type <code>FLUSH ALL SETTINGS</code></label>
             <input id="fl-settings-confirm" placeholder="FLUSH ALL SETTINGS" autocomplete="off"></div>
           <div style="align-self:end;"><button class="btn del" id="fl-settings-go" disabled>Flush settings &amp; admin data</button></div>
         </div>
+        <div class="hint">Wipes everything listed above for a fresh deploy. <b>Does not touch</b> user
+          accounts — remove those from User Management — and <b>does not touch any data</b>. Download
+          first if there is any chance you will want it back; this cannot be undone.</div>
         <div class="note" id="fl-settings-msg" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <h4>Data &amp; records</h4>
+        <div class="hint" style="margin-bottom:10px;">Everything every other screen has saved — parts,
+          customers, suppliers, machines, routings, quality documents, production, dispatch, HR
+          records and enquiries. Does not contain your company profile, branding or any key.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="bk-exp-data">Download data JSON</button>
+          <button class="btn del" id="bk-imp-data">Upload data JSON</button>
+        </div>
+        <div class="row four" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
+          <div style="grid-column:span 2;"><label>Flush it all — type <code>FLUSH ALL DATA</code></label>
+            <input id="fl-data-confirm" placeholder="FLUSH ALL DATA" autocomplete="off"></div>
+          <div style="align-self:end;"><button class="btn del" id="fl-data-go" disabled>Flush all data and records</button></div>
+        </div>
+        <div class="hint">Deletes every part, order, routing, quality document, production booking,
+          attendance record, punch, payslip and attachment. <b>Does not touch</b> your company
+          profile, branding, users, keys or devices — the same team carries straight on afterwards.
+          Download first; this cannot be undone.</div>
+        <div class="note" id="fl-data-msg" style="display:none;"></div>
       </div>
     </div>
 
@@ -29324,38 +29330,101 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 
   /* Export and import are a safety net for taking a copy off-site. The
      database remains the record — this is not where the data lives. */
-  document.getElementById('t-export').addEventListener('click', async function(){
-    this.disabled = true;
-    try {
-      var dump = { exportedAt: new Date().toISOString(),
-        parts: await C.idms.parts(), docs: await C.idms.docs(), settings: settings };
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(dump,null,2)], {type:'application/json'}));
-      a.download = 'idms-backup-' + new Date().toISOString().slice(0,10) + '.json';
-      a.click();
-      toast('Backup downloaded');
-    } catch(e){ toast(e.message); }
-    this.disabled = false;
-  });
-
-  document.getElementById('t-import').addEventListener('click', function(){
-    /* Restoring overwrites records. It is not something a general login should
-       be able to do from a stray click. */
-    if (String(me.role || '').toLowerCase().indexOf('admin') < 0 &&
-        String(me.role || '').toLowerCase() !== 'developer') {
-      toast('Restoring a backup needs an administrator login.');
-      return;
-    }
+  /* Two scopes, matching the two flushes exactly — settings-and-admin, and
+     data-and-records. Keeping them apart is the point: replacing one
+     company's branding should not be able to drag another company's parts
+     in with it, and re-seeding data should never silently overwrite the
+     keys that make email work. */
+  function bkSay(t, good){ noteWriter(document.getElementById('bk-msg'))(t, good); }
+  function bkDownload(name, obj){
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)], {type:'application/json'}));
+    a.download = name + '-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+  }
+  function bkIsAdmin(){
+    var r = String(me.role || '').toLowerCase();
+    return r === 'developer' || r.indexOf('admin') >= 0;
+  }
+  function bkPickFile(then){
     var f = document.createElement('input');
     f.type = 'file'; f.accept = '.json,application/json';
     f.addEventListener('change', async function(){
       var file = f.files[0]; if (!file) return;
       var dump;
       try { dump = JSON.parse(await file.text()); }
-      catch(e){ toast('That file is not valid JSON.'); return; }
-      var n = (dump.parts||[]).length + (dump.docs||[]).length;
-      if (!confirm('Restore ' + n + ' records into the database?\n\nExisting records with the same id ' +
-                   'are overwritten. This cannot be undone.')) return;
+      catch(e){ bkSay('That file is not valid JSON.'); return; }
+      then(dump);
+    });
+    f.click();
+  }
+
+  document.getElementById('bk-exp-admin').addEventListener('click', async function(){
+    this.disabled = true;
+    try {
+      var content = {};
+      try { content = (await C.api('/api/content')).data || {}; } catch(e){}
+      var setts = {};
+      try { setts = (await C.api('/api/settings')).settings || {}; } catch(e){}
+      bkDownload('idms-settings', { scope:'settings', exportedAt:new Date().toISOString(),
+        content:content, idmsSettings:settings,
+        /* provider keys come back masked from the server and are never in the
+           clear here — the list is for checking what was configured, not for
+           carrying secrets between deployments */
+        providerKeys:setts });
+      bkSay('Settings downloaded. Provider keys are listed but masked — set those again on the new ' +
+            'deployment from the Setup Wizard.', true);
+    } catch(e){ bkSay(esc(e.message)); }
+    this.disabled = false;
+  });
+
+  document.getElementById('bk-imp-admin').addEventListener('click', function(){
+    if (!bkIsAdmin()) return bkSay('Restoring settings needs an administrator login.');
+    bkPickFile(async function(dump){
+      if (dump.scope && dump.scope !== 'settings')
+        return bkSay('That looks like a <b>data</b> backup, not a settings one. Use Upload data JSON.');
+      if (!dump.content && !dump.idmsSettings)
+        return bkSay('That file carries no settings.');
+      if (!confirm('Replace this deployment\'s settings and admin data with the file?\n\n' +
+                   'Parts, orders and every other record are untouched. This cannot be undone.')) return;
+      var ok = 0, bad = 0;
+      try { await C.api('/api/content', { method:'POST', body:JSON.stringify({ data: dump.content||{} }) }); ok++; }
+      catch(e){ bad++; }
+      var ks = Object.keys(dump.idmsSettings || {});
+      for (var i = 0; i < ks.length; i++){
+        try { await C.idms.saveSetting(ks[i], dump.idmsSettings[ks[i]]); ok++; } catch(e){ bad++; }
+      }
+      bkSay('Restored ' + ok + ' settings record(s)' + (bad ? ', ' + bad + ' failed' : '') +
+            '. Provider keys are not carried in a backup — set those on the Setup Wizard. Reloading…', true);
+      setTimeout(function(){ location.reload(); }, 1800);
+    });
+  });
+
+  document.getElementById('bk-exp-data').addEventListener('click', async function(){
+    this.disabled = true;
+    try {
+      var dump = { scope:'data', exportedAt:new Date().toISOString(),
+        parts: await C.idms.parts(), docs: await C.idms.docs() };
+      try { dump.hrEmployees = (await C.api('/api/hr?what=employees')).employees || []; } catch(e){ dump.hrEmployees = []; }
+      try { dump.hrItems = (await C.api('/api/hr?what=items')).items || []; } catch(e){ dump.hrItems = []; }
+      try { dump.rfqs = (await C.api('/api/rfqs')).rfqs || []; } catch(e){ dump.rfqs = []; }
+      bkDownload('idms-data', dump);
+      bkSay('Data downloaded — ' + dump.parts.length + ' part(s), ' + dump.docs.length +
+            ' document(s), ' + dump.hrEmployees.length + ' employee(s), ' + dump.rfqs.length + ' enquiry/ies.', true);
+    } catch(e){ bkSay(esc(e.message)); }
+    this.disabled = false;
+  });
+
+  document.getElementById('bk-imp-data').addEventListener('click', function(){
+    if (!bkIsAdmin()) return bkSay('Restoring data needs an administrator login.');
+    bkPickFile(async function(dump){
+      if (dump.scope && dump.scope !== 'data')
+        return bkSay('That looks like a <b>settings</b> backup, not a data one. Use Upload settings JSON.');
+      var n = (dump.parts||[]).length + (dump.docs||[]).length +
+              (dump.hrEmployees||[]).length + (dump.hrItems||[]).length;
+      if (!n) return bkSay('That file carries no records.');
+      if (!confirm('Restore ' + n + ' record(s) into the database?\n\nRecords with the same id are ' +
+                   'overwritten. Your company profile, branding and keys are untouched. This cannot be undone.')) return;
       var ok = 0, bad = 0, i;
       for (i = 0; i < (dump.parts||[]).length; i++) {
         var p = dump.parts[i];
@@ -29369,10 +29438,21 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
                 rev:dd.rev, status:dd.status, data:dd.data }, 'restored from a backup file'); ok++; }
         catch(e){ bad++; }
       }
-      toast('Restored ' + ok + ' record(s)' + (bad ? ', ' + bad + ' failed' : ''));
+      for (i = 0; i < (dump.hrEmployees||[]).length; i++) {
+        try { await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'employees',
+                employee:dump.hrEmployees[i], reason:'restored from a backup file' }) }); ok++; }
+        catch(e){ bad++; }
+      }
+      for (i = 0; i < (dump.hrItems||[]).length; i++) {
+        var it = dump.hrItems[i];
+        try { await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items',
+                item: Object.assign({ itemId:it.item_id, kind:it.kind, status:it.status }, it.data||{}),
+                reason:'restored from a backup file' }) }); ok++; }
+        catch(e){ bad++; }
+      }
+      bkSay('Restored ' + ok + ' record(s)' + (bad ? ', ' + bad + ' failed' : '') + '.', true);
       go('home');
     });
-    f.click();
   });
 
   /* Both flush actions stay disabled until the exact phrase is typed — no

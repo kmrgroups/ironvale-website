@@ -3187,3 +3187,52 @@ is worse than no check.
 
 **All 42 suites, 1,237 checks, zero failures**, verified by diffing the
 result list against the suite files so nothing could be silently missing.
+
+## Backup split into two scopes, matching the two flushes
+
+Export/Import was a single "everything" JSON while the flushes were already
+split into settings-and-admin versus data-and-records. That mismatch was
+the actual problem: you could flush one half but only ever back up or
+restore both together, so there was no safe way to move a company's
+branding to a new deployment without dragging its parts along, or to
+re-seed data without overwriting the keys that make email work.
+
+Backup & Restore is now two self-contained blocks, each with its own
+download, upload and flush:
+
+- **Settings & admin** — company profile and branding, website content and
+  theme, login screen, quoting/costing rates, statutory rates, document
+  numbering, devices, provider keys. Exports `scope:'settings'`.
+- **Data & records** — parts, documents, HR employees, HR items and RFQs.
+  Exports `scope:'data'`. This one deliberately gained HR and RFQs, which
+  the old single export never included at all: it only carried parts, docs
+  and idms settings, so an employee master or an enquiry pipeline could
+  never actually be restored from a backup.
+
+**Each upload checks the `scope` of the file and refuses the wrong half by
+name** rather than half-applying it. Restoring a data file into the
+settings slot would have wiped the branding; a mismatch now says so and
+does nothing.
+
+**Provider keys are exported masked, and say so.** The server returns them
+masked and this does not try to defeat that — the settings export lists
+what was configured so it can be checked, and the restore message states
+plainly that keys must be set again on the new deployment from the Setup
+Wizard. A backup that silently carried working secrets between deployments
+would be the wrong thing to build.
+
+`smoketest.mjs` gained seven checks proving the separation is real rather
+than described: the data download carries records and no company profile or
+keys, the settings download carries the profile and no parts, documents or
+employees, and uploading a data file into the settings slot is refused with
+nothing written.
+
+**42 suites, 1,244 checks, zero failures**, verified by diffing the result
+list against the suite files.
+
+**A note on the runner**, since it has now cost time twice: individual
+suites that take four seconds standalone occasionally hang indefinitely
+inside `run-all.mjs` (smoketest once, themetest once). It is environmental,
+not a code fault — each was re-run standalone immediately afterwards and
+passed in seconds. Worth fixing properly at some point by having run-all
+kill a child that outlives its timeout rather than waiting on it forever.

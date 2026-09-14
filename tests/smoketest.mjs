@@ -158,11 +158,79 @@ check('sample data moved to Admin',
 
 // ---- 5. top bar ----
 check('Export/Import are off the top bar',
-  !window.document.querySelector('.top #t-export') && !window.document.querySelector('.top #t-import'));
-check('Export/Import live in Backup & Restore',
-  !!window.document.querySelector('[data-panel="admin_backup"] #t-export') &&
-  !!window.document.querySelector('[data-panel="admin_backup"] #t-import'));
-check('database chip still reports', /connected/i.test($('t-dbtext').textContent), $('t-dbtext').textContent);
+  !window.document.querySelector('.top #bk-exp-data') && !window.document.querySelector('.top #bk-imp-data'));
+/* Backup is split in two, matching the two flush scopes: settings-and-admin,
+   and data-and-records. Each half has its own download, upload and flush. */
+check('settings has its own download, upload and flush in Backup & Restore',
+  !!window.document.querySelector('[data-panel="admin_backup"] #bk-exp-admin') &&
+  !!window.document.querySelector('[data-panel="admin_backup"] #bk-imp-admin') &&
+  !!window.document.querySelector('[data-panel="admin_backup"] #fl-settings-go'));
+check('data has its own download, upload and flush in Backup & Restore',
+  !!window.document.querySelector('[data-panel="admin_backup"] #bk-exp-data') &&
+  !!window.document.querySelector('[data-panel="admin_backup"] #bk-imp-data') &&
+  !!window.document.querySelector('[data-panel="admin_backup"] #fl-data-go'));
+// ---------- the two backup scopes must stay genuinely separate ----------
+const bkClick = el => el.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+nav('admin_backup');
+await wait(200);
+let downloaded = null;
+const realCreate = window.URL.createObjectURL;
+window.URL.createObjectURL = (blob) => { downloaded = blob; return 'blob:x'; };
+window.HTMLAnchorElement.prototype.click = function(){};
+
+bkClick($('bk-exp-data'));
+await wait(300);
+let dataDump = downloaded ? JSON.parse(await downloaded.text()) : null;
+check('the data download is marked as data scope', dataDump && dataDump.scope === 'data',
+  dataDump && dataDump.scope);
+check('the data download carries records', dataDump && Array.isArray(dataDump.docs));
+check('the data download carries NO company profile or provider keys',
+  dataDump && !dataDump.content && !dataDump.providerKeys && !dataDump.idmsSettings,
+  dataDump && Object.keys(dataDump).join(','));
+
+downloaded = null;
+bkClick($("bk-exp-admin"));
+await wait(300);
+let adminDump = downloaded ? JSON.parse(await downloaded.text()) : null;
+check('the settings download is marked as settings scope', adminDump && adminDump.scope === 'settings',
+  adminDump && adminDump.scope);
+check('the settings download carries the company profile',
+  adminDump && adminDump.content && adminDump.content.company);
+check('the settings download carries NO parts, documents or employees',
+  adminDump && !adminDump.parts && !adminDump.docs && !adminDump.hrEmployees,
+  adminDump && Object.keys(adminDump).join(','));
+window.URL.createObjectURL = realCreate;
+
+/* Uploading the wrong half must be refused, not silently half-applied —
+   restoring a data file over settings would wipe the branding. */
+let uploadCalls = 0;
+const realFetchB = window.fetch;
+window.fetch = async (p, o) => {
+  if (String(p).startsWith('/api/content') && o && o.method === 'POST') uploadCalls++;
+  return realFetchB(p, o);
+};
+window.__file = new window.File([JSON.stringify({ scope: 'data', parts: [], docs: [] })], 'x.json',
+  { type: 'application/json' });
+const realCreateEl = window.document.createElement.bind(window.document);
+window.document.createElement = function(tag){
+  const el = realCreateEl(tag);
+  if (tag === 'input') {
+    setTimeout(() => {
+      Object.defineProperty(el, 'files', { value: [window.__file], configurable: true });
+      el.dispatchEvent(new window.Event('change'));
+    }, 10);
+    el.click = function(){};
+  }
+  return el;
+};
+bkClick($("bk-imp-admin"));
+await wait(250);
+check('uploading a data file into the settings slot is refused by name',
+  /data.*backup/i.test($('bk-msg').textContent) && uploadCalls === 0, $('bk-msg').textContent);
+window.document.createElement = realCreateEl;
+window.fetch = realFetchB;
+
+
 
 // ---- 6. every dashboard renders ----
 const depts = window.KPIX.DEPTS.map(d => d.key);

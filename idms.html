@@ -2766,11 +2766,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         <div class="hint" style="margin-bottom:10px;">A resignation and its clearance across
           departments — kept together because an unresolved clearance is exactly what holds up a
           final settlement in real life.
-          <span class="hint" style="display:block;margin-top:6px;">The settlement figure itself
-          (final salary, leave encashment, gratuity) is not calculated here yet — it depends on leave
-          balance rules that have not moved off the website. Enter it by hand for now; open
-          <a data-goto="hr_payroll" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">HR &amp; Payroll</a>
-          for the calculated version until it moves here too.</span></div>
+          <span class="hint" style="display:block;margin-top:6px;">The settlement figure (final
+          salary, leave encashment, gratuity) is now calculated on each exit below. Leave
+          encashment days are entered by hand, since leave balance/entitlement tracking has not
+          moved off the website yet — everything else (pro-rated final salary, the gratuity
+          formula, the net figure) is computed here.</span></div>
         <div class="stat" id="ex-kpi"></div>
       </div>
       <div class="card">
@@ -8999,6 +8999,83 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     }).catch(function(){ return null; });
   }
 
+  /* Fallback terms used when a candidate has no offerTerms typed in — the
+     website's own default, kept word for word. Template management (pick
+     from a saved list, AI-drafted terms) is still deferred to the second
+     pass noted above; this only restores the document itself. */
+  var RC_DEFAULT_TERMS = '1. APPOINTMENT\nYour appointment is on the terms set out in this letter and in the ' +
+    'company\'s standing orders and policies, as amended from time to time.\n\n' +
+    '2. PROBATION\nYou will be on probation for six months from your date of joining. The company may extend ' +
+    'this period. Confirmation in writing follows satisfactory completion.\n\n' +
+    '3. HOURS OF WORK\nYou will work the shift assigned to you. Working hours, weekly off and holidays are as ' +
+    'per the company\'s attendance policy and the Factories Act.\n\n' +
+    '4. LEAVE\nLeave entitlement is as per the company leave policy in force. Leave must be applied for in ' +
+    'advance except in a genuine emergency.\n\n' +
+    '5. STATUTORY DEDUCTIONS\nProvident Fund, ESI, Professional Tax and Income Tax will be deducted as ' +
+    'required by law.\n\n' +
+    '6. CONFIDENTIALITY\nYou shall not disclose any drawing, process, price, customer detail or other ' +
+    'confidential information of the company or its customers, during or after your employment.\n\n' +
+    '7. NOTICE PERIOD\nEither party may terminate this employment by giving one month\'s written notice or ' +
+    'salary in lieu, subject to the terms of the standing orders.\n\n' +
+    '8. CONDUCT AND SAFETY\nYou are required to follow all safety instructions, wear the protective equipment ' +
+    'provided, and comply with the quality and environmental requirements of the company and its customers.\n\n' +
+    '9. VERIFICATION\nThis offer is subject to verification of your certificates, previous employment and ' +
+    'references. Any misrepresentation will render this offer void.';
+
+  /* §5 offer letter, ported from the website's printOfferLetter(). Same
+     salary-structure split as rcStructure(), plus the statutory employer/
+     employee contributions computed from the same 'statutory' config
+     Payroll reads — no second set of rates invented for this screen. */
+  async function rcPrintOffer(candId){
+    var c = rcCands.filter(function(x){ return x.item_id === candId; })[0]; if (!c) return;
+    var req = rcReqs.filter(function(r){ return r.item_id === c.reqId; })[0];
+    var content;
+    try { content = (await C.api('/api/content')).data || {}; } catch(e){ content = {}; }
+    var t = content.salaryStructure || {}, stat = content.statutory || {};
+    var m = C.num(c.offerCtc) / 12;
+    var basic = Math.round(m * C.num(t.basicPct) / 100);
+    var da = Math.round(m * C.num(t.daPct) / 100);
+    var hra = Math.round(m * C.num(t.hraPct) / 100);
+    var conveyance = C.num(t.conveyance);
+    var known = basic + da + hra + conveyance;
+    var special = Math.max(0, Math.round(m - known));
+    var monthly = basic + da + hra + conveyance + special;
+
+    var pf = stat.pf || {}, esi = stat.esi || {}, pt = stat.pt || {};
+    var pfWage = Math.min(basic + da, C.num(pf.wageCeiling));
+    var pfEr = Math.round(pfWage * C.num(pf.employerPct) / 100);
+    var pfEmp = Math.round(pfWage * C.num(pf.employeePct) / 100);
+    var esiEr = monthly <= C.num(esi.grossLimit) ? Math.ceil(monthly * C.num(esi.employerPct) / 100) : 0;
+    var esiEmp = monthly <= C.num(esi.grossLimit) ? Math.ceil(monthly * C.num(esi.employeePct) / 100) : 0;
+    var ptSlab = (pt.slabs||[]).slice().sort(function(a,b){ return C.num(a.upTo)-C.num(b.upTo); })
+      .filter(function(x){ return monthly <= C.num(x.upTo); })[0];
+    var ptAmt = ptSlab ? C.num(ptSlab.amount) : 0;
+    var gratuity = Math.round((basic+da) * C.num((stat.gratuity||{}).accrualPct) / 100);
+    var bonusBase = Math.min(basic+da, C.num((stat.bonus||{}).wageCeiling) || (basic+da));
+    var bonus = Math.round(bonusBase * C.num((stat.bonus||{}).accrualPct) / 100);
+
+    var role = req ? req.title : (c.designation || 'the position');
+    C.openReport({ title:'Offer of Employment', kind:'Recruitment', subtitle:esc(c.name)+' — '+esc(role),
+      sections:[
+        { type:'pairs', title:'Offer', rows:[['Candidate', esc(c.name)], ['Position', esc(c.designation||role)],
+          ['Department', esc(req ? req.department : '')], ['Grade', esc(c.grade||'—')],
+          ['Annual CTC', C.inr(c.offerCtc)],
+          ['Proposed joining date', c.joiningDate ? new Date(c.joiningDate).toLocaleDateString('en-GB') : '—']] },
+        { type:'table', title:'Monthly salary structure', columns:[{label:'Component'},{label:'Amount',align:'r'}],
+          rows:[['Basic', C.inr(basic)], ['Dearness Allowance', C.inr(da)], ['House Rent Allowance', C.inr(hra)],
+                ['Conveyance', C.inr(conveyance)], ['Special Allowance', C.inr(special)],
+                [{v:'<b>Gross monthly</b>'}, {v:'<b>'+C.inr(monthly)+'</b>'}]] },
+        { type:'table', title:'Statutory benefits (not part of take-home pay)',
+          columns:[{label:'Benefit'},{label:'Employee',align:'r'},{label:'Employer',align:'r'}],
+          rows:[['Provident Fund', C.inr(pfEmp), C.inr(pfEr)], ['ESI', C.inr(esiEmp), C.inr(esiEr)],
+                ['Professional Tax', C.inr(ptAmt), '—'], ['Gratuity provision (per year)', '—', C.inr(gratuity)],
+                ['Statutory bonus provision (per year)', '—', C.inr(bonus)]],
+          note:'Deducted or contributed as applicable under law; not a guarantee where a scheme does not apply.' },
+        { type:'text', title:'Terms and Conditions', body:c.offerTerms || RC_DEFAULT_TERMS },
+        { type:'text', title:'Signatures', body:'For the company\n\n\nAuthorised signatory' }
+      ]});
+  }
+
   function rcCandRow(c){
     var req = rcReqs.filter(function(r){ return r.item_id === c.reqId; })[0];
     var open = rcExpanded === c.item_id;
@@ -9047,6 +9124,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         '<button class="btn gold rc-cd-save" data-id="'+esc(c.item_id)+'">Save</button>' +
         (['Selected','Offer Made','Joined'].indexOf(c.status) >= 0 && !c.empId
           ? '<button class="btn rc-cd-join" data-id="'+esc(c.item_id)+'">Convert to employee</button>' : '') +
+        (c.offerCtc ? '<button class="btn rc-cd-offer" data-id="'+esc(c.item_id)+'">Print offer letter</button>' : '') +
         (c.empId ? '<span class="badge series">Employee '+esc(c.empId)+'</span>' : '') +
         '<button class="btn del rc-cd-del" data-id="'+esc(c.item_id)+'">Delete</button>' +
         '</div></div>'
@@ -9071,7 +9149,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         if (inp.dataset.k === 'offerCtc') rcShowStructure(inp.dataset.id, inp.value);
       });
     });
-    host.querySelectorAll('.rc-cd-save, .rc-cd-screen, .rc-cd-join, .rc-cd-del').forEach(function(b){
+    host.querySelectorAll('.rc-cd-save, .rc-cd-screen, .rc-cd-join, .rc-cd-del, .rc-cd-offer').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); });
     });
     host.querySelectorAll('.rc-cd-stage').forEach(function(sel){
@@ -9104,6 +9182,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     });
     host.querySelectorAll('.rc-cd-screen').forEach(function(b){
       b.addEventListener('click', function(){ rcScreenCandidate(b.dataset.id, b); });
+    });
+    host.querySelectorAll('.rc-cd-offer').forEach(function(b){
+      b.addEventListener('click', function(){ rcPrintOffer(b.dataset.id); });
     });
     rcCands.forEach(function(c){ if (rcExpanded === c.item_id && c.offerCtc) rcShowStructure(c.item_id, c.offerCtc); });
   }
@@ -9465,7 +9546,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 
   /* ---------------- Exit & Full and Final (native, phase 1 — see the note
      on the screen itself: the settlement figure is not calculated here) ---------------- */
-  var hrExits = [], hrEmpForExit = [];
+  var hrExits = [], hrEmpForExit = [], exStat = {};
   async function loadHrExit(){
     hrEmpForExit = await hrAllEmployees();
     document.getElementById('ex-emp').innerHTML = hrEmpSelectOptions(hrEmpForExit.filter(function(e){ return e.status !== 'Exited'; }));
@@ -9473,8 +9554,63 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       var j = await C.api('/api/hr?what=items&kind=exit');
       hrExits = (j.items || []).map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
     } catch(e){ hrExits = []; }
+    try { exStat = ((await C.api('/api/content')).data || {}).statutory || {}; } catch(e){ exStat = {}; }
     drawExits();
   }
+
+  /* full & final settlement — ported from the website's calcFnF(), with one
+     deliberate substitution: the website derives leave-encashment days from
+     a running leave balance the native app does not compute yet (no leave
+     entitlement/balance tracking has been migrated), so encashment days are
+     entered by hand here, the same way recoveries already are. Everything
+     else — pro-rated final salary, the 15/26 gratuity formula gated on five
+     years' service, net settlement — matches the website figure for figure. */
+  function exCalcFnF(emp, x){
+    var s = (emp && emp.structure) || {};
+    var lwd = new Date((x && x.lastWorkingDay) || Date.now());
+    var daysInMonth = new Date(lwd.getFullYear(), lwd.getMonth()+1, 0).getDate();
+    var workedDays = lwd.getDate();
+    var factor = workedDays / daysInMonth;
+    var gross = emp ? prGrossMonthly(emp) : 0;
+    var finalSalary = Math.round(gross * factor);
+    var perDay = (C.num(s.basic) + C.num(s.da)) / Math.max(1, daysInMonth);
+    var encashDays = C.num(x && x.encashDays);
+    var encashment = Math.round(encashDays * perDay);
+    var years = 0;
+    if (emp && emp.doj) years = (lwd - new Date(emp.doj)) / (365.25*86400000);
+    var gratuityEligible = years >= 5;
+    var gratuity = gratuityEligible ? Math.round((C.num(s.basic)+C.num(s.da)) * 15/26 * Math.round(years)) : 0;
+    var deductions = C.num(x && x.recoveries);
+    var net = finalSalary + encashment + gratuity - deductions;
+    return { workedDays:workedDays, daysInMonth:daysInMonth, finalSalary:finalSalary,
+      encashDays:encashDays, encashment:encashment, years:years.toFixed(1),
+      gratuityEligible:gratuityEligible, gratuity:gratuity, deductions:deductions, net:net, perDay:perDay };
+  }
+
+  function exPrintRelieving(itemId){
+    var x = hrExits.filter(function(v){ return v.item_id === itemId; })[0]; if (!x) return;
+    var emp = hrEmpForExit.filter(function(e){ return e.empId === x.empId; })[0];
+    if (!emp){ toast('Employee record not found.'); return; }
+    var f = exCalcFnF(emp, x);
+    C.openReport({ title:'Relieving & Experience Certificate', kind:'Exit', subtitle:esc(emp.name)+' — '+esc(emp.empId),
+      sections:[
+        { type:'text', title:'', body:'This is to certify that ' + emp.name + ' (Employee ID ' + emp.empId + ') was ' +
+          'employed as ' + (emp.designation||'—') + (emp.department ? ' in the ' + emp.department + ' department' : '') +
+          ' from ' + (emp.doj ? new Date(emp.doj).toLocaleDateString('en-GB') : '—') + ' to ' +
+          (x.lastWorkingDay ? new Date(x.lastWorkingDay).toLocaleDateString('en-GB') : '—') + '.\n\n' +
+          'They are relieved from their duties with effect from the close of business on the last working day ' +
+          'shown above, and all dues have been settled as detailed below.' },
+        { type:'table', title:'Full & Final Settlement', columns:[{label:'Item'},{label:'Amount',align:'r'}],
+          rows:[['Final salary ('+f.workedDays+' of '+f.daysInMonth+' days)', C.inr(f.finalSalary)],
+                ['Leave encashment ('+f.encashDays+' days)', C.inr(f.encashment)],
+                ['Gratuity'+(f.gratuityEligible?' ('+f.years+' yrs service)':' (not eligible — under 5 years)'), C.inr(f.gratuity)],
+                ['Less recoveries', '− '+C.inr(f.deductions)],
+                [{v:'<b>Net settlement</b>'}, {v:'<b>'+C.inr(f.net)+'</b>'}]] },
+        { type:'text', title:'', body:'We wish them well in their future endeavours.' },
+        { type:'text', title:'Signatures', body:'For the company\n\n\nAuthorised signatory' }
+      ]});
+  }
+
   function drawExits(){
     document.getElementById('ex-kpi').innerHTML =
       [['In progress', hrExits.filter(function(x){return x.status!=='Settled';}).length],
@@ -9494,12 +9630,22 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
             '<option value="yes"'+((x.clearance||{})[c]==='yes'?' selected':'')+'>Cleared</option>' +
             '<option value="na"'+((x.clearance||{})[c]==='na'?' selected':'')+'>Not applicable</option></select></div>';
         }).join('') + '</div>' +
-        '<div class="row four" style="margin-top:9px;"><div><label>Recoveries / advances</label>' +
+        '<div class="sub" style="margin-top:8px;">Full &amp; Final Settlement</div>' +
+        '<div class="row four">' +
+        '<div><label>Recoveries / advances</label>' +
         '<input class="num ex-in" data-id="'+esc(x.item_id)+'" data-k="recoveries" value="'+esc(x.recoveries||0)+'"></div>' +
+        '<div><label>Leave encashment (days)</label>' +
+        '<input class="num ex-in" data-id="'+esc(x.item_id)+'" data-k="encashDays" value="'+esc(x.encashDays||0)+'"></div>' +
         '<div style="grid-column:span 2;"><label>Exit interview notes</label>' +
         '<input class="ex-in" data-id="'+esc(x.item_id)+'" data-k="exitNotes" value="'+esc(x.exitNotes||'')+'"></div></div>' +
+        (function(){ var f = exCalcFnF(emp, x);
+          return '<div class="hint" style="margin-top:6px;">Net settlement '+C.inr(f.net)+
+            ' — final salary '+C.inr(f.finalSalary)+' + encashment '+C.inr(f.encashment)+
+            ' + gratuity '+C.inr(f.gratuity)+(f.gratuityEligible?' ('+f.years+' yrs)':' (under 5 yrs, not eligible)')+
+            ' − recoveries '+C.inr(f.deductions)+'.</div>'; })() +
         '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' +
         '<button class="btn gold ex-save" data-id="'+esc(x.item_id)+'">Save</button>' +
+        '<button class="btn ex-print" data-id="'+esc(x.item_id)+'">Print relieving letter</button>' +
         (x.status!=='Settled' ? '<button class="btn ex-settle" data-id="'+esc(x.item_id)+'">Mark settled</button>' : '') +
         '</div></div>';
     }).join('') : '<div class="empty"><b>No exits in progress</b></div>';
@@ -9518,6 +9664,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           patch:data, reason:'exit record updated' }) });
           toast('Saved.'); } catch(e){ toast(e.message); }
       });
+    });
+    host.querySelectorAll('.ex-print').forEach(function(b){
+      b.addEventListener('click', function(){ exPrintRelieving(b.dataset.id); });
     });
     host.querySelectorAll('.ex-settle').forEach(function(b){
       b.addEventListener('click', async function(){
@@ -28430,6 +28579,45 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     host.querySelectorAll('.pr-print').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); prPrintRun(b.dataset.run); });
     });
+    host.querySelectorAll('.pr-line-print').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); prPrintSlip(b.dataset.run, b.dataset.emp); });
+    });
+  }
+
+  /* one employee's payslip — same layout as the register, ported from the
+     website's own printSinglePayslip(), just rendered through the shared
+     openReport engine instead of a bespoke print window. */
+  function prPrintSlip(runId, empId){
+    var f = prFindRun(runId); if (!f) return;
+    var emp = prEmployees.filter(function(e){ return e.empId === empId; })[0];
+    var line = (f.run.lines||[]).filter(function(l){ return l.empId === empId; })[0];
+    if (!emp || !line){ toast('Could not find that employee on this run.'); return; }
+    var s = prCalcPayslip(emp, line, prSt, prCb);
+    C.openReport({ title:'Payslip — ' + f.run.period, kind:'Payroll', subtitle:esc(s.name)+' ('+esc(s.empId)+')',
+      sections:[
+        { type:'pairs', title:'Employee', rows:[['Employee', esc(s.name)+' ('+esc(s.empId)+')'],
+          ['Designation', esc(emp.designation||'—')], ['Department', esc(emp.department||'—')],
+          ['Payable days', s.payableDays+' of '+s.totalDays+(s.lopDays?' · LOP '+s.lopDays:'')],
+          ['Date of joining', emp.doj ? new Date(emp.doj).toLocaleDateString('en-GB') : '—'],
+          ['UAN', esc(emp.uan||'—')], ['PF number', esc(emp.pfNumber||'—')], ['ESI number', esc(emp.esiNumber||'—')],
+          ['PAN', esc(emp.pan||'—')],
+          ['Bank', esc(emp.bankName||'—')+(emp.bankAcc?' · A/c '+esc(emp.bankAcc):'')], ['IFSC', esc(emp.ifsc||'—')]] },
+        { type:'table', title:'Earnings & Deductions',
+          columns:[{label:'Earnings'},{label:'Amount',align:'r'},{label:'Deductions'},{label:'Amount',align:'r'}],
+          rows:[['Basic', C.inr(s.earnings.basic), 'Provident Fund', C.inr(s.deductions.pf)],
+                ['Dearness Allowance', C.inr(s.earnings.da), 'ESI', C.inr(s.deductions.esi)],
+                ['House Rent Allowance', C.inr(s.earnings.hra), 'Professional Tax', C.inr(s.deductions.pt)],
+                ['Conveyance', C.inr(s.earnings.conveyance), 'Income Tax (TDS)', C.inr(s.deductions.tds)],
+                ['Special Allowance', C.inr(s.earnings.special), 'Other', C.inr(s.deductions.other)],
+                ['Overtime'+(s.otHours?' ('+s.otHours+' hrs)':''), C.inr(s.earnings.ot), '', ''],
+                [{v:'<b>Gross Earnings</b>'}, {v:'<b>'+C.inr(s.gross)+'</b>'},
+                 {v:'<b>Total Deductions</b>'}, {v:'<b>'+C.inr(s.totalDeductions)+'</b>'}]] },
+        { type:'pairs', title:'Net Pay', rows:[['Net pay', '<b>'+C.inr(s.net)+'</b>']] },
+        { type:'text', title:'', body:'Employer contributions, not deducted from you: PF ' + C.inr(s.employer.pf) +
+          ' · EPS ' + C.inr(s.employer.eps) + ' · EDLI ' + C.inr(s.employer.edli) + ' · ESI ' + C.inr(s.employer.esi) +
+          '. Statutory rates effective from ' + (s.rulesEffectiveFrom || 'not recorded') + '.' +
+          (s.tdsBasis ? ' Income tax basis: ' + s.tdsBasis + '.' : '') }
+      ]});
   }
 
   function prRunDetailHtml(r, run, t, approved){
@@ -28448,7 +28636,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       '<div class="scroll-x" style="margin-top:10px;"><table class="t"><thead><tr><th>Employee</th>' +
       '<th class="r">Payable days</th><th class="r">OT hrs</th><th class="r">Incentive</th><th class="r">Advance</th>' +
       '<th class="r">Gross</th><th class="r">PF</th><th class="r">ESI</th><th class="r">PT</th><th class="r">TDS</th>' +
-      '<th class="r">Net</th></tr></thead><tbody>' +
+      '<th class="r">Net</th><th></th></tr></thead><tbody>' +
       t.slips.map(function(s){
         var ed = approved ? '' : ' class="num pr-line-in" data-run="'+esc(runId)+'" data-emp="'+esc(s.empId)+'"';
         var cell = function(k, v){
@@ -28462,7 +28650,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           '<td class="r">'+C.inr(s.gross)+'</td><td class="r">'+C.inr(s.deductions.pf)+'</td>' +
           '<td class="r">'+C.inr(s.deductions.esi)+'</td><td class="r">'+C.inr(s.deductions.pt)+'</td>' +
           '<td class="r" title="'+esc(s.tdsBasis)+'">'+C.inr(s.deductions.tds)+'</td>' +
-          '<td class="r"><b>'+C.inr(s.net)+'</b></td></tr>';
+          '<td class="r"><b>'+C.inr(s.net)+'</b></td>' +
+          '<td><button class="btn pr-line-print" data-run="'+esc(runId)+'" data-emp="'+esc(s.empId)+'">Print</button></td></tr>';
       }).join('') + '</tbody></table></div>' +
       '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
       (approved

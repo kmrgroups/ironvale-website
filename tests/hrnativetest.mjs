@@ -12,7 +12,8 @@ const kpi = fs.readFileSync('kpi.js', 'utf8');
 
 let items = [];
 let employees = [
-  { empId: 'EMP001', name: 'Asha Rao', status: 'Active' },
+  { empId: 'EMP001', name: 'Asha Rao', status: 'Active', designation: 'Operator', department: 'Production',
+    doj: '2018-01-15', structure: { basic: 20000, da: 0, hra: 8000, conveyance: 1600, special: 2000 } },
   { empId: 'EMP002', name: 'Vikram Shah', status: 'Active' }
 ];
 let auditRows = [{ who: 'tester', what: 'employee.update', ref: 'EMP001', reason: 'edited', at: new Date().toISOString() }];
@@ -27,6 +28,8 @@ const { window } = dom;
 window.Element.prototype.scrollIntoView = function () {};
 window.confirm = () => true;
 window.prompt = (m) => window.__promptAnswer !== undefined ? window.__promptAnswer : 'reason given';
+let opened = [];
+window.open = () => ({ document: { write: h => opened.push(h), close() {} }, print() {} });
 
 window.fetch = async (path, opts = {}) => {
   const body = opts.body ? JSON.parse(opts.body) : {};
@@ -183,8 +186,8 @@ click($('ex-add'));
 await wait(200);
 const exCall = calls.find(c => c.kind === 'item-save' && c.body.item.kind === 'exit');
 check('recording an exit posts it In Progress', !!exCall && exCall.body.item.status === 'In Progress', JSON.stringify(calls));
-check('the settlement-not-calculated note is shown on screen',
-  /not calculated here yet/.test(window.document.querySelector('[data-panel="hr_exit"]').textContent));
+check('the settlement is now calculated on screen',
+  /calculated on each exit below/.test(window.document.querySelector('[data-panel="hr_exit"]').textContent));
 
 calls.length = 0;
 await wait(100);
@@ -198,6 +201,17 @@ await wait(200);
 const exSaveCall = calls.find(c => c.kind === 'item-patch' && c.body.itemId === exitId);
 check('saving the exit patches its clearance', exSaveCall && exSaveCall.body.patch.clearance['Tools returned'] === 'yes',
   JSON.stringify(exSaveCall));
+
+// ---------- relieving letter, built from the same figures shown on screen ----------
+opened.length = 0;
+click(window.document.querySelector('.ex-print[data-id="' + exitId + '"]'));
+await wait(150);
+const relDoc = opened[0] || '';
+check('the relieving letter opens a document', !!relDoc);
+check('it is titled as a relieving certificate', /Relieving/.test(relDoc));
+check('it names the employee', /Asha Rao/.test(relDoc));
+check('the final salary is pro-rated by day worked in the exit month (15 of 30 days · 31,600 gross)',
+  /15,800|15800/.test(relDoc), relDoc.slice(0, 2000));
 
 // ---------- settling an exit must mark the employee Exited, not just the exit record ----------
 calls.length = 0;

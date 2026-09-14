@@ -55,6 +55,8 @@ const { window } = dom;
 window.Element.prototype.scrollIntoView = function () {};
 window.confirm = () => true;
 window.prompt = () => 'approved after checking every line';
+let opened = [];
+window.open = () => ({ document: { write: h => opened.push(h), close() {} }, print() {} });
 
 window.fetch = async (path, opts = {}) => {
   const body = opts.body ? JSON.parse(opts.body) : {};
@@ -168,6 +170,17 @@ check('Asha\'s gross is the pro-rated structure plus OT, to the rupee',
   /14,267/.test(table), table.slice(0, 600));
 check('PF is 12% of pro-rated basic only', /896/.test(table));
 check('ESI is charged (gross is under the 21,000 limit)', /108/.test(table));
+
+// ---------- one employee's own payslip, not just the register ----------
+check('a per-employee print button sits on the pay register',
+  !!window.document.querySelector('.pr-line-print[data-run="' + runId + '"][data-emp="ET001"]'));
+click(window.document.querySelector('.pr-line-print[data-run="' + runId + '"][data-emp="ET001"]'));
+await wait(150);
+const slipDoc = opened[0] || '';
+check('the single payslip opens a document', !!slipDoc);
+check('it is titled as a payslip for the period', /Payslip/.test(slipDoc));
+check('it names the employee', /Asha Rao/.test(slipDoc));
+check('it carries the same gross figure as the register', /14,267/.test(slipDoc), slipDoc.slice(0, 600));
 
 // ---------- approve, then prove immutability ----------
 calls.length = 0;

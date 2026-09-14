@@ -22,6 +22,8 @@ const { window } = dom;
 window.Element.prototype.scrollIntoView = function () {};
 window.confirm = () => true;
 window.prompt = () => 'no longer needed';
+let opened = [];
+window.open = () => ({ document: { write: h => opened.push(h), close() {} }, print() {} });
 
 window.fetch = async (path, opts = {}) => {
   const body = opts.body ? JSON.parse(opts.body) : {};
@@ -158,6 +160,28 @@ stageSel.value = 'Selected'; change(stageSel);
 await wait(200);
 const stageCall = calls.find(c => c.kind === 'item-patch' && c.body.status === 'Selected');
 check('changing the stage patches the item with the new status', !!stageCall, JSON.stringify(calls));
+
+// ---------- offer letter, built from the offered CTC ----------
+let offerBtn = window.document.querySelector('.rc-cd-offer[data-id="' + candId + '"]');
+check('no offer letter button before a CTC is entered', !offerBtn);
+const offerInput = window.document.querySelector('.rc-cd-in[data-id="' + candId + '"][data-k="offerCtc"]');
+offerInput.value = '600000';
+offerInput.dispatchEvent(new window.Event('input', { bubbles: true }));
+calls.length = 0;
+click(window.document.querySelector('.rc-cd-save[data-id="' + candId + '"]'));
+await wait(200);
+offerBtn = window.document.querySelector('.rc-cd-offer[data-id="' + candId + '"]');
+check('the offer letter button appears once a CTC is entered and saved', !!offerBtn);
+opened.length = 0;
+click(offerBtn);
+await wait(150);
+const offerDoc = opened[0] || '';
+check('the offer letter opens a document', !!offerDoc);
+check('it is titled as an offer of employment', /Offer of Employment/.test(offerDoc));
+check('the salary structure is broken up from the offered CTC — basic',
+  /25,000|25000/.test(offerDoc), offerDoc.slice(0, 400));
+check('the salary structure is broken up from the offered CTC — HRA',
+  /10,000|10000/.test(offerDoc));
 
 calls.length = 0;
 await wait(150);

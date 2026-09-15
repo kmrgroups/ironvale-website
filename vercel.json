@@ -1,12 +1,17 @@
 {
   "rewrites": [
-    {
-      "source": "/iclock/:op",
-      "destination": "/api/device?proto=adms&op=:op"
-    },
-    {
-      "source": "/api/agentic",
-      "destination": "/api/ai?mode=agentic"
-    }
+    { "source": "/iclock/:op", "destination": "/api/index?route=device&proto=adms&op=:op" },
+    { "source": "/api/ai", "destination": "/api/index?route=ai" },
+    { "source": "/api/assets", "destination": "/api/index?route=assets" },
+    { "source": "/api/auth", "destination": "/api/index?route=auth" },
+    { "source": "/api/cnc", "destination": "/api/index?route=cnc" },
+    { "source": "/api/content", "destination": "/api/index?route=content" },
+    { "source": "/api/device", "destination": "/api/index?route=device" },
+    { "source": "/api/hr", "destination": "/api/index?route=hr" },
+    { "source": "/api/idms", "destination": "/api/index?route=idms" },
+    { "source": "/api/notify", "destination": "/api/index?route=notify" },
+    { "source": "/api/orders", "destination": "/api/index?route=orders" },
+    { "source": "/api/rfqs", "destination": "/api/index?route=rfqs" },
+    { "source": "/api/settings", "destination": "/api/index?route=settings" }
   ]
 }

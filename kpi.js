@@ -302,23 +302,8 @@
      V2 control tower is loaded conditionally by the shared KPI script only when
      the existing IDMS Agentic AI panel is present, so public pages are untouched. */
   (function loadAgenticControlTower(){
-    function boot(){
-      if (!document.querySelector('[data-panel="agentic_ai"]')) return;
-      import('/agentic-ai-v2/ui/control-tower.js').catch(function(e){ console.error('Agentic AI Control Tower failed to load:', e); });
-    }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  })();
-})();
-
-
-/* AGENTIC_AI_CONTROL_TOWER_LOADER */
-(function(){
-  function boot(){
-    if (!document.querySelector('[data-panel="agentic_ai"]')) return;
     import('/agentic-ai-v2/ui/control-tower.js').catch(function(e){
       console.error('Agentic AI Control Tower failed to load:', e);
     });
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  })();
 })();

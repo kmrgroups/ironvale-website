@@ -1,0 +1,21 @@
+<section id="agentic-control-tower-v2" class="panel">
+  <div class="card">
+    <h2>AI Control Tower</h2>
+    <p>Governed Agentic AI: agents observe, rank and propose. Named people approve controlled actions.</p>
+    <div id="agentic-v2-status"></div>
+    <div id="agentic-v2-agents" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px"></div>
+    <div id="agentic-v2-result" style="margin-top:16px"></div>
+  </div>
+</section>
+<script type="module">
+import {agenticGet,agenticRun} from '/agentic-ai-v2/ui/agentic-client.js';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function boot(){
+  const j=await agenticGet('registry');
+  if(!j.ok){document.getElementById('agentic-v2-status').textContent=j.error;return;}
+  document.getElementById('agentic-v2-status').textContent=`${j.registry.agents.length} governed agents ready`;
+  document.getElementById('agentic-v2-agents').innerHTML=j.registry.agents.map(a=>`<div class="card"><b>${esc(a.name)}</b><div>${esc(a.department)}</div><small>Level ${a.level} · ${esc(a.mode)}</small><br><button data-agent="${esc(a.id)}">Run / Propose</button></div>`).join('');
+  document.querySelectorAll('[data-agent]').forEach(b=>b.onclick=async()=>{b.disabled=true;b.textContent='Running…';const r=await agenticRun(b.dataset.agent,{eventType:'MANUAL'});document.getElementById('agentic-v2-result').innerHTML=r.ok?`<div class="card"><b>Run ${esc(r.runId)}</b><pre style="white-space:pre-wrap">${esc(r.narrative||'No narrative')}</pre><p>Reviewable tasks created: ${r.taskCount||0}</p></div>`:`<div class="card">${esc(r.error)}</div>`;b.disabled=false;b.textContent='Run / Propose';});
+}
+boot();
+</script>

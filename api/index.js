@@ -8,6 +8,7 @@ import auth from '../server/routes/auth.js';
 import cnc from '../server/routes/cnc.js';
 import content from '../server/routes/content.js';
 import device from '../server/routes/device.js';
+import health from '../server/routes/health.js';
 import hr from '../server/routes/hr.js';
 import idms from '../server/routes/idms.js';
 import notify from '../server/routes/notify.js';
@@ -28,7 +29,7 @@ async function prepareJsonBody(req) {
   req.body = raw ? JSON.parse(raw) : {};
 }
 
-const handlers = { ai, assets, auth, cnc, content, device, hr, idms, notify, orders, rfqs, settings };
+const handlers = { ai, assets, auth, cnc, content, device, health, hr, idms, notify, orders, rfqs, settings };
 
 function routeName(req) {
   const q = req.query || {};
@@ -39,8 +40,6 @@ function routeName(req) {
 }
 
 function queryWithRouteRemoved(req) {
-  // Vercel's rewrite passes the original query plus route=. Preserve all
-  // application query parameters and hide only the dispatcher parameter.
   const q = { ...(req.query || {}) };
   delete q.route;
   req.query = q;
@@ -51,9 +50,7 @@ export default async function handler(req, res) {
   const name = routeName(req);
   const fn = handlers[name];
   if (!fn) return res.status(404).json({ ok: false, error: `Unknown API route: ${name || 'missing'}` });
-  // The device route deliberately consumes raw request bytes. Every other
-  // application route uses JSON bodies through the shared readBody() helper.
-  if (name !== 'device') {
+  if (name !== 'device' && name !== 'health') {
     try { await prepareJsonBody(req); }
     catch (e) { return res.status(400).json({ ok: false, error: 'Invalid JSON request body.' }); }
   }

@@ -9,7 +9,7 @@
 // Deletions and status changes are written to idms_audit and never undone
 // silently — a quality system that cannot say who changed a control plan is
 // not worth having.
-import { sql, ensureTables, checkToken, checkRole, cors, readBody, tokenUser } from '../_db.js';
+import { sql, ensureTables, checkToken, checkRole, cors, readBody, tokenUser } from '../server/_db.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '6mb' } } };
 

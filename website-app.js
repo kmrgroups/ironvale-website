@@ -2816,6 +2816,143 @@ ${sections}
     });
   }
 
+  /* ================= NEW JOINER ONBOARDING (self-fill) =================
+     Reached with ?onboard=TOKEN, a link HR sends once an offer is
+     accepted. The token stands in for a login the candidate does not
+     have yet — same idea as employee self-service, but there is no
+     employee record to check a DOB against. Documents are read as data
+     URLs and sent inline with the form, the same way the careers-page
+     resume upload already works (no separate signed-upload endpoint
+     exists for the public, unauthenticated side of the site). Nothing
+     here is stored as an employee until HR reviews and approves it. */
+  const ONB_FIELDS=[
+    ['dob','Date of birth','date',true],['gender','Gender','text',false],
+    ['fatherHusbandName',"Father's / Husband's name",'text',false],
+    ['address','Present address','textarea',true],['permAddress','Permanent address (leave blank if same as above)','textarea',false],
+    ['emergencyName','Emergency contact — name','text',true],['emergencyPhone','Emergency contact — phone','text',true],
+    ['emergencyRelation','Emergency contact — relation','text',false],
+    ['education','Highest qualification & institution','text',true],['priorEmployer','Previous employer (leave blank if this is your first job)','text',false],
+    ['priorUan','Previous PF / UAN number, if any','text',false],
+    ['pan','PAN','text',true],['aadhaar','Aadhaar number','text',true],
+    ['bankName','Bank name','text',true],['bankAcc','Bank account number','text',true],['ifsc','IFSC code','text',true],
+    ['nomineeName','PF / Gratuity nominee — name','text',false],['nomineeRelation','Nominee — relation','text',false],['nomineeDob','Nominee — date of birth','date',false],
+    ['ptState','State you will be working from (for Professional Tax)','text',false]
+  ];
+  const ONB_DOCS=[
+    ['photoUrl','Passport-size photograph'],['idProofUrl','Government ID proof (Aadhaar / PAN / passport)'],
+    ['addressProofUrl','Address proof'],['eduCertUrl','Education certificate(s)'],['bankProofUrl','Bank proof (passbook first page / cancelled cheque)']
+  ];
+  async function openOnboard(token){
+    document.getElementById('onboard-page').classList.add('open');
+    document.body.style.overflow='hidden';
+    setText('onb-co',CO().legalName||CO().displayName||data.brandName||'');
+    const lg=document.getElementById('onb-logo');
+    if(lg) lg.innerHTML=documentLogo()?`<img src="${documentLogo()}" alt="">`:'';
+    const host=document.getElementById('onb-body');
+    host.innerHTML='<p class="t-body">Loading…</p>';
+    let j;
+    try{
+      const r=await fetch(API+'/api/hr?what=onboarding&token='+encodeURIComponent(token));
+      j=await r.json();
+      if(!j.ok) throw new Error(j.error||'This link is not valid.');
+    }catch(e){
+      host.innerHTML=`<div class="me-card"><h3>Can't open this link</h3><p class="t-body">${esc(e.message)}</p></div>`;
+      return;
+    }
+    if(j.status==='Approved'){
+      host.innerHTML=`<div class="me-card"><h3>You're all set, ${esc(j.candidateName||'')}!</h3>
+        <p class="t-body">HR has already reviewed and approved your onboarding. Welcome aboard — your ID card
+        and biometric access will be set up separately by HR.</p></div>`;
+      return;
+    }
+    if(j.status==='Submitted'){
+      host.innerHTML=`<div class="me-card"><h3>Thanks, ${esc(j.candidateName||'')}</h3>
+        <p class="t-body">Your details have been submitted and are waiting for HR to review. You don't need to
+        do anything else right now — if HR needs a correction, this same link will show you what to fix.</p></div>`;
+      return;
+    }
+    renderOnboardForm(j,token);
+  }
+  function renderOnboardForm(shell,token){
+    const host=document.getElementById('onb-body');
+    const fd=shell.formData||{};
+    const changesNote=shell.status==='Changes Requested'&&shell.hrNote
+      ?`<div class="note" style="background:#fdf0ee;color:#B03A2E;padding:10px 14px;border-radius:8px;margin-bottom:16px;">
+         <b>HR asked for a correction:</b> ${esc(shell.hrNote)}</div>`:'';
+    host.innerHTML=`<div class="me-card">
+      <p class="t-label">EMPLOYEE ONBOARDING</p>
+      <h2 class="t-title" style="margin-bottom:6px;">Welcome, ${esc(shell.candidateName||'')}</h2>
+      <p class="t-body" style="margin-bottom:18px;">Please fill this in as accurately as you can — these details go
+        straight into your employee, payroll and statutory records. Fields marked * are required. Nothing is final
+        until HR reviews and approves it.</p>
+      ${changesNote}
+      <label>Full name *</label><input id="onb-name" value="${esc(fd.name||shell.candidateName||'')}">
+      ${ONB_FIELDS.map(f=>`<label style="margin-top:12px;display:block;">${esc(f[1])}${f[3]?' *':''}</label>`+
+        (f[2]==='textarea'?`<textarea id="onb-${f[0]}" rows="2">${esc(fd[f[0]]||'')}</textarea>`
+          :`<input type="${f[2]}" id="onb-${f[0]}" value="${esc(fd[f[0]]||'')}">`)).join('')}
+      <div class="t-label" style="margin-top:22px;">DOCUMENTS</div>
+      <p class="t-micro" style="color:var(--ink-light);margin-bottom:8px;">Photos or PDFs, under 2MB each.</p>
+      ${ONB_DOCS.map(d=>`<label style="margin-top:10px;display:block;">${esc(d[1])}</label>
+        <input type="file" id="onb-${d[0]}" accept=".pdf,.png,.jpg,.jpeg">
+        <div class="t-micro" id="onb-${d[0]}-msg" style="color:var(--ink-light);">${fd[d[0]]?'Already uploaded — choose a file only to replace it.':''}</div>`).join('')}
+      <div class="t-label" style="margin-top:22px;">DECLARATIONS</div>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;">
+        <input type="checkbox" id="onb-esiAck" style="margin-top:3px;" ${fd.esiAck?'checked':''}>
+        <span class="t-body">I understand ESI applies if my gross monthly wage is within the government-notified limit, and will be deducted where applicable.</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;">
+        <input type="checkbox" id="onb-poshAck" style="margin-top:3px;" ${fd.poshAck?'checked':''}>
+        <span class="t-body">I acknowledge the company's Code of Conduct and Prevention of Sexual Harassment (POSH) policy.</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;">
+        <input type="checkbox" id="onb-consent" style="margin-top:3px;" ${fd.dpdpConsent?'checked':''}>
+        <span class="t-body">I confirm the details above are true, and I consent to the company processing this personal data for employment, payroll and statutory purposes (Digital Personal Data Protection Act, 2023). *</span></label>
+      <button class="btn btn-primary" id="onb-submit" style="width:100%;margin-top:20px;">Submit</button>
+      <div class="login-err" id="onb-msg"></div>
+    </div>`;
+    document.getElementById('onb-submit').addEventListener('click',function(){ onboardSubmit(token,fd); });
+  }
+  async function onboardFileToDataUrl(inputId){
+    const f=document.getElementById(inputId).files[0];
+    if(!f) return null;
+    if(f.size>2*1024*1024) throw new Error('One of the files is over 2MB — please use a smaller copy.');
+    return new Promise((ok,no)=>{
+      const rd=new FileReader(); rd.onload=()=>ok(rd.result); rd.onerror=()=>no(new Error('Could not read a file.'));
+      rd.readAsDataURL(f);
+    });
+  }
+  async function onboardSubmit(token,prevFd){
+    const btn=document.getElementById('onb-submit'), msg=document.getElementById('onb-msg');
+    msg.textContent=''; msg.style.color='#B03A2E';
+    const name=document.getElementById('onb-name').value.trim();
+    const consent=document.getElementById('onb-consent').checked;
+    const dob=document.getElementById('onb-dob').value;
+    if(!name){ msg.textContent='Please enter your full name.'; return; }
+    if(!dob){ msg.textContent='Please enter your date of birth.'; return; }
+    if(!consent){ msg.textContent='Please confirm the declaration at the bottom before submitting.'; return; }
+    for(const f of ONB_FIELDS){
+      if(f[3]&&!document.getElementById('onb-'+f[0]).value.trim()){
+        msg.textContent='Please fill in: '+f[1]; return;
+      }
+    }
+    btn.disabled=true; btn.textContent='Submitting…';
+    try{
+      const formData={ name, consent:true, dpdpConsent:consent,
+        esiAck:document.getElementById('onb-esiAck').checked, poshAck:document.getElementById('onb-poshAck').checked };
+      ONB_FIELDS.forEach(f=>{ formData[f[0]]=document.getElementById('onb-'+f[0]).value.trim(); });
+      for(const d of ONB_DOCS){
+        const dataUrl=await onboardFileToDataUrl('onb-'+d[0]);
+        formData[d[0]]=dataUrl||prevFd[d[0]]||'';
+      }
+      const r=await fetch(API+'/api/hr',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({what:'onboarding',token,formData})});
+      const j=await r.json();
+      if(!j.ok) throw new Error(j.error||'Could not submit.');
+      openOnboard(token);
+    }catch(e){ msg.textContent=e.message; btn.disabled=false; btn.textContent='Submit'; }
+  }
+  document.getElementById('onb-out')?.addEventListener('click',()=>{
+    document.getElementById('onboard-page').classList.remove('open'); document.body.style.overflow='';
+  });
+
   /* ================= PUBLIC CAREERS PAGE =================
      Open requisitions are published here. Applying creates a candidate record
      that lands directly in HR & People — nothing is retyped. */
@@ -9967,5 +10104,11 @@ company-specific policies, salary figures or reporting lines.`;
       const m=location.hash.match(/id=([A-Za-z0-9_-]+)/);
       openMe(m?m[1].toUpperCase():'');
     }
+    /* Self-fill onboarding: a token in the URL stands in for a login the
+       candidate does not have yet — same public-page pattern as #me, but
+       reached with ?onboard=TOKEN since it comes from a link HR sends,
+       not a QR code someone already has. */
+    const onbToken=new URLSearchParams(location.search).get('onboard');
+    if(onbToken) openOnboard(onbToken);
   })();
 })();

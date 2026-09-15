@@ -2622,17 +2622,28 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       <div class="card">
         <h4>Add a candidate</h4>
         <div class="row four">
+          <div><label>Source</label><select id="rc-cd-source">
+            <option value="Careers Website">Careers website (applied online)</option>
+            <option value="Job Portal">Job portal (Naukri, LinkedIn, etc.)</option>
+            <option value="Consultancy">Consultancy / recruiter</option>
+            <option value="Employee Referral">Employee referral</option>
+            <option value="Direct">Direct / walk-in</option></select></div>
           <div><label>Requisition</label><select id="rc-cd-req"></select></div>
           <div><label>Name</label><input id="rc-cd-name"></div>
           <div><label>Phone</label><input id="rc-cd-phone"></div>
-          <div><label>Email</label><input id="rc-cd-email"></div>
         </div>
         <div class="row four" style="margin-top:9px;">
+          <div><label>Email</label><input id="rc-cd-email"></div>
+          <div id="rc-cd-srcref-wrap" style="display:none;"><label id="rc-cd-srcref-label">Source detail</label>
+            <input id="rc-cd-srcref" placeholder=""></div>
           <div><label>Qualification</label><input id="rc-cd-qual"></div>
           <div><label>Experience (years)</label><input class="num" id="rc-cd-exp"></div>
+        </div>
+        <div class="row four" style="margin-top:9px;">
           <div><label>Current CTC</label><input class="num" id="rc-cd-cctc"></div>
           <div><label>Expected CTC</label><input class="num" id="rc-cd-ectc"></div>
         </div>
+        <div class="hint" id="rc-cd-source-note" style="margin-top:6px;"></div>
         <div class="row" style="margin-top:9px;"><div style="grid-column:1/-1;">
           <label>CV / resume file (PDF or image — read directly by AI; Word files can be attached but only the pasted text below is read)</label>
           <input type="file" id="rc-cd-cvfile" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
@@ -8934,7 +8945,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
      here too. Quick free-text/template messaging to a candidate is still
      on the website's HR & Payroll engine pending a second pass; nothing
      else should be added there going forward. */
-  var rcReqs = [], rcCands = [], rcExpanded = null, RC_STAGES = ['Applied','Screened','Interview','Selected','Offer Made','Joined','Rejected'];
+  var rcReqs = [], rcCands = [], rcOnboard = [], rcExpanded = null, rcReviewingOnb = null,
+      RC_STAGES = ['Applied','Screened','Interview','Selected','Offer Made','Joined','Rejected'];
 
   async function loadRecruitment(){
     try {
@@ -8944,11 +8956,75 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         .map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
       rcCands = all.filter(function(x){ return x.kind === 'candidate'; })
         .map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
-    } catch(e){ toast(e.message); rcReqs = []; rcCands = []; }
+      rcOnboard = all.filter(function(x){ return x.kind === 'onboarding'; })
+        .map(function(x){ return Object.assign({}, x.data||{}, { item_id:x.item_id, status:x.status }); });
+    } catch(e){ toast(e.message); rcReqs = []; rcCands = []; rcOnboard = []; }
     drawRcStats();
     fillRcReqSelect();
     drawRequisitions();
     drawCandidates();
+  }
+  function rcOnboardFor(candId){
+    return rcOnboard.filter(function(o){ return o.candId === candId; }).sort(function(a,b){
+      return new Date(b.createdAt||0) - new Date(a.createdAt||0); })[0] || null;
+  }
+
+  /* The fields the candidate fills in themselves once an offer is made —
+     kept in one list so the public form (website-app.js) and this review
+     screen can never drift on what a field is called or labelled. */
+  var RC_ONB_FIELDS = [
+    ['dob','Date of birth'], ['gender','Gender'], ['fatherHusbandName',"Father's/Husband's name"],
+    ['address','Present address'], ['permAddress','Permanent address'],
+    ['emergencyName','Emergency contact — name'], ['emergencyPhone','Emergency contact — phone'], ['emergencyRelation','Emergency contact — relation'],
+    ['education','Highest qualification & institution'], ['priorEmployer','Previous employer (if any)'], ['priorUan','Previous UAN, if any (PF transfer / Form 11)'],
+    ['pan','PAN'], ['aadhaar','Aadhaar number'],
+    ['bankName','Bank name'], ['bankAcc','Bank account number'], ['ifsc','IFSC code'],
+    ['nomineeName','PF/Gratuity nominee — name'], ['nomineeRelation','Nominee — relation'], ['nomineeDob','Nominee — date of birth'],
+    ['ptState','State (for Professional Tax)'], ['esiAck','ESI eligibility acknowledged'],
+    ['poshAck','POSH & Code of Conduct acknowledged'], ['dpdpConsent','Consent to processing personal data (DPDP Act)']
+  ];
+  var RC_ONB_DOCS = [
+    ['photoUrl','Photograph'], ['idProofUrl','Government ID proof'], ['addressProofUrl','Address proof'],
+    ['eduCertUrl','Education certificate(s)'], ['bankProofUrl','Bank proof (passbook/cancelled cheque)']
+  ];
+
+  function rcOnboardBlockHtml(c){
+    if (!c.offerCtc) return '<div class="hint">Available once an offer has been made.</div>';
+    var onb = rcOnboardFor(c.item_id);
+    if (!onb) return '<div class="hint" style="margin-bottom:6px;">Send the candidate a self-fill link to collect ' +
+      'their personal, bank and statutory details plus documents. Nothing is added to the employee database until ' +
+      'you review and approve what they submit.</div>' +
+      '<button class="btn rc-cd-onb-send" data-id="'+esc(c.item_id)+'">Send onboarding link</button>';
+    if (onb.status === 'Sent' || onb.status === 'Changes Requested')
+      return '<div class="hint">'+(onb.status==='Sent'
+          ? 'Link sent '+esc((onb.createdAt||'').slice(0,10))+' — waiting for the candidate to fill it in.'
+          : 'Sent back to the candidate for changes'+(onb.hrNote?': "'+esc(onb.hrNote)+'"':'')+' — waiting for them to resubmit.') +'</div>' +
+        '<div class="row" style="margin-top:6px;"><div style="grid-column:1/-1;"><input readonly value="'+esc(onb.linkUrl||'')+'" onclick="this.select()"></div></div>' +
+        '<button class="btn rc-cd-onb-send" data-id="'+esc(c.item_id)+'">Resend / regenerate link</button>';
+    if (onb.status === 'Submitted'){
+      var reviewing = rcReviewingOnb === onb.item_id;
+      var html = '<div class="note good" style="margin-bottom:8px;">Filled in by the candidate '+esc((onb.submittedAt||'').slice(0,10))+' — pending your review.</div>' +
+        '<button class="btn gold rc-cd-onb-review" data-id="'+esc(onb.item_id)+'">'+(reviewing?'Hide':'Review submission')+'</button>';
+      if (reviewing){
+        var fd = onb.formData || {};
+        html += '<div class="card" style="margin-top:8px;">' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:13px;">' +
+          RC_ONB_FIELDS.map(function(f){ return '<div><b>'+esc(f[1])+':</b> '+esc(fd[f[0]]||'—')+'</div>'; }).join('') +
+          '</div>' +
+          '<div class="sub" style="margin-top:10px;">Documents</div>' +
+          '<div style="font-size:13px;">' +
+          RC_ONB_DOCS.map(function(d){ return '<div>'+esc(d[1])+': '+
+            (fd[d[0]] ? '<a href="'+esc(fd[d[0]])+'" target="_blank" rel="noopener">view</a>' : '<span class="hint">not uploaded</span>') + '</div>'; }).join('') +
+          '</div>' +
+          '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button class="btn gold rc-cd-onb-approve" data-id="'+esc(onb.item_id)+'" data-cand="'+esc(c.item_id)+'">Approve — create employee record</button>' +
+          '<button class="btn rc-cd-onb-reject" data-id="'+esc(onb.item_id)+'">Request changes</button>' +
+          '</div></div>';
+      }
+      return html;
+    }
+    if (onb.status === 'Approved') return '<div class="badge series">Onboarding approved'+(c.empId?' — Employee '+esc(c.empId):'')+'</div>';
+    return '';
   }
 
   function drawRcStats(){
@@ -9095,6 +9171,36 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     var bonusBase = Math.min(basic+da, C.num((stat.bonus||{}).wageCeiling) || (basic+da));
     var bonus = Math.round(bonusBase * C.num((stat.bonus||{}).accrualPct) / 100);
 
+    /* Projected TDS for the offer letter — the exact same slab/rebate/
+       surcharge/marginal-relief engine Payroll uses (prAnnualTaxBeforeCess),
+       not a separate AI guess. There is no declared regime or investment
+       declaration yet at offer stage, so this runs the default regime with
+       no declared deductions and is labelled as provisional throughout;
+       the actual monthly TDS is fixed once the employee declares after
+       joining, the same as Payroll already handles for existing staff. */
+    var tdsCfg = stat.tds || {}, tdsRows = null, tdsNote = '';
+    if (tdsCfg.enabled !== false){
+      var regimeKey = tdsCfg.defaultRegime || 'New';
+      var rg = (tdsCfg.regimes||{})[regimeKey];
+      if (rg && (rg.slabs||[]).length){
+        var annualGross = monthly * 12;
+        var taxable = Math.max(0, annualGross - C.num(rg.standardDeduction));
+        var tCalc = prAnnualTaxBeforeCess(taxable, rg);
+        var cess = tCalc.total * C.num(tdsCfg.cessPct) / 100;
+        var annualTax = tCalc.total + cess;
+        var monthlyTds = Math.round(annualTax / 12);
+        tdsRows = [['Projected monthly TDS', C.inr(monthlyTds)], ['Projected annual tax (incl. cess)', C.inr(Math.round(annualTax))]];
+        tdsNote = 'Provisional, under the ' + regimeKey + ' regime with no declarations — computed from annual gross ' +
+          C.inr(Math.round(annualGross)) + ' less ' + C.inr(C.num(rg.standardDeduction)) + ' standard deduction. ' +
+          'This will be finalised once the employee declares their regime and investment proofs after joining, and is not part of the take-home figures above.' +
+          (tdsCfg.slabsReviewedBy ? '' : ' Tax slabs have not yet been confirmed by your CA on Statutory & Masters.');
+      } else {
+        tdsNote = 'No tax slabs are configured for the ' + regimeKey + ' regime on Statutory & Masters — projected TDS cannot be shown until that is set up.';
+      }
+    } else {
+      tdsNote = 'TDS is switched off in Statutory & Masters — no projection shown.';
+    }
+
     var role = req ? req.title : (c.designation || 'the position');
     C.openReport({ title:'Offer of Employment', kind:'Recruitment', subtitle:esc(c.name)+' — '+esc(role),
       sections:[
@@ -9112,9 +9218,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
                 ['Professional Tax', C.inr(ptAmt), '—'], ['Gratuity provision (per year)', '—', C.inr(gratuity)],
                 ['Statutory bonus provision (per year)', '—', C.inr(bonus)]],
           note:'Deducted or contributed as applicable under law; not a guarantee where a scheme does not apply.' },
+      ].concat(tdsRows ? [{ type:'table', title:'Projected income tax (TDS)', columns:[{label:'Item'},{label:'Amount',align:'r'}],
+          rows:tdsRows, note:tdsNote }] : [{ type:'text', title:'Projected income tax (TDS)', body:tdsNote }]).concat([
         { type:'text', title:'Terms and Conditions', body:c.offerTerms || RC_DEFAULT_TERMS },
         { type:'text', title:'Signatures', body:'For the company\n\n\nAuthorised signatory' }
-      ]});
+      ])});
   }
 
   function rcCandRow(c){
@@ -9134,7 +9242,9 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     return '<div class="card" style="margin-bottom:10px;">' +
       '<div class="rc-cand-head" data-cand="'+esc(c.item_id)+'" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
       '<div><b>'+esc(c.name)+'</b><div class="hint">'+esc(req?req.title:'—')+' · '+esc(c.experience||0)+' yrs · '+
-      (c.expectedCtc ? 'expects ' + C.inr(c.expectedCtc) : 'CTC not stated')+'</div></div>' +
+      (c.expectedCtc ? 'expects ' + C.inr(c.expectedCtc) : 'CTC not stated')+
+      (c.source && c.source !== 'Careers Website' ? ' · <b>'+esc(c.source)+'</b>'+(c.sourceRef?' ('+esc(c.sourceRef)+')':'') : '')+
+      '</div></div>' +
       '<span class="badge '+badge+'">'+esc(c.status)+'</span></div>' +
       (open ? (
         '<div style="margin-top:12px;">' +
@@ -9182,6 +9292,8 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
           esc(c.offerTerms||RC_DEFAULT_TERMS)+'</textarea>' +
           '<div class="hint" style="margin-top:4px;">This exact text prints on the offer letter. Edit freely, then press Save.</div>'
         ) : '') +
+        '<div class="sub" style="margin-top:16px;">Employee onboarding</div>' +
+        rcOnboardBlockHtml(c) +
         '<div class="row four" style="margin-top:12px;">' +
         '<div><label>Stage</label><select class="rc-cd-stage" data-id="'+esc(c.item_id)+'">' +
         RC_STAGES.map(function(s){ return '<option'+(c.status===s?' selected':'')+'>'+s+'</option>'; }).join('') + '</select></div>' +
@@ -9230,7 +9342,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         if (inp.dataset.k === 'offerCtc') rcShowStructure(inp.dataset.id, inp.value);
       });
     });
-    host.querySelectorAll('.rc-cd-save, .rc-cd-screen, .rc-cd-join, .rc-cd-del, .rc-cd-offer, .rc-cd-invite, .rc-cd-terms, .rc-cd-terms-reset').forEach(function(b){
+    host.querySelectorAll('.rc-cd-save, .rc-cd-screen, .rc-cd-join, .rc-cd-del, .rc-cd-offer, .rc-cd-invite, .rc-cd-terms, .rc-cd-terms-reset, .rc-cd-onb-send, .rc-cd-onb-review, .rc-cd-onb-approve, .rc-cd-onb-reject').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); });
     });
     host.querySelectorAll('.rc-cd-terms-box').forEach(function(t){
@@ -9287,6 +9399,21 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
         c.offerTerms = RC_DEFAULT_TERMS;
         drawCandidates();
       });
+    });
+    host.querySelectorAll('.rc-cd-onb-send').forEach(function(b){
+      b.addEventListener('click', function(){ rcSendOnboardingLink(b.dataset.id); });
+    });
+    host.querySelectorAll('.rc-cd-onb-review').forEach(function(b){
+      b.addEventListener('click', function(){
+        rcReviewingOnb = (rcReviewingOnb === b.dataset.id) ? null : b.dataset.id;
+        drawCandidates();
+      });
+    });
+    host.querySelectorAll('.rc-cd-onb-approve').forEach(function(b){
+      b.addEventListener('click', function(){ rcApproveOnboarding(b.dataset.id, b.dataset.cand); });
+    });
+    host.querySelectorAll('.rc-cd-onb-reject').forEach(function(b){
+      b.addEventListener('click', function(){ rcRequestOnboardingChanges(b.dataset.id); });
     });
     rcCands.forEach(function(c){ if (rcExpanded === c.item_id && c.offerCtc) rcShowStructure(c.item_id, c.offerCtc); });
   }
@@ -9480,9 +9607,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
   /* A candidate who has joined becomes an employee the same way Add Employee
      already assigns an ID — never typed, checked against who is actually on
      file, not a stored counter. */
-  async function rcConvertToEmployee(candId){
-    var c = rcCands.filter(function(x){ return x.item_id === candId; })[0]; if (!c) return;
-    if (!confirm('Convert ' + c.name + ' to an employee record?')) return;
+  async function rcNextEmpId(){
     var hm = {}, hrList = [];
     try { hm = ((await C.api('/api/content')).data || {}).hrMasters || {}; } catch(e){}
     try { hrList = (await C.api('/api/hr?what=employees')).employees || []; } catch(e){}
@@ -9490,18 +9615,100 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     var n = C.num(hm.empIdNextSeq) || 1, empId;
     do { empId = (hm.empIdPrefix || 'EMP') + String(n).padStart(C.num(hm.empIdPad) || 3, '0'); n++; }
     while (used[empId.toUpperCase()]);
+    return empId;
+  }
+  /* Shared by the plain Convert-to-employee button and the onboarding
+     Approve action, so a candidate's employee record is built exactly the
+     same way regardless of which path created it — one place to keep the
+     empId scheme and the reused salary structure in sync, not two. */
+  async function rcCreateEmployeeFromCandidate(c, extra){
+    var empId = await rcNextEmpId();
     var st = c.offerCtc ? await rcStructure(c.offerCtc) : null;
-    var emp = { empId:empId, name:c.name, designation:c.designation||'', department:(rcReqs.filter(function(r){return r.item_id===c.reqId;})[0]||{}).department||'',
+    var reason = (extra && extra.__reason) || 'converted from a candidate record';
+    var extraClean = Object.assign({}, extra); delete extraClean.__reason;
+    var emp = Object.assign({ empId:empId, name:c.name, designation:c.designation||'',
+      department:(rcReqs.filter(function(r){return r.item_id===c.reqId;})[0]||{}).department||'',
       doj:c.joiningDate || new Date().toISOString().slice(0,10), status:'Probation', phone:c.phone||'',
-      email:c.email||'', grade:c.grade||'', structure: st || undefined };
+      email:c.email||'', grade:c.grade||'', structure: st || undefined }, extraClean);
+    await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'employees', employee:emp, reason:reason }) });
+    return empId;
+  }
+  async function rcConvertToEmployee(candId){
+    var c = rcCands.filter(function(x){ return x.item_id === candId; })[0]; if (!c) return;
+    if (!confirm('Convert ' + c.name + ' to an employee record?')) return;
     try {
-      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'employees', employee:emp,
-        reason:'converted from a candidate record' }) });
+      var empId = await rcCreateEmployeeFromCandidate(c);
       c.empId = empId;
       var data = Object.assign({}, c); delete data.item_id; delete data.status;
       await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:c.item_id,
         patch:data, status:'Joined', reason:'converted to employee ' + empId }) });
       toast(c.name + ' is now employee ' + empId + '.');
+      loadRecruitment();
+    } catch(e){ toast(e.message); }
+  }
+
+  /* ---------------- Onboarding self-fill link (native) ----------------
+     A token stands in for a login the candidate does not have yet. The
+     record is an ordinary 'onboarding' hr_items row so HR reads and
+     approves it through the same generic endpoint as everything else;
+     only the candidate's own fetch/submit needed a public route
+     (api/hr.js 'onboarding'), added there for exactly that reason. */
+  async function rcSendOnboardingLink(candId){
+    var c = rcCands.filter(function(x){ return x.item_id === candId; })[0]; if (!c) return;
+    var existing = rcOnboardFor(candId);
+    if (existing && existing.status === 'Approved'){ toast('This candidate\'s onboarding is already approved.'); return; }
+    if (existing && !confirm('A link was already sent to ' + c.name + '. Send a new one? The old link stops working.')) return;
+    var token = (window.crypto && crypto.randomUUID) ? crypto.randomUUID().replace(/-/g,'')
+      : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+    var expiresAt = new Date(Date.now() + 14*24*60*60*1000).toISOString();
+    var linkUrl = location.origin + '/?onboard=' + token;
+    var item = { itemId: existing ? existing.item_id : 'ONB-'+Date.now().toString(36).toUpperCase(),
+      kind:'onboarding', status:'Sent', candId:candId, candidateName:c.name, designation:c.designation||'',
+      token:token, linkUrl:linkUrl, expiresAt:expiresAt, createdAt:new Date().toISOString(), formData:null, hrNote:'' };
+    try {
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item,
+        reason: existing ? 'onboarding link regenerated' : 'onboarding link sent to candidate' }) });
+      toast('Onboarding link ready — copy it to ' + c.name + '.');
+      loadRecruitment();
+    } catch(e){ toast(e.message); }
+  }
+  async function rcApproveOnboarding(onbId, candId){
+    var onb = rcOnboard.filter(function(x){ return x.item_id === onbId; })[0]; if (!onb) return;
+    var c = rcCands.filter(function(x){ return x.item_id === candId; })[0]; if (!c) return;
+    if (!confirm('Approve this submission and create the employee record for ' + c.name + '?')) return;
+    var fd = onb.formData || {};
+    var extra = {
+      dob: fd.dob||'', gender: fd.gender||'', fatherHusbandName: fd.fatherHusbandName||'',
+      address: fd.address||'', permAddress: fd.permAddress||'',
+      emergencyName: fd.emergencyName||'', emergencyPhone: fd.emergencyPhone||'', emergencyRelation: fd.emergencyRelation||'',
+      education: fd.education || c.qualification || '', priorEmployer: fd.priorEmployer||'',
+      pan: fd.pan||'', aadhaar: fd.aadhaar||'', uan: fd.priorUan||'',
+      bankName: fd.bankName||'', bankAcc: fd.bankAcc||'', ifsc: fd.ifsc||'',
+      nomineeName: fd.nomineeName||'', nomineeRelation: fd.nomineeRelation||'', nomineeDob: fd.nomineeDob||'',
+      photo: fd.photoUrl||'', onboardingDocs: { photo:fd.photoUrl||'', idProof:fd.idProofUrl||'',
+        addressProof:fd.addressProofUrl||'', eduCert:fd.eduCertUrl||'', bankProof:fd.bankProofUrl||'' },
+      __reason: 'converted from candidate record after onboarding review'
+    };
+    try {
+      var empId = await rcCreateEmployeeFromCandidate(c, extra);
+      c.empId = empId;
+      var data = Object.assign({}, c); delete data.item_id; delete data.status;
+      await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:c.item_id,
+        patch:data, status:'Joined', reason:'converted to employee ' + empId + ' after onboarding review' }) });
+      await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:onb.item_id,
+        status:'Approved', reason:'onboarding approved — employee ' + empId }) });
+      rcReviewingOnb = null;
+      toast(c.name + ' is now employee ' + empId + '. ID card printing and biometric enrolment are still separate steps.');
+      loadRecruitment();
+    } catch(e){ toast(e.message); }
+  }
+  async function rcRequestOnboardingChanges(onbId){
+    var why = prompt('What should the candidate correct or add?'); if (!why) return;
+    try {
+      await C.api('/api/hr', { method:'PATCH', body:JSON.stringify({ what:'items', itemId:onbId,
+        patch:{ hrNote:why }, status:'Changes Requested', reason:'sent back to candidate: ' + why }) });
+      rcReviewingOnb = null;
+      toast('Sent back to the candidate.');
       loadRecruitment();
     } catch(e){ toast(e.message); }
   }
@@ -29811,24 +30018,51 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
           ' — this file type cannot be read by AI; paste the CV text below too.');
     } catch(e){ rcPendingCv = null; m.textContent = e.message; }
   });
+  /* Sources other than the careers website never went through an online
+     application or CV screening, so they start straight at Interview —
+     the rest of the pipeline (assessment, offer, joining) is identical
+     regardless of where the candidate came from. */
+  var RC_SOURCE_INFO = {
+    'Careers Website': { label:'Source detail', placeholder:'', hint:'', startStage:'Applied' },
+    'Job Portal':       { label:'Portal name & listing ref.', placeholder:'e.g. Naukri — REF12345', hint:'Sourced from a job portal — screening is skipped; this candidate starts directly at the Interview stage.', startStage:'Interview' },
+    'Consultancy':      { label:'Consultancy name & contact', placeholder:'e.g. ABC Consultants — Mr. Rao', hint:'Sourced via a consultancy — screening is skipped; this candidate starts directly at the Interview stage. Keep the consultancy\'s invoice/fee reference here for TDS on professional fees.', startStage:'Interview' },
+    'Employee Referral':{ label:'Referred by (employee name & ID)', placeholder:'e.g. Priya Nair — EMP0042', hint:'Employee referral — screening is skipped; this candidate starts directly at the Interview stage.', startStage:'Interview' },
+    'Direct':           { label:'Reference / walk-in note', placeholder:'', hint:'Direct entry — screening is skipped; this candidate starts directly at the Interview stage.', startStage:'Interview' }
+  };
+  function rcApplySourceUI(){
+    var src = document.getElementById('rc-cd-source').value;
+    var info = RC_SOURCE_INFO[src] || RC_SOURCE_INFO['Careers Website'];
+    var wrap = document.getElementById('rc-cd-srcref-wrap');
+    wrap.style.display = src === 'Careers Website' ? 'none' : '';
+    document.getElementById('rc-cd-srcref-label').textContent = info.label;
+    document.getElementById('rc-cd-srcref').placeholder = info.placeholder;
+    document.getElementById('rc-cd-source-note').textContent = info.hint;
+  }
+  document.getElementById('rc-cd-source').addEventListener('change', rcApplySourceUI);
+  rcApplySourceUI();
   document.getElementById('rc-cd-add').addEventListener('click', async function(){
     var name = fieldVal('rc-cd-name'), reqId = document.getElementById('rc-cd-req').value;
+    var source = document.getElementById('rc-cd-source').value;
+    var info = RC_SOURCE_INFO[source] || RC_SOURCE_INFO['Careers Website'];
     var msg = document.getElementById('rc-cd-msg'), say = noteWriter(msg);
     if (!name || !reqId) return say('Choose a requisition and enter a name.');
-    var item = { itemId:'CAND-'+Date.now().toString(36).toUpperCase(), kind:'candidate', status:'Applied',
+    var item = { itemId:'CAND-'+Date.now().toString(36).toUpperCase(), kind:'candidate', status:info.startStage,
       name:name, reqId:reqId, phone:fieldVal('rc-cd-phone'), email:fieldVal('rc-cd-email'),
+      source:source, sourceRef:fieldVal('rc-cd-srcref'),
       qualification:fieldVal('rc-cd-qual'), experience:C.num(fieldVal('rc-cd-exp')),
       currentCtc:C.num(fieldVal('rc-cd-cctc')), expectedCtc:C.num(fieldVal('rc-cd-ectc')),
       cvText:fieldVal('rc-cd-cv') };
     if (rcPendingCv) Object.assign(item, rcPendingCv);
     this.disabled = true;
     try {
-      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item, reason:'candidate added' }) });
-      ['rc-cd-name','rc-cd-phone','rc-cd-email','rc-cd-qual','rc-cd-exp','rc-cd-cctc','rc-cd-ectc','rc-cd-cv'].forEach(function(id){
+      await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'items', item:item,
+        reason:'candidate added (' + source + ')' }) });
+      ['rc-cd-name','rc-cd-phone','rc-cd-email','rc-cd-srcref','rc-cd-qual','rc-cd-exp','rc-cd-cctc','rc-cd-ectc','rc-cd-cv'].forEach(function(id){
         document.getElementById(id).value = ''; });
       document.getElementById('rc-cd-cvfile').value = ''; document.getElementById('rc-cd-cvfile-msg').textContent = '';
+      document.getElementById('rc-cd-source').value = 'Careers Website'; rcApplySourceUI();
       rcPendingCv = null;
-      say('Candidate added.', true);
+      say(source === 'Careers Website' ? 'Candidate added.' : 'Candidate added — sent straight to Interview.', true);
       loadRecruitment();
     } catch(e){ say(esc(e.message)); }
     this.disabled = false;

@@ -1,7 +1,7 @@
 // HR module: employee master, pay runs, audit trail.
 // Payroll is deliberately Draft → Reviewed → Approved. Nothing is ever
 // silently final, and every approval is written to an immutable audit log.
-import { sql, ensureTables, checkToken, checkRole, cors, readBody, tokenUser } from '../_db.js';
+import { sql, ensureTables, checkToken, checkRole, cors, readBody, tokenUser } from '../server/_db.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '6mb' } } };
 
@@ -48,6 +48,47 @@ export default async function handler(req, res) {
       await audit('careers-page', 'candidate.apply', item.itemId, null,
         { name: item.name, reqId: item.reqId }, 'applied through the careers page');
       return res.status(200).json({ ok: true, ref: item.itemId });
+    }
+
+    /* ---- PUBLIC: candidate self-fill onboarding, reached by a token HR
+       sends once someone has joined. Deliberately NOT the DOB-style 'me'
+       login — the person has no employee record yet to check a DOB
+       against — a single-use, expiring token stands in for one instead.
+       The record itself is an ordinary hr_items row (kind='onboarding'),
+       so HR reads/reviews it the same way as every other item, through
+       the authenticated 'items' route below; only fetching/submitting by
+       token needs to be reachable without a login. ---- */
+    if (askedFor === 'onboarding' && req.method === 'GET') {
+      const token = String(q.token || '');
+      if (!token) return res.status(400).json({ ok: false, error: 'Missing link token.' });
+      const rows = await sql`SELECT data FROM hr_items WHERE kind = 'onboarding' AND data->>'token' = ${token} LIMIT 1`;
+      if (!rows.length) return res.status(404).json({ ok: false, error: 'This onboarding link is not valid. Please ask HR to send it again.' });
+      const rec = rows[0].data;
+      if (rec.status !== 'Approved' && rec.expiresAt && new Date(rec.expiresAt) < new Date())
+        return res.status(410).json({ ok: false, error: 'This link has expired. Please ask HR to send a new one.' });
+      return res.status(200).json({ ok: true, status: rec.status, candidateName: rec.candidateName || '',
+        designation: rec.designation || '', hrNote: rec.hrNote || '', formData: rec.formData || null });
+    }
+    if (askedFor === 'onboarding' && req.method === 'POST') {
+      const token = String(preBody.token || '');
+      if (!token) return res.status(400).json({ ok: false, error: 'Missing link token.' });
+      const rows = await sql`SELECT item_id, data FROM hr_items WHERE kind = 'onboarding' AND data->>'token' = ${token} LIMIT 1`;
+      if (!rows.length) return res.status(404).json({ ok: false, error: 'This onboarding link is not valid. Please ask HR to send it again.' });
+      const rec = rows[0].data;
+      if (rec.status === 'Approved')
+        return res.status(400).json({ ok: false, error: 'This onboarding record has already been approved by HR.' });
+      if (rec.expiresAt && new Date(rec.expiresAt) < new Date())
+        return res.status(410).json({ ok: false, error: 'This link has expired. Please ask HR to send a new one.' });
+      const formData = preBody.formData || {};
+      if (!formData.name || !formData.dob || !formData.consent)
+        return res.status(400).json({ ok: false, error: 'Please complete the required fields and confirm the declarations before submitting.' });
+      const updated = Object.assign({}, rec, { formData, status: 'Submitted',
+        submittedAt: new Date().toISOString(), hrNote: '' });
+      await sql`UPDATE hr_items SET data = ${JSON.stringify(updated)}::jsonb, status = 'Submitted'
+                WHERE item_id = ${rows[0].item_id}`;
+      await audit('onboarding-link', 'onboarding.submit', rows[0].item_id, null,
+        { candidateName: rec.candidateName }, 'submitted via self-fill onboarding link');
+      return res.status(200).json({ ok: true });
     }
 
     /* ---- PUBLIC: employee self-service. Identity is employee ID + date of

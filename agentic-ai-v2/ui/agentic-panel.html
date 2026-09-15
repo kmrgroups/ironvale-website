@@ -2,106 +2,122 @@
 <style>
 #agentic-control-tower-v2{font-size:14px;color:var(--ink,#17243b)}
 #agentic-control-tower-v2>.card:not(#aa-v2-root){display:none!important}
-#agentic-control-tower-v2 #aa-v2-root{margin:0!important;border:0!important;box-shadow:none!important;background:transparent!important}
-/* Simple Agentic AI navigation */
-#agentic-control-tower-v2 .aa-layout-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 14px;padding:6px;background:var(--paper,#f8fbfe);border:1px solid var(--line);border-radius:12px}
-#agentic-control-tower-v2 .aa-layout-tab{border:1px solid transparent;background:transparent;color:var(--ink-mid);border-radius:8px;padding:9px 15px;font:600 12px var(--body,Arial);cursor:pointer}
-#agentic-control-tower-v2 .aa-layout-tab:hover{border-color:var(--line-strong);color:var(--navy)}
-#agentic-control-tower-v2 .aa-layout-tab.active{background:var(--navy);color:#fff;box-shadow:0 2px 5px rgba(11,42,91,.16)}
-#agentic-control-tower-v2 .aa-layout-help{font-size:11px;color:var(--ink-soft);margin:0 0 13px;padding-left:2px}
-#agentic-control-tower-v2 .aa-layout-section{display:block}
-#agentic-control-tower-v2 .aa-layout-section.aa-hidden{display:none!important}
-#agentic-control-tower-v2 .aa-group-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:17px 0 9px;font:700 14px var(--disp,Arial);color:var(--navy)}
-#agentic-control-tower-v2 .aa-group-title span{font:500 10px var(--mono,monospace);color:var(--ink-soft)}
-#agentic-control-tower-v2 .aa-agent-group{border:1px solid var(--line);border-radius:11px;background:var(--white);padding:12px;margin-bottom:10px}
-#agentic-control-tower-v2 .aa-agent-group-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
-#agentic-control-tower-v2 .aa-agent-group .aa-agent{min-width:0}
-#agentic-control-tower-v2 .aa-review-note,#agentic-control-tower-v2 .aa-info-card{border:1px solid var(--line);border-radius:11px;background:var(--white);padding:15px;margin-bottom:10px}
-#agentic-control-tower-v2 .aa-review-note b,#agentic-control-tower-v2 .aa-info-card b{color:var(--navy)}
-#agentic-control-tower-v2 .aa-info-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}
-#agentic-control-tower-v2 .aa-info-item{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:11px}
-#agentic-control-tower-v2 .aa-info-item strong{display:block;color:var(--navy);font-size:12px;margin-bottom:3px}
-#agentic-control-tower-v2 .aa-info-item span{display:block;color:var(--ink-mid);font-size:11px;line-height:1.45}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-head h3{font-size:25px!important;line-height:1.2!important;margin:2px 0 6px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-head p{font-size:13px!important;line-height:1.45!important;max-width:760px}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-kicker{font-size:10px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-status{font-size:11px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-kpis{gap:10px!important;margin:13px 0 16px!important;grid-template-columns:repeat(4,minmax(0,1fr))!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-kpi{min-height:82px!important;padding:13px!important;border-radius:10px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-kpi b{font-size:25px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-kpi span{font-size:11px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-grid{display:none!important}
-#agentic-control-tower-v2 #aa-v2-root #aa-v2-result{display:none!important}
-#agentic-control-tower-v2 #aa-v2-root #aa-v2-runs-top{display:none!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-feedback{margin:0 0 16px!important;border-radius:10px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-feedback-head{padding:13px 15px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-feedback-title{font-size:17px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-feedback-body{padding:13px 15px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-fstat{padding:9px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-finding{padding:11px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-5w1h{gap:7px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-w1h{padding:8px!important;min-height:68px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-section-head{margin-top:15px!important;margin-bottom:8px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-agent-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:9px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-agent{padding:12px!important;border-radius:10px!important;box-shadow:none!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-agent-name{font-size:13px!important}
-#agentic-control-tower-v2 #aa-v2-root .aa-v2-agent-meta,#agentic-control-tower-v2 #aa-v2-root .aa-v2-agent-stats{font-size:10px!important}
-@media(max-width:900px){#agentic-control-tower-v2 .aa-agent-group-grid,#agentic-control-tower-v2 #aa-v2-root .aa-v2-kpis,#agentic-control-tower-v2 #aa-v2-root .aa-v2-agent-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.aa-info-list{grid-template-columns:1fr!important}}
-@media(max-width:600px){#agentic-control-tower-v2 .aa-layout-tabs{overflow-x:auto;flex-wrap:nowrap}.aa-layout-tab{white-space:nowrap}.aa-agent-group-grid,#agentic-control-tower-v2 #aa-v2-root .aa-v2-kpis,#agentic-control-tower-v2 #aa-v2-root .aa-v2-agent-grid{grid-template-columns:1fr!important}}
+#agentic-control-tower-v2 #aa-clean-root{margin:0!important;border:0!important;box-shadow:none!important;background:transparent!important}
+#agentic-control-tower-v2 .aa-menu-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 14px;padding:6px;background:var(--paper,#f8fbfe);border:1px solid var(--line);border-radius:12px}
+#agentic-control-tower-v2 .aa-menu-tab{border:1px solid transparent;background:transparent;color:var(--ink-mid);border-radius:8px;padding:9px 15px;font:600 12px var(--body,Arial);cursor:pointer}
+#agentic-control-tower-v2 .aa-menu-tab:hover{border-color:var(--line-strong);color:var(--navy)}
+#agentic-control-tower-v2 .aa-menu-tab.active{background:var(--navy);color:#fff;box-shadow:0 2px 5px rgba(11,42,91,.16)}
+#agentic-control-tower-v2 .aa-menu-pane{display:none}
+#agentic-control-tower-v2 .aa-menu-pane.active{display:block}
+#agentic-control-tower-v2 .aa-extra{border:1px solid var(--line);border-radius:11px;background:var(--white);padding:15px;margin-bottom:10px}
+#agentic-control-tower-v2 .aa-extra-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 9px;font:700 15px var(--disp,Arial);color:var(--navy)}
+#agentic-control-tower-v2 .aa-extra-title span{font:500 10px var(--mono,monospace);color:var(--ink-soft)}
+#agentic-control-tower-v2 .aa-extra-text{font-size:12px;line-height:1.5;color:var(--ink-mid)}
+#agentic-control-tower-v2 .aa-extra-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}
+#agentic-control-tower-v2 .aa-extra-item{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:11px}
+#agentic-control-tower-v2 .aa-extra-item strong{display:block;color:var(--navy);font-size:12px;margin-bottom:3px}
+#agentic-control-tower-v2 .aa-extra-item span{display:block;color:var(--ink-mid);font-size:11px;line-height:1.45}
+#agentic-control-tower-v2 .aa-extra-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+#agentic-control-tower-v2 .aa-extra-note{margin-top:12px;padding:10px;border:1px dashed var(--line);border-radius:9px;background:var(--paper);font-size:11px;color:var(--ink-soft);line-height:1.45}
+@media(max-width:700px){#agentic-control-tower-v2 .aa-menu-tabs{overflow-x:auto;flex-wrap:nowrap}.aa-menu-tab{white-space:nowrap}.aa-extra-grid{grid-template-columns:1fr}}
 </style>
-<div class="aa-layout-tabs" role="tablist" aria-label="Agentic AI sections">
-  <button class="aa-layout-tab active" data-aa-tab="overview" role="tab">Overview</button>
-  <button class="aa-layout-tab" data-aa-tab="agents" role="tab">AI Agents</button>
-  <button class="aa-layout-tab" data-aa-tab="review" role="tab">Review & Approvals</button>
-  <button class="aa-layout-tab" data-aa-tab="insights" role="tab">AI Insights</button>
-  <button class="aa-layout-tab" data-aa-tab="history" role="tab">Run History</button>
+
+<div class="aa-menu-tabs" role="tablist" aria-label="Agentic AI menu">
+  <button class="aa-menu-tab active" data-aa-menu-tab="main" role="tab" aria-selected="true">Control Tower</button>
+  <button class="aa-menu-tab" data-aa-menu-tab="more" role="tab" aria-selected="false">Agentic AI — More</button>
 </div>
-<div class="aa-layout-help">Management first: see the risk, recommendation and required human decision without opening technical AI details.</div>
-<div id="aa-layout-host"></div>
+
+<div class="aa-menu-pane active" data-aa-menu-pane="main"></div>
+
+<div class="aa-menu-pane" data-aa-menu-pane="more">
+  <div class="aa-extra">
+    <div class="aa-extra-title">Review & Approvals <span>HUMAN DECISION REQUIRED</span></div>
+    <div class="aa-extra-text">Review AI-proposed actions, inspect the evidence and then approve, reject or modify them. AI recommendations do not release manufacturing or commercial actions automatically.</div>
+    <div class="aa-extra-actions">
+      <button class="btn gold" data-aa-open="agent_review">Open Review Agent Work</button>
+    </div>
+  </div>
+
+  <div class="aa-extra">
+    <div class="aa-extra-title">AI Insights <span>RISK AREAS</span></div>
+    <div class="aa-extra-grid">
+      <div class="aa-extra-item"><strong>Delivery Risk</strong><span>Late orders, machine downtime, capacity and recovery recommendations.</span></div>
+      <div class="aa-extra-item"><strong>Quality Risk</strong><span>NCR, SPC, rejection and investigation recommendations.</span></div>
+      <div class="aa-extra-item"><strong>Material Risk</strong><span>Shortage, supplier and procurement requirements.</span></div>
+      <div class="aa-extra-item"><strong>Machine Risk</strong><span>Machine state, downtime and predictive maintenance findings.</span></div>
+      <div class="aa-extra-item"><strong>NPD / APQP</strong><span>Gate readiness, document consistency and change impact.</span></div>
+      <div class="aa-extra-item"><strong>Cost / COPQ</strong><span>Manufacturing cost, quality loss and profitability opportunities.</span></div>
+    </div>
+  </div>
+
+  <div class="aa-extra">
+    <div class="aa-extra-title">Run History <span>AUDIT TRAIL</span></div>
+    <div class="aa-extra-text">Every agent execution should have a run ID, evidence, proposal and review decision. Use the existing Agent Run Log for the detailed audit trail.</div>
+    <div class="aa-extra-actions">
+      <button class="btn" data-aa-open="agent_runs">Open Agent Run Log</button>
+      <button class="btn" data-aa-open="users">User Management</button>
+    </div>
+  </div>
+
+  <div class="aa-extra-note">The main Control Tower tab intentionally keeps the management view unchanged: executive header, KPIs, Latest Agent Feedback and all 20 Governed Agents. Additional operational navigation is kept here to avoid clutter.</div>
+</div>
+
 <script>
 (function(){
   'use strict';
   var panel=document.getElementById('agentic-control-tower-v2');
-  if(!panel||panel.dataset.layoutReady==='1')return;
-  panel.dataset.layoutReady='1';
-  var tabs=[].slice.call(panel.querySelectorAll('.aa-layout-tab'));
-  function root(){return panel.querySelector('#aa-clean-root');}
-  function find(id){var r=root();return r?r.querySelector(id):null;}
-  function moveOverview(){var r=root(),host=panel.querySelector('#aa-layout-host');if(!r||!host)return;var body=r.querySelector('.aa-body')||r;host.appendChild(r);var k=find('#aa-kpis'),f=find('#aa-feedback-host');
-    if(k){k.closest('.aa-section')?.classList.add('aa-overview-part');}
-    if(f){f.closest('.aa-section')?.classList.add('aa-overview-part');}
+  if(!panel||panel.dataset.menuReady==='1')return;
+  panel.dataset.menuReady='1';
+  var tabs=[].slice.call(panel.querySelectorAll('[data-aa-menu-tab]'));
+  var panes=[].slice.call(panel.querySelectorAll('[data-aa-menu-pane]'));
+  function openScreen(s){
+    if(!s)return;
+    var q='[data-screen="'+CSS.escape(s)+'"]';
+    var a=document.querySelector('.menubar '+q)||document.querySelector(q);
+    if(a){a.click();return;}
+    var g=document.querySelector('[data-goto="'+CSS.escape(s)+'"]');
+    if(g)g.click();
   }
-  function buildExtra(){
-    var host=panel.querySelector('#aa-layout-host');if(!host||host.querySelector('.aa-layout-extra'))return;
-    var r=root();if(!r)return;
-    var extra=document.createElement('div');extra.className='aa-layout-extra';
-    extra.innerHTML='<div class="aa-layout-section aa-hidden" data-aa-section="review"><div class="aa-group-title">Review & Approvals <span>HUMAN DECISION REQUIRED</span></div><div class="aa-review-note"><b>AI recommendations never release manufacturing or commercial actions automatically.</b><div style="margin-top:5px;color:var(--ink-mid);font-size:12px;line-height:1.5">Review proposed actions, inspect evidence, then approve, reject or modify them in the existing Review Agent Work queue.</div><div style="margin-top:10px"><button class="btn gold" data-aa-open="agent_review">Open Review Agent Work</button></div></div></div><div class="aa-layout-section aa-hidden" data-aa-section="insights"><div class="aa-group-title">AI Insights <span>RISK AREAS</span></div><div class="aa-info-list"><div class="aa-info-item"><strong>Delivery Risk</strong><span>Late orders, machine downtime, capacity and recovery recommendations.</span></div><div class="aa-info-item"><strong>Quality Risk</strong><span>NCR, SPC, rejection and investigation recommendations.</span></div><div class="aa-info-item"><strong>Material Risk</strong><span>Shortage, supplier and procurement requirements.</span></div><div class="aa-info-item"><strong>Machine Risk</strong><span>Machine state, downtime and predictive maintenance findings.</span></div><div class="aa-info-item"><strong>NPD / APQP</strong><span>Gate readiness, document consistency and change impact.</span></div><div class="aa-info-item"><strong>Cost / COPQ</strong><span>Manufacturing cost, quality loss and profitability opportunities.</span></div></div></div><div class="aa-layout-section aa-hidden" data-aa-section="history"><div class="aa-group-title">Run History <span>AUDIT TRAIL</span></div><div class="aa-review-note"><b>Agent Run Log</b><div style="margin-top:5px;color:var(--ink-mid);font-size:12px;line-height:1.5">Every agent execution should have a run ID, evidence, proposal and review decision. Open the existing run log for the detailed audit trail.</div><div style="margin-top:10px"><button class="btn" data-aa-open="agent_runs">Open Agent Run Log</button></div></div></div>';
-    host.appendChild(extra);
-    extra.querySelectorAll('[data-aa-open]').forEach(function(b){b.onclick=function(){var s=b.dataset.aaOpen,a=panel.closest('body')?.querySelector('[data-screen="'+s+'"]');if(a)a.click();else{var g=document.querySelector('[data-goto="'+s+'"]');if(g)g.click();}}});
+  function wire(){
+    panel.querySelectorAll('[data-aa-open]').forEach(function(b){
+      if(b.dataset.wired==='1')return;
+      b.dataset.wired='1';
+      b.onclick=function(){
+        var s=b.dataset.aaOpen;
+        if(s==='users'){
+          var nodes=[].slice.call(document.querySelectorAll('.menubar [data-screen],.menubar [data-goto],.menubar button,.menubar a'));
+          var a=nodes.find(function(n){var t=(n.getAttribute('data-screen')||n.getAttribute('data-goto')||n.textContent||'').toLowerCase().replace(/[_-]+/g,' ').trim();return['user management','users','user admin','manage users','employee master'].indexOf(t)>=0;});
+          if(a){a.click();return;}
+        }
+        openScreen(s);
+      };
+    });
   }
-  function show(name){
-    var r=root();if(!r)return;
-    tabs.forEach(function(t){var active=t.dataset.aaTab===name;t.classList.toggle('active',active);t.setAttribute('aria-selected',active?'true':'false');});
-    var overviewParts=[].slice.call(panel.querySelectorAll('.aa-overview-part'));
-    overviewParts.forEach(function(x){x.classList.toggle('aa-hidden',name!=='overview');});
-    var agents=[];
-    var ag=find('#aa-agents');if(ag){var sec=ag.closest('.aa-section');if(sec)agents.push(sec);else agents.push(ag);}
-    agents.forEach(function(x){x.classList.toggle('aa-hidden',name!=='agents');});
-    panel.querySelectorAll('[data-aa-section]').forEach(function(x){x.classList.toggle('aa-hidden',x.dataset.aaSection!==name);});
-    var head=r.querySelector('.aa-head');if(head)head.classList.toggle('aa-hidden',false);
-  }
-  function setup(){var r=root();if(!r)return false;moveOverview();buildExtra();
-    var ag=find('#aa-agents');if(ag&&!ag.dataset.grouped){
-      ag.dataset.grouped='1';
-      var cards=[].slice.call(ag.children),groups={};
-      cards.forEach(function(c){var txt=(c.textContent||'').toLowerCase();var group=txt.indexOf('rfq')>=0||txt.indexOf('drawing')>=0?'Sales & RFQ':txt.indexOf('apqp')>=0||txt.indexOf('4m')>=0?'NPD':txt.indexOf('production')>=0||txt.indexOf('delivery')>=0||txt.indexOf('tool life')>=0?'Planning & Production':txt.indexOf('material')>=0||txt.indexOf('supplier')>=0?'Purchase & Supplier':txt.indexOf('quality')>=0||txt.indexOf('spc')>=0||txt.indexOf('complaint')>=0||txt.indexOf('trace')>=0?'Quality':txt.indexOf('maintenance')>=0?'Maintenance':txt.indexOf('workforce')>=0||txt.indexOf('skill')>=0?'HR':txt.indexOf('audit')>=0?'QMS & Compliance':txt.indexOf('cost')>=0||txt.indexOf('profit')>=0?'Cost & Finance':'Management';(groups[group]=groups[group]||[]).push(c);});
-      ag.innerHTML='';Object.keys(groups).forEach(function(g){var wrap=document.createElement('div');wrap.className='aa-agent-group';var title=document.createElement('div');title.className='aa-group-title';title.innerHTML='<span style="font:700 13px var(--disp,Arial);color:var(--navy)">'+g+'</span><span>'+groups[g].length+' agents</span>';var grid=document.createElement('div');grid.className='aa-agent-group-grid';groups[g].forEach(function(c){grid.appendChild(c)});wrap.appendChild(title);wrap.appendChild(grid);ag.appendChild(wrap);});
+  tabs.forEach(function(t){
+    t.onclick=function(){
+      var name=t.dataset.aaMenuTab;
+      tabs.forEach(function(x){var active=x.dataset.aaMenuTab===name;x.classList.toggle('active',active);x.setAttribute('aria-selected',active?'true':'false');});
+      panes.forEach(function(p){p.classList.toggle('active',p.dataset.aaMenuPane===name);});
+      wire();
+    };
+  });
+  function mountTower(){
+    var root=panel.querySelector('#aa-clean-root');
+    var main=panel.querySelector('[data-aa-menu-pane="main"]');
+    if(!root||!main)return false;
+    if(root.parentElement!==main)main.appendChild(root);
+    /* Keep the quoted executive content together on the first tab. */
+    var actions=root.querySelector('.aa-fb-actions');
+    if(actions){
+      actions.dataset.movedToMore='1';
+      actions.style.display='none';
     }
-    show('overview');return true;
+    wire();
+    return true;
   }
-  tabs.forEach(function(t){t.onclick=function(){show(t.dataset.aaTab)}});
-  var observer=new MutationObserver(function(){if(setup())observer.disconnect();});observer.observe(panel,{childList:true,subtree:true});
-  setup();
+  var observer=new MutationObserver(function(){if(mountTower())observer.disconnect();});
+  observer.observe(panel,{childList:true,subtree:true});
+  mountTower();
 })();
 </script>
 </section>

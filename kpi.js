@@ -309,3 +309,16 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   })();
 })();
+
+
+/* AGENTIC_AI_CONTROL_TOWER_LOADER */
+(function(){
+  function boot(){
+    if (!document.querySelector('[data-panel="agentic_ai"]')) return;
+    import('/agentic-ai-v2/ui/control-tower.js').catch(function(e){
+      console.error('Agentic AI Control Tower failed to load:', e);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();

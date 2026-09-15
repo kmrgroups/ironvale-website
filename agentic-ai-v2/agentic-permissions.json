@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "source": "Admin Menu > User Management",
+  "module": "agentic_ai",
+  "tabs": [
+    {
+      "id": "agentic_ai.control_tower",
+      "label": "Control Tower",
+      "panels": [
+        { "id": "agentic_ai.control_tower.header", "label": "Executive Header" },
+        { "id": "agentic_ai.control_tower.actions", "label": "Run Control Tower / Refresh" },
+        { "id": "agentic_ai.control_tower.kpis", "label": "Risk & Action KPIs" },
+        { "id": "agentic_ai.control_tower.feedback", "label": "Latest Agent Feedback" },
+        { "id": "agentic_ai.control_tower.agents", "label": "20 Governed Agents" },
+        { "id": "agentic_ai.control_tower.agent_run", "label": "Run Individual Agent" },
+        { "id": "agentic_ai.control_tower.agent_open", "label": "Open Agent Screen" }
+      ]
+    },
+    {
+      "id": "agentic_ai.more",
+      "label": "Agentic AI — More",
+      "panels": [
+        { "id": "agentic_ai.more.review", "label": "Review & Approvals" },
+        { "id": "agentic_ai.more.insights", "label": "AI Insights" },
+        { "id": "agentic_ai.more.run_history", "label": "Run History / Agent Run Log" }
+      ]
+    }
+  ],
+  "rules": {
+    "admin_user_management_is_source_of_truth": true,
+    "deny_by_default_when_explicit_permission_exists": true,
+    "ui_visibility_must_match_permission": true,
+    "api_actions_must_be_authorized_server_side": true,
+    "no_agentic_ai_user_management_panel": true
+  }
+}

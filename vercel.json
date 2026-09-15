@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/idms.html", "destination": "/api/idms-screen" },
+    { "source": "/idms", "destination": "/api/idms-screen" },
+    { "source": "/idms/", "destination": "/api/idms-screen" },
     { "source": "/iclock/:op", "destination": "/api/index?route=device&proto=adms&op=:op" },
     { "source": "/api/ai", "destination": "/api/index?route=ai" },
     { "source": "/api/assets", "destination": "/api/index?route=assets" },

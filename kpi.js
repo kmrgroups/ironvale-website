@@ -107,7 +107,6 @@
       'xmlns="http://www.w3.org/2000/svg" class="kpi-svg">' + inner + '</svg>';
   }
 
-  /* grouped (or single) vertical bars over a shared set of labels */
   function chartBars(labels, series, unit) {
     var max = niceMax(Math.max.apply(null, [0].concat(series.map(function (s) {
       return Math.max.apply(null, [0].concat(s.values.map(num)));
@@ -131,7 +130,6 @@
     return legend(series) + svg(body);
   }
 
-  /* lines with dots — for rates and ratios read over time */
   function chartLine(labels, series, unit) {
     var max = niceMax(Math.max.apply(null, [0].concat(series.map(function (s) {
       return Math.max.apply(null, [0].concat(s.values.map(num)));
@@ -157,7 +155,6 @@
     return legend(series) + svg(body);
   }
 
-  /* donut — for a split of one total */
   function chartPie(labels, values, unit) {
     var total = sum(values);
     if (!total) return '';
@@ -179,7 +176,6 @@
     return legend(labels.map(function (l, i) { return { name: l + ' — ' + fmt(values[i], unit), color: PALETTE[i % PALETTE.length] }; })) + svg(body);
   }
 
-  /* radar — for comparing several measures on one common scale (0–100) */
   function chartRadar(axes, series) {
     var cx = W / 2, cy = H / 2 + 4, r = 96, n = axes.length, body = '', i, k;
     if (!n) return '';
@@ -217,8 +213,6 @@
     return legend(series) + svg(body);
   }
 
-  /* pareto — bars descending with the cumulative line and the 80% mark, one of
-     the 7QC tools and the only honest way to say "start here" */
   function chartPareto(labels, values, unit) {
     var pairs = labels.map(function (l, i) { return { l: l, v: num(values[i]) }; })
       .filter(function (p) { return p.v > 0; })
@@ -247,10 +241,6 @@
 
   var CHARTS = { bars: chartBars, line: chartLine, pie: chartPie, radar: chartRadar, pareto: chartPareto };
 
-  /* ---------------- registry ---------------- */
-  /* Each KPI describes its evidence path so the dashboard can explain where the
-     number came from. The actual page-specific dashboards below choose the
-     suitable subset. */
   var KPI = {
     production: {
       title:'Production', unit:'pcs', chart:'line',
@@ -299,10 +289,10 @@
   window.KPIEngine = { charts:CHARTS, registry:KPI, renderChart:renderChart, fyOf:fyOf, inFy:inFy };
 
   /* The IDMS pages use this file for rendering dashboard panels. The Agentic AI
-     V2 control tower is loaded conditionally by the shared KPI script only when
+     V2 control tower is loaded by the shared KPI script; it only mounts when
      the existing IDMS Agentic AI panel is present, so public pages are untouched. */
   (function loadAgenticControlTower(){
-    import('/agentic-ai-v2/ui/control-tower.js').catch(function(e){
+    import('/agentic-ai-v2/ui/control-tower.js?v=20260915').catch(function(e){
       console.error('Agentic AI Control Tower failed to load:', e);
     });
   })();

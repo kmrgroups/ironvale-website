@@ -19,9 +19,12 @@
       .aa-v2-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
       .aa-v2-status{font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);margin-top:9px;min-height:14px}
       .aa-v2-kpis{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:10px;margin-top:12px}
-      .aa-v2-kpi{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+      .aa-v2-kpi{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease}
+      .aa-v2-kpi:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm);border-color:var(--gold,#c2932e)}
+      .aa-v2-kpi:focus{outline:2px solid var(--gold,#c2932e);outline-offset:2px}
       .aa-v2-kpi b{display:block;font-family:var(--disp);font-size:24px;line-height:1;color:var(--navy)}
       .aa-v2-kpi span{display:block;font-family:var(--mono);font-size:9px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
+      .aa-v2-kpi em{display:block;font-family:var(--mono);font-size:8px;color:var(--sky-deep,#2b78a8);font-style:normal;margin-top:7px}
       .aa-v2-kpi.warn b{color:var(--bad,#d95f56)}
       .aa-v2-kpi.good b{color:var(--ok,#1f9d6b)}
       .aa-v2-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.8fr);gap:14px;margin-top:14px}
@@ -118,8 +121,15 @@
         agents=(state.registry.agents||[]);
     root.querySelector('#aa-v2-status').textContent='Live data · '+agents.length+' governed agents · updated '+state.updatedAt.toLocaleString('en-GB');
     root.querySelector('#aa-v2-kpis').innerHTML=[
-      ['Critical risks',stop,stop?'warn':'good'],['High risks',high,high?'warn':'good'],['Open AI actions',tasks.length,tasks.length?'warn':'good'],['Overdue actions',overdueN,overdueN?'warn':'good']
-    ].map(function(x){return '<div class="aa-v2-kpi '+x[2]+'"><b>'+x[1]+'</b><span>'+esc(x[0])+'</span></div>';}).join('');
+      ['Critical risks',stop,stop?'warn':'good','ncr_open','Open NCR / critical quality risks'],
+      ['High risks',high,high?'warn':'good','ncr_open','Open NCR / high-priority risks'],
+      ['Open AI actions',tasks.length,tasks.length?'warn':'good','agent_review','Open Agent Work for review'],
+      ['Overdue actions',overdueN,overdueN?'warn':'good','agent_review','Open overdue actions for follow-up']
+    ].map(function(x){return '<div class="aa-v2-kpi '+x[2]+'" role="button" tabindex="0" data-aa-kpi-screen="'+esc(x[3])+'" aria-label="'+esc(x[0])+' '+esc(x[1])+' · '+esc(x[4])+'"><b>'+x[1]+'</b><span>'+esc(x[0])+'</span><em>↗ '+esc(x[4])+'</em></div>';}).join('');
+    root.querySelectorAll('[data-aa-kpi-screen]').forEach(function(card){
+      card.onclick=function(){openScreen(card.getAttribute('data-aa-kpi-screen'));};
+      card.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();card.click();}};
+    });
 
     var q=tasks.slice().sort(function(a,b){var p={stop:3,high:2,normal:1};return (p[priorityClass(b)]-p[priorityClass(a)])||(overdue(b)?1:0)-(overdue(a)?1:0);}).slice(0,10);
     root.querySelector('#aa-v2-queue').innerHTML=q.length

@@ -3,6 +3,9 @@
 #agentic-control-tower-v2{font-size:14px;color:var(--ink,#17243b)}
 #agentic-control-tower-v2>.card:not(#aa-v2-root){display:none!important}
 #agentic-control-tower-v2 #aa-clean-root{margin:0!important;border:0!important;box-shadow:none!important;background:transparent!important}
+/* User access is managed only from Admin -> User Management. */
+#agentic-control-tower-v2 #aa-clean-root .aa-actions button:last-child{display:none!important}
+#agentic-control-tower-v2 #aa-clean-root .aa-fb-actions{display:none!important}
 #agentic-control-tower-v2 .aa-menu-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 14px;padding:6px;background:var(--paper,#f8fbfe);border:1px solid var(--line);border-radius:12px}
 #agentic-control-tower-v2 .aa-menu-tab{border:1px solid transparent;background:transparent;color:var(--ink-mid);border-radius:8px;padding:9px 15px;font:600 12px var(--body,Arial);cursor:pointer}
 #agentic-control-tower-v2 .aa-menu-tab:hover{border-color:var(--line-strong);color:var(--navy)}
@@ -55,11 +58,10 @@
     <div class="aa-extra-text">Every agent execution should have a run ID, evidence, proposal and review decision. Use the existing Agent Run Log for the detailed audit trail.</div>
     <div class="aa-extra-actions">
       <button class="btn" data-aa-open="agent_runs">Open Agent Run Log</button>
-      <button class="btn" data-aa-open="users">User Management</button>
     </div>
   </div>
 
-  <div class="aa-extra-note">The main Control Tower tab intentionally keeps the management view unchanged: executive header, KPIs, Latest Agent Feedback and all 20 Governed Agents. Additional operational navigation is kept here to avoid clutter.</div>
+  <div class="aa-extra-note">Agentic AI does not have a separate Users or User Management panel. All users, roles, permissions and access to Agentic AI are controlled centrally from Admin Menu → User Management.</div>
 </div>
 
 <script>
@@ -82,15 +84,7 @@
     panel.querySelectorAll('[data-aa-open]').forEach(function(b){
       if(b.dataset.wired==='1')return;
       b.dataset.wired='1';
-      b.onclick=function(){
-        var s=b.dataset.aaOpen;
-        if(s==='users'){
-          var nodes=[].slice.call(document.querySelectorAll('.menubar [data-screen],.menubar [data-goto],.menubar button,.menubar a'));
-          var a=nodes.find(function(n){var t=(n.getAttribute('data-screen')||n.getAttribute('data-goto')||n.textContent||'').toLowerCase().replace(/[_-]+/g,' ').trim();return['user management','users','user admin','manage users','employee master'].indexOf(t)>=0;});
-          if(a){a.click();return;}
-        }
-        openScreen(s);
-      };
+      b.onclick=function(){openScreen(b.dataset.aaOpen);};
     });
   }
   tabs.forEach(function(t){
@@ -106,7 +100,7 @@
     var main=panel.querySelector('[data-aa-menu-pane="main"]');
     if(!root||!main)return false;
     if(root.parentElement!==main)main.appendChild(root);
-    /* Keep the quoted executive content together on the first tab. */
+    /* Keep the requested executive content together on the first tab. */
     var actions=root.querySelector('.aa-fb-actions');
     if(actions){
       actions.dataset.movedToMore='1';

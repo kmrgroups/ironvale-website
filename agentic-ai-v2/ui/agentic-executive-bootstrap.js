@@ -2,32 +2,61 @@
 (function(){
   'use strict';
   var MENU_ID='agentic-executive-menu';
+  var BUTTON_ID='agentic-executive-launcher';
   var PANEL_ID='agentic-control-tower-v2';
   var HASH='agentic_exec';
   var panelReady=false;
   var stylesReady=false;
 
+  function getBar(){
+    return document.getElementById('menubar') ||
+      document.querySelector('.menubar') ||
+      document.querySelector('nav') ||
+      document.querySelector('[role="navigation"]');
+  }
+
   function visiblePanel(){
     var target=document.getElementById(PANEL_ID);
+    if(!target) return;
     var panels=[].slice.call(document.querySelectorAll('.panel'));
     panels.forEach(function(p){
-      if(p===target) p.classList.add('on');
-      else p.classList.remove('on');
+      if(p===target){
+        p.classList.add('on');
+        p.style.display='block';
+      }else{
+        p.classList.remove('on');
+      }
     });
+    window.scrollTo(0,0);
   }
 
   function openExecutive(){
     if(!panelReady) return;
-    visiblePanel();
     if(location.hash !== '#s='+HASH) history.pushState(null,'','#s='+HASH);
+    visiblePanel();
     var menu=document.getElementById(MENU_ID);
     if(menu) menu.classList.remove('open');
-    var tower=document.getElementById(PANEL_ID);
-    if(tower) tower.classList.add('on');
+    var launcher=document.getElementById(BUTTON_ID);
+    if(launcher) launcher.setAttribute('aria-expanded','true');
+  }
+
+  function addLauncher(){
+    if(document.getElementById(BUTTON_ID) || !document.body) return;
+    var b=document.createElement('button');
+    b.id=BUTTON_ID;
+    b.type='button';
+    b.textContent='🎯 AGENTIC AI · EXECUTIVE CONTROL';
+    b.setAttribute('aria-label','Open Agentic AI Executive Control');
+    b.setAttribute('aria-expanded','false');
+    b.style.cssText='position:fixed;right:18px;top:72px;z-index:2147483000;border:1px solid #d6dee8;border-radius:10px;padding:10px 14px;background:#17243b;color:#fff;font:700 12px Arial,sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.18);letter-spacing:.2px;';
+    b.addEventListener('mouseenter',function(){b.style.transform='translateY(-1px)';});
+    b.addEventListener('mouseleave',function(){b.style.transform='';});
+    b.addEventListener('click',function(e){e.preventDefault();openExecutive();});
+    document.body.appendChild(b);
   }
 
   function installMenu(){
-    var bar=document.getElementById('menubar') || document.querySelector('.menubar');
+    var bar=getBar();
     if(!bar || document.getElementById(MENU_ID)) return;
     var g=document.createElement('div');
     g.className='mgroup';
@@ -44,10 +73,7 @@
       if(!was) g.classList.add('open');
     });
     var link=g.querySelector('[data-agentic-executive-link]');
-    if(link) link.addEventListener('click',function(e){
-      e.preventDefault();
-      openExecutive();
-    });
+    if(link) link.addEventListener('click',function(e){e.preventDefault();openExecutive();});
   }
 
   function copyPanelStyles(doc){
@@ -63,8 +89,7 @@
   async function installPanel(){
     if(panelReady || !document.body) return;
     var firstPanel=document.querySelector('.panel');
-    var host=firstPanel ? firstPanel.parentNode : null;
-    if(!host) return;
+    var host=firstPanel ? firstPanel.parentNode : document.body;
     try{
       var r=await fetch('/agentic-ai-v2/ui/agentic-panel.html?v=20260915',{cache:'no-store'});
       if(!r.ok) throw Error('Agentic panel load failed ('+r.status+')');
@@ -88,19 +113,22 @@
         node.appendChild(s);
       });
       panelReady=true;
+      addLauncher();
+      installMenu();
       if((location.hash||'')==='#s='+HASH) openExecutive();
     }catch(err){
       console.error('[Agentic Executive]',err);
+      addLauncher();
     }
   }
 
-  function tick(){ installMenu(); installPanel(); }
-  var obs=new MutationObserver(function(){ tick(); });
+  function tick(){ addLauncher(); installMenu(); installPanel(); }
   function start(){
     tick();
+    var obs=new MutationObserver(function(){tick();});
     obs.observe(document.body,{childList:true,subtree:true});
-    window.addEventListener('hashchange',function(){ if(location.hash==='#s='+HASH) openExecutive(); });
-    window.addEventListener('popstate',function(){ if(location.hash==='#s='+HASH) openExecutive(); });
+    window.addEventListener('hashchange',function(){if(location.hash==='#s='+HASH) openExecutive();});
+    window.addEventListener('popstate',function(){if(location.hash==='#s='+HASH) openExecutive();});
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();

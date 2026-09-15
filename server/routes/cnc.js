@@ -2,7 +2,7 @@
 // The browser never connects directly to a CNC. A factory-LAN edge gateway
 // posts normalized machine state here. The UI reads the same normalized model
 // regardless of controller/vendor.
-import { sql, ensureTables, checkRole, cors, readBody, tokenUser } from '../_db.js';
+import { sql, ensureTables, checkRole, cors, readBody, tokenUser } from '../server/_db.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '256kb' } } };
 const gatewayKey = () => process.env.CNC_GATEWAY_KEY || process.env.MACHINE_GATEWAY_KEY || '';

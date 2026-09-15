@@ -1,7 +1,7 @@
 // Image / video storage, separate from the content record.
 // POST (signed in): send a data URL, get back a short link.
 // GET  (public):    serves the file itself, cached by the browser.
-import { sql, ensureTables, checkToken, cors, readBody } from '../_db.js';
+import { sql, ensureTables, checkToken, cors, readBody } from '../server/_db.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '8mb' } } };
 

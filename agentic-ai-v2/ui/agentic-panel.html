@@ -1,4 +1,4 @@
-<section id="agentic-control-tower-v2" class="panel">
+<section id="agentic-control-tower-v2" class="panel" data-aa-permission-module="agentic_ai" data-aa-permission-source="admin_user_management">
 <style>
 #agentic-control-tower-v2{font-size:14px;color:var(--ink,#17243b)}
 #agentic-control-tower-v2>.card:not(#aa-v2-root){display:none!important}
@@ -26,22 +26,22 @@
 </style>
 
 <div class="aa-menu-tabs" role="tablist" aria-label="Agentic AI menu">
-  <button class="aa-menu-tab active" data-aa-menu-tab="main" role="tab" aria-selected="true">Control Tower</button>
-  <button class="aa-menu-tab" data-aa-menu-tab="more" role="tab" aria-selected="false">Agentic AI — More</button>
+  <button class="aa-menu-tab active" data-aa-menu-tab="main" data-aa-permission="agentic_ai.control_tower" role="tab" aria-selected="true">Control Tower</button>
+  <button class="aa-menu-tab" data-aa-menu-tab="more" data-aa-permission="agentic_ai.more" role="tab" aria-selected="false">Agentic AI — More</button>
 </div>
 
-<div class="aa-menu-pane active" data-aa-menu-pane="main"></div>
+<div class="aa-menu-pane active" data-aa-menu-pane="main" data-aa-permission="agentic_ai.control_tower"></div>
 
-<div class="aa-menu-pane" data-aa-menu-pane="more">
-  <div class="aa-extra">
+<div class="aa-menu-pane" data-aa-menu-pane="more" data-aa-permission="agentic_ai.more">
+  <div class="aa-extra" data-aa-permission="agentic_ai.more.review">
     <div class="aa-extra-title">Review & Approvals <span>HUMAN DECISION REQUIRED</span></div>
     <div class="aa-extra-text">Review AI-proposed actions, inspect the evidence and then approve, reject or modify them. AI recommendations do not release manufacturing or commercial actions automatically.</div>
     <div class="aa-extra-actions">
-      <button class="btn gold" data-aa-open="agent_review">Open Review Agent Work</button>
+      <button class="btn gold" data-aa-open="agent_review" data-aa-permission="agentic_ai.more.review">Open Review Agent Work</button>
     </div>
   </div>
 
-  <div class="aa-extra">
+  <div class="aa-extra" data-aa-permission="agentic_ai.more.insights">
     <div class="aa-extra-title">AI Insights <span>RISK AREAS</span></div>
     <div class="aa-extra-grid">
       <div class="aa-extra-item"><strong>Delivery Risk</strong><span>Late orders, machine downtime, capacity and recovery recommendations.</span></div>
@@ -53,15 +53,15 @@
     </div>
   </div>
 
-  <div class="aa-extra">
+  <div class="aa-extra" data-aa-permission="agentic_ai.more.run_history">
     <div class="aa-extra-title">Run History <span>AUDIT TRAIL</span></div>
     <div class="aa-extra-text">Every agent execution should have a run ID, evidence, proposal and review decision. Use the existing Agent Run Log for the detailed audit trail.</div>
     <div class="aa-extra-actions">
-      <button class="btn" data-aa-open="agent_runs">Open Agent Run Log</button>
+      <button class="btn" data-aa-open="agent_runs" data-aa-permission="agentic_ai.more.run_history">Open Agent Run Log</button>
     </div>
   </div>
 
-  <div class="aa-extra-note">Agentic AI does not have a separate Users or User Management panel. All users, roles, permissions and access to Agentic AI are controlled centrally from Admin Menu → User Management.</div>
+  <div class="aa-extra-note">All Agentic AI tabs and panels are permission-controlled from Admin Menu → User Management. There is no separate Users/User Management panel inside Agentic AI.</div>
 </div>
 
 <script>

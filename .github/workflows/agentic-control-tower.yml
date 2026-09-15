@@ -1,0 +1,60 @@
+name: Integrate Agentic AI Control Tower
+
+on:
+  push:
+    paths:
+      - 'agentic-ai-v2/ui/control-tower.js'
+      - '.agentic-control-tower-enable'
+      - '.github/workflows/agentic-control-tower.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Inject the loader into the existing KPI bundle
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('kpi.js')
+          s = p.read_text(encoding='utf-8')
+          marker = "/* AGENTIC_AI_CONTROL_TOWER_LOADER */"
+          if marker not in s:
+              s += """
+
+          /* AGENTIC_AI_CONTROL_TOWER_LOADER */
+          (function(){
+            function boot(){
+              if (!document.querySelector('[data-panel=\"agentic_ai\"]')) return;
+              import('/agentic-ai-v2/ui/control-tower.js').catch(function(e){
+                console.error('Agentic AI Control Tower failed to load:', e);
+              });
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+            else boot();
+          })();
+          """
+              p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit and push the loader integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add kpi.js
+          if git diff --cached --quiet; then
+            echo "kpi.js already integrated"
+            exit 0
+          fi
+          git commit -m "Integrate live Agentic AI Control Tower into IDMS"
+          git push origin HEAD:main

@@ -1,15 +1,15 @@
-/* Live IDMS bridge for the Agentic AI screens: Control Tower and Agentic AI · More.
-   These are two separate, independently navigable screens (not tabs on one screen). */
+/* Live IDMS bridge for the Agentic AI screens. Installs two independent
+   screens under the "AGENTIC AI" menu — Control Tower and Agentic AI-More —
+   instead of a single screen with two tabs. */
 (function(){
   'use strict';
   var MENU_ID='agentic-executive-menu';
   var BUTTON_ID='agentic-executive-launcher';
-
-  var SCREENS={
-    control:{ panelId:'agentic-control-tower-v2', panelKey:'agentic_control_tower', file:'/agentic-ai-v2/ui/control-tower-panel.html', menuLabel:'🎯 Control Tower' },
-    more:{ panelId:'agentic-ai-more-v2', panelKey:'agentic_ai_more', file:'/agentic-ai-v2/ui/agentic-more-panel.html', menuLabel:'🗂️ Agentic AI · More' }
-  };
-  var ready={ control:false, more:false };
+  var TOWER_PANEL_ID='agentic-control-tower-v2';
+  var MORE_PANEL_ID='agentic-ai-more-v2';
+  var TOWER_HASH='agentic_exec';
+  var MORE_HASH='agentic_exec_more';
+  var panelReady=false;
   var stylesReady=false;
 
   function getBar(){
@@ -19,14 +19,8 @@
       document.querySelector('[role="navigation"]');
   }
 
-  function hashFor(key){ return '#s='+SCREENS[key].panelKey; }
-  function keyForHash(hash){
-    for(var k in SCREENS){ if(SCREENS.hasOwnProperty(k) && hashFor(k)===hash) return k; }
-    return null;
-  }
-
-  function visiblePanel(key){
-    var target=document.getElementById(SCREENS[key].panelId);
+  function showPanel(panelId){
+    var target=document.getElementById(panelId);
     if(!target) return;
     var panels=[].slice.call(document.querySelectorAll('.panel'));
     panels.forEach(function(p){
@@ -40,15 +34,25 @@
     window.scrollTo(0,0);
   }
 
-  function openScreen(key){
-    if(!ready[key]) return;
-    var wantHash=hashFor(key);
-    if(location.hash !== wantHash) history.pushState(null,'',wantHash);
-    visiblePanel(key);
+  function closeMenu(){
     var menu=document.getElementById(MENU_ID);
     if(menu) menu.classList.remove('open');
     var launcher=document.getElementById(BUTTON_ID);
     if(launcher) launcher.setAttribute('aria-expanded','true');
+  }
+
+  function openTower(){
+    if(!panelReady) return;
+    if(location.hash !== '#s='+TOWER_HASH) history.pushState(null,'','#s='+TOWER_HASH);
+    showPanel(TOWER_PANEL_ID);
+    closeMenu();
+  }
+
+  function openMore(){
+    if(!panelReady) return;
+    if(location.hash !== '#s='+MORE_HASH) history.pushState(null,'','#s='+MORE_HASH);
+    showPanel(MORE_PANEL_ID);
+    closeMenu();
   }
 
   function addLauncher(){
@@ -62,7 +66,7 @@
     b.style.cssText='position:fixed;right:18px;top:72px;z-index:2147483000;border:1px solid #d6dee8;border-radius:10px;padding:10px 14px;background:#17243b;color:#fff;font:700 12px Arial,sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.18);letter-spacing:.2px;';
     b.addEventListener('mouseenter',function(){b.style.transform='translateY(-1px)';});
     b.addEventListener('mouseleave',function(){b.style.transform='';});
-    b.addEventListener('click',function(e){e.preventDefault();openScreen('control');});
+    b.addEventListener('click',function(e){e.preventDefault();openTower();});
     document.body.appendChild(b);
   }
 
@@ -72,11 +76,10 @@
     var g=document.createElement('div');
     g.className='mgroup';
     g.id=MENU_ID;
-    g.innerHTML='<a href="'+hashFor('control')+'" class="mg-toggle">🤖 AGENTIC AI <span class="ar">▼</span></a>'+
+    g.innerHTML='<a href="#s='+TOWER_HASH+'" class="mg-toggle">🤖 AGENTIC AI <span class="ar">▼</span></a>'+
       '<div class="drop"><div class="sec">AI Governance &amp; Executive Control</div>'+
-      '<a href="'+hashFor('control')+'" data-agentic-link="control"><span>'+SCREENS.control.menuLabel+'</span></a>'+
-      '<a href="'+hashFor('more')+'" data-agentic-link="more"><span>'+SCREENS.more.menuLabel+'</span></a>'+
-      '</div>';
+      '<a href="#s='+TOWER_HASH+'" data-agentic-open="tower"><span>🗼 Control Tower</span></a>'+
+      '<a href="#s='+MORE_HASH+'" data-agentic-open="more"><span>🗂 Agentic AI-More</span></a></div>';
     bar.appendChild(g);
     var toggle=g.querySelector('.mg-toggle');
     if(toggle) toggle.addEventListener('click',function(e){
@@ -85,9 +88,22 @@
       bar.querySelectorAll('.mgroup').forEach(function(x){x.classList.remove('open');});
       if(!was) g.classList.add('open');
     });
-    [].slice.call(g.querySelectorAll('[data-agentic-link]')).forEach(function(link){
-      link.addEventListener('click',function(e){e.preventDefault();openScreen(link.dataset.agenticLink);});
+    g.querySelectorAll('[data-agentic-open]').forEach(function(link){
+      link.addEventListener('click',function(e){
+        e.preventDefault();
+        if(link.dataset.agenticOpen==='more') openMore(); else openTower();
+      });
     });
+  }
+
+  function renameMenu(){
+    var a=document.querySelector('.menubar a[data-s="agentic_ai"]');
+    if(a){
+      var span=a.querySelector('span');
+      if(span) span.textContent='AGENTIC AI · EXECUTIVE CONTROL'; else a.textContent='🤖 AGENTIC AI · EXECUTIVE CONTROL';
+      a.setAttribute('aria-label','AGENTIC AI · EXECUTIVE CONTROL');
+      a.title='AGENTIC AI · EXECUTIVE CONTROL';
+    }
   }
 
   function copyPanelStyles(doc){
@@ -100,24 +116,27 @@
     stylesReady=true;
   }
 
-  async function installScreen(key){
-    if(ready[key] || !document.body) return;
-    var cfg=SCREENS[key];
+  async function installPanel(){
+    if(panelReady || !document.body) return;
     var firstPanel=document.querySelector('.panel');
     var host=firstPanel ? firstPanel.parentNode : document.body;
     try{
-      var r=await fetch(cfg.file+'?v=20260915',{cache:'no-store'});
+      var r=await fetch('/agentic-ai-v2/ui/agentic-panel.html?v=20260915b',{cache:'no-store'});
       if(!r.ok) throw Error('Agentic panel load failed ('+r.status+')');
       var html=await r.text();
       var doc=new DOMParser().parseFromString(html,'text/html');
       copyPanelStyles(doc);
-      var node=doc.querySelector('#'+cfg.panelId);
-      if(!node) throw Error('Agentic panel root not found for '+key);
-      node.dataset.panel=cfg.panelKey;
-      node.classList.remove('on');
-      var scripts=[].slice.call(node.querySelectorAll('script'));
+      var towerNode=doc.querySelector('#'+TOWER_PANEL_ID);
+      var moreNode=doc.querySelector('#'+MORE_PANEL_ID);
+      if(!towerNode || !moreNode) throw Error('Agentic panel roots not found');
+      towerNode.dataset.panel='agentic_ai';
+      towerNode.classList.remove('on');
+      moreNode.dataset.panel='agentic_ai_more';
+      moreNode.classList.remove('on');
+      var scripts=[].slice.call(doc.querySelectorAll('script'));
       scripts.forEach(function(s){s.remove();});
-      host.appendChild(node);
+      host.appendChild(towerNode);
+      host.appendChild(moreNode);
       scripts.forEach(function(old){
         var s=document.createElement('script');
         for(var i=0;i<old.attributes.length;i++){
@@ -125,27 +144,34 @@
           s.setAttribute(a.name,a.value);
         }
         s.text=old.textContent||'';
-        node.appendChild(s);
+        document.body.appendChild(s);
       });
-      ready[key]=true;
-      if((location.hash||'')===hashFor(key)) openScreen(key);
+      panelReady=true;
+      addLauncher();
+      installMenu();
+      renameMenu();
+      var h=location.hash||'';
+      if(h==='#s='+MORE_HASH) openMore();
+      else if(h==='#s='+TOWER_HASH) openTower();
     }catch(err){
-      console.error('[Agentic '+key+']',err);
+      console.error('[Agentic Executive]',err);
+      addLauncher();
     }
   }
 
-  function installScreens(){
-    installScreen('control');
-    installScreen('more');
-  }
-
-  function tick(){ addLauncher(); installMenu(); installScreens(); }
+  function tick(){ addLauncher(); installMenu(); installPanel(); }
   function start(){
     tick();
     var obs=new MutationObserver(function(){tick();});
     obs.observe(document.body,{childList:true,subtree:true});
-    window.addEventListener('hashchange',function(){var k=keyForHash(location.hash);if(k)openScreen(k);});
-    window.addEventListener('popstate',function(){var k=keyForHash(location.hash);if(k)openScreen(k);});
+    window.addEventListener('hashchange',function(){
+      if(location.hash==='#s='+TOWER_HASH) openTower();
+      if(location.hash==='#s='+MORE_HASH) openMore();
+    });
+    window.addEventListener('popstate',function(){
+      if(location.hash==='#s='+TOWER_HASH) openTower();
+      if(location.hash==='#s='+MORE_HASH) openMore();
+    });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();

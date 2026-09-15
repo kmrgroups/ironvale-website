@@ -7,7 +7,7 @@ export default async function handler(req, res) {
       res.status(502).setHeader('Content-Type', 'text/plain; charset=utf-8');
       return res.end('Unable to load IDMS screen source.');
     }
-    const bridge = '<script src="/agentic-ai-v2/ui/agentic-executive-bootstrap.js?v=20260915"></script>';
+    const bridge = '<script src="/agentic-ai-v2/ui/agentic-executive-bootstrap.js?v=20260915b"></script>';
     const output = html.includes('agentic-executive-bootstrap.js')
       ? html
       : html.replace(/<\/body>/i, bridge + '</body>');

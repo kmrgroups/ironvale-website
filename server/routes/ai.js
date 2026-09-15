@@ -6,7 +6,7 @@
 //   ANTHROPIC_API_KEY   – paid, best quality on difficult drawings
 // Keys stay on the server and are never sent to the browser.
 import { cors, readBody, getSecret } from '../server/_db.js';
-import agenticHandler from '../agentic-ai-v2/agentic-handler.js';
+import agenticHandler from '../../agentic-ai-v2/agentic-handler.js';
 
 const CLAUDE_MODEL = process.env.AI_MODEL || 'claude-sonnet-4-6';
 
@@ -45,17 +45,16 @@ async function openrouterModels() {
         return isFree && mods.includes('image');
       })
       .map(m => m.id);
-    // prefer bigger, well-known vision models
     const score = id => {
       let s = 0;
-      if (/qwen.*vl/i.test(id)) s += 40;              // strong at documents
+      if (/qwen.*vl/i.test(id)) s += 40;
       if (/llama-4|llama4|maverick|scout/i.test(id)) s += 35;
       if (/gemini/i.test(id)) s += 30;
       if (/pixtral|mistral/i.test(id)) s += 25;
       if (/llama-3\.2.*vision/i.test(id)) s += 20;
       if (/intern|glm|minicpm/i.test(id)) s += 10;
-      if (/\b(7b|8b|small|mini|tiny|nano)\b/i.test(id)) s -= 12;  // too small for drawings
-      if (/note|inkling|preview/i.test(id)) s -= 15;   // experimental
+      if (/\b(7b|8b|small|mini|tiny|nano)\b/i.test(id)) s -= 12;
+      if (/note|inkling|preview/i.test(id)) s -= 15;
       return s;
     };
     free.sort((a, b) => score(b) - score(a));
@@ -78,16 +77,12 @@ async function groqModels(key, needsVision) {
     });
     const j = await r.json();
     let ids = (j.data || []).map(m => m.id).filter(Boolean);
-
-    // drop things that cannot do chat completions
     ids = ids.filter(id => !/whisper|tts|guard|embed|distil-whisper/i.test(id));
-
     const looksVision = id => /vision|scout|maverick|llama-4|llama4|vl\b|llava|multimodal|qwen3|qwen2\.5|compound|pixtral|gemma-3/i.test(id);
     if (needsVision) {
       const v = ids.filter(looksVision);
       if (v.length) ids = v;
     }
-
     const score = id => {
       let s = 0;
       if (/maverick/i.test(id)) s += 40;
@@ -153,11 +148,9 @@ async function askOpenAICompatible(base, key, models, args, extraHeaders) {
     }
   }
   content.push({ type: 'text', text: args.prompt });
-
   const messages = [];
   if (args.system) messages.push({ role: 'system', content: args.system });
   messages.push({ role: 'user', content: content.length === 1 ? args.prompt : content });
-
   const attempts = [];
   let lastError = 'No model responded.';
   for (const model of models.slice(0, 6)) {
@@ -201,10 +194,8 @@ async function askGemini(args) {
   const body = { contents: [{ role: 'user', parts }],
     generationConfig: { maxOutputTokens: args.maxTokens, temperature: 0.2 } };
   if (args.system) body.systemInstruction = { parts: [{ text: args.system }] };
-
   const candidates = process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL]
     : ((await geminiModels(key)) || ['gemini-3.5-flash-lite', 'gemini-3.5-flash']);
-
   const attempts = [];
   let lastError = 'No Gemini model responded.';
   for (const model of candidates.slice(0, 8)) {
@@ -247,7 +238,6 @@ async function askAnthropic(args) {
   content.push({ type: 'text', text: args.prompt });
   const payload = { model: CLAUDE_MODEL, max_tokens: args.maxTokens, messages: [{ role: 'user', content }] };
   if (args.system) payload.system = args.system;
-
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -295,69 +285,24 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const list = await providers();
-
   if (req.method === 'GET') {
-    const info = { alive: true, configured: list.length > 0, providers: list };
-    const peek = v => {
-      const k = cleanKey(v);
-      if (!k) return 'not set';
-      return 'length ' + k.length + ', starts "' + k.slice(0, 7) + '"';
-    };
-    info.keys = {
-      OPENROUTER_API_KEY: peek(await getSecret('OPENROUTER_API_KEY')),
-      MISTRAL_API_KEY: peek(await getSecret('MISTRAL_API_KEY')),
-      GROQ_API_KEY: peek(await getSecret('GROQ_API_KEY')),
-      GEMINI_API_KEY: peek(await getSecret('GEMINI_API_KEY')),
-      ANTHROPIC_API_KEY: peek(await getSecret('ANTHROPIC_API_KEY'))
-    };
-    if (list.includes('openrouter')) info.openrouterFreeVisionModels = (await openrouterModels()).slice(0, 8);
-    if (list.includes('groq')) {
-      const k = cleanKey(await getSecret('GROQ_API_KEY'));
-      info.groqVisionModels = (await groqModels(k, true)).slice(0, 6);
-      info.groqAllModels = (await groqModels(k, false)).slice(0, 10);
-    }
-    if (list.includes('gemini')) info.geminiModels = (await geminiModels(cleanKey(await getSecret('GEMINI_API_KEY'))) || []).slice(0, 8);
-    info.note = list.length
-      ? 'AI is active. Providers tried in order: ' + list.join(' → ')
-      : 'Add MISTRAL_API_KEY (free tier, no card) in Vercel to switch AI features on.';
-    return res.status(200).json(info);
+    return res.status(200).json({ ok: true, providers: list });
   }
 
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
-  if (!list.length) {
-    return res.status(200).json({ ok: false, notConfigured: true,
-      error: 'AI is not configured on this site yet.' });
+  if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Use GET or POST' });
+  const body = readBody(req);
+  const provider = body.provider || list[0];
+  if (!provider || !list.includes(provider)) {
+    return res.status(400).json({ ok: false, error: 'No AI provider is configured.' });
   }
 
-  try {
-    const body = readBody(req);
-    const args = {
-      prompt: String(body.prompt || ''),
-      system: body.system ? String(body.system) : null,
-      attachment: body.attachment || null,
-      maxTokens: Math.min(parseInt(body.maxTokens, 10) || 1500, 8000)
-    };
-
-    if (args.attachment && args.attachment.mime &&
-        !/^(application\/pdf|image\/(jpeg|png|gif|webp))$/.test(args.attachment.mime)) {
-      return res.status(200).json({ ok: false,
-        error: 'This file type (' + args.attachment.mime + ') cannot be read. Only PDF and image drawings can be analysed.' });
-    }
-
-    // try each configured provider until one succeeds
-    const allAttempts = [];
-    for (const name of list) {
-      const out = await runProvider(name, args);
-      if (out.ok) return res.status(200).json({ ok: true, text: out.text, provider: name, model: out.model });
-      allAttempts.push(name + ' → ' + out.error);
-      if (out.attempts) out.attempts.slice(0, 3).forEach(a => allAttempts.push('   ' + a));
-      console.log('Provider ' + name + ' failed: ' + out.error);
-    }
-    return res.status(200).json({ ok: false,
-      error: 'No AI provider could complete the request.', attempts: allAttempts });
-
-  } catch (e) {
-    console.log('AI HANDLER ERROR:', e.message);
-    return res.status(200).json({ ok: false, error: e.message });
-  }
+  const args = {
+    prompt: String(body.prompt || '').trim(),
+    system: body.system ? String(body.system) : '',
+    maxTokens: Math.min(12000, Math.max(100, parseInt(body.maxTokens, 10) || 2500)),
+    attachment: body.attachment && typeof body.attachment === 'object' ? body.attachment : null
+  };
+  if (!args.prompt) return res.status(400).json({ ok: false, error: 'Prompt required.' });
+  const result = await runProvider(provider, args);
+  return res.status(result.ok ? 200 : 502).json(result);
 }

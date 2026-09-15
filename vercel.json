@@ -1,5 +1,12 @@
 {
   "rewrites": [
-    { "source": "/iclock/:op", "destination": "/api/device?proto=adms&op=:op" }
+    {
+      "source": "/iclock/:op",
+      "destination": "/api/device?proto=adms&op=:op"
+    },
+    {
+      "source": "/api/agentic",
+      "destination": "/api/ai?mode=agentic"
+    }
   ]
 }

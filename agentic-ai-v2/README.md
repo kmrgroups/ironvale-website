@@ -8,7 +8,7 @@ This package adds a governed, event-oriented Agentic AI layer to the existing ID
 - `event-catalog.json` — business events that can wake agents.
 - `action-policy.json` — hard guardrails for what agents may and may not do.
 - `migration.sql` — optional dedicated Agentic AI tables for event queue, proposals and schedules.
-- `api/agentic.js` — Vercel-ready Agentic AI API endpoint. It reads IDMS data, invokes the existing `/api/ai` gateway, parses structured task proposals, and writes everything as reviewable `task` records plus an `agent_run` record.
+- `agentic-ai-v2/agentic-handler.js` (mounted into the existing `/api/ai` function) — Vercel-ready Agentic AI API endpoint. It reads IDMS data, invokes the existing `/api/ai` gateway, parses structured task proposals, and writes everything as reviewable `task` records plus an `agent_run` record.
 - `ui/agentic-client.js` — browser client for the endpoint.
 - `ui/agentic-panel.html` — drop-in control-tower panel markup.
 - `tests/agentic-contract.test.mjs` — contract tests for registry and policy integrity.
@@ -16,12 +16,12 @@ This package adds a governed, event-oriented Agentic AI layer to the existing ID
 
 ## Installation
 
-1. Copy `api/agentic.js` into the project's `api/` directory.
+1. The supplied project is already wired: `api/ai.js` mounts `agentic-ai-v2/agentic-handler.js` internally. Do not create a separate `api/agentic.js` file, because that would exceed the Hobby function limit.
 2. Copy `agentic-ai-v2/ui/agentic-client.js` into the web assets or load it from the package.
 3. Add the supplied panel markup to the existing Agentic AI page, or use it as the basis for a new Control Tower screen.
 4. Optional but recommended: run `agentic-ai-v2/migration.sql` against the same Neon database. The endpoint also works without it by using the existing `idms_docs` store.
 5. Keep the existing `/api/ai` provider keys and gateway. No provider key is exposed to the browser.
-6. Add the route to your normal Vercel deployment. It is protected by the same `X-Auth-Token` session mechanism as IDMS.
+6. Deploy normally to Vercel. The project keeps exactly 12 endpoint files under `api/`, while shared helpers are under `server/`. `/api/agentic` remains available through a Vercel rewrite to `/api/ai?mode=agentic`.
 7. Run `node agentic-ai-v2/tests/agentic-contract.test.mjs`.
 
 ## Safety model

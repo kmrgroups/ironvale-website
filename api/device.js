@@ -23,9 +23,9 @@
 //
 // A day marked or corrected by hand is never overwritten by a device.
 import crypto from 'crypto';
-import { sql, ensureTables, cors, tokenUser, hash } from './_db.js';
+import { sql, ensureTables, cors, tokenUser, hash } from '../server/_db.js';
 import { parseAdmsAttlog, parseHikEvent, parseJsonPunches, shiftFor, workDayFor,
-  summariseDay, attendanceRecord, DEFAULT_POLICY, wallMinutes, wallString } from './_attendance.js';
+  summariseDay, attendanceRecord, DEFAULT_POLICY, wallMinutes, wallString } from '../server/_attendance.js';
 
 /* Devices post text and multipart bodies; read the raw bytes ourselves. */
 export const config = { api: { bodyParser: false } };

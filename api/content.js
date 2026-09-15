@@ -1,5 +1,5 @@
 // Site content: anyone can read, only signed-in staff can write.
-import { sql, ensureTables, checkToken, cors, readBody } from './_db.js';
+import { sql, ensureTables, checkToken, cors, readBody } from '../server/_db.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '20mb' } } };
 

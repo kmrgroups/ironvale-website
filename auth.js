@@ -1,5 +1,5 @@
 // Sign in and change password.
-import { sql, hash, ensureTables, cors, readBody } from './_db.js';
+import { sql, hash, ensureTables, cors, readBody } from './server/_db.js';
 
 export default async function handler(req, res) {
   cors(res);

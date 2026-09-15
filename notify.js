@@ -1,6 +1,6 @@
 // Sends email (Resend) and WhatsApp (Meta Cloud API).
 // Used by rfqs.js, and also reachable directly as a webhook at /api/notify.
-import { cors, readBody } from './_db.js';
+import { cors, readBody } from './server/_db.js';
 
 export async function sendNotification(event, payload = {}, notifyEmail, notifyWhatsapp) {
   const ownerEmail = notifyEmail || process.env.OWNER_EMAIL || '';

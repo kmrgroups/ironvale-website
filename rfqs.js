@@ -1,6 +1,6 @@
 // RFQs: anyone can submit or look up their own by reference.
 // Only signed-in staff can list all or update.
-import { sql, ensureTables, checkToken, cors, readBody } from './_db.js';
+import { sql, ensureTables, checkToken, cors, readBody } from './server/_db.js';
 import { sendNotification } from './notify.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '12mb' } } };

@@ -5,7 +5,8 @@
 //   GEMINI_API_KEY      – free tier (some accounts are blocked by Google)
 //   ANTHROPIC_API_KEY   – paid, best quality on difficult drawings
 // Keys stay on the server and are never sent to the browser.
-import { cors, readBody, getSecret } from './_db.js';
+import { cors, readBody, getSecret } from '../server/_db.js';
+import agenticHandler from '../agentic-ai-v2/agentic-handler.js';
 
 const CLAUDE_MODEL = process.env.AI_MODEL || 'claude-sonnet-4-6';
 
@@ -290,6 +291,7 @@ export const config = { api: { bodyParser: { sizeLimit: '10mb' } } };
 
 export default async function handler(req, res) {
   cors(res);
+  if (String((req.query || {}).mode || '') === 'agentic') return agenticHandler(req, res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const list = await providers();

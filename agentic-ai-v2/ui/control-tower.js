@@ -5,7 +5,7 @@
   'use strict';
   var mounted=false, state={registry:null,tasks:[],runs:[],updatedAt:null};
   var esc=function(s){return String(s==null?'':s).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c];});};
-  var token=function(){return sessionStorage.getItem('idms_token')||'';};
+  var token=function(){try{return (window.Core&&window.Core.getToken?window.Core.getToken():'')||sessionStorage.getItem('app_token')||'';}catch(e){return '';}};
 
   function css(){
     if(document.getElementById('aa-v2-css')) return;
@@ -171,14 +171,18 @@
   function boot(){
     var tries=0, timer=setInterval(function(){
       tries++;
-      if(!document.querySelector('[data-panel="agentic_ai"]')){if(tries>120)clearInterval(timer);return;}
-      if(token()){clearInterval(timer);mount();return;}
-      if(tries>120)clearInterval(timer);
-    },500);
-    document.addEventListener('click',function(e){
-      if(e.target&&e.target.closest&&e.target.closest('[data-screen="agentic_ai"]')){
-        setTimeout(function(){if(!mounted&&token())mount(); else if(mounted)refresh().catch(function(){});},250);
+      var panel=document.querySelector('[data-panel="agentic_ai"]');
+      if(panel){
+        clearInterval(timer);
+        mount();
+        if(token()) refresh().catch(function(e){var st=document.getElementById('aa-v2-status');if(st)st.textContent=e.message;});
+        return;
       }
+      if(tries>240)clearInterval(timer);
+    },250);
+    document.addEventListener('click',function(e){
+      var t=e.target&&e.target.closest&&e.target.closest('[data-screen="agentic_ai"]');
+      if(t) setTimeout(function(){mount();if(token())refresh().catch(function(){});},0);
     });
   }
 

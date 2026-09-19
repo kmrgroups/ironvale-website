@@ -1,7 +1,7 @@
 // Sign in, two-step codes, forgot-password reset, face login and user management.
 import { sql, hash, ensureTables, cors, readBody, tokenUser, checkRole,
          newSalt, scryptHash, passwordMatches, isLegacyHash,
-         startSession, endSession, endAllSessions } from '../server/_db.js';
+         startSession, endSession, endAllSessions } from '../_db.js';
 import { sendNotification } from './notify.js';
 
 const sixDigit = () => String(Math.floor(100000 + Math.random() * 900000));

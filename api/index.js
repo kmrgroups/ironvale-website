@@ -36,10 +36,13 @@ async function getHandler(name) {
 
 function routeName(req) {
   const q = req.query || {};
-  if (q.route) return String(q.route).replace(/^\\/+|\\/+$/g, '').split('/')[0];
+  if (q.route) {
+    const first = String(q.route).split('/').find(Boolean);
+    return first ? first.toLowerCase() : '';
+  }
   const path = String(req.url || '').split('?')[0];
-  const m = path.match(/^\\/api\\/([^/]+)/i);
-  return m ? m[1].toLowerCase() : '';
+  const parts = path.split('/');
+  return parts[1]?.toLowerCase() === 'api' && parts[2] ? parts[2].toLowerCase() : '';
 }
 
 function queryWithRouteRemoved(req) {

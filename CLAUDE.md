@@ -3396,3 +3396,205 @@ import, before their own first assertion. `server/_db.js` also exists twice
 the two are byte-identical), and `agentic.js` imports a third copy under
 `api/`. None of that was touched here, but it is the first thing that will
 confuse the next person.
+
+## Five things a live deployment found — and one explanation of mine that was wrong
+
+All five were reported together with screenshots of elixirtec.com. Four were
+real defects; the fifth was a feature that did not exist. What links the first
+three is the shape of the failure rather than the cause: **in each one the
+screen said something different from what had actually happened**, which is the
+kind of bug that costs a user far more than an honest error does.
+
+### 1. A successful enquiry was announced as a failure
+
+`rnSaveEnquiry` saved the RFQ, then called `wireGoto(document.getElementById(
+'rn-msg-box'))`. **`wireGoto` has never existed anywhere in this codebase** —
+every other screen wires those links inline with
+`querySelectorAll('[data-goto]').forEach(...)`. Under `'use strict'` that is a
+ReferenceError, it was raised *inside* the `try` whose `catch` reports failure,
+and the outer catch overwrote the confirmation with **"Not created — wireGoto is
+not defined"** over an enquiry that was already on file. People then entered it
+again.
+
+The wiring is now the inline pattern, and — this is the part worth keeping —
+**everything after the save runs outside the try that reports failure**. The save
+records what it achieved in `rnSaved`; the confirmation is drawn from that
+afterwards. A fault while drawing a link can no longer report that a record was
+not created. Any screen that does presentation work after a write has this same
+hazard; this is the second time in this project a cosmetic step has been able to
+misreport a completed write (the first was the APQP save-on-change queue).
+
+### 2. Costing failed on ordinary AI replies
+
+`rfqParseAiJson` was a **third, weaker copy** of the tolerant reader, private to
+the RFQ pipeline. It handled code fences and raw line breaks, then did
+`lastIndexOf('}')` and gave up. `core.js`'s `parseAiJson` — the one the
+Conventions section above has always said is the reader for AI replies in both
+files — additionally strips comments, ignores prose after the object, and
+**repairs a reply cut off at the token limit**.
+
+That last case was not an edge case here. The costing prompt asks for the
+material, every operation, the dimensions under each operation, tooling, jigs,
+gauges, consumables, packaging, logistics, freight, special processes and the
+assumptions behind all of it, and it asked for it in **4500 tokens**. A real
+answer for a six-operation part does not fit, so the reply was truncated as a
+matter of course and the user was told *"The AI answered, but not in the shape
+the costing needs"*. The shape was right; the reply was unfinished.
+
+Three changes, and the third matters most:
+
+- `rfqParseAiJson` now delegates to `C.parseAiJson`. One reader, as intended.
+- The costing call asks for **9000** tokens (the server caps at 12000).
+- **A repaired reply is declared, not silently accepted.** A truncated costing
+  parses cleanly and reads as complete while missing the end of the route — on a
+  cost sheet that understates the price invisibly. `rfqReplyCutOff()` detects it
+  (one pass, tracking string state, so a brace inside a quoted value is not
+  mistaken for structure), stores `costing.truncated`, and says on screen that
+  the last operations are missing. The two failure messages are also kept apart,
+  as the Conventions note requires: a reply cut off even at 9000 tokens needs a
+  different answer from one that ignored the format.
+
+### 3. Restored settings came back with every image broken
+
+`site_content` holds only **references** to pictures — the logo, the hero banner
+and video, every capability, gallery, founder and certificate image are all
+`/api/assets?id=…` — while the bytes live in the `assets` table. The two-scope
+split followed `flushTable()` exactly, which puts `site_content` in **settings**
+and `assets` in **data**. So restoring a settings backup brought back every
+reference and none of the images, and the public site came up with broken
+pictures and nothing on screen explaining why.
+
+The settings export now carries **the files its own content points at**
+(`bkContentAssetIds()` walks the content record for asset ids; `bkFetchAssets()`
+is shared with the data export, which still carries every file unchanged). An
+asset landing twice is a no-op — `/api/assets` upserts on a caller-supplied id.
+Restoring writes the images **before** the content that references them, and an
+older file that has references but no images **says so by count** and points at
+the data JSON, rather than leaving broken pictures to be discovered.
+
+`idmsSettings:` also read `settings`, a module-level variable belonging to the
+home screen rather than anything that function owns. It is read fresh now.
+**See the correction below — this one was not the bug I first said it was.**
+
+### 4. "Parts, BOM & routing (for quoting)" was dead, and the objection was right
+
+The user's own reasoning was the correct one: *every part has a unique BOM and
+routing and it should be derived by AI from the drawing data.* The panel was
+worse than redundant — `rfqCfg` is loaded as `{costBase, machines, labourGrades,
+materials, quoteCfg, company, quoteSender}` and **has no `parts` key at all**, so
+nothing in the native costing path ever read it. Its only consumer was
+`partById()` in the website's `#ppc-page`, already recorded above as unreachable
+from the menu. It was a second, hand-kept part list with a second BOM and a
+second routing, feeding a screen nobody could open.
+
+The editor is removed and replaced with a note saying where the real ones live:
+the RFQ Pipeline derives route, times and BOM from the drawing, and
+`Send route to the part` writes them onto the part, where Process Master, Bill
+of Materials and the Dimensions Master own them and the PFD, PFMEA and control
+plan are built from them. **The records are deliberately not deleted** — the save
+posts the whole content object, so an old deployment's typed-in list survives
+untouched. `quotingsetuptest.mjs` asserts exactly that: editor gone, records
+kept.
+
+### 5. Balloon drawing and drawing data — new, not a fix
+
+Nothing of the kind existed. Reading a drawing produced `requirements`, a flat
+list that mixed a bore diameter, a material grade and a plating spec into one
+column of prose with no item numbers — nothing to balloon against, nothing to
+inspect from.
+
+`characteristics[]` is that list done properly: numbered from 1, typed
+(Dimension / GD&T / Material / Finish / Treatment / Thread / Note / Standard),
+with the nominal and the **signed** deviations kept apart from the text, the GD&T
+callout kept as written, and a position on the sheet. **Balloon drawing** prints
+the customer's own drawing with those numbers over it; **Print drawing data**
+prints the table alone.
+
+Four decisions worth keeping:
+
+- **The AI never decides CC/SC.** It marks a class only where the drawing itself
+  does. Same rule as the PFMEA parser: the class is copied, never inferred.
+- **An unplaceable characteristic is listed, never guessed at.** The prompt says
+  to set the position null rather than estimate it, and the sheet prints those
+  beneath the drawing as *"real requirements and still have to be inspected"*. A
+  balloon in the wrong place is read as fact by everyone downstream.
+- **A balloon is a circle, and it does not cover what it points at.** Both were
+  got wrong first and caught by rendering it rather than by reading the code.
+  Drawn inside an SVG whose viewBox is stretched to the image's aspect, every
+  balloon came out an oval; and placed at the callout's own position — which is
+  what the AI is asked for — it hid the dimension it numbered, so the title block
+  read `MAT( 4 )D` instead of `EN8D`. The balloons are now positioned elements
+  sized in **px** (round at any aspect), offset clear of the callout with a
+  **vertical** leader back to it — vertical being the one direction a stretched
+  viewBox cannot skew.
+- **Both sheets carry the draft warning.** The numbers, the values and every
+  balloon position are the AI's reading, and the sheet says so, because this is
+  an FAI/PPAP-shaped artefact that somebody will otherwise hand to a customer.
+
+### 6. The New Enquiry form could not attach a readable drawing
+
+Not reported as such, but it is what *"the RFQ form should have the same function
+as the website"* actually amounts to. The fields were never the problem — this
+form has more of them than the public one. The **function** missing was drawing
+conversion: the public form converts PDF/DXF/PNG to JPEG in the browser before
+upload, because the drawing reader is given images and not PDFs, and
+`drawing-convert.js` was not even loaded by `idms.html`. A PDF taken over the
+phone uploaded happily, the enquiry saved, everything looked right — and
+*Read drawing with AI* could not read it, days later, with nothing to say why.
+
+`idms.html` now loads the same converter, with the same 3MB ceiling, the same
+page chooser (the drawing is not always page 1), the same preview — *a
+conversion nobody can see is a conversion nobody can check* — and the same rule
+on failure: a file that cannot be converted is **still attached**, with the
+reason said out loud.
+
+---
+
+### The correction: an explanation of mine that was wrong
+
+I told the user the `idmsSettings: settings` line meant **the whole
+`idms_settings` table had never been exported**. The first half was right; the
+second was not. That variable is also filled during boot
+(`var settingsP = C.idms.settings()...`), so in practice it usually holds the
+real settings by the time anyone presses Export.
+
+I found this by **reintroducing the bug to check my own new test caught it**. It
+did not — the image checks failed and the settings checks passed. The fix is
+still worth keeping (a boot-time snapshot goes stale as soon as a setting is
+saved without a reload, which is why the invoice screen already patches that same
+variable by hand), but it is a robustness change, not the cause of anything the
+user saw, and the test comment now says so rather than claiming a bug it never
+caught.
+
+**The habit that is actually load-bearing here:** reintroduce the defect and
+watch the new test fail. It has now caught two things in this project — a fake
+`_db.js` that could not have seen the `sql.query` crash, and an explanation of
+mine that was simply wrong. A test written after a fix proves nothing until it
+has been shown to fail without it.
+
+Worth recording alongside it: `newenquirytest.mjs` initially failed four checks
+because its stand-in `File` was a plain object. The converted path posts a data
+URL straight to `/api/assets` and never touches `FileReader`; the **fallback**
+path — the file that could not be converted and must still be attached — goes
+through `Core.uploadFile()` and therefore through `readAsDataURL`, which refuses
+anything that is not a real `Blob`. The stand-in passed every converted case and
+failed every fallback case, which was precisely the half worth testing. Use a
+real `new window.File([...])`.
+
+### Tests
+
+`balloontest.mjs` (38) — the prompt asking for what the feature needs, a fenced
+reply with prose in front of it, ± and asymmetric tolerances printing with the
+right signs, the unplaced characteristic listed rather than dropped, a position
+past the edge pulled back on, the top-of-sheet offset going downward instead,
+and the draft warning on both sheets. `newenquirytest.mjs` (24) — the save
+reported honestly both ways, the link wired without being able to take the
+confirmation down with it, and conversion including the multi-page chooser, the
+refusal-still-attaches rule and the oversized-image refusal.
+`backuprestoretest.mjs` 77 → 92. `quotingsetuptest.mjs` 17 → 23.
+
+**The baseline is unchanged:** the same 10 suites fail before and after this
+work, for the reasons recorded at the end of the previous section (`api/*.js`
+imports that do not exist in this checkout, and `server/_db.js` existing three
+times over). None of that was touched here, and it is still the first thing that
+will confuse the next person.

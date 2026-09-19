@@ -17,7 +17,11 @@ let content = {
     kw: 15, loadFactor: 60, area: 120, maintenance: 120000, operators: 1 }],
   labourGrades: [{ grade: 'CNC Operator', wage: 28000, statutoryPct: 22, paidDays: 26, hoursPerDay: 8 }],
   materials: [{ name: 'EN8 Bright Bar', grade: 'EN8', rate: 85, unit: 'kg', density: 7.85,
-    leadTimeDays: 7, confidence: 'Manual' }]
+    leadTimeDays: 7, confidence: 'Manual' }],
+  /* A part typed into the old Parts/BOM/routing panel before it was removed.
+     The editor is gone; the record must not be. */
+  parts: [{ id: 'qp-legacy', partNo: 'Q-1001', description: 'old quoting part',
+    bom: [{ item: 'EN8 bar', qtyPerPart: 1.4 }], routing: [{ op: 10, process: 'Turn' }] }]
 };
 const calls = [];
 let signedIn = false;
@@ -117,41 +121,29 @@ check('the added machine is in the saved payload', saveCall && saveCall.body.dat
 check('the deleted-then-readded labour grade array has exactly one entry',
   saveCall && saveCall.body.data.labourGrades.length === 1);
 
-// ---------- quoting parts, with their own BOM and routing ----------
-click($('qs-pt-add'));
-await wait(80);
-check('a quoting part can be added',
-  !!window.document.querySelector('.qs-pt[data-k="partNo"]'));
-const ptNo = window.document.querySelector('.qs-pt[data-k="partNo"]');
-ptNo.value = 'Q-1001'; input(ptNo);
-click(window.document.querySelector('.qs-bom-add'));
-await wait(80);
-const bomItem = window.document.querySelector('.qs-bom[data-k="item"]');
-check('a bill of materials line can be added to that part', !!bomItem);
-bomItem.value = 'EN8 bar'; input(bomItem);
-const bomQty = window.document.querySelector('.qs-bom[data-k="qtyPerPart"]');
-bomQty.value = '1.4'; input(bomQty);
-click(window.document.querySelector('.qs-rt-add'));
-await wait(80);
-const rtProc = window.document.querySelector('.qs-rt[data-k="process"]');
-check('a routing operation can be added to that part', !!rtProc);
-rtProc.value = 'Turn'; input(rtProc);
-check('the first operation is numbered 10 automatically',
-  window.document.querySelector('.qs-rt[data-k="op"]').value === '10');
+// ---------- the Parts/BOM/routing panel is gone, and took no data with it ----------
+/* It used to be edited here. Nothing in the native RFQ Pipeline ever read it
+   (rfqCfg carries no `parts` key at all), and its only consumer was partById()
+   on the website's unreachable #ppc-page — so it was a second, hand-kept part
+   list with a second BOM and a second routing, feeding a screen nobody could
+   open. What it must NOT have done is delete anyone's existing entries, and
+   that is the half worth a test: the editor is removed, the records stay. */
+check('the Parts/BOM/routing editor is gone from the screen',
+  !$('qs-pt-add') && !$('qs-parts'));
+check('the screen says where a part\'s real BOM and routing live instead',
+  /Bill of Materials/.test($('quoting_setup') ? $('quoting_setup').innerHTML : window.document.body.innerHTML) &&
+  /RFQ Pipeline/.test(window.document.body.innerHTML));
 
 calls.length = 0;
 click($('qs-save'));
 await wait(250);
 const partSave = calls.find(c => c.kind === 'content-save');
-const savedPart = partSave && partSave.body.data.parts && partSave.body.data.parts[0];
-check('the quoting part is saved under data.parts', !!savedPart,
+const kept = partSave && partSave.body.data.parts && partSave.body.data.parts[0];
+check('a part typed into the old panel is still in the record after a save', !!kept,
   partSave && JSON.stringify(partSave.body.data.parts || []).slice(0, 120));
-check('its part number is saved', savedPart && savedPart.partNo === 'Q-1001');
-check('its bill of materials is saved with a real number for quantity',
-  savedPart && savedPart.bom.length === 1 && savedPart.bom[0].qtyPerPart === 1.4,
-  savedPart && JSON.stringify(savedPart.bom));
-check('its routing is saved', savedPart && savedPart.routing.length === 1 &&
-  savedPart.routing[0].process === 'Turn');
+check('it kept its part number', kept && kept.partNo === 'Q-1001');
+check('it kept its bill of materials', kept && kept.bom.length === 1 && kept.bom[0].qtyPerPart === 1.4);
+check('it kept its routing', kept && kept.routing.length === 1 && kept.routing[0].process === 'Turn');
 
 // ---------- the critical one: unrelated company profile must not be clobbered ----------
 check('the unrelated company profile survives this save untouched',

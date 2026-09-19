@@ -2250,12 +2250,24 @@ table.rc-t input.num{text-align:right;font-variant-numeric:tabular-nums}
       </div>
 
       <div class="card">
-        <h4>Parts, BOM &amp; routing (for quoting)</h4>
-        <div class="hint" style="margin-bottom:10px;">A simplified part list used only for quick
-          quoting — separate from Parts Addition, which carries far more than a quotation needs.
-          Each part can hold its own bill of materials and routing.</div>
-        <div id="qs-parts"></div>
-        <button class="btn" id="qs-pt-add" style="margin-top:8px;">+ Add part</button>
+        <h4>Parts, BOM &amp; routing</h4>
+        <div class="hint">This panel used to hold a second, simplified part list with its own bill of
+          materials and routing, typed in here by hand. It has been removed, because every part has
+          its own BOM and its own routing and neither of them belongs on a settings screen:
+          <ul style="margin:8px 0 0 18px;">
+            <li><b>When quoting</b> — <a data-goto="rfq_pipeline" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">RFQ Pipeline</a>
+              reads the customer's drawing and works out the route, the cycle times and the bill of
+              materials for that part from what the drawing actually says. Every line is editable on
+              the costing sheet.</li>
+            <li><b>Once it is won</b> — that route is written onto the real part with <i>Send route to
+              the part</i>, where <a data-goto="process_master" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Process Master</a>,
+              <a data-goto="bom" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Bill of Materials</a>
+              and the Dimensions Master own it from then on, and the PFD, PFMEA and control plan are
+              all built from it.</li>
+          </ul>
+          What stays on this screen is what a quotation genuinely needs and a part cannot supply:
+          the machines and their rates, the labour grades, the material price book and the cost base
+          above.</div>
       </div>
 
       <div class="card">
@@ -2309,13 +2321,28 @@ table.rc-t input.num{text-align:right;font-variant-numeric:tabular-nums}
           <textarea id="rn-msg" rows="4" placeholder="material, tolerances, finish, delivery — everything they said"></textarea></div>
 
         <div class="row four" style="margin-top:8px;">
-          <div><label>Drawing file</label><input type="file" id="rn-file" accept=".pdf,.png,.jpg,.jpeg,.webp,.dxf"></div>
+          <div><label>Drawing file</label><input type="file" id="rn-file"
+            accept=".pdf,.dxf,.jpg,.jpeg,.png,.webp,.bmp,.gif,.dwg,.step,.stp,.igs,.iges,.zip"></div>
           <div style="align-self:end;"><span class="hint" id="rn-file-msg">A drawing is what makes the
             costing possible — attach it now if you have it.</span></div>
           <div style="align-self:end;"><label style="display:flex;gap:8px;align-items:center;font-weight:400;">
             <input type="checkbox" id="rn-ack" style="width:auto;">
             <span>Email an acknowledgement to the customer</span></label></div>
           <div style="align-self:end;"><span class="hint">Off by default — you have just spoken to them.</span></div>
+        </div>
+
+        <!-- Shown once a file is picked. The converted image is put in front of
+             the person who took the enquiry, for the same reason the public form
+             does it: a conversion nobody can see is a conversion nobody can
+             check, and a drawing on page 3 of a PDF is the ordinary case. -->
+        <div id="rn-file-box" style="display:none;margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:8px;">
+          <div class="note" id="rn-file-status" style="display:none;"></div>
+          <div id="rn-file-pagerow" style="display:none;align-items:center;gap:8px;margin-top:8px;">
+            <label style="margin:0;">Page with the drawing on it</label>
+            <select id="rn-file-page" style="width:auto;"></select>
+          </div>
+          <img id="rn-file-prev" alt="Converted drawing preview" style="display:none;margin-top:8px;
+            max-width:100%;max-height:320px;border:1px solid var(--line);border-radius:6px;background:#fff;">
         </div>
 
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
@@ -5407,6 +5434,13 @@ table.rc-t input.num{text-align:right;font-variant-numeric:tabular-nums}
 
 <script src="/core.js"></script>
 <script src="/kpi.js"></script>
+<!-- The same converter the public enquiry form uses. The drawing reader is
+     given images, not PDFs and not CAD, so an enquiry taken over the phone and
+     entered on New Enquiry needs its attachment turned into a JPEG exactly as
+     a customer's own submission does — otherwise the file uploads happily and
+     "Read drawing with AI" can never read it. pdf.js is still loaded lazily
+     from inside this file, only when a PDF actually turns up. -->
+<script src="/drawing-convert.js"></script>
 <script>
 (function(){
   'use strict';
@@ -28112,8 +28146,7 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
      'warrantyTerms','confidentiality','footerNote'].forEach(function(k){ set('qs-qc-'+k, qc[k]); });
     document.getElementById('qs-qc-showTax').value = qc.showTax === false ? 'no' : 'yes';
     document.getElementById('qs-msg').style.display = 'none';
-    qsContent.parts = qsContent.parts || [];
-    qsDrawMachines(); qsDrawLabour(); qsDrawMaterials(); qsDrawParts();
+    qsDrawMachines(); qsDrawLabour(); qsDrawMaterials();
   }
 
   function qsDrawMachines(){
@@ -28178,92 +28211,16 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
       b.addEventListener('click', function(){ qsContent.materials.splice(+b.dataset.i,1); qsDrawMaterials(); });
     });
   }
-  function qsDrawParts(){
-    var host = document.getElementById('qs-parts');
-    qsContent.parts = qsContent.parts || [];
-    var rows = qsContent.parts;
-    host.innerHTML = rows.length ? rows.map(function(p, i){
-      p.bom = p.bom || []; p.routing = p.routing || [];
-      return '<div class="card" style="margin-top:10px;">' +
-        '<div class="row four">' +
-        '<div><label>Part number</label><input class="qs-pt" data-i="'+i+'" data-k="partNo" value="'+esc(p.partNo)+'"></div>' +
-        '<div><label>Description</label><input class="qs-pt" data-i="'+i+'" data-k="description" value="'+esc(p.description)+'"></div>' +
-        '<div><label>Customer part no.</label><input class="qs-pt" data-i="'+i+'" data-k="custPartNo" value="'+esc(p.custPartNo)+'"></div>' +
-        '<div><label>Drawing no.</label><input class="qs-pt" data-i="'+i+'" data-k="drawingNo" value="'+esc(p.drawingNo)+'"></div>' +
-        '</div>' +
-        '<div class="row four" style="margin-top:9px;">' +
-        '<div><label>Drawing rev</label><input class="qs-pt" data-i="'+i+'" data-k="drawingRev" value="'+esc(p.drawingRev)+'"></div>' +
-        '<div><label>Raw material stock</label><input class="num qs-pt" data-i="'+i+'" data-k="rmStockQty" value="'+esc(p.rmStockQty)+'"></div>' +
-        '<div><label>WIP qty</label><input class="num qs-pt" data-i="'+i+'" data-k="wipQty" value="'+esc(p.wipQty)+'"></div>' +
-        '<div><label>Finished qty</label><input class="num qs-pt" data-i="'+i+'" data-k="fgQty" value="'+esc(p.fgQty)+'"></div>' +
-        '</div>' +
-        '<div class="row four" style="margin-top:9px;"><div><label>Safety stock</label>' +
-        '<input class="num qs-pt" data-i="'+i+'" data-k="safetyStockQty" value="'+esc(p.safetyStockQty)+'"></div></div>' +
-
-        '<div class="sub" style="margin-top:12px;">Bill of materials</div>' +
-        (p.bom.length ? '<table class="t"><thead><tr><th>Item</th><th>Spec</th><th class="r">Qty/part</th>' +
-          '<th>Unit</th><th class="r">Rate</th><th></th></tr></thead><tbody>' +
-          p.bom.map(function(b, j){
-            return '<tr>' +
-              ['item','spec'].map(function(k){
-                return '<td><input class="qs-bom" data-i="'+i+'" data-j="'+j+'" data-k="'+k+'" value="'+esc(b[k])+'"></td>'; }).join('') +
-              '<td><input class="num qs-bom" data-i="'+i+'" data-j="'+j+'" data-k="qtyPerPart" value="'+esc(b.qtyPerPart)+'"></td>' +
-              '<td><input class="qs-bom" data-i="'+i+'" data-j="'+j+'" data-k="unit" value="'+esc(b.unit)+'"></td>' +
-              '<td><input class="num qs-bom" data-i="'+i+'" data-j="'+j+'" data-k="rate" value="'+esc(b.rate)+'"></td>' +
-              '<td><button class="btn del qs-bom-del" data-i="'+i+'" data-j="'+j+'">×</button></td></tr>';
-          }).join('') + '</tbody></table>' : '<div class="hint">No bill of materials yet.</div>') +
-        '<button class="btn qs-bom-add" data-i="'+i+'" style="margin-top:6px;">+ Add material</button>' +
-
-        '<div class="sub" style="margin-top:12px;">Routing</div>' +
-        (p.routing.length ? '<table class="t"><thead><tr><th class="c">Op</th><th>Process</th>' +
-          '<th>Machine type</th><th class="r">Setup min</th><th class="r">Cycle min</th><th></th></tr></thead><tbody>' +
-          p.routing.map(function(o, j){
-            return '<tr><td><input class="num qs-rt" data-i="'+i+'" data-j="'+j+'" data-k="op" value="'+esc(o.op)+'" style="width:60px;"></td>' +
-              '<td><input class="qs-rt" data-i="'+i+'" data-j="'+j+'" data-k="process" value="'+esc(o.process)+'"></td>' +
-              '<td><input class="qs-rt" data-i="'+i+'" data-j="'+j+'" data-k="machineType" value="'+esc(o.machineType)+'"></td>' +
-              '<td><input class="num qs-rt" data-i="'+i+'" data-j="'+j+'" data-k="setupMin" value="'+esc(o.setupMin)+'"></td>' +
-              '<td><input class="num qs-rt" data-i="'+i+'" data-j="'+j+'" data-k="cycleMin" value="'+esc(o.cycleMin)+'"></td>' +
-              '<td><button class="btn del qs-rt-del" data-i="'+i+'" data-j="'+j+'">×</button></td></tr>';
-          }).join('') + '</tbody></table>' : '<div class="hint">No routing yet.</div>') +
-        '<button class="btn qs-rt-add" data-i="'+i+'" style="margin-top:6px;">+ Add operation</button>' +
-        '<div style="margin-top:10px;"><button class="btn del qs-pt-del" data-i="'+i+'">Remove this part</button></div>' +
-        '</div>';
-    }).join('') : '<div class="empty"><b>No quoting parts yet</b></div>';
-
-    var num = function(k){ return ['qtyPerPart','rate','op','setupMin','cycleMin','rmStockQty','wipQty','fgQty','safetyStockQty'].indexOf(k) >= 0; };
-    host.querySelectorAll('.qs-pt').forEach(function(el){
-      el.addEventListener('input', function(){
-        rows[+el.dataset.i][el.dataset.k] = num(el.dataset.k) ? C.num(el.value) : el.value; });
-    });
-    host.querySelectorAll('.qs-bom').forEach(function(el){
-      el.addEventListener('input', function(){
-        rows[+el.dataset.i].bom[+el.dataset.j][el.dataset.k] = num(el.dataset.k) ? C.num(el.value) : el.value; });
-    });
-    host.querySelectorAll('.qs-rt').forEach(function(el){
-      el.addEventListener('input', function(){
-        rows[+el.dataset.i].routing[+el.dataset.j][el.dataset.k] = num(el.dataset.k) ? C.num(el.value) : el.value; });
-    });
-    host.querySelectorAll('.qs-bom-add').forEach(function(b){
-      b.addEventListener('click', function(){
-        rows[+b.dataset.i].bom.push({ item:'', spec:'', qtyPerPart:0, unit:'kg', rate:0 }); qsDrawParts(); });
-    });
-    host.querySelectorAll('.qs-rt-add').forEach(function(b){
-      b.addEventListener('click', function(){
-        var r = rows[+b.dataset.i].routing;
-        r.push({ op:(r.length+1)*10, process:'', machineType:'', setupMin:0, cycleMin:0 }); qsDrawParts(); });
-    });
-    host.querySelectorAll('.qs-bom-del').forEach(function(b){
-      b.addEventListener('click', function(){ rows[+b.dataset.i].bom.splice(+b.dataset.j,1); qsDrawParts(); });
-    });
-    host.querySelectorAll('.qs-rt-del').forEach(function(b){
-      b.addEventListener('click', function(){ rows[+b.dataset.i].routing.splice(+b.dataset.j,1); qsDrawParts(); });
-    });
-    host.querySelectorAll('.qs-pt-del').forEach(function(b){
-      b.addEventListener('click', function(){
-        if (!confirm('Remove this part, with its bill of materials and routing?')) return;
-        rows.splice(+b.dataset.i,1); qsDrawParts(); });
-    });
-  }
+  /* qsDrawParts() and its Parts/BOM/routing editor were removed here.
+     It wrote to qsContent.parts, which nothing in the native RFQ Pipeline
+     ever reads — rfqCfg is loaded as {costBase, machines, labourGrades,
+     materials, quoteCfg, company, quoteSender} and has no `parts` key at all.
+     Its only consumer was partById() in the website's #ppc-page, which is
+     already unreachable from the menu. So it was a hand-kept second part list,
+     with a second BOM and a second routing, feeding a screen nobody can open.
+     The records themselves are left untouched in site_content: this screen's
+     save preserves the whole object, so an old deployment's typed-in list is
+     still there and nothing was deleted by removing the editor. */
 
   function qsCollectSimpleFields(){
     var g = fieldVal, cb = qsContent.costBase, qc = qsContent.quoteCfg;
@@ -28530,11 +28487,17 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
             return '<tr><td class="hint">'+esc(q2.category)+'</td><td>'+esc(q2.requirement)+'</td>' +
               '<td class="hint">'+esc(q2.source)+'</td><td class="c">'+esc(q2.confidence)+'</td></tr>';
           }).join('') + '</tbody></table>' : '<div class="hint">Nothing could be read from this drawing.</div>') +
+        rfqDrawDataHtml(r) +
         ((x.missing||[]).filter(Boolean).length ? '<div class="note bad" style="margin-top:8px;">' +
           '<b>Not on the drawing — needs clarification:</b><ul style="margin:6px 0 0 18px;">' +
           x.missing.filter(Boolean).map(function(m){ return '<li>'+esc(m)+'</li>'; }).join('') + '</ul></div>' : '') +
         '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">' +
-        '<button class="btn ai-btn rp-read" data-ref="'+esc(r.ref)+'">Re-read</button></div>';
+        '<button class="btn ai-btn rp-read" data-ref="'+esc(r.ref)+'">Re-read</button>' +
+        ((x.characteristics||[]).length && r.fileUrl
+          ? '<button class="btn rp-balloon" data-ref="'+esc(r.ref)+'">Balloon drawing</button>' : '') +
+        ((x.characteristics||[]).length
+          ? '<button class="btn rp-ddprint" data-ref="'+esc(r.ref)+'">Print drawing data</button>' : '') +
+        '</div>';
     }
 
     /* ---- costing ---- */
@@ -28587,6 +28550,9 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
      thing a website submission cannot know — and which is what tells the
      company later that half its work arrives by referral. */
   var rnFile = null;
+  /* what the save actually achieved, read after the try/catch so that the
+     confirmation and the failure message can never both be reached */
+  var rnSaved = null;
   function rnRef(){
     return 'RFQ-' + Date.now().toString(36).toUpperCase().slice(-4) +
       Math.random().toString(36).slice(2, 4).toUpperCase();
@@ -28610,7 +28576,10 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     document.getElementById('rn-file').value = '';
     document.getElementById('rn-file-msg').textContent = 'A drawing is what makes the costing possible ' +
       '— attach it now if you have it.';
-    rnFile = null;
+    document.getElementById('rn-file-box').style.display = 'none';
+    document.getElementById('rn-file-pagerow').style.display = 'none';
+    document.getElementById('rn-file-prev').style.display = 'none';
+    rnFile = null; rnRawFile = null;
     rnUpdateSource();
     document.getElementById('rn-msg-box').style.display = 'none';
   }
@@ -28660,28 +28629,131 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
         acknowledge: ack,
         companyName: co.legalName || co.displayName || (C.getProfile()||{}).name || '' }) });
 
-      say('Enquiry <b>' + esc(ref) + '</b> created' + (ack ? ' and acknowledged to ' + esc(email) : '') +
-        '. It is in the RFQ Pipeline now — read the drawing and cost it there.', true);
-      rnClear();
-      document.getElementById('rn-msg-box').innerHTML +=
-        ' <a data-goto="rfq_pipeline" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Open the pipeline →</a>';
-      wireGoto(document.getElementById('rn-msg-box'));
-    } catch(e){ say('Not created — ' + esc(e.message)); }
+      /* The enquiry is saved at this point. Everything below is presentation,
+         and it sits OUTSIDE the try that reports failure on purpose: a fault
+         while drawing a link must never be reported as "Not created" over a
+         record that is already on file. That is exactly what happened here —
+         wireGoto() was called and had never existed anywhere in this file, so
+         every successful enquiry was announced as a failure and re-entered. */
+      rnSaved = { ref:ref, ack:ack, email:email };
+    } catch(e){ say('Not created — ' + esc(e.message)); rnSaved = null; }
+    if (rnSaved){
+      try {
+        /* clear first: rnClear() hides the message box, so writing the note
+           before it would show the confirmation and then hide it again */
+        rnClear();
+        say('Enquiry <b>' + esc(rnSaved.ref) + '</b> created' +
+          (rnSaved.ack ? ' and acknowledged to ' + esc(rnSaved.email) : '') +
+          '. It is in the RFQ Pipeline now — read the drawing and cost it there.' +
+          ' <a data-goto="rfq_pipeline" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">' +
+          'Open the pipeline →</a>', true);
+        var mb = document.getElementById('rn-msg-box');
+        mb.querySelectorAll('[data-goto]').forEach(function(a){
+          a.addEventListener('click', function(){ go(a.dataset.goto); }); });
+      } catch(e2){}
+      rnSaved = null;
+    }
     btn.disabled = false; btn.textContent = 'Create enquiry';
   }
 
   document.getElementById('rn-source').addEventListener('change', rnUpdateSource);
   document.getElementById('rn-clear').addEventListener('click', rnClear);
   document.getElementById('rn-save').addEventListener('click', function(){ rnSaveEnquiry(this); });
-  document.getElementById('rn-file').addEventListener('change', async function(){
-    var f = this.files[0], msg = document.getElementById('rn-file-msg');
-    if (!f) { rnFile = null; return; }
-    msg.textContent = 'Uploading ' + f.name + '…';
+  /* ---------------- the attachment, converted the same way the website does it
+     This screen used to hand the file straight to Core.uploadFile(). The upload
+     worked, the enquiry saved, and everything looked right — but the drawing
+     reader is given images, not PDFs and not CAD (see the conversion note in
+     CLAUDE.md), so a PDF taken over the phone produced an enquiry whose
+     drawing could never be read. The customer's own form on the website has
+     converted since it was built; only this one did not, and the failure was
+     invisible until somebody pressed "Read drawing with AI" days later.
+
+     It is the same converter, the same 3MB ceiling, the same page chooser and
+     the same rule on failure: a file that cannot be converted is still
+     attached, with the reason said out loud, rather than silently dropped. */
+  var rnRawFile = null;
+  function rnFileNote(text, kind){
+    var box = document.getElementById('rn-file-box'), s = document.getElementById('rn-file-status');
+    box.style.display = ''; s.style.display = '';
+    s.className = 'note' + (kind ? ' ' + kind : '');
+    s.textContent = text;
+  }
+  /* Uploads a converted image, which is a data URL rather than a File and so
+     cannot go through Core.uploadFile(). Same endpoint, same 6MB server cap. */
+  async function rnUploadDataUrl(dataUrl){
+    var j = await C.api('/api/assets', { method:'POST', body:JSON.stringify({ dataUrl:dataUrl }) });
+    return j.url || ('/api/assets?id=' + j.id);
+  }
+  async function rnConvertFile(page){
+    var f = rnRawFile; if (!f) return;
+    var msg = document.getElementById('rn-file-msg');
+    var prev = document.getElementById('rn-file-prev');
+    var pageRow = document.getElementById('rn-file-pagerow');
+    prev.style.display = 'none';
+    rnFile = null;
+
+    var converted = null;
+    if (window.DrawingConvert){
+      rnFileNote('Converting ' + f.name + ' to an image the drawing reader can read…');
+      try {
+        var out = await window.DrawingConvert.prepare(f, { page:page });
+        var bytes = window.DrawingConvert.sizeOf(out.dataUrl);
+        if (bytes > 3 * 1024 * 1024){
+          rnFileNote('The converted image is ' + (Math.round(bytes/1048576*10)/10) + 'MB, over the 3MB ' +
+            'limit. Ask for a smaller drawing, or attach the original and read it by hand.', 'bad');
+        } else {
+          converted = out;
+          prev.src = out.dataUrl; prev.style.display = '';
+          if (out.pages > 1){
+            pageRow.style.display = 'flex';
+            var sel = document.getElementById('rn-file-page');
+            if (sel.options.length !== out.pages){
+              sel.innerHTML = Array.from({ length:out.pages }, function(_, i){
+                return '<option value="' + (i+1) + '">' + (i+1) + '</option>'; }).join('');
+            }
+            sel.value = String(out.page || 1);
+          } else pageRow.style.display = 'none';
+        }
+      } catch(e){
+        pageRow.style.display = 'none';
+        rnFileNote(e.message + ' It will still be attached to the enquiry as it is.', 'bad');
+      }
+    } else {
+      rnFileNote('The converter did not load, so the file is attached as it is. If it is a PDF or a ' +
+        'DXF, the drawing reader will not be able to read it.', 'bad');
+    }
+
+    msg.textContent = 'Uploading…';
     try {
-      var up = await C.uploadFile(f);
-      rnFile = { name:f.name, url:up.url };
-      msg.innerHTML = 'Attached <b>' + esc(f.name) + '</b>.';
-    } catch(e){ rnFile = null; msg.textContent = 'That file was not attached — ' + e.message; }
+      if (converted){
+        var url = await rnUploadDataUrl(converted.dataUrl);
+        rnFile = { name:converted.fileName, url:url, readable:true };
+        rnFileNote(converted.note + ' It will be read automatically when the drawing is read.', 'good');
+        msg.innerHTML = 'Attached <b>' + esc(converted.fileName) + '</b>, converted from ' +
+          esc(f.name) + '.';
+      } else {
+        /* Conversion failed or was refused. The original still goes up — an
+           enquiry that loses the customer's drawing is worse than one whose
+           drawing has to be read by hand. */
+        var up = await C.uploadFile(f);
+        rnFile = { name:f.name, url:up.url, readable:false };
+        msg.innerHTML = 'Attached <b>' + esc(f.name) + '</b> as it is.';
+      }
+    } catch(e){
+      rnFile = null;
+      msg.textContent = 'That file was not attached — ' + e.message;
+      rnFileNote('Nothing was uploaded: ' + e.message, 'bad');
+    }
+  }
+  document.getElementById('rn-file').addEventListener('change', function(){
+    rnFile = null; rnRawFile = this.files[0] || null;
+    document.getElementById('rn-file-pagerow').style.display = 'none';
+    document.getElementById('rn-file-prev').style.display = 'none';
+    if (!rnRawFile){ document.getElementById('rn-file-box').style.display = 'none'; return; }
+    rnConvertFile(1);
+  });
+  document.getElementById('rn-file-page').addEventListener('change', function(){
+    rnConvertFile(parseInt(this.value, 10) || 1);
   });
 
   /* ---------------- the costing sheet, editable ----------------
@@ -29049,6 +29121,12 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     host.querySelectorAll('.rp-read').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); rfqReadDrawing(b); });
     });
+    host.querySelectorAll('.rp-balloon').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); rfqBalloonDrawing(b.dataset.ref); });
+    });
+    host.querySelectorAll('.rp-ddprint').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); rfqPrintDrawData(b.dataset.ref); });
+    });
     host.querySelectorAll('.rp-cost').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); rfqGenerateCosting(b); });
     });
@@ -29298,21 +29376,237 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
   async function rfqPatch(ref, patch){
     await C.api('/api/rfqs', { method:'PATCH', body:JSON.stringify({ ref:ref, patch:patch }) });
   }
+  /* The one tolerant reader, shared with the website and core.js — see the
+     Conventions note in CLAUDE.md, which has always said parseAiJson is the
+     reader for AI replies in both files. This screen had its own weaker copy
+     that handled only code fences and raw line breaks. It did
+     `lastIndexOf('}')` and gave up on anything else, which meant a reply cut
+     off at the token limit — the ordinary outcome for the costing prompt,
+     whose schema runs to a dozen nested arrays — was reported to the user as
+     "the AI answered, but not in the shape the costing needs". The shape was
+     right; the reply was simply unfinished, which Core.parseAiJson repairs by
+     closing what was left open and dropping the half-written fragment. */
   function rfqParseAiJson(text){
-    var t = String(text||'').replace(/```json|```/g, '').trim();
-    var i = t.indexOf('{'), j = t.lastIndexOf('}');
-    if (i >= 0 && j > i) t = t.slice(i, j+1);
-    /* a model will happily put a real line break inside a quoted string, which
-       JSON.parse rejects outright — escape control characters inside strings */
-    var out = '', inStr = false, prev = '';
-    for (var k = 0; k < t.length; k++){
-      var ch = t[k];
-      if (ch === '"' && prev !== '\\') inStr = !inStr;
-      if (inStr && (ch === '\n' || ch === '\r' || ch === '\t')) out += ch === '\t' ? '\\t' : '\\n';
-      else out += ch;
-      prev = ch;
+    return C.parseAiJson(text);
+  }
+  /* Did the reply stop before the object closed? Core.parseAiJson repairs that
+     silently and only names it when the repair fails, which is right for it —
+     but a caller that is about to price a job needs to know the answer is a
+     fragment. One pass, tracking string state the same way the reader does, so
+     a brace inside a quoted value cannot be mistaken for structure. */
+  function rfqReplyCutOff(text){
+    var t = String(text == null ? '' : text).replace(/```[a-z]*\n?|```/gi, '');
+    var start = t.search(/[{[]/); if (start < 0) return false;
+    var depth = 0, inStr = false, esc2 = false, q = '"';
+    for (var i = start; i < t.length; i++){
+      var c = t[i];
+      if (inStr){
+        if (esc2) { esc2 = false; continue; }
+        if (c === '\\') { esc2 = true; continue; }
+        if (c === q) inStr = false;
+        continue;
+      }
+      if (c === '"' || c === "'") { inStr = true; q = c; continue; }
+      if (c === '{' || c === '[') depth++;
+      else if (c === '}' || c === ']') { depth--; if (!depth) return false; }
     }
-    return JSON.parse(out);
+    return true;
+  }
+
+  /* ---------------- drawing data, and the balloon drawing ----------------
+     What the reader produced before this was `requirements` — a flat list that
+     mixed a bore diameter, a material grade and a plating spec into one column
+     of prose with no item numbers. Nothing could be balloon-numbered against
+     it, nothing could be checked off, and nothing could be carried into an
+     inspection record.
+
+     `characteristics` is that list done properly: numbered from 1, typed, with
+     the nominal and the signed deviations kept apart from the text, the GD&T
+     callout kept as written, and a position on the sheet. The balloon drawing
+     is then the customer's own drawing with those numbers drawn over it.
+
+     Two rules, and both are on the printed sheet rather than only here:
+     the numbers and the positions are the AI's reading and are a draft until
+     somebody checks them against the drawing — a balloon in the wrong place is
+     read as fact by everyone downstream; and a characteristic the AI could not
+     place is listed under the drawing rather than dropped or guessed at, which
+     is the difference between an honest sheet and a tidy one. */
+  function rfqChars(r){
+    var x = (r && r.extract) || {};
+    return (x.characteristics || []).filter(function(c){ return c && (c.feature || c.spec); });
+  }
+  /* The tolerance column, built from the numbers rather than from prose, so a
+     limit that was read as ±0.05 can never print as anything else. */
+  function rfqTolText(c){
+    var n = c.nominal, u = c.upper, l = c.lower;
+    if (n == null || n === '') return '';
+    var unit = c.unit || 'mm';
+    if (u == null && l == null) return C.qty(n) + ' ' + unit;
+    var up = C.num(u), lo = C.num(l);
+    var sign = function(v){ return (v > 0 ? '+' : '') + C.qty(v); };
+    if (up === -lo && up !== 0) return C.qty(n) + ' ±' + C.qty(up) + ' ' + unit;
+    return C.qty(n) + ' ' + sign(up) + '/' + sign(lo) + ' ' + unit;
+  }
+  function rfqDrawDataRows(r){
+    return rfqChars(r).map(function(c, i){
+      var no = (c.no == null || c.no === '') ? (i + 1) : c.no;
+      return { no:no, type:c.type || '', feature:c.feature || '',
+               tol:rfqTolText(c), gdt:c.gdt || '', spec:c.spec || '', cls:c.cls || '',
+               placed:(c.x != null && c.y != null && isFinite(C.num(c.x)) && isFinite(C.num(c.y))),
+               x:C.num(c.x), y:C.num(c.y), where:c.locationNote || '' };
+    });
+  }
+  function rfqDrawDataHtml(r){
+    var rows = rfqDrawDataRows(r);
+    if (!rows.length) return '';
+    var unplaced = rows.filter(function(d){ return !d.placed; }).length;
+    return '<div class="sub" style="margin-top:12px;">Drawing data — ' + rows.length +
+      ' characteristic(s)</div>' +
+      '<div class="hint" style="margin-bottom:6px;">Numbered as they are balloon-numbered on the ' +
+      'drawing. Read by the AI, so check it against the drawing before it is used to inspect ' +
+      'anything.</div>' +
+      '<table class="t"><thead><tr><th class="c">No.</th><th>Type</th><th>Characteristic</th>' +
+      '<th>Size &amp; tolerance</th><th>GD&amp;T</th><th>Spec</th><th class="c">Class</th></tr></thead><tbody>' +
+      rows.map(function(d){
+        return '<tr>' +
+          '<td class="c"><b>' + esc(d.no) + '</b>' + (d.placed ? '' :
+            ' <span class="hint" title="the AI could not place this on the sheet">•</span>') + '</td>' +
+          '<td class="hint">' + esc(d.type) + '</td>' +
+          '<td>' + esc(d.feature) + '</td>' +
+          '<td>' + esc(d.tol) + '</td>' +
+          '<td>' + esc(d.gdt) + '</td>' +
+          '<td>' + esc(d.spec) + '</td>' +
+          '<td class="c">' + (d.cls ? '<b>' + esc(d.cls) + '</b>' : '') + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      (unplaced ? '<div class="hint" style="margin-top:6px;">• ' + unplaced + ' of these could not be ' +
+        'placed on the sheet and are listed beneath the balloon drawing rather than shown on it.</div>' : '');
+  }
+  /* The overlay, drawn over the original image rather than into it — the
+     drawing underneath is never re-encoded, and the balloons print at the
+     printer's resolution rather than the screen's.
+
+     Two things here were got wrong first time round and are worth keeping
+     right, because both make a balloon drawing harder to read than no balloon
+     drawing at all:
+
+     1. A balloon must be a CIRCLE. Drawing it in an SVG whose viewBox is
+        stretched to the image's aspect turns every one of them into an
+        ellipse — a landscape drawing gives fat ovals. So the balloons are
+        positioned HTML elements sized in px: round at any aspect ratio, at
+        any zoom, on any sheet.
+     2. A balloon must not cover the thing it points at. The AI is asked for
+        the position of the callout itself, so putting the balloon there hides
+        the very dimension being numbered — the title block read "MAT( 4 )D"
+        instead of EN8D. Each balloon is therefore offset clear of its callout
+        with a leader back to it, the way a drawing office does it. The leader
+        is vertical, which is the one direction a stretched viewBox cannot
+        skew, so the line lands where it should whatever shape the sheet is. */
+  function rfqBalloonOverlay(rows){
+    var placed = rows.filter(function(d){ return d.placed; });
+    if (!placed.length) return '';
+    var pts = placed.map(function(d){
+      var x = Math.max(3, Math.min(97, d.x)), y = Math.max(3, Math.min(97, d.y));
+      /* above the callout, unless that would run off the top of the sheet */
+      var by = y > 14 ? y - 9 : y + 9;
+      return { no:d.no, cls:d.cls, x:x, y:y, by:Math.max(3, Math.min(97, by)) };
+    });
+    return '<svg viewBox="0 0 100 100" preserveAspectRatio="none" class="bl-ov">' +
+      pts.map(function(p){
+        return '<line x1="' + p.x + '" y1="' + p.y + '" x2="' + p.x + '" y2="' + p.by + '" ' +
+          'class="bl-l" vector-effect="non-scaling-stroke"/>' +
+          '<circle cx="' + p.x + '" cy="' + p.y + '" r="0.4" class="bl-d" ' +
+          'vector-effect="non-scaling-stroke"/>';
+      }).join('') + '</svg>' +
+      pts.map(function(p){
+        return '<span class="bl-b' + (p.cls ? ' bl-' + esc(String(p.cls).toLowerCase()) : '') +
+          '" style="left:' + p.x + '%;top:' + p.by + '%;">' + esc(p.no) + '</span>';
+      }).join('');
+  }
+  function rfqBalloonDrawing(ref){
+    var r = rfqRows.filter(function(x){ return x.ref === ref; })[0]; if (!r) return;
+    var rows = rfqDrawDataRows(r);
+    if (!rows.length) return rfqSay(ref, 'Read the drawing first — there are no characteristics to balloon.');
+    if (!r.fileUrl) return rfqSay(ref, 'The balloon drawing needs the drawing image itself, and this ' +
+      'enquiry has no attachment on file.');
+    var x = r.extract || {}, p = x.part || {}, co = rfqCfg.company || {};
+    var unplaced = rows.filter(function(d){ return !d.placed; });
+    var w = window.open('', '_blank');
+    if (!w) return rfqSay(ref, 'The browser blocked the print window. Allow pop-ups for this site.');
+    w.document.write('<!doctype html><html><head><meta charset="utf-8">' +
+      '<title>Balloon drawing — ' + esc(p.drawingNumber || r.ref) + '</title><style>' +
+      'body{font:13px/1.45 system-ui,sans-serif;color:#111;margin:18px;}' +
+      'h1{font-size:18px;margin:0 0 2px;} .sub{color:#555;margin-bottom:12px;}' +
+      '.wrap{position:relative;display:inline-block;max-width:100%;border:1px solid #bbb;}' +
+      '.wrap img{display:block;max-width:100%;}' +
+      '.bl-ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}' +
+      '.bl-l{stroke:#c00;stroke-width:1px;} .bl-d{fill:#c00;stroke:none;}' +
+      /* a real circle, in px, so the image\'s aspect ratio cannot squash it */
+      '.bl-b{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;' +
+      'border-radius:50%;border:1.6px solid #c00;background:#fff;color:#c00;' +
+      'font:700 12px/19px sans-serif;text-align:center;}' +
+      '.bl-b.bl-cc{border-width:3px;} .bl-b.bl-sc{border-color:#d67b00;color:#d67b00;border-width:2.4px;}' +
+      'table{border-collapse:collapse;width:100%;margin-top:14px;table-layout:fixed;}' +
+      'th,td{border:1px solid #999;padding:4px 6px;text-align:left;vertical-align:top;' +
+      'overflow-wrap:anywhere;font-size:12px;} th{background:#eee;} td.c,th.c{text-align:center;}' +
+      '.note{border:1px solid #c00;background:#fff6f6;padding:8px 10px;margin-top:14px;font-size:12px;}' +
+      '.foot{margin-top:12px;color:#666;font-size:11px;}' +
+      '@media print{.no-print{display:none;}}' +
+      '</style></head><body>' +
+      '<h1>' + esc(co.legalName || co.displayName || '') + ' — Balloon drawing</h1>' +
+      '<div class="sub">' + esc([p.number, p.name, p.drawingNumber && ('Drawing ' + p.drawingNumber),
+        p.revision && ('Rev ' + p.revision), 'Enquiry ' + r.ref].filter(Boolean).join(' · ')) + '</div>' +
+      '<div class="wrap"><img src="' + esc(r.fileUrl) + '" alt="drawing">' + rfqBalloonOverlay(rows) + '</div>' +
+      '<table><colgroup><col style="width:46px"><col style="width:78px"><col><col style="width:130px">' +
+      '<col style="width:110px"><col style="width:130px"><col style="width:52px"></colgroup>' +
+      '<thead><tr><th class="c">No.</th><th>Type</th><th>Characteristic</th><th>Size &amp; tolerance</th>' +
+      '<th>GD&amp;T</th><th>Spec</th><th class="c">Class</th></tr></thead><tbody>' +
+      rows.map(function(d){
+        return '<tr><td class="c"><b>' + esc(d.no) + '</b></td><td>' + esc(d.type) + '</td><td>' +
+          esc(d.feature) + '</td><td>' + esc(d.tol) + '</td><td>' + esc(d.gdt) + '</td><td>' +
+          esc(d.spec) + '</td><td class="c">' + esc(d.cls) + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      (unplaced.length ? '<div class="note"><b>' + unplaced.length + ' characteristic(s) could not be ' +
+        'placed on the drawing</b> and carry no balloon above — they are real requirements and still ' +
+        'have to be inspected:<ul style="margin:6px 0 0 18px;">' +
+        unplaced.map(function(d){ return '<li><b>' + esc(d.no) + '</b> — ' + esc(d.feature) +
+          (d.where ? ' <i>(' + esc(d.where) + ')</i>' : '') + '</li>'; }).join('') + '</ul></div>' : '') +
+      '<div class="note"><b>Draft — read by AI, not yet verified.</b> The item numbers, the values and ' +
+      'the position of every balloon are the AI\'s reading of this drawing. Check each one against the ' +
+      'drawing before this sheet is used to inspect parts or sent to a customer.</div>' +
+      '<div class="foot">Read ' + esc(x.readAt || '') + ' · printed ' + esc(new Date().toLocaleString()) +
+      '</div><div class="no-print" style="margin-top:14px;">' +
+      '<button onclick="window.print()">Print</button></div></body></html>');
+    w.document.close();
+  }
+
+  /* The same list without the drawing behind it — what an estimator or a
+     supplier actually wants to hold beside the part. Uses C.openReport, the
+     one report engine every other printed document here goes through. */
+  function rfqPrintDrawData(ref){
+    var r = rfqRows.filter(function(x){ return x.ref === ref; })[0]; if (!r) return;
+    var rows = rfqDrawDataRows(r);
+    if (!rows.length) return rfqSay(ref, 'Read the drawing first — there is no drawing data to print.');
+    var x = r.extract || {}, p = x.part || {};
+    var secs = [{ type:'table', title:'Characteristics', dense:true,
+      columns:[{label:'No.',align:'c'},{label:'Type'},{label:'Characteristic'},
+               {label:'Size & tolerance'},{label:'GD&T'},{label:'Spec'},{label:'Class',align:'c'},
+               {label:'Where on the sheet'}],
+      rows: rows.map(function(d){
+        return [{ v:'<b>'+esc(d.no)+'</b>' }, esc(d.type), esc(d.feature), esc(d.tol),
+                esc(d.gdt), esc(d.spec), esc(d.cls), esc(d.where)];
+      }) }];
+    if ((x.missing||[]).filter(Boolean).length)
+      secs.push({ type:'html', title:'Not on the drawing — needs clarification',
+        html:'<ul style="margin-left:16px;">' +
+          x.missing.filter(Boolean).map(function(m){ return '<li>' + esc(m) + '</li>'; }).join('') + '</ul>' });
+    secs.push({ type:'html', title:'', html:'<p class="note" style="border:1pt solid #c00;padding:6px 8px;">' +
+      '<b>Draft — read by AI, not yet verified.</b> Every value here is the AI\'s reading of the drawing. ' +
+      'Check it against the drawing before it is used to inspect parts or sent to a customer.</p>' });
+    C.openReport({ title:'Drawing data — ' + (p.drawingNumber || r.ref), landscape:true,
+      subtitle:[p.number, p.name, p.drawingNumber && ('Drawing ' + p.drawingNumber),
+        p.revision && ('Rev ' + p.revision), 'Enquiry ' + r.ref,
+        x.readAt && ('read ' + x.readAt)].filter(Boolean).join(' · '),
+      sections: secs });
   }
 
   async function rfqReadDrawing(btn){
@@ -29330,9 +29624,36 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
         '{"part":{"number":"","name":"","drawingNumber":"","revision":""},' +
         '"requirements":[{"category":"Material|Dimension|Tolerance|Finish|Treatment|Quantity|Standard|Other",' +
         '"requirement":"","source":"where on the drawing","confidence":"High|Medium|Low"}],' +
+        '"characteristics":[{"no":1,' +
+        '"type":"Dimension|GD&T|Material|Finish|Treatment|Thread|Note|Standard",' +
+        '"feature":"what it is, in the drawing\'s own words",' +
+        '"nominal":null,"upper":null,"lower":null,"unit":"mm",' +
+        '"gdt":"the GD&T callout as written, eg ⌀0.05 A-B, or \\"\\" if none",' +
+        '"spec":"for Material/Finish/Treatment/Thread: the grade or specification as written",' +
+        '"cls":"CC|SC|",' +
+        '"x":null,"y":null,' +
+        '"locationNote":"where on the sheet you read it"}],' +
         '"criticalCharacteristics":[""],"missing":[""],"notes":""}\n\n' +
+        'RULES for "characteristics" — this list is balloon-numbered onto the drawing and becomes the ' +
+        'inspection record, so it must be exact:\n' +
+        '- Number them from 1, in reading order, and never reuse a number.\n' +
+        '- One entry per characteristic. Every dimension gets one. Every GD&T callout gets one. The ' +
+        'material grade gets one (type Material). Each surface finish, coating, heat treatment and ' +
+        'thread gets one.\n' +
+        '- Copy tolerances as the drawing states them: "nominal" is the basic size, "upper" and ' +
+        '"lower" are the deviations from it, signed (+0.05 and -0.05, not 0.05 and 0.05). A limit ' +
+        'dimension such as 20.1/19.9 becomes nominal 20, upper +0.1, lower -0.1.\n' +
+        '- Leave nominal/upper/lower null on anything that is not a size.\n' +
+        '- "cls" is CC only where the drawing itself marks a critical characteristic, SC only where it ' +
+        'marks a significant/special one. Leave it "" otherwise — do not decide this yourself.\n' +
+        '- "x" and "y" position the balloon: the percentage across (0 = left edge, 100 = right edge) ' +
+        'and down (0 = top, 100 = bottom) of the image, at the callout itself. If you cannot tell ' +
+        'where on the sheet it sits, set both to null rather than guessing — an unplaced balloon is ' +
+        'listed separately, a wrongly placed one is read as fact.\n' +
+        '- Never invent a characteristic that is not on the drawing. If the drawing is too unclear to ' +
+        'read a value, leave the entry out and say so in "missing".\n\n' +
         'Put anything a quotation needs but the drawing does not state into "missing" — never guess it.',
-        { attachmentUrl: r.fileUrl || r.fileName, maxTokens: 3000 });
+        { attachmentUrl: r.fileUrl || r.fileName, maxTokens: 6000 });
       if (!txt) throw new Error('The AI did not return a reading.');
       var parsed;
       try { parsed = rfqParseAiJson(txt); }
@@ -29404,12 +29725,31 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
         '"logistics":{"mode":"","route":"","costPerPart":0,"source":"","sourceDetail":""},' +
         '"freight":{"method":"","destination":"","costPerPart":0,"source":"","sourceDetail":""},' +
         '"specialProcesses":[{"name":"","note":""}],"inspectionMinPerPart":0,"inspectionSource":"","assumptions":[""],"notes":""}';
-      var txt = await C.callAI(prompt, { maxTokens: 4500 });
+      /* 4500 was not enough for this schema. It asks for the material, every
+         operation, the dimensions under each operation, tooling, jigs and
+         fixtures, gauges, consumables, packaging, logistics, freight, special
+         processes and the assumptions behind all of it — a real answer for a
+         six-operation part runs well past 4500 tokens, so the reply was being
+         cut off mid-array as a matter of course rather than as an edge case.
+         The server caps this at 12000; 9000 leaves headroom on every provider
+         while giving the answer room to finish. */
+      var txt = await C.callAI(prompt, { maxTokens: 9000 });
       if (!txt) throw new Error('No response from the AI.');
       var p;
       try { p = rfqParseAiJson(txt); }
-      catch(e){ throw new Error('The AI answered, but not in the shape the costing needs. It said: "' +
-        String(txt).replace(/\s+/g,' ').trim().slice(0,160) + '…" — try Re-plan route.'); }
+      catch(e){
+        /* Core.parseAiJson says which of the two this was, and they need
+           different fixes: a reply cut off even at 9000 tokens means the part
+           is too big to plan in one pass, while genuinely invalid JSON means
+           the model ignored the format. Saying "not in the shape this needs"
+           for both sent everyone to Re-plan route, which fixes only one. */
+        throw new Error(/cut off/i.test(e.message)
+          ? 'The AI ran out of room before it finished the plan, and what arrived could not be ' +
+            'repaired. This happens on a part with a long route: cost the main operations first, ' +
+            'then add the rest by hand — every field on the sheet is editable.'
+          : 'The AI answered, but not in the shape the costing needs. It said: "' +
+            String(txt).replace(/\s+/g,' ').trim().slice(0,160) + '…" — try Re-plan route.');
+      }
 
       var matByName = function(n){
         return rfqCfg.materials.filter(function(m){
@@ -29494,12 +29834,23 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
         inspectionSource:p.inspectionSource||'',
         assumptions:(p.assumptions||[]).filter(Boolean), aiNotes:p.notes||'' };
       var unmatched = c.operations.filter(function(o){ return !o.machineId; }).length;
+      /* A repaired truncated reply parses cleanly and looks like a complete
+         answer, but whatever the model had not written yet is simply absent —
+         the last operations, their tooling, the packing line. On a cost sheet
+         that is not a cosmetic loss: it understates the price, and it does so
+         invisibly. So a reply that arrived unfinished is recorded on the
+         costing itself and said out loud, rather than being quietly repaired
+         into something that reads as whole. */
+      if (rfqReplyCutOff(txt)) c.truncated = true;
       await rfqPatch(ref, { costing: c });
       loadRfqPipeline();
-      if (unmatched) setTimeout(function(){
-        rfqSay(ref, unmatched + ' operation(s) could not be matched to one of your machines — those ' +
-          'lines are costed at a zero machine rate. Check the route before quoting.');
-      }, 300);
+      var warn = [];
+      if (c.truncated) warn.push('The AI ran out of room before it finished, so the end of the route ' +
+        'is missing — the last operations and whatever hangs off them are not on this sheet. ' +
+        'Add them by hand or press Re-plan route before quoting.');
+      if (unmatched) warn.push(unmatched + ' operation(s) could not be matched to one of your machines — ' +
+        'those lines are costed at a zero machine rate. Check the route before quoting.');
+      if (warn.length) setTimeout(function(){ rfqSay(ref, warn.join(' ')); }, 300);
     } catch(e){
       try { await rfqPatch(ref, { costing: { error: e.message } }); } catch(e2){}
       loadRfqPipeline();
@@ -31637,11 +31988,6 @@ amort('Gauges &amp; Inspection Equipment', c.gauges, 'Gauge cost') +
   document.getElementById('qs-mt-add').addEventListener('click', function(){
     qsContent.materials.push({ name:'New Material', grade:'', rate:0, unit:'kg', density:0,
       leadTimeDays:7, source:'', sourceDate:'', confidence:'Manual' }); qsDrawMaterials(); });
-  document.getElementById('qs-pt-add').addEventListener('click', function(){
-    qsContent.parts = qsContent.parts || [];
-    qsContent.parts.push({ id:'qp'+Date.now().toString(36), partNo:'', description:'', custPartNo:'',
-      drawingNo:'', drawingRev:'', rmStockQty:0, wipQty:0, fgQty:0, safetyStockQty:0,
-      bom:[], routing:[] }); qsDrawParts(); });
   document.getElementById('qs-save').addEventListener('click', saveQuotingSetup);
 
   document.getElementById('rp-tri-run').addEventListener('click', runRfqTriage);
@@ -31900,6 +32246,68 @@ amort('Gauges &amp; Inspection Equipment', c.gauges, 'Gauge cost') +
     return out;
   }
 
+  /* Reads stored files back as the same data: URL Core.uploadFile() sent, so a
+     restore can put the bytes back under the id everything already references.
+     `wanted` is either null (every file) or a set of ids to keep.
+     Shared by both exports on purpose — see bkContentAssetIds below for why
+     the settings file needs files of its own. */
+  async function bkFetchAssets(wanted, errs){
+    var out = [];
+    try {
+      var list = (await C.api('/api/assets')).assets || [];
+      for (var i = 0; i < list.length; i++) {
+        var a = list[i];
+        if (wanted && !wanted[a.id]) continue;
+        try {
+          var res = await fetch('/api/assets?id=' + encodeURIComponent(a.id));
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          var blob = await res.blob();
+          var dataUrl = await new Promise(function(ok, no){
+            var fr = new FileReader();
+            fr.onload = function(){ ok(fr.result); };
+            fr.onerror = function(){ no(new Error('could not be read back')); };
+            fr.readAsDataURL(blob);
+          });
+          out.push({ id:a.id, mime:a.mime, bytes:a.bytes, dataUrl:dataUrl });
+        } catch(e){ errs.push((a.id||'?') + ': ' + e.message); }
+      }
+    } catch(e){ errs.push('could not list stored files: ' + e.message); }
+    return out;
+  }
+
+  /* Every asset id the website content record points at.
+
+     This exists because of a real defect in the two-scope split. site_content
+     holds only REFERENCES to pictures — the company logo, the hero banner and
+     video, every capability, gallery, founder and certificate image are all
+     stored as "/api/assets?id=…" — while the bytes live in the assets table.
+     flushTable() puts site_content in the settings scope and assets in the
+     data scope, and the exports were built to mirror it exactly. The
+     consequence was that restoring a settings backup brought back every image
+     reference and none of the images, so the whole public site came up with
+     broken pictures and nothing on the screen explained why.
+
+     So the settings file now carries the files its own content refers to. The
+     data file still carries every file, unchanged, which means a drawing is
+     still in exactly one place and nothing was moved between scopes. An asset
+     that lands twice is written twice under the same id, which is a no-op —
+     /api/assets upserts on a caller-supplied id. */
+  function bkContentAssetIds(content){
+    var ids = {};
+    (function walk(v, depth){
+      if (v == null || depth > 8) return;
+      if (typeof v === 'string'){
+        var m = v.match(/\/api\/assets\?id=([A-Za-z0-9]+)/g) || [];
+        m.forEach(function(s){ ids[s.split('=')[1]] = true; });
+        return;
+      }
+      if (typeof v !== 'object') return;
+      if (Array.isArray(v)) { v.forEach(function(x){ walk(x, depth+1); }); return; }
+      Object.keys(v).forEach(function(k){ walk(v[k], depth+1); });
+    })(content, 0);
+    return ids;
+  }
+
   document.getElementById('bk-exp-admin').addEventListener('click', async function(){
     this.disabled = true;
     try {
@@ -31909,16 +32317,37 @@ amort('Gauges &amp; Inspection Equipment', c.gauges, 'Gauge cost') +
       try { setts = (await C.api('/api/settings')).settings || {}; } catch(e){}
       var devices = [];
       try { devices = (await C.api('/api/device?what=devices')).devices || []; } catch(e){}
+      /* Read fresh, rather than reaching for a variable this function does not
+         own. The export used to write `idmsSettings: settings`, and `settings`
+         is a module-level variable belonging to the home screen. It is filled
+         during boot, so this mostly worked — but it is a snapshot taken at
+         sign-in, and it goes stale the moment a setting is saved without a
+         reload. The invoice screen already has to patch it by hand
+         (`settings.invoice_settings = data`) for exactly that reason, which is
+         the tell: anything that does not remember to do that would have been
+         exported at its old value, or at {} if the boot read had failed.
+         A backup is the wrong place to depend on that. */
+      var idmsSettings = {};
+      try { idmsSettings = await C.idms.settings(); } catch(e){}
+      var assetErrs = [];
+      var assets = await bkFetchAssets(bkContentAssetIds(content), assetErrs);
       bkDownload('idms-settings', { scope:'settings', exportedAt:new Date().toISOString(),
-        content:content, idmsSettings:settings, devices:devices,
+        content:content, idmsSettings:idmsSettings, devices:devices, assets:assets,
         /* provider keys come back masked from the server and are never in the
            clear here — the list is for checking what was configured, not for
            carrying secrets between deployments */
         providerKeys:setts });
-      bkSay('Settings downloaded — including ' + devices.length + ' registered attendance device(s). ' +
+      var abytes = assets.reduce(function(t, a){ return t + (a.bytes||0); }, 0);
+      bkSay('Settings downloaded — ' + Object.keys(idmsSettings).length + ' settings record(s), ' +
+            devices.length + ' registered attendance device(s), and ' + assets.length +
+            ' branding/website image(s) the content refers to (~' + Math.round(abytes/1024) + ' KB), ' +
+            'so a restored site comes up with its pictures rather than broken ones. ' +
             'Provider keys are listed but masked, and a non-ADMS device’s own shared key never leaves ' +
             'the server at all, so neither can be carried in the file: set keys again from the Setup ' +
-            'Wizard, and expect a fresh key for each restored device (see Upload settings JSON).', true);
+            'Wizard, and expect a fresh key for each restored device (see Upload settings JSON).' +
+            (assetErrs.length ? ' <b>' + assetErrs.length + ' image(s) could not be read and were left ' +
+              'out:</b> ' + esc(assetErrs.slice(0,5).join('; ')) + (assetErrs.length > 5 ? ' …' : '') : ''),
+            !assetErrs.length);
     } catch(e){ bkSay(esc(e.message)); }
     this.disabled = false;
   });
@@ -31933,6 +32362,18 @@ amort('Gauges &amp; Inspection Equipment', c.gauges, 'Gauge cost') +
       if (!confirm("Replace this deployment's settings and admin data with the file?\n\n" +
                    'Parts, orders and every other record are untouched. This cannot be undone.')) return;
       var ok = 0, bad = 0, errs = [], newKeys = [];
+      /* The branding and website images the content record points at, put back
+         under their original ids BEFORE the content that refers to them — so
+         there is never a moment where the site is live with references to
+         files that are not there yet. A settings file taken before this fix
+         carries no assets at all; that restores exactly as it used to, and the
+         message below says so rather than leaving broken pictures unexplained. */
+      var sAssets = dump.assets || [];
+      for (var ai = 0; ai < sAssets.length; ai++){
+        try { await C.api('/api/assets', { method:'POST',
+                body:JSON.stringify({ dataUrl: sAssets[ai].dataUrl, id: sAssets[ai].id }) }); ok++; }
+        catch(e){ bad++; errs.push('image ' + (sAssets[ai].id||'?') + ': ' + e.message); }
+      }
       try { await C.api('/api/content', { method:'POST', body:JSON.stringify({ data: dump.content||{} }) }); ok++; }
       catch(e){ bad++; errs.push('content: ' + e.message); }
       var ks = Object.keys(dump.idmsSettings || {});
@@ -31988,8 +32429,23 @@ amort('Gauges &amp; Inspection Equipment', c.gauges, 'Gauge cost') +
               true);
         return;
       }
-      bkSay('Restored ' + ok + ' settings record(s). Provider keys are not carried in a backup — ' +
-            'set those on the Setup Wizard. Reloading…', true);
+      /* An older settings file references images it does not carry. Left
+         unsaid, the site simply comes up with broken pictures and nobody can
+         tell whether the restore worked — which is precisely how this was
+         first noticed. Name it, and say which file has the bytes. */
+      var wantIds = Object.keys(bkContentAssetIds(dump.content || {}));
+      var missing = sAssets.length ? wantIds.filter(function(id){
+        return !sAssets.some(function(a){ return a.id === id; }); }) : wantIds;
+      bkSay('Restored ' + ok + ' settings record(s)' +
+            (sAssets.length ? ', including ' + sAssets.length + ' branding/website image(s)' : '') + '. ' +
+            (missing.length
+              ? '<b>' + missing.length + ' image(s) this content points at are not in the file</b>, so ' +
+                'those will show as broken until they are restored. A settings backup taken before ' +
+                'this version carried no images at all — take a fresh one, or upload the matching ' +
+                'data JSON, which carries every stored file. '
+              : '') +
+            'Provider keys are not carried in a backup — set those on the Setup Wizard. Reloading…',
+            !missing.length);
       /* Every write above just went through on this session's own token —
          the reload is to pick up the new content, not because anything
          about the session is in doubt. Say so, so the boot sequence keeps
@@ -32046,25 +32502,7 @@ amort('Gauges &amp; Inspection Equipment', c.gauges, 'Gauge cost') +
          and table rows that point at them. One unreadable file is skipped
          and named rather than failing the whole export. */
       var assetErrs = [];
-      dump.assets = [];
-      try {
-        var assetList = (await C.api('/api/assets')).assets || [];
-        for (var asi = 0; asi < assetList.length; asi++) {
-          var am = assetList[asi];
-          try {
-            var ares = await fetch('/api/assets?id=' + encodeURIComponent(am.id));
-            if (!ares.ok) throw new Error('HTTP ' + ares.status);
-            var ablob = await ares.blob();
-            var adata = await new Promise(function(res2, rej2){
-              var fr = new FileReader();
-              fr.onload = function(){ res2(fr.result); };
-              fr.onerror = function(){ rej2(new Error('could not be read back')); };
-              fr.readAsDataURL(ablob);
-            });
-            dump.assets.push({ id: am.id, mime: am.mime, bytes: am.bytes, dataUrl: adata });
-          } catch(e){ assetErrs.push((am.id||'?') + ': ' + e.message); }
-        }
-      } catch(e){ assetErrs.push('could not list stored files: ' + e.message); }
+      dump.assets = await bkFetchAssets(null, assetErrs);   // null = every stored file
       bkDownload('idms-data', dump);
       var assetBytes = dump.assets.reduce(function(t, a){ return t + (a.bytes||0); }, 0);
       bkSay('Data downloaded — ' + dump.parts.length + ' part(s), ' + dump.docs.length + ' document(s), ' +

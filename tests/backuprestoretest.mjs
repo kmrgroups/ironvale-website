@@ -275,7 +275,10 @@ function makeServer(state) {
       if (body.action === 'logout') { state.liveTokens.delete(tok); return ok({}); }
       return ok({});
     }
-    if (url.startsWith('/api/content')) return method === 'POST' ? ok({}) : ok({ data: {} });
+    if (url.startsWith('/api/content')) {
+      if (method === 'POST') { state.contentPosts = state.contentPosts || []; state.contentPosts.push(body); return ok({}); }
+      return ok({ data: state.content || {} });
+    }
     if (url.startsWith('/api/settings')) return ok({ settings: {} });
 
     if (url.startsWith('/api/device')) {
@@ -297,6 +300,7 @@ function makeServer(state) {
       if (what === 'parts') return pagedOk(state.parts || [], 'parts', q);
       if (what === 'docs') return pagedOk(state.docs || [], 'docs', q);
       if (what === 'serial') return ok({ counters: state.counters || [] });
+      if (what === 'settings') return ok({ settings: state.idmsSettings || {} });
       return ok({});
     }
 
@@ -423,6 +427,115 @@ async function openTab(state) {
     JSON.stringify(dl && dl.devices));
   check('the on-screen message names how many devices were included',
     /2 registered attendance device/.test(A.$('bk-msg').innerHTML), A.$('bk-msg').innerHTML);
+}
+
+/* ---- The settings half: one real defect, and one thing made honest ----
+
+   THE DEFECT. Branding and website images came back broken. site_content holds
+   only REFERENCES to pictures (/api/assets?id=…) while the bytes live in the
+   assets table, which flushTable() puts in the DATA scope — so restoring a
+   settings backup brought back every reference and none of the images, and the
+   public site came up with broken pictures with nothing explaining why. The
+   settings file now carries the files its own content points at. Proved by
+   reintroducing it: with the assets left out, the three image checks below
+   fail and the rest pass.
+
+   THE OTHER. The export read `idmsSettings: settings` — a module-level
+   variable belonging to the home screen rather than anything this function
+   owns. It is filled during boot, so it mostly worked, and the check below
+   would NOT have caught the old code; that was established by trying. It is
+   read fresh now because a boot-time snapshot goes stale as soon as a setting
+   is saved without a reload, which the invoice screen already works around by
+   patching that same variable by hand. The checks below pin the fresh read so
+   nobody reintroduces the dependency, not a bug they ever saw. */
+{
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
+  const jpg = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==';
+  const state = { token: 'TOK-EXPORT-ADMIN-2', liveTokens: new Set(), calls: [], devices: [],
+    /* the real shape: the logo and a capability image are references, not bytes */
+    content: {
+      company: { legalName: 'Test Mfg', letterheadLogo: '/api/assets?id=logo123' },
+      capabilities: [{ id: 'c1', title: 'CNC turning', img: '/api/assets?id=capA' }],
+      heroHeadline: 'no image in this one'
+    },
+    idmsSettings: { print_settings: { size: 'A4' }, invoice_settings: { upi: 'x@y' },
+                    cnc_gateway: { machines: [] } },
+    /* drawing789 belongs to a part, not to the website — it must NOT be pulled
+       into the settings file just because it is in the same table */
+    assets: [
+      { id: 'logo123', mime: 'image/png', bytes: 20, dataUrl: png },
+      { id: 'capA', mime: 'image/jpeg', bytes: 18, dataUrl: jpg },
+      { id: 'drawing789', mime: 'image/jpeg', bytes: 18, dataUrl: jpg }
+    ] };
+  const A = await openTab(state);
+  A.click('bk-exp-admin');
+
+  await wait(500);
+  const dl = A.lastDownload();
+  check('the settings export reads the settings table at export time, not at boot',
+    state.calls.some(c => c.method === 'GET' && c.url.includes('what=settings')));
+  check('…and the settings themselves are in the file, not an empty object',
+    dl && dl.idmsSettings && Object.keys(dl.idmsSettings).length === 3,
+    JSON.stringify(dl && dl.idmsSettings));
+  check('…including one a screen would be broken without (print settings)',
+    dl && dl.idmsSettings.print_settings && dl.idmsSettings.print_settings.size === 'A4');
+  check('the settings file carries the images its own content points at',
+    dl && Array.isArray(dl.assets) && dl.assets.length === 2,
+    JSON.stringify(dl && (dl.assets || []).map(a => a.id)));
+  check('…the company logo, by its original id and with real bytes',
+    dl && dl.assets.some(a => a.id === 'logo123' && a.dataUrl === png));
+  check('…and an image referenced from deep inside an array of sections',
+    dl && dl.assets.some(a => a.id === 'capA'));
+  check('a part drawing is NOT dragged into the settings file — it is data',
+    dl && !dl.assets.some(a => a.id === 'drawing789'));
+  check('the message says how many images travelled with the settings',
+    /2 branding\/website image/.test(A.$('bk-msg').innerHTML), A.$('bk-msg').innerHTML);
+}
+
+/* ---- Restoring a settings file puts those images back under their own ids,
+   and an older file that has none says so rather than leaving broken
+   pictures unexplained ---- */
+{
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
+  const state = { token: 'TOK-RESTORE-IMG', liveTokens: new Set(), calls: [] };
+  const A = await openTab(state);
+  A.queueFile({
+    scope: 'settings',
+    content: { company: { legalName: 'Test Mfg', letterheadLogo: '/api/assets?id=logo123' } },
+    idmsSettings: { print_settings: { size: 'A4' } },
+    assets: [{ id: 'logo123', mime: 'image/png', bytes: 20, dataUrl: png }]
+  });
+  A.click('bk-imp-admin');
+  await wait(700);
+  const posts = state.assetPosts || [];
+  check('a settings restore writes the image back',
+    posts.some(p => p.id === 'logo123'), JSON.stringify(posts.map(p => p.id)));
+  check('…under its ORIGINAL id, so the reference in the content still resolves',
+    posts.some(p => p.id === 'logo123' && p.dataUrl === png));
+  check('the idms settings in the file are written too',
+    state.calls.some(c => c.method === 'POST' && c.url.startsWith('/api/idms')));
+  check('the message counts the images it restored',
+    /including 1 branding\/website image/.test(A.$('bk-msg').innerHTML), A.$('bk-msg').innerHTML);
+}
+
+{
+  /* the file that caused the original report: references, no images */
+  const state = { token: 'TOK-RESTORE-OLDFILE', liveTokens: new Set(), calls: [] };
+  const A = await openTab(state);
+  A.queueFile({
+    scope: 'settings',
+    content: { company: { legalName: 'Test Mfg', letterheadLogo: '/api/assets?id=logo123' },
+               capabilities: [{ id: 'c1', img: '/api/assets?id=capA' }] },
+    idmsSettings: {}
+  });
+  A.click('bk-imp-admin');
+  await wait(700);
+  const msg = A.$('bk-msg').innerHTML;
+  check('an older settings file with no images is named as such, not left to be discovered',
+    /2 image\(s\) this content points at are not in the file/.test(msg), msg);
+  check('…and it says where the bytes actually are', /data JSON/.test(msg));
+  check('…and it is not reported as a clean success', !/note good/.test(A.$('bk-msg').className),
+    A.$('bk-msg').className);
 }
 
 /* ---- Settings restore: a device with no key on this deployment gets a

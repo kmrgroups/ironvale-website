@@ -1,0 +1,1 @@
+{"mcpServers":{"ironvale":{"url":"https://YOUR-IRONVALE-DOMAIN/api/mcp","headers":{"X-MCP-Key":"\${IRONVALE_MCP_KEY}"}}}}

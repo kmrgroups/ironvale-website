@@ -1,18 +1,5 @@
 // Vercel Hobby-compatible single-function API dispatcher.
-import ai from '../server/routes/ai.js';
-import assets from '../server/routes/assets.js';
-import auth from '../server/routes/auth.js';
-import cnc from '../server/routes/cnc.js';
-import content from '../server/routes/content.js';
-import device from '../server/routes/device.js';
-import health from '../server/routes/health.js';
-import hr from '../server/routes/hr.js';
-import idms from '../server/routes/idms.js';
-import mcp from '../server/routes/mcp.js';
-import notify from '../server/routes/notify.js';
-import orders from '../server/routes/orders.js';
-import rfqs from '../server/routes/rfqs.js';
-import settings from '../server/routes/settings.js';
+// Route handlers are loaded lazily so one optional module cannot crash every API route.
 
 export const config = { api: { bodyParser: false } };
 
@@ -27,13 +14,31 @@ async function prepareJsonBody(req) {
   req.body = raw ? JSON.parse(raw) : {};
 }
 
-const handlers = { ai, assets, auth, cnc, content, device, health, hr, idms, mcp, notify, orders, rfqs, settings };
+async function getHandler(name) {
+  switch (name) {
+    case 'ai': return (await import('../server/routes/ai.js')).default;
+    case 'assets': return (await import('../server/routes/assets.js')).default;
+    case 'auth': return (await import('../server/routes/auth.js')).default;
+    case 'cnc': return (await import('../server/routes/cnc.js')).default;
+    case 'content': return (await import('../server/routes/content.js')).default;
+    case 'device': return (await import('../server/routes/device.js')).default;
+    case 'health': return (await import('../server/routes/health.js')).default;
+    case 'hr': return (await import('../server/routes/hr.js')).default;
+    case 'idms': return (await import('../server/routes/idms.js')).default;
+    case 'mcp': return (await import('../server/routes/mcp.js')).default;
+    case 'notify': return (await import('../server/routes/notify.js')).default;
+    case 'orders': return (await import('../server/routes/orders.js')).default;
+    case 'rfqs': return (await import('../server/routes/rfqs.js')).default;
+    case 'settings': return (await import('../server/routes/settings.js')).default;
+    default: return null;
+  }
+}
 
 function routeName(req) {
   const q = req.query || {};
-  if (q.route) return String(q.route).replace(/^\/+|\/+$/g, '').split('/')[0];
+  if (q.route) return String(q.route).replace(/^\\/+|\\/+$/g, '').split('/')[0];
   const path = String(req.url || '').split('?')[0];
-  const m = path.match(/^\/api\/([^/]+)/i);
+  const m = path.match(/^\\/api\\/([^/]+)/i);
   return m ? m[1].toLowerCase() : '';
 }
 
@@ -46,7 +51,13 @@ function queryWithRouteRemoved(req) {
 
 export default async function handler(req, res) {
   const name = routeName(req);
-  const fn = handlers[name];
+  let fn;
+  try {
+    fn = await getHandler(name);
+  } catch (e) {
+    console.error('API MODULE LOAD ERROR:', name, e);
+    return res.status(500).json({ ok: false, error: `API module failed to load: ${name || 'unknown route'}` });
+  }
   if (!fn) return res.status(404).json({ ok: false, error: `Unknown API route: ${name || 'missing'}` });
   if (name !== 'device' && name !== 'health') {
     try { await prepareJsonBody(req); }

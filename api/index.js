@@ -1,7 +1,4 @@
 // Vercel Hobby-compatible single-function API dispatcher.
-// All application API routes are implemented in server/routes/*.js so Vercel
-// sees exactly one Serverless Function. Route handlers keep their existing
-// request/response contracts; this file only selects the correct handler.
 import ai from '../server/routes/ai.js';
 import assets from '../server/routes/assets.js';
 import auth from '../server/routes/auth.js';
@@ -11,6 +8,7 @@ import device from '../server/routes/device.js';
 import health from '../server/routes/health.js';
 import hr from '../server/routes/hr.js';
 import idms from '../server/routes/idms.js';
+import mcp from '../server/routes/mcp.js';
 import notify from '../server/routes/notify.js';
 import orders from '../server/routes/orders.js';
 import rfqs from '../server/routes/rfqs.js';
@@ -29,7 +27,7 @@ async function prepareJsonBody(req) {
   req.body = raw ? JSON.parse(raw) : {};
 }
 
-const handlers = { ai, assets, auth, cnc, content, device, health, hr, idms, notify, orders, rfqs, settings };
+const handlers = { ai, assets, auth, cnc, content, device, health, hr, idms, mcp, notify, orders, rfqs, settings };
 
 function routeName(req) {
   const q = req.query || {};

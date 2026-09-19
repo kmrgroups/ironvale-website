@@ -1,7 +1,7 @@
 // HR module: employee master, pay runs, audit trail.
 // Payroll is deliberately Draft → Reviewed → Approved. Nothing is ever
 // silently final, and every approval is written to an immutable audit log.
-import { sql, ensureTables, checkToken, checkRole, cors, readBody, tokenUser } from '../server/_db.js';
+import { sql, ensureTables, checkToken, checkRole, cors, readBody, tokenUser } from '../_db.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '6mb' } } };
 

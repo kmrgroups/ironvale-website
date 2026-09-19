@@ -1,15 +1,57 @@
 {
-  "version":"2.0.0",
-  "defaultAutonomyLevel":2,
-  "levels":{
-    "0":"read_and_explain",
-    "1":"read_and_recommend",
-    "2":"create_reviewable_draft",
-    "3":"execute_preapproved_low_risk_internal_action",
-    "4":"autonomous_controlled_operation_not_enabled"
+  "version": "2.0.0",
+  "defaultAutonomyLevel": 2,
+  "levels": {
+    "0": "read_and_explain",
+    "1": "read_and_recommend",
+    "2": "create_reviewable_draft",
+    "3": "execute_preapproved_low_risk_internal_action",
+    "4": "autonomous_controlled_operation_not_enabled"
   },
-  "allowedWithoutAdditionalApproval":["read_records","calculate_metrics","rank_findings","write_agent_run","create_ai_proposed_task"],
-  "requiresNamedHumanApproval":["approve_ncr","close_ncr","approve_8d","approve_pfmea","approve_control_plan","approve_ppap","release_production","release_dispatch","release_invoice","send_external_customer_message","release_quotation","create_purchase_order","change_supplier_status","change_employee_status","post_payroll","post_gcode","change_machine_program","stop_machine","change_quality_acceptance_status"],
-  "neverAllowedByAgent":["password_change","delete_quality_record","delete_part","delete_audit_record","release_gcode","bypass_quality_hold","bypass_approval","alter_audit_history"],
-  "principles":["The agent looks; a person decides.","Rules are arithmetic; AI ranks and explains.","Everything an agent writes is reviewable and auditable."]
+  "allowedWithoutAdditionalApproval": [
+    "read_records",
+    "calculate_metrics",
+    "rank_findings",
+    "write_agent_run",
+    "create_ai_proposed_task",
+    "create_reviewable_ai_proposal",
+    "save_ai_proposal"
+  ],
+  "requiresNamedHumanApproval": [
+    "approve_ncr",
+    "close_ncr",
+    "approve_8d",
+    "approve_pfmea",
+    "approve_control_plan",
+    "approve_ppap",
+    "release_production",
+    "release_dispatch",
+    "release_invoice",
+    "send_external_customer_message",
+    "release_quotation",
+    "create_purchase_order",
+    "change_supplier_status",
+    "change_employee_status",
+    "post_payroll",
+    "post_gcode",
+    "change_machine_program",
+    "stop_machine",
+    "change_quality_acceptance_status"
+  ],
+  "neverAllowedByAgent": [
+    "password_change",
+    "delete_quality_record",
+    "delete_part",
+    "delete_audit_record",
+    "release_gcode",
+    "bypass_quality_hold",
+    "bypass_approval",
+    "alter_audit_history"
+  ],
+  "principles": [
+    "The agent looks; a person decides.",
+    "Rules are arithmetic; AI ranks and explains.",
+    "Everything an agent writes is reviewable and auditable.",
+    "Ruflo coordinates; IRONVALE remains the source of truth."
+  ]
 }

@@ -526,6 +526,48 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
 .bu-summary b{font-size:20px;display:block}
 .bu-summary .ok b{color:#1F9D6B}
 .bu-summary .bad b{color:#B03A2E}
+/* ---- RFQ costing sheet (editable) ---- */
+.rc-sub{margin:16px 0 6px;padding-top:10px;border-top:1px solid var(--line,#d8dde6);font-weight:700;
+  font-size:12px;color:var(--navy);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.rc-sub .hint{font-weight:400}
+table.rc-t{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+table.rc-t th{background:#eef2f7;text-align:left;font-size:11px;color:#41567E;padding:5px 6px;
+  border:1px solid #c9d1dc;white-space:nowrap}
+table.rc-t td{border:1px solid #c9d1dc;padding:3px 4px;vertical-align:middle}
+table.rc-t td.r,table.rc-t th.r{text-align:right}
+table.rc-t td.c,table.rc-t th.c{text-align:center}
+table.rc-t input,table.rc-t select{width:100%;padding:4px 5px;font-size:12px;border:1px solid transparent;
+  background:transparent;border-radius:4px}
+table.rc-t input:focus,table.rc-t select:focus{border-color:var(--gold,#c8962e);background:#fff;outline:none}
+table.rc-t input.num{text-align:right;font-variant-numeric:tabular-nums}
+.rc-del{border:none;background:none;color:#B03A2E;cursor:pointer;font-size:15px;line-height:1;padding:2px 6px}
+.rc-add{margin-top:6px;font-size:12px;padding:5px 12px}
+/* where a price came from — the whole point of showing it is that a market
+   estimate and a company rate must never look the same on screen */
+.rc-src{font-size:10.5px;padding:1px 7px;border-radius:100px;white-space:nowrap;display:inline-block}
+.rc-src.book{background:#e6f5ee;color:#14654a}
+.rc-src.market{background:#fdf1dc;color:#8a5f10}
+.rc-src.none{background:#f0f2f5;color:#69707a}
+.rc-break{margin-top:12px;margin-left:auto;max-width:360px;font-size:12.5px}
+.rc-break > div{display:flex;justify-content:space-between;gap:16px;padding:3px 0}
+.rc-break .sep{border-top:1px solid #b9c6d8;margin-top:5px;padding-top:6px;font-weight:700;color:var(--navy)}
+.rc-break .grand{border-top:2px solid var(--navy,#0B2A5B);margin-top:6px;padding-top:8px;
+  font-weight:800;font-size:15px;color:var(--navy)}
+.rc-break .minp{color:#69707a;font-size:11.5px}
+/* manual machine-hour rate: when it is on, the derived panel beside it is
+   deliberately disabled rather than hidden, so it stays visible for
+   comparison while it plainly is not the figure being used */
+.rc-mhr{display:flex;gap:14px;align-items:center;flex-wrap:wrap;border:1px solid #c9d1dc;
+  border-radius:10px;padding:10px 12px;margin-top:8px;background:#fbfcfe}
+.rc-sw{position:relative;display:inline-block;width:42px;height:23px;flex:0 0 auto}
+.rc-sw input{opacity:0;width:0;height:0;position:absolute}
+.rc-sw span{position:absolute;inset:0;background:#c0c6cf;border-radius:100px;transition:background .15s;cursor:pointer}
+.rc-sw span::before{content:"";position:absolute;height:17px;width:17px;left:3px;top:3px;background:#fff;
+  border-radius:50%;transition:transform .15s}
+.rc-sw input:checked + span{background:var(--gold,#c8962e)}
+.rc-sw input:checked + span::before{transform:translateX(19px)}
+.rc-sw input:focus-visible + span{outline:2px solid var(--navy,#0B2A5B);outline-offset:2px}
+.rc-off{opacity:.45;pointer-events:none}
 @media(max-width:600px){.cnc-live-grid{grid-template-columns:1fr}.cnc-kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -2222,11 +2264,74 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       </div>
     </div>
 
+    <div class="panel" data-panel="rfq_new">
+      <div class="card">
+        <h4>New Enquiry</h4>
+        <div class="hint" style="margin-bottom:10px;">For an enquiry that did not come through the
+          website — taken on the phone, handed over at an exhibition, or passed on by somebody in the
+          trade. It becomes the same record the website form creates, with the same reference, and it
+          lands in the
+          <a data-goto="rfq_pipeline" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">RFQ Pipeline</a>
+          alongside everything else, so the drawing reading, the costing and the quotation all work on
+          it unchanged.</div>
+
+        <div class="sub">Customer</div>
+        <div class="row four">
+          <div><label>Contact name *</label><input id="rn-name" placeholder="who you spoke to"></div>
+          <div><label>Company</label><input id="rn-company"></div>
+          <div><label>Email *</label><input id="rn-email" type="email"></div>
+          <div><label>Phone</label><input id="rn-phone"></div>
+        </div>
+
+        <div class="sub" style="margin-top:12px;">Where it came from</div>
+        <div class="row four">
+          <div><label>Enquiry source</label><select id="rn-source">
+            <option value="Direct">Direct approach</option>
+            <option value="Referral">Referred by someone</option>
+            <option value="Exhibition">Exhibition or trade show</option>
+            <option value="Repeat">Existing customer</option>
+            <option value="Other">Other</option>
+          </select></div>
+          <div id="rn-ref-by-wrap" style="display:none;"><label>Referred by</label>
+            <input id="rn-ref-by" placeholder="name, and their company"></div>
+          <div><label>Taken by</label><input id="rn-takenby" placeholder="your name"></div>
+          <div><label>Required by</label><input id="rn-needby" type="date"></div>
+        </div>
+
+        <div class="sub" style="margin-top:12px;">What they want</div>
+        <div class="row four">
+          <div><label>Part or description *</label><input id="rn-part" placeholder="bush, shaft, housing…"></div>
+          <div><label>Their part number</label><input id="rn-partno"></div>
+          <div><label>Drawing number</label><input id="rn-drawing"></div>
+          <div><label>Quantity</label><input id="rn-qty" placeholder="e.g. 500"></div>
+        </div>
+        <div style="margin-top:8px;"><label>Full requirement</label>
+          <textarea id="rn-msg" rows="4" placeholder="material, tolerances, finish, delivery — everything they said"></textarea></div>
+
+        <div class="row four" style="margin-top:8px;">
+          <div><label>Drawing file</label><input type="file" id="rn-file" accept=".pdf,.png,.jpg,.jpeg,.webp,.dxf"></div>
+          <div style="align-self:end;"><span class="hint" id="rn-file-msg">A drawing is what makes the
+            costing possible — attach it now if you have it.</span></div>
+          <div style="align-self:end;"><label style="display:flex;gap:8px;align-items:center;font-weight:400;">
+            <input type="checkbox" id="rn-ack" style="width:auto;">
+            <span>Email an acknowledgement to the customer</span></label></div>
+          <div style="align-self:end;"><span class="hint">Off by default — you have just spoken to them.</span></div>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn gold" id="rn-save">Create enquiry</button>
+          <button class="btn" id="rn-clear">Clear the form</button>
+        </div>
+        <div class="note" id="rn-msg-box" style="display:none;"></div>
+      </div>
+    </div>
+
     <div class="panel" data-panel="rfq_pipeline">
       <div class="card">
         <h4>RFQ Pipeline</h4>
-        <div class="hint" style="margin-bottom:10px;">Every enquiry the website has received, and
-          where it stands. Reading a drawing, working out a cost and drafting the quotation are all
+        <div class="hint" style="margin-bottom:10px;">Every enquiry received, from the website and from
+          <a data-goto="rfq_new" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">New Enquiry</a>,
+          and where each one stands. Reading a drawing, working out a cost and drafting the quotation are all
           native here — the costing arithmetic runs entirely on your own figures from
           <a data-goto="admin_quoting" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Quoting &amp; Costing Setup</a>;
           the AI proposes the route and the times, never a price.
@@ -5419,6 +5524,11 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
       ['bulk_upload','⬆','Bulk Upload',1]]],
     ['marketing','📣','Marketing','Enquiry to order',[
       ['dash_marketing','📊','Marketing Dashboard',1],
+      /* Not every enquiry arrives through the website. One taken on the phone,
+         handed over at an exhibition or passed on by somebody in the trade has
+         to enter the same pipeline as the rest, or it is tracked in a notebook
+         and lost. This writes the identical record the website form writes. */
+      ['rfq_new','📝','New Enquiry (RFQ)',1],
       ['rfq_pipeline','📨','RFQ Pipeline',1]]],
     ['npd','🗂','NPD','New product development',[
       ['dash_npd','📊','NPD Dashboard',1],
@@ -5781,6 +5891,7 @@ table.iv-grid tr.tot td{font-weight:700;background:#f7f9fc}
     if (s === 'admin_content') loadWebsiteContent();
     if (s === 'admin_theme') loadThemeScreen();
     if (s === 'rfq_pipeline') loadRfqPipeline();
+    if (s === 'rfq_new') loadRfqNew();
     if (s === 'dwm')                   loadDwm();
     if (s === 'task_list')             loadTasks();
     if (s === 'users')                 loadUsers();
@@ -28237,6 +28348,22 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     var qty = Math.max(1, C.num(c.qty));
     var batch = Math.max(1, C.num(c.batchQty) || qty);
     var mat = c.material || {};
+    /* Manual machine-hour rate. Asked for directly: an estimator who already
+       knows what a machine actually costs per hour — from a customer's own
+       agreed rate card, or from a rate the works has always quoted — must be
+       able to type it, and the derived panel is then switched off rather
+       than left on screen arguing with it. Per-operation first (different
+       machines cost different money), falling back to one rate for the whole
+       job, and only ever consulted while manualMhr is on: turning it off
+       restores the cost-base figure untouched, so nothing is lost either way. */
+    var manualOn = !!c.manualMhr;
+    var mhrFor = function(o, derived){
+      if (!manualOn) return derived;
+      var per = C.num(o && o.manualRate);
+      if (per > 0) return per;
+      var all = C.num(c.manualMhrRate);
+      return all > 0 ? all : derived;
+    };
 
     var blank = C.num(mat.blankWeight) || C.num(mat.finishWeight);
     var matGross = blank * C.num(mat.rate);
@@ -28250,7 +28377,8 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     var machineCost = 0, labourCost = 0, setupCost = 0, totalCycleMin = 0;
     var ops = (c.operations||[]).map(function(o){
       var m = byId(machines, o.machineId);
-      var mr = m ? rcMachineRate(m, b, machines).total : 0;
+      var derivedRate = m ? rcMachineRate(m, b, machines).total : 0;
+      var mr = mhrFor(o, derivedRate);
       var l = byId(grades, o.labourGradeId);
       var lr = l ? rcLabourRate(l) : rcDefaultLabourRate(grades);
       var cyc = C.num(o.cycleMin);
@@ -28260,11 +28388,18 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
       var sc = (setupPerPart/60) * mr;
       machineCost += mc; labourCost += lc; setupCost += sc; totalCycleMin += cyc;
       return Object.assign({}, o, { machineName: m ? m.name : '(not matched)', machineRate:mr,
+        derivedRate:derivedRate, rateIsManual: manualOn && mr !== derivedRate,
         labourRate:lr, machineCost:mc, labourCost:lc, setupCost:sc, setupPerPart:setupPerPart });
     });
 
+    /* Inspection is the one head that can arrive two ways: as minutes per
+       piece costed at the inspector's own labour rate (what the AI proposes),
+       or as a rupee figure the estimator types straight in. A typed figure
+       wins, because somebody typing a number here is overriding on purpose. */
     var inspGrade = (grades||[]).filter(function(l){ return /inspect/i.test(l.grade); })[0];
-    var inspection = (C.num(c.inspectionMinPerPart)/60) * (inspGrade ? rcLabourRate(inspGrade) : rcDefaultLabourRate(grades));
+    var inspRate = inspGrade ? rcLabourRate(inspGrade) : rcDefaultLabourRate(grades);
+    var inspFromMin = (C.num(c.inspectionMinPerPart)/60) * inspRate;
+    var inspection = C.num(c.inspectionPerPart) > 0 ? C.num(c.inspectionPerPart) : inspFromMin;
     var special = (c.specialProcesses||[]).reduce(function(t,s){ return t + C.num(s.ratePerPart); }, 0);
 
     var toolingList = rcListCost(c.tooling), consumList = rcListCost(c.consumables);
@@ -28272,8 +28407,23 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     var consumables = consumList > 0 ? consumList : C.num(c.consumablesPerPart);
     var packaging = C.num(c.packaging && c.packaging.costPerPart) || C.num(c.packagingPerPart);
     var freight = C.num(c.freight && c.freight.costPerPart) || C.num(c.freightPerPart);
+    /* Jigs, fixtures and gauges are amortised exactly the way tooling already
+       is — unit cost over the life it is good for — because that is what they
+       are: a one-off spend recovered across the pieces it makes or checks.
+       Costing them at full value against a single piece is how a small order
+       ends up quoted at ten times what it should be. rcListCost() does the
+       division and is deliberately shared, so all three heads agree. */
+    var jigList = rcListCost(c.jigFixtures), gaugeList = rcListCost(c.gauges);
+    var jigFixture = jigList > 0 ? jigList : C.num(c.jigFixturePerPart);
+    var gauge = gaugeList > 0 ? gaugeList : C.num(c.gaugePerPart);
+    /* Logistics is inward and in-plant movement — the lorry that brings the
+       bar in, the trip to the sub-contractor and back. Freight above stays
+       what it always was: getting the finished part to the customer. They
+       are two different costs and merging them hides one of them. */
+    var logistics = C.num(c.logistics && c.logistics.costPerPart) || C.num(c.logisticsPerPart);
 
-    var direct = materialCost+machineCost+labourCost+setupCost+inspection+special+tooling+consumables+packaging+freight;
+    var direct = materialCost+machineCost+labourCost+setupCost+inspection+special+tooling+
+      consumables+packaging+freight+jigFixture+gauge+logistics;
     var scrap = direct * C.num(b.scrapPct)/100;
     var withScrap = direct + scrap;
     var admin = withScrap * C.num(b.adminPct)/100;
@@ -28286,6 +28436,9 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     return { qty:qty, batch:batch, ops:ops, materialCost:materialCost, machineCost:machineCost,
       labourCost:labourCost, setupCost:setupCost, inspection:inspection, special:special,
       tooling:tooling, consumables:consumables, packaging:packaging, freight:freight,
+      jigFixture:jigFixture, gauge:gauge, logistics:logistics,
+      inspectionFromMin:inspFromMin, inspectionTyped: C.num(c.inspectionPerPart) > 0,
+      manualMhr:manualOn,
       direct:direct, scrap:scrap, admin:admin, finance:finance, contingency:contingency,
       totalCost:totalCost, profit:profit, sellingPrice:sellingPrice, totalCycleMin:totalCycleMin,
       minPrice: totalCost * 1.03, lineTotal: sellingPrice * qty };
@@ -28393,28 +28546,7 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
       h += '<div class="note bad">'+esc(cs.error)+'</div>' +
         '<button class="btn ai-btn rp-cost" data-ref="'+esc(r.ref)+'" style="margin-top:8px;">Try again</button>';
     } else {
-      var t = rcComputeCosting(cs, rfqCfg);
-      h += '<div class="stat">' + [['Quantity', C.qty(t.qty)], ['Cost/piece', C.inr(t.totalCost)],
-        ['Selling/piece', C.inr(t.sellingPrice)], ['Line total', C.inr(t.lineTotal)]]
-        .map(function(s){ return '<div class="b"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>'; }).join('') + '</div>' +
-        '<div class="scroll-x" style="margin-top:8px;"><table class="t"><thead><tr><th class="c">Op</th><th>Process</th>' +
-        '<th>Machine</th><th class="r">Setup min</th><th class="r">Cycle min</th><th class="r">Machine</th>' +
-        '<th class="r">Labour</th><th class="r">Total</th></tr></thead><tbody>' +
-        (t.ops||[]).map(function(o){
-          return '<tr><td class="c">'+esc(o.op)+'</td><td>'+esc(o.process||'')+'</td>' +
-            '<td>'+esc(o.machineName)+'</td><td class="r">'+C.qty(o.setupMin)+'</td>' +
-            '<td class="r">'+C.qty(o.cycleMin)+'</td><td class="r">'+C.inr(o.machineCost)+'</td>' +
-            '<td class="r">'+C.inr(o.labourCost)+'</td>' +
-            '<td class="r"><b>'+C.inr(o.machineCost+o.labourCost+o.setupCost)+'</b></td></tr>';
-        }).join('') + '</tbody></table></div>' +
-        '<div class="hint" style="margin-top:6px;">Material '+C.inr(t.materialCost)+' · tooling '+C.inr(t.tooling)+
-        ' · consumables '+C.inr(t.consumables)+' · packaging '+C.inr(t.packaging)+' · freight '+C.inr(t.freight)+
-        ' · scrap '+C.inr(t.scrap)+' · admin '+C.inr(t.admin)+' · profit '+C.inr(t.profit)+'</div>' +
-        ((cs.assumptions||[]).length ? '<div class="note" style="margin-top:8px;"><b>Assumptions the AI had to make:</b>' +
-          '<ul style="margin:6px 0 0 18px;">'+cs.assumptions.map(function(a){ return '<li>'+esc(a)+'</li>'; }).join('')+'</ul></div>' : '') +
-        '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">' +
-        '<button class="btn ai-btn rp-cost" data-ref="'+esc(r.ref)+'">Re-plan route</button>' +
-        '<button class="btn rp-costsheet" data-ref="'+esc(r.ref)+'">Print cost sheet</button></div>';
+      h += rfqCostingHtml(r);
     }
 
     /* ---- quotation ---- */
@@ -28443,6 +28575,452 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
       RFQ_STAGES.map(function(s){ return '<option'+((r.status||'Received')===s?' selected':'')+'>'+s+'</option>'; }).join('') +
       '</select></div><div style="align-self:end;"><button class="btn del rp-del" data-ref="'+esc(r.ref)+'">Delete</button></div></div>' +
       '<div class="note" id="rp-msg-'+esc(r.ref)+'" style="display:none;"></div></div>';
+    return h;
+  }
+
+  /* ---------------- New Enquiry (staff-entered RFQ) ----------------
+     The same record the public form writes, created by somebody in the
+     office. Deliberately the same shape and the same reference series: an
+     enquiry taken on the phone is not a lesser kind of enquiry, and the
+     pipeline, the triage rules and the costing must not be able to tell the
+     difference. What it adds is where the enquiry came from, which is the one
+     thing a website submission cannot know — and which is what tells the
+     company later that half its work arrives by referral. */
+  var rnFile = null;
+  function rnRef(){
+    return 'RFQ-' + Date.now().toString(36).toUpperCase().slice(-4) +
+      Math.random().toString(36).slice(2, 4).toUpperCase();
+  }
+  function loadRfqNew(){
+    var say = noteWriter(document.getElementById('rn-msg-box'));
+    document.getElementById('rn-msg-box').style.display = 'none';
+    var who = document.getElementById('rn-takenby');
+    if (!who.value) who.value = (me && (me.name || me.user)) || '';
+    rnUpdateSource();
+  }
+  function rnUpdateSource(){
+    var v = document.getElementById('rn-source').value;
+    document.getElementById('rn-ref-by-wrap').style.display = (v === 'Referral') ? '' : 'none';
+  }
+  function rnClear(){
+    ['rn-name','rn-company','rn-email','rn-phone','rn-ref-by','rn-needby','rn-part','rn-partno',
+     'rn-drawing','rn-qty','rn-msg'].forEach(function(id){ document.getElementById(id).value = ''; });
+    document.getElementById('rn-source').value = 'Direct';
+    document.getElementById('rn-ack').checked = false;
+    document.getElementById('rn-file').value = '';
+    document.getElementById('rn-file-msg').textContent = 'A drawing is what makes the costing possible ' +
+      '— attach it now if you have it.';
+    rnFile = null;
+    rnUpdateSource();
+    document.getElementById('rn-msg-box').style.display = 'none';
+  }
+
+  async function rnSaveEnquiry(btn){
+    var say = noteWriter(document.getElementById('rn-msg-box'));
+    var g = fieldVal;
+    var name = g('rn-name'), email = g('rn-email'), part = g('rn-part');
+    if (!name) return say('Say who the enquiry came from — a record with no name against it cannot be followed up.');
+    if (!email) return say('An email address is needed. It is how the quotation gets to them, and the ' +
+      'pipeline chases an enquiry that has gone quiet by email.');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say('That email address does not look right: ' + esc(email));
+    if (!part) return say('Say what they want made, even roughly. "Part or description" is what the ' +
+      'costing and the quotation are both built around.');
+    var source = document.getElementById('rn-source').value;
+    var refBy = g('rn-ref-by');
+    if (source === 'Referral' && !refBy)
+      return say('Say who referred them. A referral nobody can name is the one thing this field exists to capture.');
+
+    btn.disabled = true; btn.textContent = 'Creating…';
+    try {
+      /* The requirement as the customer put it, with the structured bits the
+         staff member typed appended — the drawing reader and the costing both
+         read this text, so anything known at this point belongs in it. */
+      var msg = [g('rn-msg'),
+        g('rn-partno') ? 'Customer part no: ' + g('rn-partno') : '',
+        g('rn-drawing') ? 'Drawing no: ' + g('rn-drawing') : '',
+        g('rn-qty') ? 'Quantity: ' + g('rn-qty') : '',
+        g('rn-needby') ? 'Required by: ' + g('rn-needby') : ''
+      ].filter(Boolean).join('\n');
+
+      var ref = rnRef(), now = new Date().toLocaleString();
+      var rec = { ref:ref, date:now, createdAt:new Date().toISOString(), status:'Received',
+        name:name, company:g('rn-company'), email:email, phone:g('rn-phone'),
+        message:(part + (msg ? '\n' + msg : '')),
+        fileName:(rnFile && rnFile.name) || '', fileUrl:(rnFile && rnFile.url) || '',
+        enteredBy:g('rn-takenby') || ((me && (me.name || me.user)) || ''),
+        enquirySource:source, referredBy:refBy, viaStaff:true,
+        log:[now + ' — enquiry taken by ' + (g('rn-takenby') || 'staff') + ' (' + source.toLowerCase() + ')'] };
+
+      var ack = document.getElementById('rn-ack').checked;
+      var co = rfqCfg.company || {};
+      await C.api('/api/rfqs', { method:'POST', body:JSON.stringify({ rfq:rec,
+        /* acknowledge is off unless asked for: the customer has just been
+           spoken to, and an automatic "we have received your enquiry" minutes
+           later reads as a machine, not a works. */
+        acknowledge: ack,
+        companyName: co.legalName || co.displayName || (C.getProfile()||{}).name || '' }) });
+
+      say('Enquiry <b>' + esc(ref) + '</b> created' + (ack ? ' and acknowledged to ' + esc(email) : '') +
+        '. It is in the RFQ Pipeline now — read the drawing and cost it there.', true);
+      rnClear();
+      document.getElementById('rn-msg-box').innerHTML +=
+        ' <a data-goto="rfq_pipeline" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">Open the pipeline →</a>';
+      wireGoto(document.getElementById('rn-msg-box'));
+    } catch(e){ say('Not created — ' + esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Create enquiry';
+  }
+
+  document.getElementById('rn-source').addEventListener('change', rnUpdateSource);
+  document.getElementById('rn-clear').addEventListener('click', rnClear);
+  document.getElementById('rn-save').addEventListener('click', function(){ rnSaveEnquiry(this); });
+  document.getElementById('rn-file').addEventListener('change', async function(){
+    var f = this.files[0], msg = document.getElementById('rn-file-msg');
+    if (!f) { rnFile = null; return; }
+    msg.textContent = 'Uploading ' + f.name + '…';
+    try {
+      var up = await C.uploadFile(f);
+      rnFile = { name:f.name, url:up.url };
+      msg.innerHTML = 'Attached <b>' + esc(f.name) + '</b>.';
+    } catch(e){ rnFile = null; msg.textContent = 'That file was not attached — ' + e.message; }
+  });
+
+  /* ---------------- the costing sheet, editable ----------------
+     Every figure on this screen can be typed over. The AI's route and its
+     market prices are a starting point, never the answer: an estimator who
+     knows the real tooling price, the real packing cost or the real machine
+     hour rate must be able to put it in without arguing with the software.
+     What the AI supplied and where each price came from stays visible beside
+     the field, so a typed-over figure and a market estimate never look the
+     same. Edits update the totals immediately and are saved on blur. */
+  function rcMoney(n){
+    return ((rfqCfg.quoteCfg||{}).currencySymbol || '₹') + C.rate(n);
+  }
+  function rcSrcChip(src, conf){
+    var s = String(src || '');
+    var cls = /price book|company|your own|agreed/i.test(s) ? 'book' : (s ? 'market' : 'none');
+    return '<span class="rc-src ' + cls + '" title="' + esc(conf || '') + '">' +
+      esc(s || 'no source') + '</span>';
+  }
+  /* one input cell, wired by section/key or by array/index/key */
+  function rcIn(ref, opts){
+    var a = ['class="rc-in' + (opts.num ? ' num' : '') + '"', 'data-ref="' + esc(ref) + '"'];
+    if (opts.sec) a.push('data-sec="' + opts.sec + '"');
+    if (opts.arr) { a.push('data-arr="' + opts.arr + '"'); a.push('data-idx="' + opts.idx + '"'); }
+    a.push('data-k="' + opts.k + '"');
+    if (opts.ph) a.push('placeholder="' + esc(opts.ph) + '"');
+    if (opts.dis) a.push('disabled');
+    return '<input ' + a.join(' ') + ' value="' + esc(opts.v === undefined || opts.v === null ? '' : opts.v) + '">';
+  }
+  function rcField(ref, label, opts){
+    return '<div><label>' + esc(label) + '</label>' + rcIn(ref, opts) + '</div>';
+  }
+  function rcDelBtn(ref, arr, idx){
+    return '<button class="rc-del rc-row-del" data-ref="' + esc(ref) + '" data-arr="' + arr +
+      '" data-idx="' + idx + '" title="Remove this line">×</button>';
+  }
+  function rcAddBtn(ref, arr, label){
+    return '<button class="btn rc-add rc-row-add" data-ref="' + esc(ref) + '" data-arr="' + arr + '">' +
+      esc(label) + '</button>';
+  }
+
+  /* An amortised head — tooling, jigs and fixtures, gauges. All three are the
+     same shape (unit cost recovered over a life), so they share one renderer
+     rather than three that could drift apart. */
+  function rcAmortTable(r, arr, unitLabel, lifeLabel){
+    var ref = r.ref, list = r.costing[arr] || [];
+    return '<div class="scroll-x"><table class="rc-t"><thead><tr><th class="c" style="width:42px">Op</th>' +
+      '<th>Item</th><th>Specification</th><th class="r" style="width:92px">' + esc(unitLabel) + '</th>' +
+      '<th class="r" style="width:86px">' + esc(lifeLabel) + '</th><th class="r" style="width:86px">Cost/pc</th>' +
+      '<th style="width:150px">Price source</th><th style="width:30px"></th></tr></thead><tbody>' +
+      (list.length ? list.map(function(x, i){
+        var per = C.num(x.life) > 0 ? C.num(x.unitCost) / C.num(x.life) : C.num(x.costPerPart);
+        return '<tr><td class="c">' + rcIn(ref, { arr:arr, idx:i, k:'op', v:x.op, num:true }) + '</td>' +
+          '<td>' + rcIn(ref, { arr:arr, idx:i, k:'item', v:x.item }) + '</td>' +
+          '<td>' + rcIn(ref, { arr:arr, idx:i, k:'spec', v:x.spec }) + '</td>' +
+          '<td class="r">' + rcIn(ref, { arr:arr, idx:i, k:'unitCost', v:x.unitCost, num:true }) + '</td>' +
+          '<td class="r">' + rcIn(ref, { arr:arr, idx:i, k:'life', v:x.life, num:true }) + '</td>' +
+          '<td class="r">' + rcMoney(isFinite(per) ? per : 0) + '</td>' +
+          '<td>' + rcIn(ref, { arr:arr, idx:i, k:'source', v:x.source, ph:'where the price came from' }) + '</td>' +
+          '<td class="c">' + rcDelBtn(ref, arr, i) + '</td></tr>';
+      }).join('')
+        : '<tr><td colspan="8" class="hint" style="padding:8px">Nothing listed. A line with a life of ' +
+          '0 is costed at its full cost per piece instead of being amortised.</td></tr>') +
+      '</tbody></table></div>';
+  }
+
+  function rfqCostingHtml(r){
+    var c = r.costing, ref = r.ref, t = rcComputeCosting(c, rfqCfg);
+    var b = rfqCfg.costBase || {};
+    var mat = c.material || {}, pk = c.packaging || {}, fr = c.freight || {}, lg = c.logistics || {};
+    var machineOpts = function(sel){
+      return '<option value="">— pick —</option>' + (rfqCfg.machines||[]).map(function(m){
+        return '<option value="' + esc(m.id) + '"' + (m.id === sel ? ' selected' : '') + '>' + esc(m.name) + '</option>';
+      }).join('');
+    };
+    var labourOpts = function(sel){
+      return (rfqCfg.labourGrades||[]).map(function(g){
+        return '<option value="' + esc(g.id) + '"' + (g.id === sel ? ' selected' : '') + '>' + esc(g.grade) + '</option>';
+      }).join('');
+    };
+
+    var h = '<div class="stat" id="rc-kpi-' + esc(ref) + '">' + rcKpiHtml(t) + '</div>';
+
+    /* quantity and batch */
+    h += '<div class="row four" style="margin-top:10px;">' +
+      rcField(ref, 'Order quantity', { sec:'root', k:'qty', v:c.qty, num:true }) +
+      rcField(ref, 'Batch size', { sec:'root', k:'batchQty', v:c.batchQty, num:true }) +
+      '<div><label>Total cycle</label><input value="' + C.qty(Math.round(t.totalCycleMin*100)/100) +
+        ' min/pc" disabled></div>' +
+      '<div><label>Costed on</label><input value="' + esc(c.createdAt||'') + '" disabled></div></div>';
+
+    /* ---- machine hour rate: derived, or typed ---- */
+    h += '<div class="rc-sub">Machine hour rate<span class="hint">Derived from Quoting &amp; Costing Setup ' +
+      'unless you switch it over</span></div>' +
+      '<div class="rc-mhr">' +
+      '<label class="rc-sw"><input type="checkbox" class="rc-mhr-sw" data-ref="' + esc(ref) + '"' +
+      (c.manualMhr ? ' checked' : '') + '><span></span></label>' +
+      '<div><b>Manual machine hour rate</b><div class="hint">' +
+      (c.manualMhr
+        ? 'On — the rate below is used and the derived cost base is ignored.'
+        : 'Off — each rate is worked out from depreciation, power, maintenance, space and overhead.') +
+      '</div></div>' +
+      '<div style="flex:1;min-width:190px;' + (c.manualMhr ? '' : 'opacity:.45;') + '">' +
+      '<label>Rate for the whole job (' + ((rfqCfg.quoteCfg||{}).currencySymbol || '₹') + '/hr)</label>' +
+      rcIn(ref, { sec:'root', k:'manualMhrRate', v:c.manualMhrRate, num:true, dis:!c.manualMhr,
+        ph:'leave blank to set it per operation' }) + '</div>' +
+      '<div class="hint" style="flex:1 1 100%;">A rate typed against one operation in the route below ' +
+      'beats this one. With the switch off, both are ignored entirely.</div></div>';
+
+    /* ---- raw material ---- */
+    h += '<div class="rc-sub">Raw material' +
+      (mat.matched ? '' : ' <span class="hint">— not matched to your price book</span>') + '</div>' +
+      '<div class="row four">' +
+      rcField(ref, 'Grade', { sec:'material', k:'grade', v:mat.grade }) +
+      rcField(ref, 'Stock form', { sec:'material', k:'stockForm', v:mat.stockForm, ph:'Round bar' }) +
+      rcField(ref, 'Stock size', { sec:'material', k:'stockSize', v:mat.stockSize, ph:'Ø18 mm × 3000 mm' }) +
+      rcField(ref, 'Cut length', { sec:'material', k:'cutLength', v:mat.cutLength, ph:'62 mm' }) +
+      '</div><div class="row four">' +
+      rcField(ref, 'Blank weight (kg)', { sec:'material', k:'blankWeight', v:mat.blankWeight, num:true }) +
+      rcField(ref, 'Finish weight (kg)', { sec:'material', k:'finishWeight', v:mat.finishWeight, num:true }) +
+      rcField(ref, 'Rate / kg', { sec:'material', k:'rate', v:mat.rate, num:true }) +
+      rcField(ref, 'Scrap recovery / kg', { sec:'material', k:'scrapRecovery', v:mat.scrapRecovery, num:true }) +
+      '</div><div class="row four">' +
+      rcField(ref, 'Cut-to-size / pre-ready cost', { sec:'material', k:'prepCostPerPart', v:mat.prepCostPerPart, num:true,
+        ph:'sawing, facing, per piece' }) +
+      '<div style="grid-column:span 3;"><label>Where this price came from</label>' +
+      rcIn(ref, { sec:'material', k:'rateSource', v:mat.rateSource, ph:'supplier, index or price book' }) + '</div>' +
+      '</div>' +
+      '<div class="hint" style="margin-top:4px;">' + rcSrcChip(mat.rateSource, mat.rateConfidence) +
+      (mat.rateDate ? ' · quoted ' + esc(mat.rateDate) : '') +
+      (mat.basis ? '<br>Sizing basis: ' + esc(mat.basis) : '') + '</div>';
+
+    /* ---- bill of material ---- */
+    h += '<div class="rc-sub">Bill of material<span class="hint">Lines here replace blank weight × rate</span></div>' +
+      '<div class="scroll-x"><table class="rc-t"><thead><tr><th>Item</th><th style="width:110px">Type</th>' +
+      '<th>Spec</th><th class="r" style="width:76px">Qty/pc</th><th style="width:60px">Unit</th>' +
+      '<th class="r" style="width:82px">Rate</th><th class="r" style="width:86px">Cost/pc</th>' +
+      '<th style="width:150px">Price source</th><th style="width:30px"></th></tr></thead><tbody>' +
+      ((c.bom||[]).length ? c.bom.map(function(bm, i){
+        return '<tr><td>' + rcIn(ref, { arr:'bom', idx:i, k:'item', v:bm.item }) + '</td>' +
+          '<td>' + rcIn(ref, { arr:'bom', idx:i, k:'type', v:bm.type }) + '</td>' +
+          '<td>' + rcIn(ref, { arr:'bom', idx:i, k:'spec', v:bm.spec }) + '</td>' +
+          '<td class="r">' + rcIn(ref, { arr:'bom', idx:i, k:'qtyPerPart', v:bm.qtyPerPart, num:true }) + '</td>' +
+          '<td>' + rcIn(ref, { arr:'bom', idx:i, k:'unit', v:bm.unit }) + '</td>' +
+          '<td class="r">' + rcIn(ref, { arr:'bom', idx:i, k:'rate', v:bm.rate, num:true }) + '</td>' +
+          '<td class="r">' + rcMoney(C.num(bm.costPerPart) || (C.num(bm.qtyPerPart) * C.num(bm.rate))) + '</td>' +
+          '<td>' + rcIn(ref, { arr:'bom', idx:i, k:'source', v:bm.source }) + '</td>' +
+          '<td class="c">' + rcDelBtn(ref, 'bom', i) + '</td></tr>';
+      }).join('') : '<tr><td colspan="9" class="hint" style="padding:8px">No bill of material — the ' +
+        'material cost falls back to blank weight × rate.</td></tr>') +
+      '</tbody></table></div>' + rcAddBtn(ref, 'bom', '+ Add BOM line');
+
+    /* ---- process route ---- */
+    h += '<div class="rc-sub">Process route<span class="hint">' +
+      (c.manualMhr ? 'M/c rate is yours to type' : 'M/c rate comes from the cost base') + '</span></div>' +
+      '<div class="scroll-x"><table class="rc-t"><thead><tr><th class="c" style="width:48px">Op</th>' +
+      '<th>Process</th><th style="width:160px">Machine</th><th style="width:130px">Labour</th>' +
+      '<th class="r" style="width:96px">M/c rate/hr</th><th class="r" style="width:74px">Setup min</th>' +
+      '<th class="r" style="width:74px">Cycle min</th><th class="r" style="width:86px">Cost/pc</th>' +
+      '<th class="c" style="width:74px">Conf.</th><th style="width:30px"></th></tr></thead><tbody>' +
+      ((t.ops||[]).length ? t.ops.map(function(o, i){
+        return '<tr><td class="c">' + rcIn(ref, { arr:'operations', idx:i, k:'op', v:o.op, num:true }) + '</td>' +
+          '<td>' + rcIn(ref, { arr:'operations', idx:i, k:'process', v:o.process }) + '</td>' +
+          '<td><select class="rc-in" data-ref="' + esc(ref) + '" data-arr="operations" data-idx="' + i +
+            '" data-k="machineId">' + machineOpts(o.machineId) + '</select></td>' +
+          '<td><select class="rc-in" data-ref="' + esc(ref) + '" data-arr="operations" data-idx="' + i +
+            '" data-k="labourGradeId">' + labourOpts(o.labourGradeId) + '</select></td>' +
+          '<td class="r">' + (c.manualMhr
+            ? rcIn(ref, { arr:'operations', idx:i, k:'manualRate', v:o.manualRate, num:true,
+                ph:C.rate(o.derivedRate) })
+            : '<span class="hint">' + rcMoney(o.derivedRate) + '</span>') + '</td>' +
+          '<td class="r">' + rcIn(ref, { arr:'operations', idx:i, k:'setupMin', v:o.setupMin, num:true }) + '</td>' +
+          '<td class="r">' + rcIn(ref, { arr:'operations', idx:i, k:'cycleMin', v:o.cycleMin, num:true }) + '</td>' +
+          '<td class="r"><b>' + rcMoney(o.machineCost + o.labourCost + o.setupCost) + '</b></td>' +
+          '<td class="c hint">' + esc(o.confidence||'—') + '</td>' +
+          '<td class="c">' + rcDelBtn(ref, 'operations', i) + '</td></tr>';
+      }).join('') : '<tr><td colspan="10" class="hint" style="padding:8px">No operations on the route.</td></tr>') +
+      '</tbody></table></div>' + rcAddBtn(ref, 'operations', '+ Add operation');
+
+    /* ---- dimensions, per operation ---- */
+    h += rfqDimsHtml(r);
+
+    /* ---- the amortised heads ---- */
+    h += '<div class="rc-sub">Tooling &amp; holders<span class="hint">Cost per piece = unit cost ÷ tool life</span></div>' +
+      rcAmortTable(r, 'tooling', 'Unit cost', 'Life (pcs)') + rcAddBtn(ref, 'tooling', '+ Add tooling item');
+    h += '<div class="rc-sub">Jigs &amp; fixtures<span class="hint">Recovered over the pieces the fixture makes</span></div>' +
+      rcAmortTable(r, 'jigFixtures', 'Build cost', 'Life (pcs)') + rcAddBtn(ref, 'jigFixtures', '+ Add jig / fixture');
+    h += '<div class="rc-sub">Gauges &amp; inspection equipment<span class="hint">Recovered over the pieces it checks</span></div>' +
+      rcAmortTable(r, 'gauges', 'Gauge cost', 'Life (pcs)') + rcAddBtn(ref, 'gauges', '+ Add gauge');
+
+    /* ---- consumables ---- */
+    h += '<div class="rc-sub">Consumables<span class="hint">Coolant, inserts consumed, abrasives</span></div>' +
+      '<div class="scroll-x"><table class="rc-t"><thead><tr><th>Item</th><th>Specification</th>' +
+      '<th class="r" style="width:92px">Cost/pc</th><th style="width:150px">Price source</th>' +
+      '<th style="width:30px"></th></tr></thead><tbody>' +
+      ((c.consumables||[]).length ? c.consumables.map(function(cn, i){
+        return '<tr><td>' + rcIn(ref, { arr:'consumables', idx:i, k:'item', v:cn.item }) + '</td>' +
+          '<td>' + rcIn(ref, { arr:'consumables', idx:i, k:'spec', v:cn.spec }) + '</td>' +
+          '<td class="r">' + rcIn(ref, { arr:'consumables', idx:i, k:'costPerPart', v:cn.costPerPart, num:true }) + '</td>' +
+          '<td>' + rcIn(ref, { arr:'consumables', idx:i, k:'source', v:cn.source }) + '</td>' +
+          '<td class="c">' + rcDelBtn(ref, 'consumables', i) + '</td></tr>';
+      }).join('') : '<tr><td colspan="5" class="hint" style="padding:8px">No consumables listed.</td></tr>') +
+      '</tbody></table></div>' + rcAddBtn(ref, 'consumables', '+ Add consumable');
+
+    /* ---- inspection, packing, logistics, freight ---- */
+    h += '<div class="rc-sub">Inspection<span class="hint">Either minutes at the inspector’s rate, ' +
+      'or a figure you type</span></div><div class="row four">' +
+      rcField(ref, 'Inspection min / pc', { sec:'root', k:'inspectionMinPerPart', v:c.inspectionMinPerPart, num:true }) +
+      rcField(ref, 'Or inspection cost / pc', { sec:'root', k:'inspectionPerPart', v:c.inspectionPerPart, num:true,
+        ph:'overrides the minutes' }) +
+      '<div><label>Costed at</label><input value="' + rcMoney(t.inspection) +
+        (t.inspectionTyped ? ' (typed)' : ' (from minutes)') + '" disabled></div>' +
+      rcField(ref, 'Source / basis', { sec:'root', k:'inspectionSource', v:c.inspectionSource }) + '</div>';
+
+    h += '<div class="rc-sub">Packing</div><div class="row four">' +
+      rcField(ref, 'Method', { sec:'packaging', k:'method', v:pk.method, ph:'VCI bag in carton' }) +
+      rcField(ref, 'Materials', { sec:'packaging', k:'materials', v:pk.materials }) +
+      rcField(ref, 'Packing cost / pc', { sec:'packaging', k:'costPerPart', v:pk.costPerPart, num:true }) +
+      rcField(ref, 'Price source', { sec:'packaging', k:'source', v:pk.source }) + '</div>' +
+      (pk.basis ? '<div class="hint">' + esc(pk.basis) + '</div>' : '');
+
+    h += '<div class="rc-sub">Logistics<span class="hint">Inward and in-plant movement — not the ' +
+      'delivery to the customer</span></div><div class="row four">' +
+      rcField(ref, 'Mode', { sec:'logistics', k:'mode', v:lg.mode, ph:'own vehicle / transporter' }) +
+      rcField(ref, 'Route or leg', { sec:'logistics', k:'route', v:lg.route, ph:'mill → works, works → sub-con' }) +
+      rcField(ref, 'Logistics cost / pc', { sec:'logistics', k:'costPerPart', v:lg.costPerPart, num:true }) +
+      rcField(ref, 'Price source', { sec:'logistics', k:'source', v:lg.source }) + '</div>';
+
+    h += '<div class="rc-sub">Freight to customer</div><div class="row four">' +
+      rcField(ref, 'Method', { sec:'freight', k:'method', v:fr.method }) +
+      rcField(ref, 'Destination', { sec:'freight', k:'destination', v:fr.destination }) +
+      rcField(ref, 'Freight cost / pc', { sec:'freight', k:'costPerPart', v:fr.costPerPart, num:true }) +
+      rcField(ref, 'Price source', { sec:'freight', k:'source', v:fr.source }) + '</div>';
+
+    if ((c.specialProcesses||[]).length){
+      h += '<div class="rc-sub">Special processes<span class="hint">Your sub-contractor’s rate per piece</span></div>' +
+        '<div class="row four">' + c.specialProcesses.map(function(s, i){
+          return rcField(ref, s.name || ('Process ' + (i+1)),
+            { arr:'specialProcesses', idx:i, k:'ratePerPart', v:s.ratePerPart, num:true });
+        }).join('') + '</div>';
+    }
+
+    /* ---- the build-up ---- */
+    h += '<div class="rc-sub">Cost build-up</div><div id="rc-break-' + esc(ref) + '">' +
+      rcBreakHtml(t, b) + '</div>';
+
+    if ((c.assumptions||[]).length)
+      h += '<div class="note" style="margin-top:10px;"><b>Assumptions made during costing — check these ' +
+        'before the price goes out:</b><ul style="margin:6px 0 0 18px;">' +
+        c.assumptions.map(function(a){ return '<li>' + esc(a) + '</li>'; }).join('') + '</ul></div>';
+    if (c.aiNotes) h += '<div class="note" style="margin-top:8px;">' + esc(c.aiNotes) + '</div>';
+
+    h += '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' +
+      '<button class="btn ai-btn rp-cost" data-ref="' + esc(ref) + '">Re-plan route</button>' +
+      '<button class="btn ai-btn rp-market" data-ref="' + esc(ref) + '">Refresh market prices with AI</button>' +
+      '<button class="btn rp-costsheet" data-ref="' + esc(ref) + '">Print cost sheet</button>' +
+      '<button class="btn gold rp-topart" data-ref="' + esc(ref) + '">Send route &amp; dimensions to the part</button>' +
+      '</div>';
+    return h;
+  }
+
+  function rcKpiHtml(t){
+    return [['Quantity', C.qty(t.qty)], ['Cost/piece', rcMoney(t.totalCost)],
+      ['Selling/piece', rcMoney(t.sellingPrice)], ['Order value', rcMoney(t.lineTotal)]]
+      .map(function(s){ return '<div class="b"><b>' + s[1] + '</b><span>' + s[0] + '</span></div>'; }).join('');
+  }
+  function rcBreakHtml(t, b){
+    var row = function(label, val, cls){
+      return '<div' + (cls ? ' class="' + cls + '"' : '') + '><span>' + label + '</span><span>' +
+        rcMoney(val) + '</span></div>';
+    };
+    return '<div class="rc-break">' +
+      row('Material', t.materialCost) + row('Machine', t.machineCost) + row('Labour', t.labourCost) +
+      row('Setup (spread over batch of ' + t.batch + ')', t.setupCost) +
+      row('Inspection', t.inspection) + row('Special processes', t.special) +
+      row('Tooling', t.tooling) + row('Jigs &amp; fixtures', t.jigFixture) + row('Gauges', t.gauge) +
+      row('Consumables', t.consumables) + row('Packing', t.packaging) +
+      row('Logistics', t.logistics) + row('Freight', t.freight) +
+      row('Direct cost', t.direct, 'sep') +
+      row('Scrap / rejection @ ' + C.num(b.scrapPct) + '%', t.scrap) +
+      row('Administration @ ' + C.num(b.adminPct) + '%', t.admin) +
+      row('Finance @ ' + C.num(b.financePct) + '%', t.finance) +
+      row('Contingency @ ' + C.num(b.contingencyPct) + '%', t.contingency) +
+      row('Total manufacturing cost', t.totalCost, 'sep') +
+      row('Profit @ ' + C.num(b.profitPct) + '%', t.profit) +
+      row('Recommended selling price / pc', t.sellingPrice, 'grand') +
+      row('Minimum viable price / pc', t.minPrice, 'minp') +
+      row('Order value (' + t.qty + ' pcs)', t.lineTotal, 'minp') + '</div>';
+  }
+
+  /* Dimensions the AI read off the drawing, grouped by the operation that
+     produces them. This is the seam into engineering: the same list becomes
+     the part's dimension records, which is what the PFD, the PFMEA and the
+     control plan are all built from. Costed here, controlled there, one
+     source. */
+  function rfqDimsHtml(r){
+    var ref = r.ref, ops = r.costing.operations || [];
+    var rows = [];
+    ops.forEach(function(o, oi){
+      (o.dims || []).forEach(function(d, di){
+        rows.push({ o:o, oi:oi, d:d, di:di });
+      });
+    });
+    var h = '<div class="rc-sub">Dimensions by operation<span class="hint">' +
+      (rows.length ? rows.length + ' characteristic(s) — these become the part’s dimension records'
+                   : 'None read yet — Re-plan route asks the AI for them') + '</span></div>';
+    if (!rows.length)
+      return h + '<div class="hint" style="padding:6px 0;">Nothing to show. The AI proposes a ' +
+        'characteristic list per operation when it plans the route; a drawing it could not read ' +
+        'leaves this empty rather than inventing tolerances.</div>';
+    h += '<div class="scroll-x"><table class="rc-t"><thead><tr><th class="c" style="width:48px">Op</th>' +
+      '<th style="width:140px">Operation</th><th>Characteristic</th><th class="r" style="width:80px">Nominal</th>' +
+      '<th class="r" style="width:72px">+ Tol</th><th class="r" style="width:72px">− Tol</th>' +
+      '<th style="width:60px">Unit</th><th class="c" style="width:60px">Class</th>' +
+      '<th style="width:130px">Gauge</th><th style="width:110px">Frequency</th>' +
+      '<th style="width:30px"></th></tr></thead><tbody>' +
+      rows.map(function(x){
+        var din = function(k, num, ph){
+          return '<input class="rc-in' + (num ? ' num' : '') + '" data-ref="' + esc(ref) +
+            '" data-arr="operations" data-idx="' + x.oi + '" data-dim="' + x.di + '" data-k="' + k + '"' +
+            (ph ? ' placeholder="' + esc(ph) + '"' : '') +
+            ' value="' + esc(x.d[k] === undefined || x.d[k] === null ? '' : x.d[k]) + '">';
+        };
+        return '<tr><td class="c hint">' + esc(x.o.op) + '</td>' +
+          '<td class="hint">' + esc(x.o.process || '') + '</td>' +
+          '<td>' + din('char') + '</td>' +
+          '<td class="r">' + din('nominal', true) + '</td>' +
+          '<td class="r">' + din('tolPlus', true) + '</td>' +
+          '<td class="r">' + din('tolMinus', true) + '</td>' +
+          '<td>' + din('unit') + '</td>' +
+          '<td class="c">' + din('cls', false, 'SC/CC') + '</td>' +
+          '<td>' + din('gauge') + '</td>' +
+          '<td>' + din('frequency') + '</td>' +
+          '<td class="c"><button class="rc-del rc-dim-del" data-ref="' + esc(ref) + '" data-idx="' + x.oi +
+            '" data-dim="' + x.di + '" title="Remove this characteristic">×</button></td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<div class="hint" style="margin-top:4px;">A characteristic marked <b>SC</b> or <b>CC</b> must carry a ' +
+      'gauge and a check frequency before the control plan can be worked to — the Dimensions Master ' +
+      'refuses it otherwise, so fill both in here and the transfer goes through clean.</div>';
     return h;
   }
 
@@ -28486,6 +29064,138 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     host.querySelectorAll('.rp-send').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); rfqSendQuote(b); });
     });
+    host.querySelectorAll('.rp-market').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); rfqMarketPrices(b); });
+    });
+    host.querySelectorAll('.rp-topart').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); rfqRouteToPart(b); });
+    });
+    rfqWireCosting(host);
+  }
+
+  /* Typing on the cost sheet updates the totals as you type and saves when
+     you leave the field. Two separate things on purpose: recomputing on every
+     keystroke is what makes a cost sheet usable, and writing to the server on
+     every keystroke is what makes it unusable. Nothing is redrawn wholesale
+     while a field has focus — the totals block and the KPI strip are replaced
+     on their own, so the caret never jumps. */
+  var rcSaveTimers = {};
+  function rcRfq(ref){ return rfqRows.filter(function(x){ return x.ref === ref; })[0] || null; }
+  function rcTargetOf(el){
+    var r = rcRfq(el.dataset.ref); if (!r || !r.costing) return null;
+    var c = r.costing;
+    if (el.dataset.arr){
+      var list = c[el.dataset.arr]; if (!list) return null;
+      var row = list[+el.dataset.idx]; if (!row) return null;
+      if (el.dataset.dim !== undefined && el.dataset.dim !== ''){
+        var d = (row.dims || [])[+el.dataset.dim];
+        return d ? { obj:d, r:r } : null;
+      }
+      return { obj:row, r:r };
+    }
+    if (el.dataset.sec && el.dataset.sec !== 'root'){
+      if (!c[el.dataset.sec]) c[el.dataset.sec] = {};
+      return { obj:c[el.dataset.sec], r:r };
+    }
+    return { obj:c, r:r };
+  }
+  /* which keys are money or measurements — stored as numbers so the cost sheet,
+     the print and anything reading the record later all see the same type */
+  var RC_NUM_KEYS = ['qty','batchQty','manualMhrRate','manualRate','setupMin','cycleMin','op',
+    'blankWeight','finishWeight','rate','scrapRecovery','prepCostPerPart','qtyPerPart','costPerPart',
+    'unitCost','life','inspectionMinPerPart','inspectionPerPart','ratePerPart','nominal','tolPlus','tolMinus'];
+  function rcApply(el){
+    var tgt = rcTargetOf(el); if (!tgt) return null;
+    var k = el.dataset.k;
+    tgt.obj[k] = RC_NUM_KEYS.indexOf(k) >= 0
+      ? (String(el.value).trim() === '' ? '' : C.num(el.value))
+      : el.value;
+    return tgt.r;
+  }
+  function rcRefreshTotals(ref){
+    var r = rcRfq(ref); if (!r || !r.costing) return;
+    var t = rcComputeCosting(r.costing, rfqCfg);
+    var kpi = document.getElementById('rc-kpi-' + ref);
+    if (kpi) kpi.innerHTML = rcKpiHtml(t);
+    var br = document.getElementById('rc-break-' + ref);
+    if (br) br.innerHTML = rcBreakHtml(t, rfqCfg.costBase || {});
+  }
+  function rcQueueSave(ref){
+    clearTimeout(rcSaveTimers[ref]);
+    rcSaveTimers[ref] = setTimeout(async function(){
+      var r = rcRfq(ref); if (!r || !r.costing) return;
+      try { await rfqPatch(ref, { costing: r.costing }); }
+      catch(e){ rfqSay(ref, 'That edit was not saved — ' + esc(e.message)); }
+    }, 700);
+  }
+  function rfqWireCosting(host){
+    host.querySelectorAll('.rc-in').forEach(function(el){
+      el.addEventListener('click', function(e){ e.stopPropagation(); });
+      el.addEventListener('input', function(){
+        var r = rcApply(el); if (!r) return;
+        rcRefreshTotals(r.ref);
+      });
+      el.addEventListener('change', function(){
+        var r = rcApply(el); if (!r) return;
+        rcRefreshTotals(r.ref);
+        rcQueueSave(r.ref);
+      });
+    });
+    /* Switching the machine hour rate over changes which controls are live, so
+       this one does redraw — it is a deliberate click, not a keystroke. */
+    host.querySelectorAll('.rc-mhr-sw').forEach(function(el){
+      el.addEventListener('click', function(e){ e.stopPropagation(); });
+      el.addEventListener('change', async function(){
+        var r = rcRfq(el.dataset.ref); if (!r || !r.costing) return;
+        r.costing.manualMhr = el.checked;
+        try { await rfqPatch(r.ref, { costing: r.costing }); }
+        catch(e){ rfqSay(r.ref, 'That change was not saved — ' + esc(e.message)); }
+        drawRfqList();
+      });
+    });
+    host.querySelectorAll('.rc-row-add').forEach(function(b){
+      b.addEventListener('click', async function(e){
+        e.stopPropagation();
+        var r = rcRfq(b.dataset.ref); if (!r || !r.costing) return;
+        var arr = b.dataset.arr;
+        if (!r.costing[arr]) r.costing[arr] = [];
+        r.costing[arr].push(rcBlankRow(arr, r.costing[arr].length));
+        try { await rfqPatch(r.ref, { costing: r.costing }); }
+        catch(e2){ rfqSay(r.ref, 'That line was not saved — ' + esc(e2.message)); }
+        drawRfqList();
+      });
+    });
+    host.querySelectorAll('.rc-row-del').forEach(function(b){
+      b.addEventListener('click', async function(e){
+        e.stopPropagation();
+        var r = rcRfq(b.dataset.ref); if (!r || !r.costing) return;
+        var list = r.costing[b.dataset.arr]; if (!list) return;
+        list.splice(+b.dataset.idx, 1);
+        try { await rfqPatch(r.ref, { costing: r.costing }); }
+        catch(e2){ rfqSay(r.ref, 'That line was not removed — ' + esc(e2.message)); }
+        drawRfqList();
+      });
+    });
+    host.querySelectorAll('.rc-dim-del').forEach(function(b){
+      b.addEventListener('click', async function(e){
+        e.stopPropagation();
+        var r = rcRfq(b.dataset.ref); if (!r || !r.costing) return;
+        var op = (r.costing.operations || [])[+b.dataset.idx]; if (!op || !op.dims) return;
+        op.dims.splice(+b.dataset.dim, 1);
+        try { await rfqPatch(r.ref, { costing: r.costing }); }
+        catch(e2){ rfqSay(r.ref, 'That characteristic was not removed — ' + esc(e2.message)); }
+        drawRfqList();
+      });
+    });
+  }
+  function rcBlankRow(arr, n){
+    if (arr === 'operations') return { op:(n+1)*10, process:'', machineId:'', labourGradeId:'',
+      setupMin:0, cycleMin:0, notes:'', confidence:'Typed', dims:[] };
+    if (arr === 'bom') return { item:'', type:'Base metal', spec:'', qtyPerPart:0, unit:'kg',
+      rate:0, costPerPart:0, source:'Typed in' };
+    if (arr === 'consumables') return { item:'', spec:'', costPerPart:0, source:'Typed in' };
+    /* tooling, jigFixtures and gauges are one shape */
+    return { op:'', item:'', spec:'', unitCost:0, life:0, source:'Typed in' };
   }
 
   /* Ported line for line from the website's own triageRfqs() — the same
@@ -28662,17 +29372,38 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
         '\n\nCOMPONENT:\n' + (x ? JSON.stringify({ part:x.part, requirements:x.requirements, critical:x.criticalCharacteristics }) : (r.message||'no drawing data')) +
         '\nOrder quantity: ' + qty + '\nCustomer\'s stated requirement: ' + (r.message||'(none given)') +
         '\n\nRULES:\n1. Give realistic setup and cycle times in MINUTES based on the actual features.\n' +
-        '2. Do NOT price machine time, labour or overhead — those come from the company\'s own rates.\n' +
-        '3. For material, say where each price came from in "source": "Company price book" when it is in ' +
-        'the list above, "Market estimate" otherwise. Never claim a supplier quotation you do not have.\n' +
-        '4. List every assumption you had to make.\n\nReply with ONLY this JSON, no commentary or code fences:\n' +
-        '{"material":{"name":"","grade":"","stockForm":"","stockSize":"","finishWeight":0,"blankWeight":0,"rate":0,"source":"","basis":""},' +
-        '"bom":[{"item":"","type":"Base metal|Conversion|Offcut credit","spec":"","qtyPerPart":0,"unit":"kg","rate":0,"costPerPart":0,"source":"","confidence":"High|Medium|Low"}],' +
-        '"operations":[{"op":10,"process":"","machineType":"","setupMin":0,"cycleMin":0,"labourGrade":"","notes":"","confidence":"High|Medium|Low"}],' +
-        '"tooling":[{"op":10,"item":"","spec":"","unitCost":0,"life":0,"source":"","confidence":"High|Medium|Low"}],' +
-        '"consumables":[{"item":"","costPerPart":0,"source":"","confidence":"High|Medium|Low"}],' +
-        '"packaging":{"method":"","costPerPart":0,"source":""},"freight":{"method":"","costPerPart":0,"source":""},' +
-        '"specialProcesses":[{"name":"","note":""}],"inspectionMinPerPart":0,"assumptions":[""],"notes":""}';
+        '2. Do NOT price machine time, labour or overhead. Those are the company\'s own costs and come ' +
+        'from its cost base — a rate you invent for them would silently replace a real one.\n' +
+        '3. You SHOULD price what the company buys in: raw material, cut-to-size or pre-ready ' +
+        'preparation, tooling, jigs and fixtures, gauges, consumables, packing material and inward ' +
+        'logistics. Give the current market price in Indian rupees for each.\n' +
+        '4. Every bought-in price must carry a "source" naming where the figure comes from (a named ' +
+        'supplier or distributor, a published index, a trade portal, or "Market estimate" when it is ' +
+        'your own general knowledge of Indian market rates), a "sourceDetail" saying what exactly was ' +
+        'priced, and "asOf" with the period the price is good for. Never claim a supplier quotation ' +
+        'you do not have, and never invent a URL or a quotation number.\n' +
+        '5. Price raw material the way it is actually bought: state the stock form and size ' +
+        '(for example EN8D bright bar Ø18 mm × 3000 mm), the rate per kg for that stock, and put any ' +
+        'cutting, facing or pre-ready charge separately in "prepCostPerPart". A price for a finished ' +
+        'blank is not the same as a price for bar plus preparation — keep them apart.\n' +
+        '6. Give the characteristics each operation produces in "dims": what is being held, its nominal ' +
+        'size, its plus and minus tolerance, the unit, whether it is a significant (SC) or critical (CC) ' +
+        'characteristic (leave blank if neither), the gauge that would measure it and how often it would ' +
+        'be checked. Take these from the drawing only — do not invent a tolerance the drawing does not ' +
+        'state; leave the field blank and say so in "assumptions".\n' +
+        '7. List every assumption you had to make.\n\nReply with ONLY this JSON, no commentary or code fences:\n' +
+        '{"material":{"name":"","grade":"","stockForm":"","stockSize":"","cutLength":"","finishWeight":0,"blankWeight":0,"rate":0,"prepCostPerPart":0,"source":"","sourceDetail":"","asOf":"","basis":""},' +
+        '"bom":[{"item":"","type":"Base metal|Conversion|Offcut credit","spec":"","qtyPerPart":0,"unit":"kg","rate":0,"costPerPart":0,"source":"","sourceDetail":"","confidence":"High|Medium|Low"}],' +
+        '"operations":[{"op":10,"process":"","machineType":"","setupMin":0,"cycleMin":0,"labourGrade":"","notes":"","confidence":"High|Medium|Low",' +
+        '"dims":[{"char":"","nominal":0,"tolPlus":0,"tolMinus":0,"unit":"mm","cls":"SC|CC|","gauge":"","frequency":""}]}],' +
+        '"tooling":[{"op":10,"item":"","spec":"","unitCost":0,"life":0,"source":"","sourceDetail":"","asOf":"","confidence":"High|Medium|Low"}],' +
+        '"jigFixtures":[{"op":10,"item":"","spec":"","unitCost":0,"life":0,"source":"","sourceDetail":"","asOf":"","confidence":"High|Medium|Low"}],' +
+        '"gauges":[{"op":10,"item":"","spec":"","unitCost":0,"life":0,"source":"","sourceDetail":"","asOf":"","confidence":"High|Medium|Low"}],' +
+        '"consumables":[{"item":"","spec":"","costPerPart":0,"source":"","sourceDetail":"","confidence":"High|Medium|Low"}],' +
+        '"packaging":{"method":"","materials":"","costPerPart":0,"source":"","sourceDetail":"","basis":""},' +
+        '"logistics":{"mode":"","route":"","costPerPart":0,"source":"","sourceDetail":""},' +
+        '"freight":{"method":"","destination":"","costPerPart":0,"source":"","sourceDetail":""},' +
+        '"specialProcesses":[{"name":"","note":""}],"inspectionMinPerPart":0,"inspectionSource":"","assumptions":[""],"notes":""}';
       var txt = await C.callAI(prompt, { maxTokens: 4500 });
       if (!txt) throw new Error('No response from the AI.');
       var p;
@@ -28693,17 +29424,31 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
             return t2 && (String(m.type||'').toLowerCase().indexOf(t2) >= 0 || t2.indexOf(String(m.type||'').toLowerCase()) >= 0); })[0] || null;
       };
       var pm = p.material || {}, mat = matByName(pm.grade || pm.name || '');
+      /* A price the company itself has agreed always beats one the AI found —
+         that rule has not moved. What is new is that when there is no entry in
+         the price book, the market figure is kept with the source it came from
+         rather than left at zero for somebody to guess at. Both are editable
+         and both say on screen which they are. */
+      var srcLine = function(o, fallback){
+        var s = String((o && o.source) || fallback || 'Market estimate');
+        var d = String((o && o.sourceDetail) || '').trim();
+        var w = String((o && o.asOf) || '').trim();
+        return s + (d ? ' — ' + d : '') + (w ? ' (' + w + ')' : '');
+      };
       var c = { qty:qty, batchQty:qty, createdAt:new Date().toLocaleString(),
+        manualMhr:false, manualMhrRate:0,
         material:{ name:pm.name||'', grade:pm.grade||'', stockForm:pm.stockForm||'', stockSize:pm.stockSize||'',
+          cutLength:pm.cutLength||'',
           rate: mat ? C.num(mat.rate) : C.num(pm.rate), unit: mat ? mat.unit : 'kg',
-          rateSource: mat ? ('Company price book — ' + (mat.name||mat.grade)) : (pm.source||'Market estimate'),
-          rateConfidence: mat ? 'Verified' : 'Estimate',
+          prepCostPerPart: C.num(pm.prepCostPerPart),
+          rateSource: mat ? ('Company price book — ' + (mat.name||mat.grade)) : srcLine(pm),
+          rateConfidence: mat ? 'Verified' : 'Estimate', rateDate: pm.asOf||'',
           finishWeight:C.num(pm.finishWeight), blankWeight:C.num(pm.blankWeight), scrapRecovery:0,
           matched: !!mat, basis: pm.basis||'' },
         bom:(p.bom||[]).filter(function(x2){ return x2 && x2.item; }).map(function(x2){
           return { item:x2.item, type:x2.type||'Base metal', spec:x2.spec||'', qtyPerPart:C.num(x2.qtyPerPart),
             unit:x2.unit||'kg', rate:C.num(x2.rate), costPerPart:C.num(x2.costPerPart)||(C.num(x2.qtyPerPart)*C.num(x2.rate)),
-            source:x2.source||'Market estimate', confidence:x2.confidence||'Medium' }; }),
+            source:srcLine(x2), confidence:x2.confidence||'Medium' }; }),
         operations:(p.operations||[]).map(function(o, i){
           var m2 = machineFor(o.machineType);
           var l = rfqCfg.labourGrades.filter(function(g){
@@ -28711,20 +29456,42 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
             rfqCfg.labourGrades.filter(function(g){ return /operator/i.test(g.grade); })[0];
           return { op:o.op||((i+1)*10), process:o.process||'', machineType:o.machineType||'',
             machineId:m2?m2.id:'', labourGradeId:l?l.id:'', setupMin:C.num(o.setupMin), cycleMin:C.num(o.cycleMin),
-            notes:o.notes||'', confidence:o.confidence||'Medium' }; }),
+            manualRate:0, notes:o.notes||'', confidence:o.confidence||'Medium',
+            /* Characteristics stay attached to the operation that makes them.
+               Anything with no name is dropped rather than carried as a blank
+               row — an empty characteristic reaching the control plan is a
+               control over nothing, which is the one thing the PFMEA parser
+               already refuses for operations. */
+            dims:(o.dims||[]).filter(function(d){ return d && String(d.char||'').trim(); })
+              .map(function(d){
+                return { char:String(d.char).trim(), nominal:C.num(d.nominal), tolPlus:C.num(d.tolPlus),
+                  tolMinus:C.num(d.tolMinus), unit:d.unit||'mm',
+                  cls:/^(SC|CC)$/i.test(String(d.cls||'').trim()) ? String(d.cls).trim().toUpperCase() : '',
+                  gauge:d.gauge||'', frequency:d.frequency||'' };
+              }) }; }),
         tooling:(p.tooling||[]).filter(function(t2){ return t2 && t2.item; }).map(function(t2){
           return { op:t2.op||'', item:t2.item, spec:t2.spec||'', unitCost:C.num(t2.unitCost), life:C.num(t2.life),
-            source:t2.source||'Market estimate', confidence:t2.confidence||'Medium' }; }),
+            source:srcLine(t2), confidence:t2.confidence||'Medium' }; }),
+        jigFixtures:(p.jigFixtures||[]).filter(function(t2){ return t2 && t2.item; }).map(function(t2){
+          return { op:t2.op||'', item:t2.item, spec:t2.spec||'', unitCost:C.num(t2.unitCost), life:C.num(t2.life),
+            source:srcLine(t2), confidence:t2.confidence||'Medium' }; }),
+        gauges:(p.gauges||[]).filter(function(t2){ return t2 && t2.item; }).map(function(t2){
+          return { op:t2.op||'', item:t2.item, spec:t2.spec||'', unitCost:C.num(t2.unitCost), life:C.num(t2.life),
+            source:srcLine(t2), confidence:t2.confidence||'Medium' }; }),
         consumables:(p.consumables||[]).filter(function(t2){ return t2 && t2.item; }).map(function(t2){
-          return { item:t2.item, costPerPart:C.num(t2.costPerPart), source:t2.source||'Market estimate',
+          return { item:t2.item, spec:t2.spec||'', costPerPart:C.num(t2.costPerPart), source:srcLine(t2),
             confidence:t2.confidence||'Medium' }; }),
-        packaging:{ method:(p.packaging||{}).method||'', costPerPart:C.num((p.packaging||{}).costPerPart),
-          source:(p.packaging||{}).source||'Market estimate' },
-        freight:{ method:(p.freight||{}).method||'', costPerPart:C.num((p.freight||{}).costPerPart),
-          source:(p.freight||{}).source||'Market estimate' },
+        packaging:{ method:(p.packaging||{}).method||'', materials:(p.packaging||{}).materials||'',
+          costPerPart:C.num((p.packaging||{}).costPerPart), basis:(p.packaging||{}).basis||'',
+          source:srcLine(p.packaging) },
+        logistics:{ mode:(p.logistics||{}).mode||'', route:(p.logistics||{}).route||'',
+          costPerPart:C.num((p.logistics||{}).costPerPart), source:srcLine(p.logistics) },
+        freight:{ method:(p.freight||{}).method||'', destination:(p.freight||{}).destination||'',
+          costPerPart:C.num((p.freight||{}).costPerPart), source:srcLine(p.freight) },
         specialProcesses:(p.specialProcesses||[]).filter(function(s){ return s && s.name; })
           .map(function(s){ return { name:s.name, note:s.note||'', ratePerPart:0 }; }),
-        inspectionMinPerPart:C.num(p.inspectionMinPerPart),
+        inspectionMinPerPart:C.num(p.inspectionMinPerPart), inspectionPerPart:0,
+        inspectionSource:p.inspectionSource||'',
         assumptions:(p.assumptions||[]).filter(Boolean), aiNotes:p.notes||'' };
       var unmatched = c.operations.filter(function(o){ return !o.machineId; }).length;
       await rfqPatch(ref, { costing: c });
@@ -28738,6 +29505,209 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
       loadRfqPipeline();
     }
     btn.disabled = false; btn.textContent = 'Work out cost with AI';
+  }
+
+  /* Refresh only what the company buys in, leaving the route, the times and
+     anything already settled exactly as they are. Two lines are deliberately
+     never overwritten: one priced from the company's own price book, and one
+     somebody has typed over. A refresh that quietly undid an estimator's own
+     figure would make the button untrustworthy the first time it happened. */
+  function rcHeld(src){ return /price book|typed in|agreed|company/i.test(String(src||'')); }
+  async function rfqMarketPrices(btn){
+    var ref = btn.dataset.ref;
+    var r = rfqRows.filter(function(x){ return x.ref === ref; })[0];
+    if (!r || !r.costing || r.costing.error) return;
+    var c = r.costing, mat = c.material || {};
+    btn.disabled = true; btn.textContent = 'Pricing…';
+    try {
+      var ask = {
+        material: { grade:mat.grade, stockForm:mat.stockForm, stockSize:mat.stockSize, cutLength:mat.cutLength,
+          blankWeight:mat.blankWeight },
+        tooling:(c.tooling||[]).map(function(x){ return { item:x.item, spec:x.spec }; }),
+        jigFixtures:(c.jigFixtures||[]).map(function(x){ return { item:x.item, spec:x.spec }; }),
+        gauges:(c.gauges||[]).map(function(x){ return { item:x.item, spec:x.spec }; }),
+        consumables:(c.consumables||[]).map(function(x){ return { item:x.item, spec:x.spec }; }),
+        packaging:{ method:(c.packaging||{}).method, materials:(c.packaging||{}).materials },
+        logistics:{ mode:(c.logistics||{}).mode, route:(c.logistics||{}).route }
+      };
+      var txt = await C.callAI(
+        'You are a purchasing engineer at an Indian precision machining company. Give the CURRENT ' +
+        'market price in Indian rupees for each item below, as it would actually be bought today.\n\n' +
+        JSON.stringify(ask) +
+        '\n\nFor raw material give the rate per kg for that stock form and size as it is sold ' +
+        '(for example EN8D bright bar Ø18 mm × 3000 mm), and put any cutting, facing or pre-ready ' +
+        'charge separately in prepCostPerPart — a ready-to-machine blank price is not a bar price.\n' +
+        'For tooling, jigs, fixtures and gauges give the purchase cost and the life in pieces it is ' +
+        'good for. For consumables, packing and inward logistics give the cost per piece.\n\n' +
+        'Every figure must carry a "source" naming where it comes from — a named supplier or ' +
+        'distributor, a published index, a trade portal, or "Market estimate" when it is your own ' +
+        'general knowledge of Indian market rates — a "sourceDetail" saying exactly what was priced, ' +
+        'and "asOf" for the period it holds good. Never invent a URL, a quotation number or a ' +
+        'supplier you have not actually been given.\n\n' +
+        'Reply with ONLY this JSON, no commentary or code fences:\n' +
+        '{"material":{"rate":0,"prepCostPerPart":0,"source":"","sourceDetail":"","asOf":""},' +
+        '"tooling":[{"item":"","unitCost":0,"life":0,"source":"","sourceDetail":"","asOf":""}],' +
+        '"jigFixtures":[{"item":"","unitCost":0,"life":0,"source":"","sourceDetail":"","asOf":""}],' +
+        '"gauges":[{"item":"","unitCost":0,"life":0,"source":"","sourceDetail":"","asOf":""}],' +
+        '"consumables":[{"item":"","costPerPart":0,"source":"","sourceDetail":""}],' +
+        '"packaging":{"costPerPart":0,"source":"","sourceDetail":""},' +
+        '"logistics":{"costPerPart":0,"source":"","sourceDetail":""}}', { maxTokens: 2500 });
+      if (!txt) throw new Error('No response from the AI.');
+      var p;
+      try { p = rfqParseAiJson(txt); }
+      catch(e){ throw new Error('The AI answered, but not in the shape this needs. It said: "' +
+        String(txt).replace(/\s+/g,' ').trim().slice(0,160) + '…"'); }
+
+      var srcLine = function(o){
+        var s = String((o && o.source) || 'Market estimate');
+        var d = String((o && o.sourceDetail) || '').trim();
+        var w = String((o && o.asOf) || '').trim();
+        return s + (d ? ' — ' + d : '') + (w ? ' (' + w + ')' : '');
+      };
+      var changed = 0, held = 0;
+      var pm = p.material || {};
+      if (mat.matched || rcHeld(mat.rateSource)) held++;
+      else if (C.num(pm.rate) > 0){
+        mat.rate = C.num(pm.rate);
+        if (C.num(pm.prepCostPerPart) > 0) mat.prepCostPerPart = C.num(pm.prepCostPerPart);
+        mat.rateSource = srcLine(pm); mat.rateConfidence = 'Estimate'; mat.rateDate = pm.asOf || '';
+        changed++;
+      }
+      ['tooling','jigFixtures','gauges'].forEach(function(arr){
+        var got = p[arr] || [];
+        (c[arr]||[]).forEach(function(row){
+          if (rcHeld(row.source)) { held++; return; }
+          var hit = got.filter(function(g){
+            return String(g.item||'').toLowerCase() === String(row.item||'').toLowerCase(); })[0];
+          if (!hit || !(C.num(hit.unitCost) > 0)) return;
+          row.unitCost = C.num(hit.unitCost);
+          if (C.num(hit.life) > 0) row.life = C.num(hit.life);
+          row.source = srcLine(hit); changed++;
+        });
+      });
+      (c.consumables||[]).forEach(function(row){
+        if (rcHeld(row.source)) { held++; return; }
+        var hit = (p.consumables||[]).filter(function(g){
+          return String(g.item||'').toLowerCase() === String(row.item||'').toLowerCase(); })[0];
+        if (!hit || !(C.num(hit.costPerPart) > 0)) return;
+        row.costPerPart = C.num(hit.costPerPart); row.source = srcLine(hit); changed++;
+      });
+      [['packaging', p.packaging], ['logistics', p.logistics]].forEach(function(pair){
+        var cur = c[pair[0]] || (c[pair[0]] = {}), got = pair[1] || {};
+        if (rcHeld(cur.source)) { held++; return; }
+        if (!(C.num(got.costPerPart) > 0)) return;
+        cur.costPerPart = C.num(got.costPerPart); cur.source = srcLine(got); changed++;
+      });
+
+      c.pricedAt = new Date().toLocaleString();
+      await rfqPatch(ref, { costing: c });
+      loadRfqPipeline();
+      setTimeout(function(){
+        rfqSay(ref, changed
+          ? changed + ' price(s) refreshed from the market, each with its source shown beside it' +
+            (held ? '. ' + held + ' were left alone because they came from your price book or were typed in by hand.' : '.') +
+            ' Check them before the quotation goes out — a market estimate is not a quotation.'
+          : 'Nothing was changed. ' + (held ? 'Every price here is either from your price book or typed in by hand, ' +
+            'and neither is overwritten.' : 'The AI returned no usable figures.'), !!changed);
+      }, 300);
+    } catch(e){ rfqSay(ref, esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Refresh market prices with AI';
+  }
+
+  /* The seam into engineering. The route and the characteristics costed here
+     become the part's own process and dimension records, which is what the
+     PFD draws itself from, what the PFMEA is generated against and what the
+     control plan controls. One source, entered once.
+     A part is NOT created here. Parts are created when a quotation is won,
+     with the customer, the drawing number and the agreed price all checked —
+     a second, thinner creation path would be exactly the duplication this
+     codebase removes everywhere else. */
+  async function rfqRouteToPart(btn){
+    var ref = btn.dataset.ref;
+    var r = rfqRows.filter(function(x){ return x.ref === ref; })[0];
+    if (!r || !r.costing || r.costing.error) return;
+    var ops = (r.costing.operations || []).filter(function(o){ return String(o.process||'').trim(); });
+    if (!ops.length) return rfqSay(ref, 'There is no route to send — add at least one operation first.');
+    btn.disabled = true; btn.textContent = 'Checking…';
+    try {
+      var x = r.extract || {}, dp = x.part || {};
+      var parts = await C.idms.parts();
+      var custParts = await C.idms.docs('cust_part');
+      var want = String(dp.drawingNumber || '').trim().toLowerCase();
+      var wantNo = String(dp.number || '').trim().toLowerCase();
+      var hit = null;
+      if ((r.idmsParts||[]).length)
+        hit = parts.filter(function(p){
+          return (r.idmsParts||[]).some(function(ip){
+            return String(ip && (ip.partId || ip) ) === String(p.part_id); }); })[0] || null;
+      if (!hit && want)
+        hit = (function(){
+          var cp = custParts.filter(function(d){
+            return String((d.data||{}).drawingNumber||'').trim().toLowerCase() === want; })[0];
+          return cp ? parts.filter(function(p){ return p.part_id === cp.part_id; })[0] : null;
+        })();
+      if (!hit && wantNo)
+        hit = parts.filter(function(p){
+          return String(p.part_no||'').trim().toLowerCase() === wantNo ||
+                 String((p.data||{}).custPartNo||'').trim().toLowerCase() === wantNo; })[0] || null;
+
+      if (!hit){
+        rfqSay(ref, 'No part on file matches this enquiry' +
+          (dp.drawingNumber ? ' (drawing ' + esc(dp.drawingNumber) + ')' : '') + '. A part is created ' +
+          'when the quotation is won, with the customer, the drawing number and the agreed price ' +
+          'checked together — so mark this enquiry <b>Won</b> first, then send the route across. ' +
+          'Nothing here is lost in the meantime.');
+        btn.disabled = false; btn.textContent = 'Send route & dimensions to the part';
+        return;
+      }
+
+      var existing = (await C.idms.docs('process')).filter(function(d){ return d.part_id === hit.part_id; });
+      var dimCount = 0, opCount = 0, skipped = 0;
+      if (!confirm('Send ' + ops.length + ' operation(s) and their characteristics to ' +
+        (hit.part_no || hit.part_id) + (hit.part_name ? ' — ' + hit.part_name : '') + '?' +
+        (existing.length ? '\n\nThat part already has ' + existing.length + ' operation(s). An ' +
+          'operation number already in use is skipped, not overwritten.' : ''))){
+        btn.disabled = false; btn.textContent = 'Send route & dimensions to the part';
+        return;
+      }
+      btn.textContent = 'Sending…';
+      for (var i = 0; i < ops.length; i++){
+        var o = ops[i], opNo = C.num(o.op) || ((i+1)*10);
+        /* the routing screen's own rule: one operation number per part */
+        if (existing.some(function(d){ return C.num((d.data||{}).opNo) === opNo; })) { skipped++; continue; }
+        var machineName = (rfqCfg.machines.filter(function(m){ return m.id === o.machineId; })[0] || {}).name || '';
+        var saved = await C.idms.saveDoc({ kind:'process', partId:hit.part_id, status:'Active',
+          docNo:String(opNo),
+          data:{ partId:hit.part_id, opNo:opNo, name:o.process, machine:machineName,
+                 setupMin:C.num(o.setupMin), cycleSec:Math.round(C.num(o.cycleMin) * 60),
+                 where:'In-house', description:o.notes || '',
+                 aiProposed:true, fromRfq:r.ref } }, 'route sent from enquiry ' + r.ref);
+        opCount++;
+        var opDocId = saved && (saved.docId || saved.doc_id || (saved.doc && saved.doc.doc_id));
+        for (var j = 0; j < (o.dims||[]).length; j++){
+          var d = o.dims[j];
+          await C.idms.saveDoc({ kind:'dimension', partId:hit.part_id, status:'Active',
+            docNo:String(j+1),
+            data:{ partId:hit.part_id, processId:opDocId || '', opNo:opNo, balloon:String(j+1),
+                   description:d.char, nominal:C.num(d.nominal),
+                   upper:d.tolPlus === '' ? '' : String(d.tolPlus),
+                   lower:d.tolMinus === '' ? '' : String(d.tolMinus),
+                   unit:d.unit || 'mm', gauge:d.gauge || '', cls:d.cls || '', frequency:d.frequency || '',
+                   aiProposed:true, fromRfq:r.ref } }, 'characteristic sent from enquiry ' + r.ref);
+          dimCount++;
+        }
+      }
+      await rfqPatch(ref, { routeSentTo: hit.part_id, routeSentAt: new Date().toLocaleString() });
+      loadRfqPipeline();
+      setTimeout(function(){
+        rfqSay(ref, opCount + ' operation(s) and ' + dimCount + ' characteristic(s) sent to ' +
+          esc(hit.part_no || hit.part_id) + '.' +
+          (skipped ? ' ' + skipped + ' operation(s) were skipped — that number is already on the part.' : '') +
+          ' They are marked <b>AI proposed</b> and wait on Review Agent Work until somebody accepts ' +
+          'them. The PFD, PFMEA and control plan all read from them once accepted.', true);
+      }, 300);
+    } catch(e){ rfqSay(ref, esc(e.message)); }
+    btn.disabled = false; btn.textContent = 'Send route & dimensions to the part';
   }
 
   async function rfqDraftQuote(btn){
@@ -28777,42 +29747,275 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     btn.disabled = false; btn.textContent = 'Draft quotation';
   }
 
+  /* ---------------- the two printed documents ----------------
+     These are their own print windows, not C.openReport, for the same reason
+     the tax invoice is: the generic report has no letterhead, no cost
+     build-up column and no signature blocks, and a cost sheet or a quotation
+     printed without them does not look like the document the works actually
+     issues. The layouts are the ones already in use — carried over from the
+     website's own builders rather than reinvented, so a quotation printed
+     from the IDMS and one printed from the website are the same document. */
+  var RFQ_DOC_CHROME =
+    '<div class="noprint">' +
+    '<button onclick="window.print()">Save as PDF / Print</button>' +
+    '<button onclick="window.close()" style="background:transparent;color:#fff;' +
+      'border:1px solid rgba(255,255,255,.4);">Close</button>' +
+    '<div style="font-size:11.5px;opacity:.85;margin-top:10px;line-height:1.6;">' +
+    'In the print dialog: <b>Destination</b> → Save as PDF, then open <b>More settings</b> ' +
+    'and untick <b>Headers and footers</b>.</div></div>';
+
+  function rfqOpenDoc(html){
+    var w = window.open('', '_blank');
+    if (!w) { toast('Allow pop-ups for this site to open the document.'); return; }
+    w.document.write(html); w.document.close();
+  }
+  function rfqCompanyAddr(co){
+    var tidy = function(s){ return String(s||'').trim().replace(/[,\s]+$/, ''); };
+    return [tidy(co.addr1), tidy(co.addr2),
+      [tidy(co.city), tidy(co.state)].filter(Boolean).join(', '),
+      [tidy(co.country), tidy(co.pin)].filter(Boolean).join(' - ')].filter(Boolean);
+  }
+
+  function rfqCostSheetHtml(r){
+    var c = r.costing, t = rcComputeCosting(c, rfqCfg);
+    var co = rfqCfg.company || {}, cfg = rfqCfg.quoteCfg || {}, b = rfqCfg.costBase || {};
+    var prof = C.getProfile() || {};
+    var logo = prof.logo || co.letterheadLogo || '';
+    var x = r.extract || {}, p = x.part || {};
+    var mat = c.material || {}, pk = c.packaging || {}, fr = c.freight || {}, lg = c.logistics || {};
+    var m2 = function(n){ return (cfg.currencySymbol || '₹') + C.rate(n); };
+
+    var opRows = (t.ops||[]).map(function(o){
+      return '<tr><td class="c">' + esc(o.op) + '</td><td>' + esc(o.process||'') + '</td>' +
+        '<td>' + esc(o.machineName) + '</td>' +
+        '<td class="r">' + m2(o.machineRate) + (o.rateIsManual ? '<span class="src"> typed</span>' : '') + '</td>' +
+        '<td class="r">' + C.num(o.setupMin).toFixed(1) + '</td>' +
+        '<td class="r">' + C.num(o.cycleMin).toFixed(2) + '</td>' +
+        '<td class="r">' + m2(o.machineCost) + '</td><td class="r">' + m2(o.labourCost) + '</td>' +
+        '<td class="r">' + m2(o.setupCost) + '</td>' +
+        '<td class="r b">' + m2(o.machineCost + o.labourCost + o.setupCost) + '</td>' +
+        '<td class="c">' + esc(o.confidence||'—') + '</td></tr>';
+    }).join('') || '<tr><td colspan="11" class="c muted">No operations</td></tr>';
+
+    var reqRows = (x.requirements||[]).map(function(q){
+      return '<tr><td>' + esc(q.category) + '</td><td>' + esc(q.requirement) + '</td>' +
+        '<td class="src">' + esc(q.source) + '</td><td class="c">' + esc(q.confidence) + '</td></tr>';
+    }).join('');
+
+    /* every characteristic the route produces, in the order it is made */
+    var dimRows = [];
+    (c.operations||[]).forEach(function(o){
+      (o.dims||[]).forEach(function(d){
+        dimRows.push('<tr><td class="c">' + esc(o.op) + '</td><td>' + esc(o.process||'') + '</td>' +
+          '<td>' + esc(d.char) + '</td><td class="r">' + C.qty(d.nominal) + '</td>' +
+          '<td class="r">' + (d.tolPlus === '' ? '—' : '+' + C.qty(d.tolPlus)) + '</td>' +
+          '<td class="r">' + (d.tolMinus === '' ? '—' : C.qty(d.tolMinus)) + '</td>' +
+          '<td>' + esc(d.unit||'') + '</td><td class="c">' + esc(d.cls||'—') + '</td>' +
+          '<td>' + esc(d.gauge||'—') + '</td><td>' + esc(d.frequency||'—') + '</td></tr>');
+      });
+    });
+
+    var amort = function(title, list, unitLabel){
+      if (!(list||[]).length) return '';
+      return '<h4>' + title + '</h4><table><thead><tr><th class="c" style="width:9mm">Op</th>' +
+        '<th style="width:38mm">Item</th><th>Specification</th>' +
+        '<th class="r" style="width:18mm">' + unitLabel + '</th><th class="r" style="width:16mm">Life (pcs)</th>' +
+        '<th class="r" style="width:17mm">Cost/pc</th><th style="width:34mm">Price source</th></tr></thead><tbody>' +
+        list.map(function(v){
+          var per = C.num(v.life) > 0 ? C.num(v.unitCost)/C.num(v.life) : C.num(v.costPerPart);
+          return '<tr><td class="c">' + esc(v.op||'—') + '</td><td>' + esc(v.item) + '</td>' +
+            '<td>' + esc(v.spec||'—') + '</td><td class="r">' + m2(v.unitCost) + '</td>' +
+            '<td class="r">' + (C.num(v.life) || '—') + '</td>' +
+            '<td class="r b">' + m2(isFinite(per) ? per : 0) + '</td>' +
+            '<td class="src">' + esc(v.source||'—') + '</td></tr>';
+        }).join('') +
+        '<tr><td colspan="5" class="r b">Total per piece</td><td class="r b">' + m2(rcListCost(list)) +
+        '</td><td></td></tr></tbody></table>';
+    };
+
+    var line = function(label, val, cls){
+      return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + label + '</td><td class="r">' +
+        m2(val) + '</td></tr>';
+    };
+
+    return '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+'<title>Cost Sheet ' + esc(r.ref) + '</title><style>' +
+'@page{size:A4;margin:12mm 10mm 14mm;}' +
+'*{box-sizing:border-box;}' +
+"body{font-family:'Helvetica Neue',Arial,sans-serif;color:#12233f;font-size:9pt;line-height:1.45;margin:0;}" +
+'.sheet{max-width:190mm;margin:0 auto;}' +
+'.stamp{background:#8E1A1A;color:#fff;text-align:center;padding:5px;font-size:8pt;letter-spacing:2pt;' +
+  'text-transform:uppercase;font-weight:700;margin-bottom:10px;border-radius:2px;}' +
+'.lh{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:2pt solid #0B2A5B;padding-bottom:8px;}' +
+'.lh img{max-height:48px;max-width:120px;object-fit:contain;}' +
+'.lh-co{font-size:12pt;font-weight:800;color:#0B2A5B;}' +
+'.lh-right{text-align:right;font-size:7.5pt;color:#41567E;}' +
+'h2.title{text-align:center;font-size:12pt;letter-spacing:2pt;color:#0B2A5B;margin:12px 0 3px;}' +
+'.rule{width:50px;height:2pt;background:#C2932E;margin:0 auto 12px;}' +
+'.grid{display:flex;gap:12px;margin-bottom:12px;}' +
+'.box{flex:1;border:.7pt solid #ccd6e5;border-radius:3px;padding:8px 10px;}' +
+'.box h5{font-size:7pt;letter-spacing:1pt;text-transform:uppercase;color:#8E6A19;margin:0 0 4px;font-weight:700;}' +
+'.box p{margin:0;font-size:8.5pt;line-height:1.5;}.box b{color:#0B2A5B;}' +
+'h4{font-size:7.5pt;letter-spacing:1.2pt;text-transform:uppercase;color:#8E6A19;margin:14px 0 5px;' +
+  'border-bottom:.7pt solid #e2e9f2;padding-bottom:3px;}' +
+'table{width:100%;border-collapse:collapse;font-size:8pt;}' +
+'th{background:#0B2A5B;color:#fff;text-align:left;padding:5px;font-size:7pt;letter-spacing:.5pt;' +
+  'text-transform:uppercase;font-weight:600;}' +
+'td{padding:4px 5px;border-bottom:.6pt solid #e2e9f2;vertical-align:top;}' +
+'td.c,th.c{text-align:center;}td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;}' +
+'td.b{font-weight:700;color:#0B2A5B;}' +
+'td.src,.src{font-size:7pt;color:#8894ab;}' +
+'.src-note{font-size:7.5pt;color:#41567E;background:#f4f7fb;border-radius:3px;padding:5px 8px;' +
+  'margin-top:5px;line-height:1.6;}.src-note b{color:#0B2A5B;}' +
+'.muted{color:#8894ab;font-style:italic;}' +
+'.totals{width:88mm;margin-left:auto;margin-top:8px;}' +
+'.totals td{padding:3px 5px;border:none;}' +
+'.totals tr.sep td{border-top:.8pt solid #b9c6d8;padding-top:6px;font-weight:700;color:#0B2A5B;}' +
+'.totals tr.grand td{border-top:1.6pt solid #0B2A5B;padding-top:7px;font-size:11pt;font-weight:800;color:#0B2A5B;}' +
+'.totals tr.minp td{color:#8894ab;font-size:7.5pt;}' +
+'.note{background:#FFF6E0;border:.7pt solid #e0c37a;border-radius:3px;padding:8px 10px;margin-top:10px;' +
+  'font-size:8pt;color:#7a5c14;}.note ul{margin:4px 0 0 14px;}.note li{margin-bottom:2px;}' +
+'.sign{margin-top:18px;display:flex;justify-content:space-between;gap:20px;}' +
+'.sign div{flex:1;border-top:.8pt solid #0B2A5B;padding-top:5px;font-size:7.5pt;color:#41567E;text-align:center;}' +
+'.foot{margin-top:14px;padding-top:6px;border-top:.6pt solid #ccd6e5;font-size:7pt;color:#8894ab;text-align:center;}' +
+'.noprint{text-align:center;padding:14px;background:#0B2A5B;color:#fff;font-family:Arial;}' +
+'.noprint button{background:#E0B44E;color:#0B2A5B;border:none;padding:11px 26px;border-radius:100px;' +
+  'font-weight:700;font-size:13px;cursor:pointer;margin:0 5px;}' +
+'@media print{.noprint{display:none;}}' +
+'</style></head><body>' + RFQ_DOC_CHROME +
+'<div class="sheet">' +
+'<div class="stamp">Internal cost sheet — confidential — not for issue to customer</div>' +
+'<div class="lh"><div style="display:flex;gap:10px;align-items:center;">' +
+  (logo ? '<img src="' + esc(logo) + '">' : '') +
+  '<div class="lh-co">' + esc(co.legalName || co.displayName || prof.name || '') + '</div></div>' +
+'<div class="lh-right">Prepared ' + esc(new Date().toLocaleString()) + '<br>By ' +
+  esc(rfqCfg.quoteSender || 'Estimating') + '</div></div>' +
+'<h2 class="title">COST SHEET</h2><div class="rule"></div>' +
+'<div class="grid">' +
+'<div class="box"><h5>Enquiry</h5><p><b>Ref:</b> ' + esc(r.ref) + '<br>' +
+  '<b>Customer:</b> ' + esc(r.company || r.name || '') + '<br>' +
+  '<b>Contact:</b> ' + esc(r.name || '') + (r.email ? ' · ' + esc(r.email) : '') + '<br>' +
+  '<b>Received:</b> ' + esc(r.date || r.createdAt || '') + '</p></div>' +
+'<div class="box"><h5>Component</h5><p><b>Part:</b> ' + esc(p.name || '—') + '<br>' +
+  '<b>Part No:</b> ' + esc(p.number || '—') + '<br>' +
+  '<b>Drawing:</b> ' + esc(p.drawingNumber || '—') + (p.revision ? ' Rev ' + esc(p.revision) : '') + '<br>' +
+  '<b>Material:</b> ' + esc(mat.grade || mat.name || '—') + '</p></div>' +
+'<div class="box"><h5>Quantity &amp; Batch</h5><p><b>Order qty:</b> ' + t.qty + '<br>' +
+  '<b>Batch size:</b> ' + t.batch + '<br>' +
+  '<b>Total cycle:</b> ' + C.num(t.totalCycleMin).toFixed(2) + ' min/pc<br>' +
+  '<b>Blank wt:</b> ' + C.num(mat.blankWeight).toFixed(3) + ' kg</p></div></div>' +
+
+(reqRows ? '<h4>Customer Requirements Extracted from Drawing</h4><table><thead><tr>' +
+  '<th style="width:28mm">Category</th><th>Requirement</th><th style="width:38mm">Source</th>' +
+  '<th class="c" style="width:16mm">Conf.</th></tr></thead><tbody>' + reqRows + '</tbody></table>' : '') +
+
+'<h4>Raw Material</h4><table><thead><tr><th>Grade</th><th>Stock form</th><th>Stock size</th>' +
+  '<th>Cut length</th><th class="r">Blank kg</th><th class="r">Finish kg</th>' +
+  '<th class="r">Rate/kg</th><th class="r">Prep/pc</th><th class="r">Cost/pc</th></tr></thead><tbody><tr>' +
+  '<td>' + esc(mat.grade || mat.name || '—') + '</td><td>' + esc(mat.stockForm || '—') + '</td>' +
+  '<td>' + esc(mat.stockSize || '—') + '</td><td>' + esc(mat.cutLength || '—') + '</td>' +
+  '<td class="r">' + C.num(mat.blankWeight).toFixed(3) + '</td>' +
+  '<td class="r">' + C.num(mat.finishWeight).toFixed(3) + '</td>' +
+  '<td class="r">' + m2(mat.rate) + '</td><td class="r">' + m2(mat.prepCostPerPart) + '</td>' +
+  '<td class="r b">' + m2(t.materialCost) + '</td></tr></tbody></table>' +
+((c.bom||[]).length ? '<table style="margin-top:8px;"><thead><tr><th>Bill of material</th><th>Type</th>' +
+  '<th>Spec</th><th class="r">Qty/pc</th><th>Unit</th><th class="r">Rate</th><th class="r">Cost/pc</th>' +
+  '<th>Price source</th></tr></thead><tbody>' + c.bom.map(function(bm){
+    return '<tr><td>' + esc(bm.item) + '</td><td>' + esc(bm.type||'') + '</td><td>' + esc(bm.spec||'—') + '</td>' +
+      '<td class="r">' + C.qty(bm.qtyPerPart) + '</td><td>' + esc(bm.unit||'') + '</td>' +
+      '<td class="r">' + m2(bm.rate) + '</td>' +
+      '<td class="r b">' + m2(C.num(bm.costPerPart) || (C.num(bm.qtyPerPart)*C.num(bm.rate))) + '</td>' +
+      '<td class="src">' + esc(bm.source||'—') + '</td></tr>'; }).join('') +
+  '<tr><td colspan="6" class="r b">Material total per piece</td><td class="r b">' + m2(t.materialCost) +
+  '</td><td></td></tr></tbody></table>' : '') +
+'<div class="src-note"><b>Price source:</b> ' + esc(mat.rateSource || 'not stated') +
+  (mat.rateDate ? ' · ' + esc(mat.rateDate) : '') +
+  (mat.basis ? '<br><b>Sizing basis:</b> ' + esc(mat.basis) : '') + '</div>' +
+
+'<h4>Process Route &amp; Operation Costing</h4><table><thead><tr><th class="c" style="width:9mm">Op</th>' +
+  '<th>Process</th><th style="width:32mm">Machine</th><th class="r" style="width:17mm">M/c rate</th>' +
+  '<th class="r" style="width:14mm">Setup min</th><th class="r" style="width:14mm">Cycle min</th>' +
+  '<th class="r" style="width:16mm">Machine</th><th class="r" style="width:16mm">Labour</th>' +
+  '<th class="r" style="width:15mm">Setup</th><th class="r" style="width:17mm">Total/pc</th>' +
+  '<th class="c" style="width:14mm">Conf.</th></tr></thead><tbody>' + opRows + '</tbody></table>' +
+(t.manualMhr ? '<div class="src-note"><b>Machine hour rate:</b> entered by hand for this estimate — ' +
+  'the derived cost base was not used.</div>' : '') +
+
+(dimRows.length ? '<h4>Dimensions by Operation</h4><table><thead><tr><th class="c" style="width:9mm">Op</th>' +
+  '<th style="width:32mm">Operation</th><th>Characteristic</th><th class="r" style="width:16mm">Nominal</th>' +
+  '<th class="r" style="width:14mm">+ Tol</th><th class="r" style="width:14mm">− Tol</th>' +
+  '<th style="width:12mm">Unit</th><th class="c" style="width:12mm">Class</th>' +
+  '<th style="width:26mm">Gauge</th><th style="width:22mm">Frequency</th></tr></thead><tbody>' +
+  dimRows.join('') + '</tbody></table>' : '') +
+
+amort('Tooling &amp; Holders', c.tooling, 'Unit cost') +
+amort('Jigs &amp; Fixtures', c.jigFixtures, 'Build cost') +
+amort('Gauges &amp; Inspection Equipment', c.gauges, 'Gauge cost') +
+
+((c.consumables||[]).length ? '<h4>Consumables</h4><table><thead><tr><th style="width:45mm">Item</th>' +
+  '<th>Specification</th><th class="r" style="width:20mm">Cost/pc</th>' +
+  '<th style="width:34mm">Price source</th></tr></thead><tbody>' + c.consumables.map(function(cn){
+    return '<tr><td>' + esc(cn.item) + '</td><td>' + esc(cn.spec||'—') + '</td>' +
+      '<td class="r b">' + m2(cn.costPerPart) + '</td><td class="src">' + esc(cn.source||'—') + '</td></tr>';
+  }).join('') + '<tr><td colspan="2" class="r b">Consumables total per piece</td>' +
+  '<td class="r b">' + m2(t.consumables) + '</td><td></td></tr></tbody></table>' : '') +
+
+'<h4>Inspection, Packing, Logistics &amp; Freight</h4><table><thead><tr><th style="width:26mm">Item</th>' +
+  '<th style="width:40mm">Method / basis</th><th>Detail</th><th class="r" style="width:20mm">Cost/pc</th>' +
+  '<th style="width:32mm">Price source</th></tr></thead><tbody>' +
+  '<tr><td><b>Inspection</b></td><td>' + (t.inspectionTyped ? 'Entered as a cost'
+    : C.qty(c.inspectionMinPerPart) + ' min/pc at the inspector’s rate') + '</td>' +
+    '<td>' + esc(c.inspectionSource || '') + '</td><td class="r b">' + m2(t.inspection) + '</td>' +
+    '<td class="src">' + esc(c.inspectionSource || '—') + '</td></tr>' +
+  '<tr><td><b>Packing</b></td><td>' + esc(pk.method||'—') + '</td><td>' + esc(pk.materials||'') +
+    (pk.basis ? '<br><span class="src">' + esc(pk.basis) + '</span>' : '') + '</td>' +
+    '<td class="r b">' + m2(pk.costPerPart) + '</td><td class="src">' + esc(pk.source||'—') + '</td></tr>' +
+  '<tr><td><b>Logistics</b></td><td>' + esc(lg.mode||'—') + '</td><td>' + esc(lg.route||'') + '</td>' +
+    '<td class="r b">' + m2(lg.costPerPart) + '</td><td class="src">' + esc(lg.source||'—') + '</td></tr>' +
+  '<tr><td><b>Freight</b></td><td>' + esc(fr.method||'—') + '</td><td>' + esc(fr.destination||'') + '</td>' +
+    '<td class="r b">' + m2(fr.costPerPart) + '</td><td class="src">' + esc(fr.source||'—') + '</td></tr>' +
+  '</tbody></table>' +
+
+'<h4>Cost Build-Up</h4><table class="totals">' +
+  line('Material', t.materialCost) + line('Machine', t.machineCost) + line('Labour', t.labourCost) +
+  line('Setup (spread over batch of ' + t.batch + ')', t.setupCost) +
+  line('Inspection', t.inspection) + line('Special processes', t.special) +
+  line('Tooling', t.tooling) + line('Jigs &amp; fixtures', t.jigFixture) + line('Gauges', t.gauge) +
+  line('Consumables', t.consumables) + line('Packing', t.packaging) +
+  line('Logistics', t.logistics) + line('Freight', t.freight) +
+  line('Direct cost', t.direct, 'sep') +
+  line('Scrap / rejection @ ' + C.num(b.scrapPct) + '%', t.scrap) +
+  line('Administration @ ' + C.num(b.adminPct) + '%', t.admin) +
+  line('Finance @ ' + C.num(b.financePct) + '%', t.finance) +
+  line('Contingency @ ' + C.num(b.contingencyPct) + '%', t.contingency) +
+  line('Total manufacturing cost', t.totalCost, 'sep') +
+  line('Profit @ ' + C.num(b.profitPct) + '%', t.profit) +
+  line('Recommended selling price / pc', t.sellingPrice, 'grand') +
+  line('Minimum viable price / pc', t.minPrice, 'minp') +
+  line('Order value (' + t.qty + ' pcs)', t.lineTotal, 'minp') + '</table>' +
+
+(((c.assumptions||[]).length || (x.missing||[]).length) ? '<div class="note">' +
+  ((c.assumptions||[]).length ? '<b>Assumptions made during costing — verify before release:</b><ul>' +
+    c.assumptions.map(function(a){ return '<li>' + esc(a) + '</li>'; }).join('') + '</ul>' : '') +
+  ((x.missing||[]).length ? '<b style="display:block;margin-top:6px;">Information missing from the drawing:</b><ul>' +
+    x.missing.filter(Boolean).map(function(mm){ return '<li>' + esc(mm) + '</li>'; }).join('') + '</ul>' : '') +
+  '</div>' : '') +
+(c.aiNotes ? '<div class="note" style="background:#EAF6FD;border-color:#a9cbe6;color:#1E4E7A;">' +
+  esc(c.aiNotes) + '</div>' : '') +
+
+'<div class="sign"><div>Estimated by</div><div>Checked by</div><div>Approved by</div></div>' +
+'<div class="foot">' +
+  (t.manualMhr ? 'Machine hour rate entered by hand' : 'Machine hour rates derived from company cost base') +
+  ' · Bought-in prices carry their source · Route and time estimates require engineering verification<br>' +
+  esc(co.legalName || co.displayName || prof.name || '') +
+  ' — internal document, not for circulation outside the company</div>' +
+'</div></body></html>';
+  }
+
   function rfqPrintCostSheet(ref){
     var r = rfqRows.filter(function(x){ return x.ref === ref; })[0];
     if (!r || !r.costing || r.costing.error) return;
-    var t = rcComputeCosting(r.costing, rfqCfg);
-    var x = r.extract || {}, part = x.part || {};
-    C.openReport({ title:'Internal Cost Sheet — ' + r.ref, kind:'Costing', landscape:true,
-      subtitle:'CONFIDENTIAL — internal costing, not for the customer',
-      sections:[
-        { type:'pairs', title:'Enquiry', rows:[['Reference', esc(r.ref)], ['Customer', esc(r.company||r.name||'')],
-          ['Part', esc([part.number, part.name, part.drawingNumber].filter(Boolean).join(' · ')||'—')],
-          ['Quantity', C.qty(t.qty)]] },
-        { type:'table', title:'Operations', dense:true,
-          columns:[{label:'Op',align:'c'},{label:'Process'},{label:'Machine'},{label:'Setup min',align:'r'},
-            {label:'Cycle min',align:'r'},{label:'Machine',align:'r'},{label:'Labour',align:'r'},
-            {label:'Setup',align:'r'},{label:'Total',align:'r'}],
-          rows:(t.ops||[]).map(function(o){
-            return [esc(o.op), esc(o.process||''), esc(o.machineName), C.qty(o.setupMin), C.qty(o.cycleMin),
-              C.qty(Math.round(o.machineCost*100)/100), C.qty(Math.round(o.labourCost*100)/100),
-              C.qty(Math.round(o.setupCost*100)/100),
-              C.qty(Math.round((o.machineCost+o.labourCost+o.setupCost)*100)/100)];
-          }) },
-        { type:'pairs', title:'Cost build-up, per piece', rows:[
-          ['Material', C.inr(t.materialCost)], ['Machine', C.inr(t.machineCost)], ['Labour', C.inr(t.labourCost)],
-          ['Setup', C.inr(t.setupCost)], ['Inspection', C.inr(t.inspection)], ['Special processes', C.inr(t.special)],
-          ['Tooling', C.inr(t.tooling)], ['Consumables', C.inr(t.consumables)], ['Packaging', C.inr(t.packaging)],
-          ['Freight', C.inr(t.freight)], ['Direct cost', C.inr(t.direct)], ['Scrap allowance', C.inr(t.scrap)],
-          ['Admin overhead', C.inr(t.admin)], ['Finance', C.inr(t.finance)], ['Contingency', C.inr(t.contingency)],
-          ['Total cost', C.inr(t.totalCost)], ['Profit', C.inr(t.profit)], ['Selling price', C.inr(t.sellingPrice)],
-          ['Line total', C.inr(t.lineTotal)], ['Floor price (cost + 3%)', C.inr(t.minPrice)]] },
-        (r.costing.assumptions||[]).length ? { type:'text', title:'Assumptions the AI had to make',
-          body:r.costing.assumptions.join('\n') } : null,
-        { type:'text', title:'How this was worked out',
-          body:'The AI proposed the route and the times only. Every rate — machine hour rate, labour rate, ' +
-               'overhead, scrap, admin, finance, contingency and profit — was computed from the figures on ' +
-               'Quoting & Costing Setup. The AI supplied no prices except material where marked as a market estimate.' }
-      ].filter(Boolean) });
+    rfqOpenDoc(rfqCostSheetHtml(r));
   }
 
   /* Sending goes through the same /api/notify the website already uses — one
@@ -28866,30 +30069,165 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     btn.disabled = false; btn.textContent = 'Send to customer';
   }
 
-  function rfqPrintQuote(ref){    var r = rfqRows.filter(function(x){ return x.ref === ref; })[0];
+  /* The customer-facing document. Everything on it is the company's own —
+     letterhead, statutory numbers, terms, seal and signature all come from
+     Company Profile and Quoting & Costing Setup, never from code, so the same
+     builder serves whichever company this deployment belongs to. */
+  function rfqQuotationHtml(r){
+    var q = r.quoteDoc || {}, co = rfqCfg.company || {}, cfg = rfqCfg.quoteCfg || {};
+    var prof = C.getProfile() || {};
+    var logo = prof.logo || co.letterheadLogo || '';
+    var sym = q.currencySymbol || cfg.currencySymbol || '₹';
+    var m2 = function(n){ return sym + C.rate(n); };
+    var addr = rfqCompanyAddr(co);
+    var contactBits = [co.phone && ('Tel: ' + esc(co.phone)), co.mobile && ('Mob: ' + esc(co.mobile)),
+      (co.rfqEmail || co.email) && ('Email: ' + esc(co.rfqEmail || co.email)),
+      co.website && esc(co.website)].filter(Boolean).join(' &nbsp;|&nbsp; ');
+    var statBits = [co.taxNumber && (esc(co.taxLabel || 'GSTIN') + ': ' + esc(co.taxNumber)),
+      co.panNumber && (esc(co.panLabel || 'PAN') + ': ' + esc(co.panNumber)),
+      co.cin && ('CIN: ' + esc(co.cin)), co.iec && ('IEC: ' + esc(co.iec))].filter(Boolean).join(' &nbsp;|&nbsp; ');
+    var qDate = q.date ? new Date(q.date) : (q.createdAt ? new Date(q.createdAt) : new Date());
+    if (isNaN(qDate.getTime())) qDate = new Date();
+    var validUntil = (function(){
+      var d = new Date(qDate.getTime());
+      d.setDate(d.getDate() + (C.num(q.validityDays) || C.num(cfg.validityDays) || 30));
+      return d.toLocaleDateString();
+    })();
+
+    /* one line per quoted item; a quotation drafted before multi-line support
+       carries a single part line and still prints correctly */
+    var items = (q.items && q.items.length) ? q.items : [{
+      desc: q.partLine || 'As per drawing', qty: q.qty, unit: q.unit || 'nos', rate: q.unitPrice }];
+    var rows = items.filter(function(i){ return i.desc || i.qty || i.rate; }).map(function(i, n){
+      return '<tr><td class="c">' + (n+1) + '</td><td>' + esc(i.desc || '') + '</td>' +
+        '<td class="c">' + esc(i.qty) + '</td><td class="c">' + esc(i.unit || 'nos') + '</td>' +
+        '<td class="r">' + m2(i.rate) + '</td>' +
+        '<td class="r">' + m2(C.num(i.qty) * C.num(i.rate)) + '</td></tr>';
+    }).join('') || '<tr><td colspan="6" class="c muted">No line items entered</td></tr>';
+
+    var terms = [
+      (q.paymentTerms || cfg.paymentTerms) && ['Payment', q.paymentTerms || cfg.paymentTerms],
+      (q.deliveryTerms || cfg.deliveryTerms) && ['Delivery', q.deliveryTerms || cfg.deliveryTerms],
+      q.leadTime && ['Lead Time', q.leadTime],
+      (q.incoterms || cfg.incoterms) && ['Incoterms', q.incoterms || cfg.incoterms],
+      cfg.freightTerms && ['Freight', cfg.freightTerms],
+      (q.warrantyTerms || cfg.warrantyTerms) && ['Warranty', q.warrantyTerms || cfg.warrantyTerms],
+      ['Validity', 'This quotation is valid until ' + validUntil + '.']
+    ].filter(Boolean).map(function(p){
+      return '<tr><th>' + esc(p[0]) + '</th><td>' + esc(p[1]) + '</td></tr>';
+    }).join('');
+
+    return '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+'<title>' + esc(q.number || 'Quotation') + ' — ' + esc(co.legalName || co.displayName || prof.name || '') +
+'</title><style>' +
+'@page{size:A4;margin:14mm 12mm 16mm;}*{box-sizing:border-box;}' +
+"body{font-family:'Helvetica Neue',Arial,sans-serif;color:#12233f;font-size:10.5pt;line-height:1.5;margin:0;}" +
+'.sheet{max-width:186mm;margin:0 auto;}' +
+'.lh{display:flex;justify-content:space-between;align-items:center;gap:14px;' +
+  'border-bottom:2.5pt solid #0B2A5B;padding-bottom:9px;}' +
+'.lh-left{display:flex;gap:10px;align-items:center;min-width:0;flex:1;}' +
+'.lh-logo img{max-height:56px;max-width:132px;object-fit:contain;}' +
+'.lh-co{font-size:13pt;font-weight:800;color:#0B2A5B;letter-spacing:-.3pt;line-height:1.15;}' +
+'.lh-tag{font-size:6.5pt;color:#8E6A19;letter-spacing:.6pt;text-transform:uppercase;margin-top:2px;line-height:1.3;}' +
+'.lh-right{text-align:right;font-size:7.5pt;color:#41567E;line-height:1.5;flex:0 0 auto;}' +
+'.stat{font-size:8pt;color:#41567E;padding:5px 0;border-bottom:.7pt solid #ccd6e5;}' +
+'.title{text-align:center;margin:12px 0 3px;font-size:13pt;font-weight:800;letter-spacing:2.5pt;color:#0B2A5B;}' +
+'.title-rule{width:60px;height:2.5pt;background:#C2932E;margin:0 auto 12px;}' +
+'.meta{display:flex;justify-content:space-between;gap:16px;margin-bottom:12px;}' +
+'.meta-box{flex:1;border:.7pt solid #ccd6e5;border-radius:3px;padding:9px 11px;}' +
+'.meta-box h5{font-size:7.5pt;letter-spacing:1.2pt;text-transform:uppercase;color:#8E6A19;margin:0 0 5px;font-weight:700;}' +
+'.meta-box p{margin:0;font-size:9.5pt;line-height:1.55;}.meta-box b{color:#0B2A5B;}' +
+'table.items{width:100%;border-collapse:collapse;margin-top:6px;}' +
+'table.items th{background:#0B2A5B;color:#fff;font-size:8pt;letter-spacing:.8pt;text-transform:uppercase;' +
+  'padding:8px 7px;text-align:left;font-weight:600;}' +
+'table.items td{padding:8px 7px;border-bottom:.7pt solid #dde5f0;font-size:9.5pt;vertical-align:top;}' +
+'table.items .c{text-align:center;}table.items .r{text-align:right;font-variant-numeric:tabular-nums;}' +
+'.muted{color:#8894ab;font-style:italic;}' +
+'.totals{margin-top:10px;margin-left:auto;width:62mm;font-size:9.5pt;}' +
+'.totals div{display:flex;justify-content:space-between;padding:4px 0;}' +
+'.totals .grand{border-top:1.6pt solid #0B2A5B;margin-top:5px;padding-top:7px;font-weight:800;' +
+  'font-size:11.5pt;color:#0B2A5B;}' +
+'.notes{margin-top:12px;font-size:9pt;color:#41567E;white-space:pre-wrap;}' +
+'.terms{margin-top:16px;page-break-inside:avoid;break-inside:avoid;}' +
+'.terms h4{font-size:8pt;letter-spacing:1.4pt;text-transform:uppercase;color:#8E6A19;margin:0 0 7px;}' +
+'table.terms-t{width:100%;border-collapse:collapse;font-size:9pt;}' +
+'table.terms-t th{text-align:left;width:30mm;padding:4px 8px 4px 0;color:#0B2A5B;font-weight:600;vertical-align:top;}' +
+'table.terms-t td{padding:4px 0;color:#41567E;vertical-align:top;}' +
+'.bank{margin-top:14px;border:.7pt solid #ccd6e5;border-radius:3px;padding:9px 11px;font-size:8.5pt;' +
+  'color:#41567E;page-break-inside:avoid;break-inside:avoid;}' +
+'.bank h4{font-size:7.5pt;letter-spacing:1.2pt;text-transform:uppercase;color:#8E6A19;margin:0 0 5px;}' +
+'.sign{margin-top:18px;display:flex;justify-content:space-between;align-items:flex-end;' +
+  'page-break-inside:avoid;break-inside:avoid;}' +
+'.sign-block{text-align:center;min-width:60mm;}' +
+'.sign-block img{max-height:44px;max-width:140px;object-fit:contain;margin:0 auto 3px;}' +
+'.sign-line{border-top:.9pt solid #0B2A5B;padding-top:5px;font-size:9pt;}' +
+'.sign-line b{color:#0B2A5B;}.sign-line span{color:#41567E;font-size:8pt;}' +
+'.seal img{max-height:70px;opacity:.9;}' +
+'.foot{margin-top:16px;padding-top:8px;border-top:.7pt solid #ccd6e5;font-size:7.5pt;color:#8894ab;' +
+  'text-align:center;line-height:1.6;page-break-inside:avoid;break-inside:avoid;}' +
+'.noprint{text-align:center;padding:14px;background:#0B2A5B;color:#fff;font-family:Arial;}' +
+'.noprint button{background:#E0B44E;color:#0B2A5B;border:none;padding:11px 26px;border-radius:100px;' +
+  'font-weight:700;font-size:13px;cursor:pointer;margin:0 5px;}' +
+'@media print{.noprint{display:none;}}' +
+'</style></head><body>' + RFQ_DOC_CHROME +
+'<div class="sheet">' +
+'<div class="lh"><div class="lh-left">' +
+  (logo ? '<div class="lh-logo"><img src="' + esc(logo) + '"></div>' : '') +
+  '<div><div class="lh-co">' + esc(co.legalName || co.displayName || prof.name || '') + '</div>' +
+  (co.tagline ? '<div class="lh-tag">' + esc(co.tagline) + '</div>' : '') + '</div></div>' +
+'<div class="lh-right">' + addr.map(function(l){ return esc(l); }).join('<br>') +
+  (contactBits ? '<br>' + contactBits : '') + '</div></div>' +
+(statBits ? '<div class="stat">' + statBits + '</div>' : '') +
+'<div class="title">QUOTATION</div><div class="title-rule"></div>' +
+'<div class="meta">' +
+'<div class="meta-box"><h5>To</h5><p><b>' + esc(r.company || r.name || '') + '</b><br>' +
+  (r.company && r.name ? esc(r.name) + '<br>' : '') +
+  (r.email ? esc(r.email) + '<br>' : '') + (r.phone ? esc(r.phone) : '') + '</p></div>' +
+'<div class="meta-box"><h5>Quotation Details</h5><p>' +
+  '<b>No:</b> ' + esc(q.number || '—') + '<br>' +
+  '<b>Date:</b> ' + esc(qDate.toLocaleDateString()) + '<br>' +
+  '<b>Valid Until:</b> ' + esc(validUntil) + '<br>' +
+  '<b>Your Ref:</b> ' + esc(r.ref || '') + '</p></div></div>' +
+'<table class="items"><thead><tr><th style="width:9mm">#</th><th>Description</th>' +
+  '<th class="c" style="width:16mm">Qty</th><th class="c" style="width:16mm">Unit</th>' +
+  '<th class="r" style="width:26mm">Rate</th><th class="r" style="width:30mm">Amount</th></tr></thead>' +
+  '<tbody>' + rows + '</tbody></table>' +
+'<div class="totals"><div><span>Subtotal</span><span>' + m2(q.subtotal) + '</span></div>' +
+  (C.num(q.taxPct) ? '<div><span>' + esc(q.taxLabel || cfg.taxLabel || 'GST') + ' @ ' + C.num(q.taxPct) +
+    '%</span><span>' + m2(q.tax) + '</span></div>' : '') +
+  '<div class="grand"><span>Total (' + esc(q.currency || cfg.currency || 'INR') + ')</span><span>' +
+  m2(q.total) + '</span></div></div>' +
+(q.body ? '<div class="notes">' + esc(q.body) + '</div>' : '') +
+(q.notes ? '<div class="notes"><b>Notes:</b> ' + esc(q.notes) + '</div>' : '') +
+'<div class="terms"><h4>Terms &amp; Conditions</h4><table class="terms-t">' + terms + '</table></div>' +
+((co.bankShow && co.bankName) ? '<div class="bank"><h4>Bank Details</h4>' +
+  esc(co.bankName) + (co.bankBranch ? ', ' + esc(co.bankBranch) : '') + '<br>' +
+  (co.bankAccName ? 'A/c Name: ' + esc(co.bankAccName) + '<br>' : '') +
+  (co.bankAccNo ? 'A/c No: ' + esc(co.bankAccNo) : '') +
+  (co.bankIfsc ? ' &nbsp;|&nbsp; IFSC/SWIFT: ' + esc(co.bankIfsc) : '') + '</div>' : '') +
+'<div class="sign">' +
+  '<div class="seal">' + (co.sealImg ? '<img src="' + esc(co.sealImg) + '">' : '') + '</div>' +
+  '<div class="sign-block">' +
+  (co.signatureImg ? '<img src="' + esc(co.signatureImg) + '">' : '<div style="height:46px"></div>') +
+  '<div class="sign-line"><b>' + esc(co.signatoryName || 'Authorised Signatory') + '</b><br>' +
+  '<span>' + esc(co.signatoryTitle || '') + (co.signatoryTitle ? '<br>' : '') +
+  'For ' + esc(co.legalName || co.displayName || prof.name || '') + '</span></div></div></div>' +
+'<div class="foot">' +
+  (cfg.confidentiality ? esc(cfg.confidentiality) + '<br>' : '') +
+  (cfg.footerNote ? esc(cfg.footerNote) + '<br>' : '') +
+  esc(co.legalName || co.displayName || prof.name || '') +
+  (addr.length ? ' · ' + esc(addr.join(', ')) : '') + '</div>' +
+'</div></body></html>';
+  }
+
+  function rfqPrintQuote(ref){
+    var r = rfqRows.filter(function(x){ return x.ref === ref; })[0];
     if (!r || !r.quoteDoc) return;
-    var q = r.quoteDoc, co = rfqCfg.company || {};
-    C.openReport({ title:'Quotation ' + (q.number||''), kind:'Quotation',
-      subtitle:(r.company || r.name || '') + ' · ' + r.ref,
-      sections:[
-        { type:'pairs', title:'Quotation', rows:[['Number', esc(q.number||'')], ['Date', esc(q.createdAt||'')],
-          ['To', esc(r.company||r.name||'')], ['Enquiry', esc(r.ref)],
-          ['Valid for', esc(q.validityDays)+' days']] },
-        q.body ? { type:'text', title:'', body:q.body } : null,
-        { type:'table', title:'Quotation', columns:[{label:'Description'},{label:'Qty',align:'r'},
-            {label:'Unit price',align:'r'},{label:'Amount',align:'r'}],
-          rows:[[esc(q.partLine||''), C.qty(q.qty), C.inr(q.unitPrice), C.inr(q.subtotal)]] },
-        { type:'pairs', title:'Totals', rows:[['Subtotal', C.inr(q.subtotal)]]
-            .concat(q.taxPct ? [[esc(q.taxLabel)+' @ '+q.taxPct+'%', C.inr(q.tax)]] : [])
-            .concat([['Total', C.inr(q.total)]]) },
-        { type:'text', title:'Terms',
-          body:[q.paymentTerms && ('Payment: ' + q.paymentTerms),
-                q.deliveryTerms && ('Delivery: ' + q.deliveryTerms),
-                q.incoterms && ('Incoterms: ' + q.incoterms),
-                q.warrantyTerms && ('Warranty: ' + q.warrantyTerms)].filter(Boolean).join('\n') || '—' },
-        { type:'text', title:'Signatures',
-          body:'For ' + (co.legalName || co.displayName || '') + '\n\n\nAuthorised signatory' }
-      ].filter(Boolean) });
+    var co = rfqCfg.company || {};
+    if (!(co.legalName || co.displayName || (C.getProfile()||{}).name))
+      return rfqSay(ref, 'Fill in Admin → Company Profile first — the quotation is printed on your ' +
+        'letterhead and there is nothing to print it on yet.');
+    rfqOpenDoc(rfqQuotationHtml(r));
   }
 
   /* ================= PAYROLL — the calculation engine =================

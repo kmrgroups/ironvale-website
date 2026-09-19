@@ -58,19 +58,25 @@ export default async function handler(req, res) {
         const kind = String(q.kind || '');
         const partId = String(q.partId || '');
         const limit = Math.min(2000, Math.max(1, parseInt(q.limit, 10) || 500));
+        /* offset is additive: every existing caller omits it (defaults to 0,
+           identical to before), and Backup & Restore uses it to page through
+           the whole table when there are more than 2000 of one kind — a
+           single request's cap is right for a screen and wrong for an export
+           that must carry everything. */
+        const offset = Math.max(0, parseInt(q.offset, 10) || 0);
         let rows;
         if (kind && partId) {
           rows = await sql`SELECT * FROM idms_docs WHERE kind = ${kind} AND part_id = ${partId}
-                           ORDER BY updated_at DESC LIMIT ${limit}`;
+                           ORDER BY updated_at DESC LIMIT ${limit} OFFSET ${offset}`;
         } else if (kind) {
           rows = await sql`SELECT * FROM idms_docs WHERE kind = ${kind}
-                           ORDER BY updated_at DESC LIMIT ${limit}`;
+                           ORDER BY updated_at DESC LIMIT ${limit} OFFSET ${offset}`;
         } else if (partId) {
           // the digital thread: everything ever recorded against one part
           rows = await sql`SELECT * FROM idms_docs WHERE part_id = ${partId}
-                           ORDER BY updated_at DESC LIMIT ${limit}`;
+                           ORDER BY updated_at DESC LIMIT ${limit} OFFSET ${offset}`;
         } else {
-          rows = await sql`SELECT * FROM idms_docs ORDER BY updated_at DESC LIMIT ${limit}`;
+          rows = await sql`SELECT * FROM idms_docs ORDER BY updated_at DESC LIMIT ${limit} OFFSET ${offset}`;
         }
         return res.status(200).json({ ok: true, docs: rows });
       }
@@ -129,9 +135,14 @@ export default async function handler(req, res) {
     if (what === 'parts') {
       if (req.method === 'GET') {
         const life = String(q.lifecycle || '');
+        /* Same additive limit/offset as docs above — every existing caller
+           gets exactly the old 1000-row behaviour by omitting both. */
+        const limit = Math.min(2000, Math.max(1, parseInt(q.limit, 10) || 1000));
+        const offset = Math.max(0, parseInt(q.offset, 10) || 0);
         const rows = life
-          ? await sql`SELECT * FROM idms_parts WHERE lifecycle = ${life} ORDER BY created_at DESC LIMIT 1000`
-          : await sql`SELECT * FROM idms_parts ORDER BY created_at DESC LIMIT 1000`;
+          ? await sql`SELECT * FROM idms_parts WHERE lifecycle = ${life}
+                     ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`
+          : await sql`SELECT * FROM idms_parts ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
         return res.status(200).json({ ok: true, parts: rows });
       }
       if (req.method === 'POST') {
@@ -186,6 +197,23 @@ export default async function handler(req, res) {
     if (what === 'serial' && req.method === 'POST') {
       const name = String(body.name || '').trim();
       if (!name) return res.status(400).json({ ok: false, error: 'Which counter?' });
+      if (body.set !== undefined) {
+        /* Used only by Settings/Data Restore, to put a counter back to its
+           exact recorded value rather than nudging it — nextSerial() only
+           moves a counter forward, which cannot put one back down, and
+           restoring documents numbered up to, say, -0042 must leave the
+           counter AT 42, not wherever a relative bump happened to land it,
+           or the very next document issued after a restore could reuse a
+           number that is already on a restored record. Restricted to the
+           same roles that may run a flush or a restore — a counter is not
+           something an ordinary save should ever be able to set outright. */
+        if (!(await checkRole(token, ['developer', 'admin'])))
+          return res.status(403).json({ ok: false, error: 'Only an administrator may set a counter directly.' });
+        const value = Math.max(0, parseInt(body.set, 10) || 0);
+        await sql`INSERT INTO idms_counters (name, value) VALUES (${name}, ${value})
+                  ON CONFLICT (name) DO UPDATE SET value = ${value}, updated_at = now()`;
+        return res.status(200).json({ ok: true, name, value });
+      }
       const value = await nextSerial(name, Math.max(1, parseInt(body.by, 10) || 1));
       return res.status(200).json({ ok: true, name, value });
     }

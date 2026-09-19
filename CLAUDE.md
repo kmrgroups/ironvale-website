@@ -3269,3 +3269,130 @@ own hint says.
 switch reveals and hides the right controls, that an oversized video is
 refused with no upload attempted, and that all six keys are ones
 `index.html` genuinely reads.
+
+## Backup & Restore: the logout bug, and three real gaps in what it carried
+
+Four things were asked for together, after a real deployment found that
+flushing settings dropped the person back to the sign-in screen. Three of
+the four turned out to be the same underlying problem in different places:
+**the backup only ever carried some of what the flush beside it wipes.**
+
+### 1. Flush, Restore and Save no longer drop you at the sign-in screen
+
+The bug was the *correct* security rule catching the wrong case. Opening
+`idms.html` with no other signed-in tab open deliberately signs nobody in —
+the shared-works-PC protection documented under Authentication, which must
+not be undone. But Company Profile save, Settings restore and both flushes
+each `location.reload()` *immediately after* proving the session is alive,
+and the boot sequence could not tell that reload apart from a crash or a
+handover, so it revoked a perfectly good, just-proven token.
+
+The fix is a one-shot, short-lived hint rather than any weakening of the
+rule: `Core.markSelfReload()` writes `app_self_reload` to sessionStorage
+immediately before those three reloads, and `Core.consumeSelfReloadHint()`
+spends it once, 15-second window, on the way back in. With a live hint,
+`adoptOpenSession()` re-checks the leftover token with the server directly
+instead of discarding it; **without one, nothing changes at all** — no
+hint, no token, sign-in screen, exactly as before.
+
+**Sign Out deliberately does NOT mark its reload**, and `selfreloadtest.mjs`
+asserts that against the source. Marking it would mean somebody who signs
+out on a shared PC is silently signed back in by the reload their own click
+caused — the precise scenario the whole design exists to prevent.
+
+### 2–3. The two scopes now mirror the two flushes, table for table
+
+`flushTable()` in `server/routes/idms.js` is the authoritative list of what
+each scope owns, and Backup & Restore is supposed to mirror it exactly.
+It did not. **Settings** never carried registered attendance devices.
+**Data** never carried counters, attendance, leave, training, pay runs,
+punches or the PPC order book — and RFQs were *exported but never
+restored at all*, so an enquiry pipeline in a backup file was unrecoverable.
+
+Several list endpoints also capped a single request well below what a
+backup needs (parts at a hardcoded 1000, RFQs at 500, and so on). Every one
+of them gained **additive** `limit`/`offset` — omit both and the behaviour
+is byte-for-byte what it was, so no existing caller changed — and
+`bkFetchAll()` pages each until a page comes back shorter than asked for.
+A works with 2,400 parts now backs up 2,400 parts instead of 1,000 and no
+warning.
+
+Three decisions worth keeping:
+
+- **Counters restore to an absolute value, not a relative bump.** A new
+  `set` mode on `what=serial` (admin/developer only) puts each counter back
+  exactly where it was, so the next GRN issued after a restore cannot reuse
+  a number a restored document already carries.
+- **Raw device punches are exported but never restored automatically.** The
+  summarised `hr_attendance` day-records — which payroll and every report
+  actually read — *are* restored, in batches of 500 through the endpoint's
+  existing `records:[]` upload. The screen says so rather than leaving the
+  asymmetry to be discovered.
+- **Restoring an RFQ must not re-fire live notifications.** The public POST
+  unconditionally emails the owner and acknowledges to the customer;
+  replaying a year of enquiries through it would spam both. `restore:true`
+  (honoured only for a signed-in caller) inserts the record and returns
+  without calling `sendNotification` at all, and upserts rather than
+  `DO NOTHING`, so re-running the same backup is not silently a no-op.
+
+**Login credentials and audit trails are still deliberately excluded.**
+`auth`/`users`/`login_codes` must never travel in a JSON file, and an audit
+trail is a log of what happened on *this* deployment, not something to
+splice into another one's history — the same reasoning flush itself applies
+when it wipes `idms_audit` last and writes a fresh entry.
+
+### 4. Pictures and videos travel in the JSON now
+
+The backup carried the records that *point at* files and none of the files,
+so a restored deployment came back with every drawing, logo, signature and
+video reference resolving to nothing. Every stored asset now rides in the
+same `idms-data` JSON as the identical `data:` URL `Core.uploadFile()`
+already sends, alongside its id — which matters more than it looks:
+`POST /api/assets` now accepts a **caller-supplied id and upserts on it**
+(additive; an ordinary upload sends no id and still mints one), because a
+freshly-minted id on restore would silently orphan every reference to that
+file everywhere else. A malformed id is refused in favour of a fresh one.
+Assets sit in the **data** scope because that is where `flushTable()` puts
+them, branding images included.
+
+One file that cannot be read back is **named and skipped**, not silently
+dropped and not allowed to fail the whole export.
+
+### Two rules the restore side now follows everywhere
+
+**A failed restore never reloads or navigates away.** Both handlers used to
+reload after ~1.8s regardless of the outcome — long enough to miss
+"Restored 0, 4 failed", which is usually a session that expired mid-restore.
+Nothing reloads or leaves the screen until every record is confirmed
+written, and an expired session is named as the cause with what to do.
+
+**A one-time secret is never hidden behind a timer.** A non-ADMS device's
+shared key never leaves the server, so restoring one necessarily mints a
+brand-new key. When that happens the restore **skips the automatic reload
+entirely** and leaves the key on screen until the admin reloads by hand.
+
+### Tests
+
+`tests/backuprestoretest.mjs` — 77 checks. It drives the real
+`server/routes/rfqs.js` and `server/routes/assets.js` handlers end to end
+(module hook, in-memory fakes, the same technique `devicetest.mjs` uses)
+and the real Backup & Restore screen in jsdom. The ones that earn their
+keep: a restored RFQ sends **no** notification while an ordinary submission
+still sends two (so the recording fake cannot be trivially empty); a 2,005-
+record collection is proved to be fetched across two pages with all 2,005
+surviving; a restored picture and video arrive as real base64 content under
+their original ids; and a new-key device restore leaves `app_self_reload`
+unset — the observable proof that no auto-reload was scheduled over the top
+of a key shown once. `selfreloadtest.mjs` — 15 checks — covers the sign-in
+fix, including that an expired hint and a hint-less leftover token are both
+still revoked.
+
+**A note on this checkout**, for whoever picks it up: 10 suites fail before
+any of this work and still fail identically after it. `devicetest.mjs` and
+`flushservertest.mjs` import from `api/device.js` / `api/idms.js`, which do
+not exist here — the routes live under `server/routes/` — so they crash at
+import, before their own first assertion. `server/_db.js` also exists twice
+(`server/server/_db.js` is what `server/routes/*.js` actually resolves to;
+the two are byte-identical), and `agentic.js` imports a third copy under
+`api/`. None of that was touched here, but it is the first thing that will
+confuse the next person.

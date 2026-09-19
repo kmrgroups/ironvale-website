@@ -269,11 +269,18 @@ export default async function handler(req, res) {
     if (what === 'punches' && req.method === 'GET') {
       const from = String(q.from || ''), to = String(q.to || '');
       const emp = String(q.empId || '');
+      /* Additive, same as every other list endpoint touched for Backup &
+         Restore: every existing caller omits limit/offset and gets exactly
+         the old 2000-row-per-request behaviour. */
+      const limit = Math.min(5000, Math.max(1, parseInt(q.limit, 10) || 2000));
+      const offset = Math.max(0, parseInt(q.offset, 10) || 0);
       const rows = emp
         ? await sql`SELECT emp_id, user_id, device_sn, punch_at, method, direction, source FROM hr_punches
-            WHERE emp_id = ${emp} AND punch_at >= ${from + ' 00:00:00'} AND punch_at <= ${to + ' 23:59:59'} ORDER BY punch_at DESC LIMIT 2000`
+            WHERE emp_id = ${emp} AND punch_at >= ${from + ' 00:00:00'} AND punch_at <= ${to + ' 23:59:59'}
+            ORDER BY punch_at DESC LIMIT ${limit} OFFSET ${offset}`
         : await sql`SELECT emp_id, user_id, device_sn, punch_at, method, direction, source FROM hr_punches
-            WHERE punch_at >= ${from + ' 00:00:00'} AND punch_at <= ${to + ' 23:59:59'} ORDER BY punch_at DESC LIMIT 2000`;
+            WHERE punch_at >= ${from + ' 00:00:00'} AND punch_at <= ${to + ' 23:59:59'}
+            ORDER BY punch_at DESC LIMIT ${limit} OFFSET ${offset}`;
       const unmatched = await sql`SELECT user_id, device_sn, count(*)::int AS n, max(punch_at) AS last
         FROM hr_punches WHERE emp_id = '' GROUP BY user_id, device_sn ORDER BY max(punch_at) DESC LIMIT 200`;
       return res.status(200).json({ ok: true, punches: rows, unmatched });

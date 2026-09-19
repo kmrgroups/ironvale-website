@@ -50,8 +50,16 @@ export default async function handler(req, res) {
       if (bytes > 6 * 1024 * 1024)
         return res.status(413).json({ ok: false, error: 'That file is larger than 6 MB.' });
 
-      const id = newId();
-      await sql`INSERT INTO assets (id, mime, data) VALUES (${id}, ${mime}, ${b64})`;
+      /* Restoring from a backup must put an asset back under the SAME id it
+         already carries everywhere it is referenced from — the company logo
+         in site_content, a drawing on a part, a signature image — never a
+         freshly-minted one, which would silently orphan every one of those
+         references. An ordinary upload never sends id, so this is additive:
+         only a restore (which alone knows the original id) takes this path. */
+      const callerId = String(body.id || '');
+      const id = /^[a-z0-9]+$/i.test(callerId) ? callerId : newId();
+      await sql`INSERT INTO assets (id, mime, data) VALUES (${id}, ${mime}, ${b64})
+                ON CONFLICT (id) DO UPDATE SET mime = ${mime}, data = ${b64}`;
       return res.status(200).json({ ok: true, id, url: `/api/assets?id=${id}`, bytes });
     }
 

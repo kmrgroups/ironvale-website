@@ -206,6 +206,38 @@
     if (was) tabPost({ type: 'signed-out', token: was });
   }
 
+  /* ---------------- surviving a self-triggered reload ----------------
+     A handful of actions (Company Profile save, Settings Restore, Flush)
+     prove the session is alive — they only run because a signed-in call
+     just succeeded — and then reload the page to make the change take
+     effect everywhere. The boot sequence that runs on every load cannot
+     normally tell that apart from a browser crash or a shared-PC handover,
+     so it revokes any leftover token rather than trust it (see the "opening
+     the system" note in idms.html — that behaviour is deliberate and must
+     stay for every OTHER reload). markSelfReload() is called immediately
+     before those specific reloads; consumeSelfReloadHint() is read once by
+     the boot sequence and immediately cleared, so it only ever excuses the
+     one reload it was set for.
+
+     sessionStorage, not a JS variable, because location.reload() clears
+     every module-level variable — and sessionStorage is exactly the right
+     lifetime anyway: it survives a reload of this tab but not closing it,
+     so a crash or a "new person, same PC" handover (a fresh tab) still
+     finds no hint and falls back to the safe, existing behaviour. */
+  const SELF_RELOAD_KEY = 'app_self_reload';
+  function markSelfReload() {
+    try { sessionStorage.setItem(SELF_RELOAD_KEY, String(Date.now())); }
+    catch (e) { /* private browsing — boot just falls back to the old behaviour */ }
+  }
+  function consumeSelfReloadHint(maxAgeMs) {
+    var at = 0;
+    try {
+      at = Number(sessionStorage.getItem(SELF_RELOAD_KEY) || 0);
+      sessionStorage.removeItem(SELF_RELOAD_KEY);   // one-shot, spent whether fresh or stale
+    } catch (e) { return false; }
+    return at > 0 && (Date.now() - at) <= (maxAgeMs || 15000);
+  }
+
   /* ---------------- sharing a session with tabs opened from this one -------
      One channel, same-origin only (the browser enforces that). Three messages:
        ask        a new tab asking whether anybody here is signed in
@@ -1214,6 +1246,7 @@
     newId: newId, toast: toast,
     api: api, signIn: signIn, verifyCode: verifyCode, setToken: setToken, getToken: getToken,
     checkSession: checkSession, signOut: signOut,
+    markSelfReload: markSelfReload, consumeSelfReloadHint: consumeSelfReloadHint,
     shareSession: shareSession, askOpenTabs: askOpenTabs, qrSvg: qrSvg,
     otpRequest: otpRequest, forgotStart: forgotStart, forgotReset: forgotReset,
     faceLogin: faceLogin, faceEnroll: faceEnroll, faceForget: faceForget,

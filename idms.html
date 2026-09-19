@@ -29471,6 +29471,10 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
       await C.api('/api/content', { method:'POST', body:JSON.stringify({ data: cpContent }) });
       say('Saved. Every document, and the read-only profile the rest of the platform uses, now reflects ' +
           'this — reloading so the change takes effect everywhere in this session too.', true);
+      /* This save just proved the session is alive; tell the boot sequence
+         so it stays on this screen, signed in, instead of treating the
+         reload like an unexplained one and asking to sign in again. */
+      C.markSelfReload();
       setTimeout(function(){ location.reload(); }, 1400);
     } catch(e){ say(esc(e.message)); }
     btn.disabled = false; btn.textContent = 'Save company profile';
@@ -30530,6 +30534,34 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     f.click();
   }
 
+  /* Several list endpoints cap a single request at a few hundred or a couple
+     of thousand rows — the right ceiling for an ordinary screen, and the
+     wrong one for a backup, which must never silently leave records behind
+     just because a company grew past that number. Each of those endpoints
+     now also accepts limit/offset (additive — every other caller omits both
+     and is unaffected); this pages through one until a page comes back
+     shorter than asked for. */
+  async function bkFetchAll(path, field, pageSize){
+    var out = [], offset = 0, sep = path.indexOf('?') >= 0 ? '&' : '?';
+    for (;;) {
+      var j = await C.api(path + sep + 'limit=' + pageSize + '&offset=' + offset);
+      var page = j[field] || [];
+      out = out.concat(page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+    return out;
+  }
+  /* Attendance restore can be thousands of day-records for a plant with a
+     long history; /api/hr?what=attendance accepts a batch (records:[...]) in
+     one call, so this sends it in bounded slices rather than one request per
+     day (too slow) or one giant request (risks the body-size limit). */
+  function bkChunks(arr, n){
+    var out = [];
+    for (var i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+    return out;
+  }
+
   document.getElementById('bk-exp-admin').addEventListener('click', async function(){
     this.disabled = true;
     try {
@@ -30537,14 +30569,18 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
       try { content = (await C.api('/api/content')).data || {}; } catch(e){}
       var setts = {};
       try { setts = (await C.api('/api/settings')).settings || {}; } catch(e){}
+      var devices = [];
+      try { devices = (await C.api('/api/device?what=devices')).devices || []; } catch(e){}
       bkDownload('idms-settings', { scope:'settings', exportedAt:new Date().toISOString(),
-        content:content, idmsSettings:settings,
+        content:content, idmsSettings:settings, devices:devices,
         /* provider keys come back masked from the server and are never in the
            clear here — the list is for checking what was configured, not for
            carrying secrets between deployments */
         providerKeys:setts });
-      bkSay('Settings downloaded. Provider keys are listed but masked — set those again on the new ' +
-            'deployment from the Setup Wizard.', true);
+      bkSay('Settings downloaded — including ' + devices.length + ' registered attendance device(s). ' +
+            'Provider keys are listed but masked, and a non-ADMS device’s own shared key never leaves ' +
+            'the server at all, so neither can be carried in the file: set keys again from the Setup ' +
+            'Wizard, and expect a fresh key for each restored device (see Upload settings JSON).', true);
     } catch(e){ bkSay(esc(e.message)); }
     this.disabled = false;
   });
@@ -30554,17 +30590,36 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     bkPickFile(async function(dump){
       if (dump.scope && dump.scope !== 'settings')
         return bkSay('That looks like a <b>data</b> backup, not a settings one. Use Upload data JSON.');
-      if (!dump.content && !dump.idmsSettings)
+      if (!dump.content && !dump.idmsSettings && !(dump.devices||[]).length)
         return bkSay('That file carries no settings.');
-      if (!confirm('Replace this deployment\'s settings and admin data with the file?\n\n' +
+      if (!confirm("Replace this deployment's settings and admin data with the file?\n\n" +
                    'Parts, orders and every other record are untouched. This cannot be undone.')) return;
-      var ok = 0, bad = 0, errs = [];
+      var ok = 0, bad = 0, errs = [], newKeys = [];
       try { await C.api('/api/content', { method:'POST', body:JSON.stringify({ data: dump.content||{} }) }); ok++; }
       catch(e){ bad++; errs.push('content: ' + e.message); }
       var ks = Object.keys(dump.idmsSettings || {});
       for (var i = 0; i < ks.length; i++){
         try { await C.idms.saveSetting(ks[i], dump.idmsSettings[ks[i]]); ok++; }
         catch(e){ bad++; errs.push(ks[i] + ': ' + e.message); }
+      }
+      /* Registered attendance devices. A device's shared key is never
+         returned by the export (the server never returns it in the clear at
+         all — see api/device.js), so a non-ADMS device with no key on this
+         deployment yet is minted a BRAND NEW one on restore; that key is
+         shown once, right here, and is never stored anywhere. ADMS devices
+         (identified by serial number alone) need no key and restore clean. */
+      var devs = dump.devices || [];
+      for (i = 0; i < devs.length; i++){
+        var dv = devs[i], dd2 = dv.data || {};
+        try {
+          var jd = await C.api('/api/device?what=devices', { method:'POST', body:JSON.stringify({
+            device: { sn: dv.sn, name: dd2.name, vendor: dd2.vendor, type: dd2.type,
+                      protocol: dd2.protocol, location: dd2.location, allowIp: dd2.allowIp,
+                      active: dd2.active },
+            reason: 'restored from a backup file' }) });
+          ok++;
+          if (jd && jd.key) newKeys.push((dv.sn || '?') + ':  ' + jd.key);
+        } catch(e){ bad++; errs.push('device ' + (dv.sn||'?') + ': ' + e.message); }
       }
       /* A failed write must never be hidden by an automatic reload — this used
          to say "Reloading…" and reload after 1.8s regardless of ok/bad, which
@@ -30582,8 +30637,26 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
               false);
         return;
       }
+      /* A freshly-minted device key is shown exactly once and stored nowhere
+         — never behind an automatic reload that could carry it off screen
+         before it is copied down. The page is left exactly as it is; the
+         admin reloads by hand once every key is safely noted. */
+      if (newKeys.length) {
+        bkSay('Restored ' + ok + ' settings record(s). Provider keys are not carried in a backup — set ' +
+              'those on the Setup Wizard. <b>' + newKeys.length + ' device(s) needed a brand-new shared ' +
+              'key — copy each one down now and re-enter it on the physical unit; it will not be shown ' +
+              'again:</b><br>' + newKeys.map(esc).join('<br>') +
+              '<br><br>The page has deliberately not reloaded — do that yourself once these are noted.',
+              true);
+        return;
+      }
       bkSay('Restored ' + ok + ' settings record(s). Provider keys are not carried in a backup — ' +
             'set those on the Setup Wizard. Reloading…', true);
+      /* Every write above just went through on this session's own token —
+         the reload is to pick up the new content, not because anything
+         about the session is in doubt. Say so, so the boot sequence keeps
+         this screen signed in instead of dropping to the sign-in page. */
+      C.markSelfReload();
       setTimeout(function(){ location.reload(); }, 1800);
     });
   });
@@ -30591,14 +30664,81 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
   document.getElementById('bk-exp-data').addEventListener('click', async function(){
     this.disabled = true;
     try {
-      var dump = { scope:'data', exportedAt:new Date().toISOString(),
-        parts: await C.idms.parts(), docs: await C.idms.docs() };
-      try { dump.hrEmployees = (await C.api('/api/hr?what=employees')).employees || []; } catch(e){ dump.hrEmployees = []; }
-      try { dump.hrItems = (await C.api('/api/hr?what=items')).items || []; } catch(e){ dump.hrItems = []; }
-      try { dump.rfqs = (await C.api('/api/rfqs')).rfqs || []; } catch(e){ dump.rfqs = []; }
+      var dump = { scope:'data', exportedAt:new Date().toISOString() };
+      /* Every one of these matches, table for table, what Flush Data itself
+         wipes (see the flushTable() switch in server/routes/idms.js) — the
+         two are meant to mirror each other exactly. idms_audit/hr_audit are
+         the one deliberate exception, on both sides: an audit trail is a log
+         of what happened on THIS deployment and is not something a restore
+         should splice into another one's history. */
+      dump.parts = await bkFetchAll('/api/idms?what=parts', 'parts', 2000);
+      dump.docs = await bkFetchAll('/api/idms?what=docs', 'docs', 2000);
+      try { dump.counters = (await C.api('/api/idms?what=serial')).counters || []; } catch(e){ dump.counters = []; }
+      try { dump.hrEmployees = await bkFetchAll('/api/hr?what=employees', 'employees', 2000); } catch(e){ dump.hrEmployees = []; }
+      try { dump.hrItems = await bkFetchAll('/api/hr?what=items', 'items', 3000); } catch(e){ dump.hrItems = []; }
+      try { dump.hrLeave = await bkFetchAll('/api/hr?what=leave', 'leave', 2000); } catch(e){ dump.hrLeave = []; }
+      try { dump.hrTraining = await bkFetchAll('/api/hr?what=training', 'records', 2000); } catch(e){ dump.hrTraining = []; }
+      try { dump.hrPayruns = await bkFetchAll('/api/hr?what=payruns', 'payruns', 2000); } catch(e){ dump.hrPayruns = []; }
+      /* Attendance has no per-request cap on its own ranged query — a wide
+         date range takes that path instead of the "most recent 3000" a live
+         screen uses, so every day ever recorded comes back. */
+      try { dump.hrAttendance = (await C.api('/api/hr?what=attendance&from=2000-01-01&to=2099-12-31')).attendance || []; }
+      catch(e){ dump.hrAttendance = []; }
+      /* Raw device punches are carried along for safekeeping, but — see the
+         restore handler below — are not restored automatically; the
+         day-by-day hrAttendance records above are what payroll and every
+         report actually read, and those ARE restored. */
+      try { dump.hrPunches = (await C.api('/api/device?what=punches&from=2000-01-01&to=2099-12-31&limit=5000')).punches || []; }
+      catch(e){ dump.hrPunches = []; }
+      try { dump.rfqs = await bkFetchAll('/api/rfqs', 'rfqs', 2000); } catch(e){ dump.rfqs = []; }
+      /* Production Planning's own order book — unreached from the current
+         menu (Sales Plan / Customer PO replaced it), but a deployment that
+         used it before that change still has records here, and a "data"
+         export that quietly drops a table would be the exact silent gap
+         this fix exists to close. */
+      try { dump.ppcOrders = (await C.api('/api/orders')).orders || []; } catch(e){ dump.ppcOrders = []; }
+      /* Every stored file — company logo/banner/signature/seal, a part
+         drawing, anything else Core.uploadFile() ever sent to /api/assets —
+         travels in this same JSON, as the identical data: URL that upload
+         call sends, plus the id it is already stored and referenced under.
+         This matches Flush Data's own table list (assets is a "data" table
+         there — see flushTable() in server/routes/idms.js — even though
+         some of what it holds is branding), and it is what makes a restore
+         able to bring pictures and videos back at all, not just the text
+         and table rows that point at them. One unreadable file is skipped
+         and named rather than failing the whole export. */
+      var assetErrs = [];
+      dump.assets = [];
+      try {
+        var assetList = (await C.api('/api/assets')).assets || [];
+        for (var asi = 0; asi < assetList.length; asi++) {
+          var am = assetList[asi];
+          try {
+            var ares = await fetch('/api/assets?id=' + encodeURIComponent(am.id));
+            if (!ares.ok) throw new Error('HTTP ' + ares.status);
+            var ablob = await ares.blob();
+            var adata = await new Promise(function(res2, rej2){
+              var fr = new FileReader();
+              fr.onload = function(){ res2(fr.result); };
+              fr.onerror = function(){ rej2(new Error('could not be read back')); };
+              fr.readAsDataURL(ablob);
+            });
+            dump.assets.push({ id: am.id, mime: am.mime, bytes: am.bytes, dataUrl: adata });
+          } catch(e){ assetErrs.push((am.id||'?') + ': ' + e.message); }
+        }
+      } catch(e){ assetErrs.push('could not list stored files: ' + e.message); }
       bkDownload('idms-data', dump);
-      bkSay('Data downloaded — ' + dump.parts.length + ' part(s), ' + dump.docs.length +
-            ' document(s), ' + dump.hrEmployees.length + ' employee(s), ' + dump.rfqs.length + ' enquiry/ies.', true);
+      var assetBytes = dump.assets.reduce(function(t, a){ return t + (a.bytes||0); }, 0);
+      bkSay('Data downloaded — ' + dump.parts.length + ' part(s), ' + dump.docs.length + ' document(s), ' +
+            dump.hrEmployees.length + ' employee(s), ' + dump.hrAttendance.length + ' attendance record(s), ' +
+            dump.hrLeave.length + ' leave request(s), ' + dump.hrPayruns.length + ' pay run(s), ' +
+            dump.rfqs.length + ' enquiry/ies, ' + dump.assets.length + ' file(s) — pictures, drawings, ' +
+            'videos and the like (~' + Math.round(assetBytes/1024) + ' KB). Raw device punches (' +
+            dump.hrPunches.length + ') are included for safekeeping but are not restored automatically — ' +
+            'see Upload data JSON.' +
+            (assetErrs.length ? ' <b>' + assetErrs.length + ' file(s) could not be read and were left out:</b> ' +
+              esc(assetErrs.slice(0,5).join('; ')) + (assetErrs.length > 5 ? ' …' : '') : ''),
+            !assetErrs.length);
     } catch(e){ bkSay(esc(e.message)); }
     this.disabled = false;
   });
@@ -30609,11 +30749,26 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
       if (dump.scope && dump.scope !== 'data')
         return bkSay('That looks like a <b>settings</b> backup, not a data one. Use Upload settings JSON.');
       var n = (dump.parts||[]).length + (dump.docs||[]).length +
-              (dump.hrEmployees||[]).length + (dump.hrItems||[]).length;
+              (dump.hrEmployees||[]).length + (dump.hrItems||[]).length +
+              (dump.hrAttendance||[]).length + (dump.hrLeave||[]).length +
+              (dump.hrTraining||[]).length + (dump.hrPayruns||[]).length +
+              (dump.rfqs||[]).length + (dump.ppcOrders||[]).length + (dump.counters||[]).length +
+              (dump.assets||[]).length;
       if (!n) return bkSay('That file carries no records.');
       if (!confirm('Restore ' + n + ' record(s) into the database?\n\nRecords with the same id are ' +
                    'overwritten. Your company profile, branding and keys are untouched. This cannot be undone.')) return;
       var ok = 0, bad = 0, i, errs = [];
+      /* Stored files first, and each back under its own original id — a
+         drawing link on a part, or the company logo referenced from
+         site_content, points at that id and must resolve exactly as it did
+         before, without any other record needing to change. See the
+         additive id-upsert in server/routes/assets.js. */
+      for (i = 0; i < (dump.assets||[]).length; i++) {
+        var as2 = dump.assets[i];
+        try { await C.api('/api/assets', { method:'POST',
+                body:JSON.stringify({ dataUrl: as2.dataUrl, id: as2.id }) }); ok++; }
+        catch(e){ bad++; errs.push('file ' + (as2.id||'?') + ': ' + e.message); }
+      }
       for (i = 0; i < (dump.parts||[]).length; i++) {
         var p = dump.parts[i];
         try { await C.idms.savePart({ partId:p.part_id, customer:p.customer, partNo:p.part_no,
@@ -30627,10 +30782,54 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
                 rev:dd.rev, status:dd.status, data:dd.data }, 'restored from a backup file'); ok++; }
         catch(e){ bad++; errs.push('doc ' + (dd.doc_id||'?') + ': ' + e.message); }
       }
+      /* Counters restored last of the core IDMS records, and set to their
+         exact recorded value (never a relative bump — see the 'serial'
+         what=set branch in server/routes/idms.js) so the very next document
+         issued after a restore cannot reuse a number a restored doc/part
+         already carries. */
+      for (i = 0; i < (dump.counters||[]).length; i++) {
+        var ctr = dump.counters[i];
+        try { await C.api('/api/idms', { method:'POST', body:JSON.stringify({ what:'serial',
+                name: ctr.name, set: ctr.value }) }); ok++; }
+        catch(e){ bad++; errs.push('counter ' + (ctr.name||'?') + ': ' + e.message); }
+      }
       for (i = 0; i < (dump.hrEmployees||[]).length; i++) {
         try { await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'employees',
                 employee:dump.hrEmployees[i], reason:'restored from a backup file' }) }); ok++; }
         catch(e){ bad++; errs.push('employee ' + (dump.hrEmployees[i].empId||'?') + ': ' + e.message); }
+      }
+      /* Attendance restores in bounded batches through the same records:[]
+         upload the endpoint already offers, rather than one request per day
+         (which would make a multi-year history take forever) or one huge
+         request (which risks the body-size limit). */
+      var attChunks = bkChunks(dump.hrAttendance || [], 500);
+      for (i = 0; i < attChunks.length; i++) {
+        try {
+          await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'attendance',
+                  records: attChunks[i], reason:'restored from a backup file' }) });
+          ok += attChunks[i].length;
+        } catch(e){ bad += attChunks[i].length; errs.push('attendance batch ' + (i + 1) + ': ' + e.message); }
+      }
+      for (i = 0; i < (dump.hrLeave||[]).length; i++) {
+        var lv = dump.hrLeave[i];
+        try { await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'leave',
+                leave: Object.assign({ leaveId:lv.leave_id, empId:lv.emp_id, status:lv.status }, lv.data||{}),
+                reason:'restored from a backup file' }) }); ok++; }
+        catch(e){ bad++; errs.push('leave request ' + (lv.leave_id||'?') + ': ' + e.message); }
+      }
+      for (i = 0; i < (dump.hrTraining||[]).length; i++) {
+        var tr = dump.hrTraining[i];
+        try { await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'training',
+                record: Object.assign({ recId:tr.rec_id, kind:tr.kind, status:tr.status }, tr.data||{}),
+                reason:'restored from a backup file' }) }); ok++; }
+        catch(e){ bad++; errs.push('training record ' + (tr.rec_id||'?') + ': ' + e.message); }
+      }
+      for (i = 0; i < (dump.hrPayruns||[]).length; i++) {
+        var pr = dump.hrPayruns[i];
+        try { await C.api('/api/hr', { method:'POST', body:JSON.stringify({ what:'payruns',
+                payrun: Object.assign({ runId:pr.run_id, period:pr.period, status:pr.status }, pr.data||{}),
+                reason:'restored from a backup file' }) }); ok++; }
+        catch(e){ bad++; errs.push('pay run ' + (pr.run_id||'?') + ': ' + e.message); }
       }
       for (i = 0; i < (dump.hrItems||[]).length; i++) {
         var it = dump.hrItems[i];
@@ -30638,6 +30837,21 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
                 item: Object.assign({ itemId:it.item_id, kind:it.kind, status:it.status }, it.data||{}),
                 reason:'restored from a backup file' }) }); ok++; }
         catch(e){ bad++; errs.push('item ' + (it.item_id||'?') + ': ' + e.message); }
+      }
+      /* Restoring an RFQ must never re-fire the emails/WhatsApp messages a
+         brand-new enquiry sends — restore:true (honoured server-side only
+         for a signed-in call) suppresses both the owner alert and the
+         customer acknowledgement. This also fixes a real gap: rfqs were
+         exported but never restored at all before this. */
+      for (i = 0; i < (dump.rfqs||[]).length; i++) {
+        try { await C.api('/api/rfqs', { method:'POST',
+                body:JSON.stringify({ rfq: dump.rfqs[i], restore:true }) }); ok++; }
+        catch(e){ bad++; errs.push('enquiry ' + (dump.rfqs[i].ref||'?') + ': ' + e.message); }
+      }
+      for (i = 0; i < (dump.ppcOrders||[]).length; i++) {
+        try { await C.api('/api/orders', { method:'POST',
+                body:JSON.stringify({ order: dump.ppcOrders[i] }) }); ok++; }
+        catch(e){ bad++; errs.push('PPC order ' + (dump.ppcOrders[i].ref||'?') + ': ' + e.message); }
       }
       /* Same principle as the settings restore above: a partly- or wholly-
          failed run must stay on screen, not send you back to Home looking
@@ -30676,6 +30890,12 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
         if (!j || j.ok === false) throw new Error((j && j.error) || 'That did not go through.');
         say(scope === 'data' ? 'All data and records are gone. Reloading…'
                               : 'All settings and admin data are gone. Reloading…', true);
+        /* The flush call above only succeeded because this session's token
+           is good — that is what the server checked. Reloading is to clear
+           every screen's in-memory state, not because the sign-in is in
+           doubt, so tell the boot sequence to stay on this screen signed in
+           rather than bounce to the sign-in page. */
+        C.markSelfReload();
         setTimeout(function(){ location.reload(); }, 1200);
       } catch(e){
         say(esc(e.message)); btn.disabled = input.value.trim() !== phrase; btn.textContent = btn.dataset.label;
@@ -31545,6 +31765,32 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
 
   async function adoptOpenSession(){
     var leftover = C.getToken();
+    /* Company Profile save, Settings Restore and Flush all reload right after
+       proving this exact token works, and mark that with C.markSelfReload()
+       at the moment they do — see core.js. Honour that here by checking the
+       token directly instead of either waiting to hear from "another" tab
+       (there may be none open at all; this IS the tab that was just working)
+       or discarding a token that was good a moment ago. The hint is one-shot
+       (the line below spends it whether or not it turns out to apply here)
+       and expires in 15s, so a crash, a closed-and-reopened browser, or
+       simply opening the page normally still falls straight through to the
+       original, deliberately strict behaviour beneath this block — that
+       behaviour is what stops a shared works PC walking the next person into
+       the last one's session, and nothing here weakens it. */
+    var selfReload = C.consumeSelfReloadHint(15000);
+    if (leftover && selfReload) {
+      C.setToken(leftover);
+      try {
+        var jSelf = await C.api('/api/auth', { method:'POST', body: JSON.stringify({ action:'session' }) });
+        if (me.user) return true;                 // signed in by hand while we were checking
+        if (jSelf && jSelf.ok && jSelf.user){
+          C.setToken(leftover);
+          applyAccess(jSelf); start();
+          return true;
+        }
+      } catch(e){ /* the token turned out not to be good after all — fall through to sign-in */ }
+      C.setToken('');
+    }
     var handed = await C.askOpenTabs(600);
     if (me.user) return true;                 // signed in by hand while we were asking
     if (handed){

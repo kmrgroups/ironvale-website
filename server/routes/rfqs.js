@@ -28,16 +28,30 @@ export default async function handler(req, res) {
         });
       }
       if (!(await checkToken(token))) return res.status(401).json({ ok: false, error: 'Not signed in.' });
-      const rows = await sql`SELECT data FROM rfqs ORDER BY created_at DESC LIMIT 500`;
+      const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
+      const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+      const rows = await sql`SELECT data FROM rfqs ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
       return res.status(200).json({ ok: true, rfqs: rows.map(r => r.data) });
     }
 
-    // ---- POST : create a new RFQ (public) ----
+    // ---- POST : create a new RFQ (public), or restore one from a backup (staff only) ----
     if (req.method === 'POST') {
       const body = readBody(req);
       const r = body.rfq || {};
       if (!r.ref || !r.name || !r.email)
         return res.status(400).json({ ok: false, error: 'Name, email and reference are required.' });
+
+      // Restoring a historical enquiry from Backup & Restore must never
+      // resend a real notification to the customer or the owner — that
+      // would spam both with an email/WhatsApp message about an enquiry
+      // that may be years old. Staff-only, writes the record exactly as
+      // backed up, and returns immediately without calling sendNotification.
+      if (body.restore === true) {
+        if (!(await checkToken(token))) return res.status(401).json({ ok: false, error: 'Not signed in.' });
+        await sql`INSERT INTO rfqs (ref, data) VALUES (${r.ref}, ${JSON.stringify(r)}::jsonb)
+                  ON CONFLICT (ref) DO UPDATE SET data = ${JSON.stringify(r)}::jsonb`;
+        return res.status(200).json({ ok: true, ref: r.ref, restored: true });
+      }
 
       await sql`INSERT INTO rfqs (ref, data) VALUES (${r.ref}, ${JSON.stringify(r)}::jsonb)
                 ON CONFLICT (ref) DO NOTHING`;

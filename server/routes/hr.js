@@ -208,7 +208,13 @@ export default async function handler(req, res) {
     /* ---------------- EMPLOYEES ---------------- */
     if (what === 'employees') {
       if (req.method === 'GET') {
-        const rows = await sql`SELECT data FROM hr_employees ORDER BY created_at DESC LIMIT 2000`;
+        /* limit/offset are additive — every existing caller omits both and
+           gets exactly the old 2000-row behaviour. Backup & Restore pages
+           through with them so a roll bigger than 2000 is never silently
+           cut short in the export. */
+        const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 2000));
+        const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+        const rows = await sql`SELECT data FROM hr_employees ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
         return res.status(200).json({ ok: true, employees: rows.map(r => r.data) });
       }
       if (req.method === 'POST') {
@@ -240,8 +246,10 @@ export default async function handler(req, res) {
     /* ---------------- PAY RUNS ---------------- */
     if (what === 'payruns') {
       if (req.method === 'GET') {
+        const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 200));
+        const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
         const rows = await sql`SELECT run_id, period, status, data, created_at
-                               FROM hr_payruns ORDER BY created_at DESC LIMIT 200`;
+                               FROM hr_payruns ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
         return res.status(200).json({ ok: true, payruns: rows });
       }
       if (req.method === 'POST') {
@@ -318,8 +326,10 @@ export default async function handler(req, res) {
     /* ---------------- LEAVE ---------------- */
     if (what === 'leave') {
       if (req.method === 'GET') {
+        const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 1000));
+        const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
         const rows = await sql`SELECT leave_id, emp_id, status, data, created_at
-                               FROM hr_leave ORDER BY created_at DESC LIMIT 1000`;
+                               FROM hr_leave ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
         return res.status(200).json({ ok: true, leave: rows });
       }
       if (req.method === 'POST') {
@@ -355,11 +365,13 @@ export default async function handler(req, res) {
     if (what === 'training') {
       if (req.method === 'GET') {
         const kind = String(req.query.kind || '');
+        const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || (kind ? 1000 : 2000)));
+        const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
         const rows = kind
           ? await sql`SELECT rec_id, kind, status, data, created_at FROM hr_training
-                      WHERE kind = ${kind} ORDER BY created_at DESC LIMIT 1000`
+                      WHERE kind = ${kind} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`
           : await sql`SELECT rec_id, kind, status, data, created_at FROM hr_training
-                      ORDER BY created_at DESC LIMIT 2000`;
+                      ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
         return res.status(200).json({ ok: true, records: rows });
       }
       if (req.method === 'POST') {
@@ -394,11 +406,13 @@ export default async function handler(req, res) {
     if (what === 'items') {
       if (req.method === 'GET') {
         const kind = String(req.query.kind || '');
+        const limit = Math.min(3000, Math.max(1, parseInt(req.query.limit, 10) || (kind ? 2000 : 3000)));
+        const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
         const rows = kind
           ? await sql`SELECT item_id, kind, status, owner, due, data, created_at FROM hr_items
-                      WHERE kind = ${kind} ORDER BY created_at DESC LIMIT 2000`
+                      WHERE kind = ${kind} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`
           : await sql`SELECT item_id, kind, status, owner, due, data, created_at FROM hr_items
-                      ORDER BY created_at DESC LIMIT 3000`;
+                      ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
         return res.status(200).json({ ok: true, items: rows });
       }
       if (req.method === 'POST') {

@@ -1,7 +1,7 @@
 // Configuration entered from the admin panel.
 // Values are stored in the database and always take priority over Vercel
 // environment variables, so a site can be set up entirely from its own screen.
-import { sql, ensureTables, checkToken, cors, readBody, clearSecretCache } from '../server/_db.js';
+import { sql, ensureTables, checkToken, cors, readBody, clearSecretCache } from '../_db.js';
 
 // Only these may be set from the panel. Anything else is ignored.
 const ALLOWED = [

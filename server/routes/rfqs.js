@@ -1,5 +1,5 @@
 // RFQs: anyone can submit or look up their own by reference.
-import { sql, ensureTables, checkToken, cors, readBody } from '../server/_db.js';
+import { sql, ensureTables, checkToken, cors, readBody } from '../_db.js';
 import { sendNotification } from './notify.js';
 import { triggerRufloRFQ } from '../services/ruflo.js';
 export const config={api:{bodyParser:{sizeLimit:'12mb'}}};

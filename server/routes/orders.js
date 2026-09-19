@@ -1,6 +1,6 @@
 // Customer production orders (POs) for the Production Planning module.
 // Staff-only end to end — unlike RFQs, nothing here is public-facing.
-import { sql, ensureTables, checkToken, cors, readBody } from '../server/_db.js';
+import { sql, ensureTables, checkToken, cors, readBody } from '../_db.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '4mb' } } };
 

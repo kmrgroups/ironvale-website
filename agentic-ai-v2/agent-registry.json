@@ -1,26 +1,556 @@
 {
   "version": "2.0.0",
-  "governance": {"humanApprovalRequired": true, "deterministicRulesAuthoritative": true, "externalActionsDisabledByDefault": true},
+  "governance": {
+    "humanApprovalRequired": true,
+    "deterministicRulesAuthoritative": true,
+    "externalActionsDisabledByDefault": true
+  },
   "agents": [
-    {"id":"control_tower","name":"Manufacturing Control Tower","department":"Management","mode":"auto","level":2,"triggers":["DAILY_0600","CRITICAL_EVENT"],"reads":["parts","ppc_orders","production","ncr","task","grn","inward","pm","gauge","msa","ppap","process","pfmea","control_plan","employee","attendance"],"proposes":["management_task","escalation"],"screen":"agentic_ai"},
-    {"id":"rfq_estimator","name":"RFQ & Estimation Agent","department":"Marketing","mode":"open","level":2,"triggers":["RFQ_CREATED","DRAWING_UPLOADED"],"reads":["rfq","part","bom","process","dimension","quotation","costing"],"proposes":["costing_draft","quotation_draft","task"],"screen":"rfq_pipeline"},
-    {"id":"drawing_intelligence","name":"Drawing Intelligence Agent","department":"NPD","mode":"open","level":2,"triggers":["DRAWING_UPLOADED","DRAWING_REVISION"],"reads":["part","drawing","dimension","process","pfmea","control_plan","ppap"],"proposes":["drawing_characteristic_proposal","consistency_task"],"screen":"parts"},
-    {"id":"apqp_npd","name":"APQP / NPD Project Agent","department":"NPD","mode":"auto","level":2,"triggers":["PART_CREATED","PART_LIFECYCLE_CHANGED","APQP_GATE_OPEN"],"reads":["part","process","dimension","pfd","pfmea","control_plan","msa","ppap","training","tool","capacity"],"proposes":["apqp_task","document_review_task"],"screen":"npd_agent"},
-    {"id":"production_planner","name":"Production Planning Agent","department":"PPC & MMD","mode":"auto","level":2,"triggers":["PO_RECEIVED","PLAN_REFRESH","MACHINE_DOWN","MATERIAL_SHORTAGE"],"reads":["salesplan","ppc_orders","production","process","machine","capacity","material","tool","task"],"proposes":["production_plan_task","reschedule_proposal"],"screen":"ppc"},
-    {"id":"delivery_risk","name":"Delivery Risk Agent","department":"PPC & MMD","mode":"auto","level":2,"triggers":["DAILY_0600","ORDER_CHANGED","MACHINE_DOWN","QUALITY_HOLD","MATERIAL_SHORTAGE"],"reads":["ppc_orders","salesplan","production","dispatch","pdi","machine","capacity","grn","inward","task"],"proposes":["delivery_recovery_task","escalation"],"screen":"ppc"},
-    {"id":"material_shortage","name":"Material & Procurement Agent","department":"Purchase & SCM","mode":"auto","level":2,"triggers":["DAILY_0600","PO_RECEIVED","STOCK_CHANGED"],"reads":["salesplan","production","grn","inward","material","bom","supplier"],"proposes":["purchase_requirement_draft","supplier_followup_task"],"screen":"rawmat"},
-    {"id":"quality_investigator","name":"Quality Investigation Agent","department":"Quality Assurance","mode":"auto","level":2,"triggers":["NCR_CREATED","CUSTOMER_COMPLAINT","SPC_WARNING","REJECTION_SPIKE"],"reads":["ncr","production","self_insp","inprocess","control_plan","pfmea","part","process","grn","inward","cnc_event","tool"],"proposes":["containment_task","8d_investigation_task","evidence_pack_task"],"screen":"ncr_open"},
-    {"id":"predictive_maintenance","name":"Predictive Maintenance Agent","department":"Maintenance","mode":"auto","level":2,"triggers":["MACHINE_ALARM","MACHINE_DOWN","DAILY_0600"],"reads":["cnc_machine","cnc_event","cnc_tool_life","maintenance","production","ncr","task"],"proposes":["maintenance_task","inspection_task"],"screen":"maintenance"},
-    {"id":"supplier_risk","name":"Supplier Risk Agent","department":"Purchase & SCM","mode":"auto","level":2,"triggers":["GRN_RECEIVED","INWARD_REJECTION","DAILY_0600"],"reads":["supplier","grn","inward","ncr","purchase_order","part"],"proposes":["supplier_review_task","supplier_audit_task"],"screen":"supplier_watch"},
-    {"id":"workforce_allocator","name":"Workforce & Skill Allocation Agent","department":"HRM","mode":"auto","level":2,"triggers":["SHIFT_START","EMPLOYEE_ABSENT","PLAN_CHANGED"],"reads":["employee","attendance","competency","training","production","process","machine"],"proposes":["manpower_reallocation_task","training_task"],"screen":"gap_analysis"},
-    {"id":"audit_compliance","name":"Audit & Compliance Agent","department":"Quality Assurance","mode":"auto","level":2,"triggers":["DAILY_0600","AUDIT_SCHEDULED","DOCUMENT_CHANGED","4M_CHANGED"],"reads":["policy","document","audit","ncr","task","training","gauge","msa","ppap","pfmea","control_plan","process"],"proposes":["audit_gap_task","document_review_task"],"screen":"audit_readiness"},
-    {"id":"traceability","name":"Traceability Agent","department":"Quality Assurance","mode":"open","level":1,"triggers":["CUSTOMER_COMPLAINT","LOT_TRACE_REQUEST"],"reads":["production","grn","inward","self_insp","inprocess","dispatch","invoice","cnc_event","part"],"proposes":["traceability_report","evidence_pack_task"],"screen":"ncr_open"},
-    {"id":"tool_life","name":"Tool Life Agent","department":"Production","mode":"auto","level":2,"triggers":["PART_COMPLETE","TOOL_LIFE_UPDATE","REJECTION_SPIKE"],"reads":["cnc_tool_life","cnc_event","production","ncr","part","process"],"proposes":["tool_change_task","tool_inspection_task"],"screen":"cnc"},
-    {"id":"spc_early_warning","name":"SPC Early Warning Agent","department":"Quality Assurance","mode":"auto","level":2,"triggers":["SPC_WARNING","INSPECTION_RECORDED"],"reads":["control_plan","self_insp","inprocess","dimension","production","cnc_event","tool"],"proposes":["spc_investigation_task","tool_check_task"],"screen":"report_control_charts"},
-    {"id":"customer_complaint","name":"Customer Complaint Agent","department":"Quality Assurance","mode":"open","level":2,"triggers":["CUSTOMER_COMPLAINT"],"reads":["complaint","part","production","dispatch","ncr","8d","grn","inward","cnc_event","tool"],"proposes":["complaint_investigation_task","8d_task"],"screen":"ncr_open"},
-    {"id":"change_impact","name":"4M Change Impact Agent","department":"Quality Assurance","mode":"open","level":2,"triggers":["4M_CHANGED"],"reads":["change_4m","part","process","pfmea","control_plan","pfd","ppap","training","cnc_program"],"proposes":["change_review_task"],"screen":"change_4m"},
-    {"id":"cost_copq","name":"Manufacturing Cost & COPQ Agent","department":"Accounts","mode":"auto","level":1,"triggers":["DAILY_0600","MONTH_END"],"reads":["production","ncr","dispatch","invoice","grn","maintenance","hr_payrun","tool"],"proposes":["cost_reduction_task","copq_investigation_task"],"screen":"kpidash"},
-    {"id":"customer_profitability","name":"Customer Profitability Agent","department":"Accounts","mode":"auto","level":1,"triggers":["MONTH_END"],"reads":["customer","invoice","quotation","production","ncr","dispatch","grn"],"proposes":["margin_review_task"],"screen":"kpidash"},
-    {"id":"task_followup","name":"Task Follow-up Agent","department":"Management","mode":"auto","level":2,"triggers":["DAILY_0600","TASK_OVERDUE"],"reads":["task","ncr","audit","maintenance","training"],"proposes":["reminder_task","escalation_task"],"screen":"ncr_open"}
+    {
+      "id": "control_tower",
+      "name": "Manufacturing Control Tower",
+      "department": "Management",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "DAILY_0600",
+        "CRITICAL_EVENT"
+      ],
+      "reads": [
+        "parts",
+        "ppc_orders",
+        "production",
+        "ncr",
+        "task",
+        "grn",
+        "inward",
+        "pm",
+        "gauge",
+        "msa",
+        "ppap",
+        "process",
+        "pfmea",
+        "control_plan",
+        "employee",
+        "attendance"
+      ],
+      "proposes": [
+        "management_task",
+        "escalation"
+      ],
+      "screen": "agentic_ai"
+    },
+    {
+      "id": "rfq_estimator",
+      "name": "RFQ & Estimation Agent",
+      "department": "Marketing",
+      "mode": "open",
+      "level": 2,
+      "triggers": [
+        "RFQ_CREATED",
+        "DRAWING_UPLOADED"
+      ],
+      "reads": [
+        "rfq",
+        "part",
+        "bom",
+        "process",
+        "dimension",
+        "quotation",
+        "costing"
+      ],
+      "proposes": [
+        "costing_draft",
+        "quotation_draft",
+        "task",
+        "ai_proposal"
+      ],
+      "screen": "rfq_pipeline",
+      "orchestrator": "ruflo"
+    },
+    {
+      "id": "drawing_intelligence",
+      "name": "Drawing Intelligence Agent",
+      "department": "NPD",
+      "mode": "open",
+      "level": 2,
+      "triggers": [
+        "DRAWING_UPLOADED",
+        "DRAWING_REVISION"
+      ],
+      "reads": [
+        "part",
+        "drawing",
+        "dimension",
+        "process",
+        "pfmea",
+        "control_plan",
+        "ppap"
+      ],
+      "proposes": [
+        "drawing_characteristic_proposal",
+        "consistency_task"
+      ],
+      "screen": "parts"
+    },
+    {
+      "id": "apqp_npd",
+      "name": "APQP / NPD Project Agent",
+      "department": "NPD",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "PART_CREATED",
+        "PART_LIFECYCLE_CHANGED",
+        "APQP_GATE_OPEN"
+      ],
+      "reads": [
+        "part",
+        "process",
+        "dimension",
+        "pfd",
+        "pfmea",
+        "control_plan",
+        "msa",
+        "ppap",
+        "training",
+        "tool",
+        "capacity"
+      ],
+      "proposes": [
+        "apqp_task",
+        "document_review_task"
+      ],
+      "screen": "npd_agent"
+    },
+    {
+      "id": "production_planner",
+      "name": "Production Planning Agent",
+      "department": "PPC & MMD",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "PO_RECEIVED",
+        "PLAN_REFRESH",
+        "MACHINE_DOWN",
+        "MATERIAL_SHORTAGE"
+      ],
+      "reads": [
+        "salesplan",
+        "ppc_orders",
+        "production",
+        "process",
+        "machine",
+        "capacity",
+        "material",
+        "tool",
+        "task"
+      ],
+      "proposes": [
+        "production_plan_task",
+        "reschedule_proposal"
+      ],
+      "screen": "ppc"
+    },
+    {
+      "id": "delivery_risk",
+      "name": "Delivery Risk Agent",
+      "department": "PPC & MMD",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "DAILY_0600",
+        "ORDER_CHANGED",
+        "MACHINE_DOWN",
+        "QUALITY_HOLD",
+        "MATERIAL_SHORTAGE"
+      ],
+      "reads": [
+        "ppc_orders",
+        "salesplan",
+        "production",
+        "dispatch",
+        "pdi",
+        "machine",
+        "capacity",
+        "grn",
+        "inward",
+        "task"
+      ],
+      "proposes": [
+        "delivery_recovery_task",
+        "escalation"
+      ],
+      "screen": "ppc"
+    },
+    {
+      "id": "material_shortage",
+      "name": "Material & Procurement Agent",
+      "department": "Purchase & SCM",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "DAILY_0600",
+        "PO_RECEIVED",
+        "STOCK_CHANGED"
+      ],
+      "reads": [
+        "salesplan",
+        "production",
+        "grn",
+        "inward",
+        "material",
+        "bom",
+        "supplier"
+      ],
+      "proposes": [
+        "purchase_requirement_draft",
+        "supplier_followup_task"
+      ],
+      "screen": "rawmat"
+    },
+    {
+      "id": "quality_investigator",
+      "name": "Quality Investigation Agent",
+      "department": "Quality Assurance",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "NCR_CREATED",
+        "CUSTOMER_COMPLAINT",
+        "SPC_WARNING",
+        "REJECTION_SPIKE"
+      ],
+      "reads": [
+        "ncr",
+        "production",
+        "self_insp",
+        "inprocess",
+        "control_plan",
+        "pfmea",
+        "part",
+        "process",
+        "grn",
+        "inward",
+        "cnc_event",
+        "tool"
+      ],
+      "proposes": [
+        "containment_task",
+        "8d_investigation_task",
+        "evidence_pack_task"
+      ],
+      "screen": "ncr_open"
+    },
+    {
+      "id": "predictive_maintenance",
+      "name": "Predictive Maintenance Agent",
+      "department": "Maintenance",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "MACHINE_ALARM",
+        "MACHINE_DOWN",
+        "DAILY_0600"
+      ],
+      "reads": [
+        "cnc_machine",
+        "cnc_event",
+        "cnc_tool_life",
+        "maintenance",
+        "production",
+        "ncr",
+        "task"
+      ],
+      "proposes": [
+        "maintenance_task",
+        "inspection_task"
+      ],
+      "screen": "maintenance"
+    },
+    {
+      "id": "supplier_risk",
+      "name": "Supplier Risk Agent",
+      "department": "Purchase & SCM",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "GRN_RECEIVED",
+        "INWARD_REJECTION",
+        "DAILY_0600"
+      ],
+      "reads": [
+        "supplier",
+        "grn",
+        "inward",
+        "ncr",
+        "purchase_order",
+        "part"
+      ],
+      "proposes": [
+        "supplier_review_task",
+        "supplier_audit_task"
+      ],
+      "screen": "supplier_watch"
+    },
+    {
+      "id": "workforce_allocator",
+      "name": "Workforce & Skill Allocation Agent",
+      "department": "HRM",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "SHIFT_START",
+        "EMPLOYEE_ABSENT",
+        "PLAN_CHANGED"
+      ],
+      "reads": [
+        "employee",
+        "attendance",
+        "competency",
+        "training",
+        "production",
+        "process",
+        "machine"
+      ],
+      "proposes": [
+        "manpower_reallocation_task",
+        "training_task"
+      ],
+      "screen": "gap_analysis"
+    },
+    {
+      "id": "audit_compliance",
+      "name": "Audit & Compliance Agent",
+      "department": "Quality Assurance",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "DAILY_0600",
+        "AUDIT_SCHEDULED",
+        "DOCUMENT_CHANGED",
+        "4M_CHANGED"
+      ],
+      "reads": [
+        "policy",
+        "document",
+        "audit",
+        "ncr",
+        "task",
+        "training",
+        "gauge",
+        "msa",
+        "ppap",
+        "pfmea",
+        "control_plan",
+        "process"
+      ],
+      "proposes": [
+        "audit_gap_task",
+        "document_review_task"
+      ],
+      "screen": "audit_readiness"
+    },
+    {
+      "id": "traceability",
+      "name": "Traceability Agent",
+      "department": "Quality Assurance",
+      "mode": "open",
+      "level": 1,
+      "triggers": [
+        "CUSTOMER_COMPLAINT",
+        "LOT_TRACE_REQUEST"
+      ],
+      "reads": [
+        "production",
+        "grn",
+        "inward",
+        "self_insp",
+        "inprocess",
+        "dispatch",
+        "invoice",
+        "cnc_event",
+        "part"
+      ],
+      "proposes": [
+        "traceability_report",
+        "evidence_pack_task"
+      ],
+      "screen": "ncr_open"
+    },
+    {
+      "id": "tool_life",
+      "name": "Tool Life Agent",
+      "department": "Production",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "PART_COMPLETE",
+        "TOOL_LIFE_UPDATE",
+        "REJECTION_SPIKE"
+      ],
+      "reads": [
+        "cnc_tool_life",
+        "cnc_event",
+        "production",
+        "ncr",
+        "part",
+        "process"
+      ],
+      "proposes": [
+        "tool_change_task",
+        "tool_inspection_task"
+      ],
+      "screen": "cnc"
+    },
+    {
+      "id": "spc_early_warning",
+      "name": "SPC Early Warning Agent",
+      "department": "Quality Assurance",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "SPC_WARNING",
+        "INSPECTION_RECORDED"
+      ],
+      "reads": [
+        "control_plan",
+        "self_insp",
+        "inprocess",
+        "dimension",
+        "production",
+        "cnc_event",
+        "tool"
+      ],
+      "proposes": [
+        "spc_investigation_task",
+        "tool_check_task"
+      ],
+      "screen": "report_control_charts"
+    },
+    {
+      "id": "customer_complaint",
+      "name": "Customer Complaint Agent",
+      "department": "Quality Assurance",
+      "mode": "open",
+      "level": 2,
+      "triggers": [
+        "CUSTOMER_COMPLAINT"
+      ],
+      "reads": [
+        "complaint",
+        "part",
+        "production",
+        "dispatch",
+        "ncr",
+        "8d",
+        "grn",
+        "inward",
+        "cnc_event",
+        "tool"
+      ],
+      "proposes": [
+        "complaint_investigation_task",
+        "8d_task"
+      ],
+      "screen": "ncr_open"
+    },
+    {
+      "id": "change_impact",
+      "name": "4M Change Impact Agent",
+      "department": "Quality Assurance",
+      "mode": "open",
+      "level": 2,
+      "triggers": [
+        "4M_CHANGED"
+      ],
+      "reads": [
+        "change_4m",
+        "part",
+        "process",
+        "pfmea",
+        "control_plan",
+        "pfd",
+        "ppap",
+        "training",
+        "cnc_program"
+      ],
+      "proposes": [
+        "change_review_task"
+      ],
+      "screen": "change_4m"
+    },
+    {
+      "id": "cost_copq",
+      "name": "Manufacturing Cost & COPQ Agent",
+      "department": "Accounts",
+      "mode": "auto",
+      "level": 1,
+      "triggers": [
+        "DAILY_0600",
+        "MONTH_END"
+      ],
+      "reads": [
+        "production",
+        "ncr",
+        "dispatch",
+        "invoice",
+        "grn",
+        "maintenance",
+        "hr_payrun",
+        "tool"
+      ],
+      "proposes": [
+        "cost_reduction_task",
+        "copq_investigation_task"
+      ],
+      "screen": "kpidash"
+    },
+    {
+      "id": "customer_profitability",
+      "name": "Customer Profitability Agent",
+      "department": "Accounts",
+      "mode": "auto",
+      "level": 1,
+      "triggers": [
+        "MONTH_END"
+      ],
+      "reads": [
+        "customer",
+        "invoice",
+        "quotation",
+        "production",
+        "ncr",
+        "dispatch",
+        "grn"
+      ],
+      "proposes": [
+        "margin_review_task"
+      ],
+      "screen": "kpidash"
+    },
+    {
+      "id": "task_followup",
+      "name": "Task Follow-up Agent",
+      "department": "Management",
+      "mode": "auto",
+      "level": 2,
+      "triggers": [
+        "DAILY_0600",
+        "TASK_OVERDUE"
+      ],
+      "reads": [
+        "task",
+        "ncr",
+        "audit",
+        "maintenance",
+        "training"
+      ],
+      "proposes": [
+        "reminder_task",
+        "escalation_task"
+      ],
+      "screen": "ncr_open"
+    }
   ]
 }

@@ -17,6 +17,10 @@
       "destination": "/api/index?route=device&proto=adms&op=:op"
     },
     {
+      "source": "/api/health",
+      "destination": "/api/index?route=health"
+    },
+    {
       "source": "/api/ai",
       "destination": "/api/index?route=ai"
     },

@@ -2443,7 +2443,9 @@ table.rc-t input.num{text-align:right;font-variant-numeric:tabular-nums}
         <div class="hint">Deletes every part, order, routing, quality document, production booking,
           attendance record, punch, payslip and attachment. <b>Does not touch</b> your company
           profile, branding, users, keys or devices — the same team carries straight on afterwards.
-          Download first; this cannot be undone.</div>
+          That now includes the <b>pictures</b>: the logo, the hero banner and video and every image on
+          the website are kept, because the website content still points at them. Only files attached
+          to the records being deleted go. Download first; this cannot be undone.</div>
         <div class="note" id="fl-data-msg" style="display:none;"></div>
       </div>
     </div>
@@ -28466,7 +28468,18 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
     var x = r.extract, cs = r.costing, q = r.quoteDoc;
     var h = '<div style="margin-top:10px;">' +
       '<div style="margin-bottom:8px;">'+esc(r.message||'—')+'</div>' +
-      (r.fileName ? '<div class="hint">📎 '+esc(r.fileName)+'</div>' : '<div class="hint">No attachment on this enquiry.</div>');
+      /* a link, not a label. When a reading comes back empty the first question
+         is always "is the file actually the drawing, and can it still be
+         opened" — and until this was a link there was no way to ask it from
+         here. It is also how a reference to a file that has gone missing shows
+         itself immediately rather than looking like an AI failure. */
+      (r.fileName
+        ? '<div class="hint">📎 ' + (r.fileUrl
+            ? '<a href="'+esc(r.fileUrl)+'" target="_blank" rel="noopener" ' +
+              'style="color:var(--sky-deep);font-weight:600;">'+esc(r.fileName)+'</a>' +
+              ' <span class="hint">— open it to check it is the drawing</span>'
+            : esc(r.fileName) + ' <span class="hint">— no file stored against this name</span>') + '</div>'
+        : '<div class="hint">No attachment on this enquiry.</div>');
 
     /* ---- drawing reading ---- */
     h += '<div class="sub" style="margin-top:12px;">Drawing</div>';
@@ -28486,7 +28499,11 @@ esc(pr.address || '') + (pr.pin ? ' - ' + esc(pr.pin) : '') +
           x.requirements.map(function(q2){
             return '<tr><td class="hint">'+esc(q2.category)+'</td><td>'+esc(q2.requirement)+'</td>' +
               '<td class="hint">'+esc(q2.source)+'</td><td class="c">'+esc(q2.confidence)+'</td></tr>';
-          }).join('') + '</tbody></table>' : '<div class="hint">Nothing could be read from this drawing.</div>') +
+          }).join('') + '</tbody></table>' : '<div class="note bad">The AI read the file but found nothing it could quote from. ' +
+          'That usually means the image itself, not the drawing: open the attachment above and check ' +
+          'it is the drawing rather than a photo of a screen, a scan too faint to read, or the wrong ' +
+          'page of a multi-page PDF. If it is a PDF or a CAD file, it has to be converted to an image ' +
+          'first — the New Enquiry form does that automatically. Re-read once the file is right.</div>') +
         rfqDrawDataHtml(r) +
         ((x.missing||[]).filter(Boolean).length ? '<div class="note bad" style="margin-top:8px;">' +
           '<b>Not on the drawing — needs clarification:</b><ul style="margin:6px 0 0 18px;">' +

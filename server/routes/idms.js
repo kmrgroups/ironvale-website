@@ -279,7 +279,29 @@ export default async function handler(req, res) {
           case 'hr_audit': return sql`DELETE FROM hr_audit`;
           case 'hr_punches': return sql`DELETE FROM hr_punches`;
           case 'ppc_orders': return sql`DELETE FROM ppc_orders`;
-          case 'assets': return sql`DELETE FROM assets`;
+          /* NOT a plain wipe. The assets table holds two different things:
+             attachments belonging to records (part drawings, PO documents) and
+             the company's branding (logo, hero banner and video, every
+             capability/gallery/founder/certificate image on the website).
+             site_content stores those as REFERENCES — "/api/assets?id=…" — and
+             site_content is deliberately not flushed by this scope, so wiping
+             the table whole left the website and the admin editor pointing at
+             files that no longer existed: every image on the public site broke,
+             and the screen that would let you re-upload them showed broken
+             thumbnails too. Flush Data's own hint promises in bold that it
+             "does not touch your company profile, branding, users, keys or
+             devices", and this is what made that untrue.
+
+             Anything the website content still refers to is therefore kept.
+             Expressed as one literal statement on purpose: no dynamic SQL, no
+             array parameters, nothing driver-specific — this file has already
+             cost one release to a driver method that turned out not to exist.
+             COALESCE matters: with no site_content row the subquery is NULL,
+             position(... in NULL) is NULL, and without it NOTHING would be
+             deleted. Erring toward keeping an asset is the safe direction — a
+             stray orphan row costs bytes, a missing logo costs the website. */
+          case 'assets': return sql`DELETE FROM assets WHERE position(id in
+            COALESCE((SELECT data::text FROM site_content WHERE id = 1), '')) = 0`;
           case 'site_content': return sql`DELETE FROM site_content`;
           case 'idms_settings': return sql`DELETE FROM idms_settings`;
           case 'secrets': return sql`DELETE FROM secrets`;

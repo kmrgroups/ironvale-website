@@ -3598,3 +3598,93 @@ work, for the reasons recorded at the end of the previous section (`api/*.js`
 imports that do not exist in this checkout, and `server/_db.js` existing three
 times over). None of that was touched here, and it is still the first thing that
 will confuse the next person.
+
+## Flush Data deleted the company's branding while promising not to
+
+Reported with screenshots after the round above: every image on the public site
+broken, the IDMS home banner broken, and — the screenshot that gave it away —
+**the Website Content editor showing a broken thumbnail with a REMOVE button
+beside it**. A REMOVE button means the record still holds a value. The reference
+was intact; the file it pointed at was gone.
+
+### The bug
+
+`flushTable()`'s data scope ended with `assets`, under a comment reading *"not
+users, not company profile/branding, not settings"*, and the screen said the
+same thing in bold: **"Does not touch your company profile, branding, users,
+keys or devices."**
+
+But `assets` is where the branding lives. The logo, the hero banner, the hero
+video and every capability/gallery/founder/certificate image are stored by
+`C.uploadFile()` and referenced from `site_content` as `/api/assets?id=…` —
+and `site_content` is deliberately **not** in the data scope. So Flush Data
+deleted every picture on the website while promising it would not, and left
+every reference behind pointing at nothing.
+
+This is the same structural fault as the settings-backup bug in the previous
+section, from the other direction: **the branding's references and its bytes sit
+in different flush scopes.** Anything that touches one without the other breaks
+the site. Both halves are now handled, and that is the thing to remember when
+adding a third scope or a new kind of upload.
+
+### The fix
+
+The data flush keeps whatever the website content still refers to:
+
+```sql
+DELETE FROM assets WHERE position(id in
+  COALESCE((SELECT data::text FROM site_content WHERE id = 1), '')) = 0
+```
+
+**One literal statement, deliberately** — no dynamic SQL, no array parameters,
+nothing driver-specific. This file has already cost a release to `sql.query`
+turning out not to exist on the deployed driver, and there is no precedent for
+array binding anywhere in `server/routes/`. Matching on the id appearing
+anywhere in the content JSON can in principle keep an asset it should not; ids
+are base36 timestamp+random, so a collision with prose is negligible, and the
+error direction is the safe one — a stray orphan row costs bytes, a missing logo
+costs the website.
+
+### It was verified against a real server, not reasoned about
+
+PostgreSQL 16, four cases:
+
+| case | result |
+|---|---|
+| content present | logo, hero video and a capability image nested in an array kept; part drawing and PO document deleted |
+| **no `site_content` row at all** | everything deleted — correct for a fresh deployment |
+| content row present but `{}` | everything deleted |
+| **the same statement without `COALESCE`** | **2 of 2 assets survived — nothing deleted at all** |
+
+That last row is why the `COALESCE` is load-bearing and not decoration: with no
+content row the subquery is NULL, `position(id in NULL)` is NULL, the WHERE
+never matches, and the flush would quietly do nothing to assets while reporting
+success. Reasoning about it would very likely have got that backwards.
+
+`flushtest.mjs` (+6) pins the shape so nobody simplifies it back to a bare wipe:
+the bare `DELETE FROM assets` is gone, the guard and the `COALESCE` are present,
+`site_content` is still absent from the data branch (checked against a **slice**
+of that branch — an unscoped regex reaches into the settings list below it and
+reports the opposite of the truth), and the screen's own wording now tells the
+user the pictures are kept.
+
+### Two smaller things from the same screenshots
+
+- **The enquiry's attachment is a link now.** When a reading comes back empty the
+  first question is whether the file is actually the drawing and can still be
+  opened, and there was no way to ask it from that screen. It also makes a
+  reference to a file that has gone missing show itself immediately instead of
+  reading as an AI failure — which is exactly what this flush bug looked like.
+- **"Nothing could be read from this drawing." was a dead end.** It now says the
+  image is almost always the cause and names what to check: a photo of a screen,
+  a scan too faint, the wrong page of a multi-page PDF, or a file that needed
+  converting to an image first.
+
+`balloontest.mjs` 38 → 42 covers both, with the AI mock returning a well-formed
+reply that simply found nothing — an empty reading is not a parse failure and
+must not be reported as one.
+
+**Recovery, for anyone who hits this before deploying the fix:** a data JSON
+downloaded before the flush carries every asset under its original id, so
+restoring it puts the pictures back exactly where the references expect. Nothing
+has to be re-uploaded by hand.

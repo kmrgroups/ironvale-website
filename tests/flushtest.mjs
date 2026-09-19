@@ -123,6 +123,45 @@ check('a server-side rejection is shown as an error, not silently ignored',
 check('the button is re-disabled after a rejection, since the box no longer matches',
   $('fl-data-go').disabled);
 
+/* ---------- Flush Data must not take the branding with it ----------
+
+   Reported from the live deployment with screenshots: after a data flush the
+   public site, the IDMS home banner and the Website Content editor itself all
+   showed broken images. The assets table holds two different things — files
+   attached to records (part drawings, PO documents) and the company's branding
+   (logo, hero banner and video, every capability/gallery/founder/certificate
+   image). site_content stores the branding as REFERENCES and is deliberately
+   NOT flushed by this scope, so `DELETE FROM assets` left the website pointing
+   at files that no longer existed, while the screen promised in bold that it
+   "does not touch your company profile, branding, users, keys or devices".
+
+   The behaviour itself was verified against a real PostgreSQL 16 server rather
+   than reasoned about — three cases (content present, no content row at all,
+   an empty content row) plus a counter-check proving the COALESCE is
+   load-bearing: without it, `position(id in NULL)` is NULL, the WHERE never
+   matches, and the flush silently deletes no assets whatsoever. See the
+   flush section in CLAUDE.md. What is checked here is that nobody simplifies
+   it back to a bare wipe, and that the promise on screen stays true. */
+{
+  const route = fs.readFileSync('server/routes/idms.js', 'utf8');
+  check('Flush Data no longer wipes the whole assets table',
+    !/case 'assets':\s*return sql`DELETE FROM assets`/.test(route));
+  check('…it keeps anything the website content still points at',
+    /DELETE FROM assets WHERE position\(id in/.test(route));
+  check('…guarded by COALESCE, without which nothing at all would be deleted',
+    /COALESCE\(\(SELECT data::text FROM site_content WHERE id = 1\), ''\)/.test(route));
+  /* sliced to the data branch itself — a regex spanning the whole file reaches
+     into the settings list below and reports the opposite of the truth */
+  const dataBranch = route.slice(route.indexOf("if (scope === 'data')"),
+                                 route.indexOf("if (scope === 'settings')"));
+  check('site_content is still NOT flushed by the data scope, which is why this is needed',
+    dataBranch.length > 200 && !dataBranch.includes("'site_content'"), String(dataBranch.length));
+  check('the settings scope still does flush site_content',
+    route.slice(route.indexOf("if (scope === 'settings')")).includes("'site_content'"));
+  check('the screen tells the user the pictures are kept',
+    /the logo, the hero banner and video and every image on/.test(html));
+}
+
 check('no console errors while any of this ran', pageErrors.length === 0, pageErrors.join(' | '));
 
 const failed = results.filter(([, ok]) => !ok);

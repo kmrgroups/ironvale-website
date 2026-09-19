@@ -59,6 +59,10 @@ const AI_READING = 'Here is what I can read from the drawing.\n```json\n' + JSON
   notes: 'Title block partly obscured.'
 }) + '\n```';
 
+/* a well-formed reply that simply found nothing — not a parse failure */
+const AI_NOTHING = JSON.stringify({ part:{}, requirements: [], characteristics: [],
+  criticalCharacteristics: [], missing: ['The drawing could not be read'], notes: '' });
+let AI_EMPTY = false;
 const calls = [];
 let signedIn = false;
 const vc = new VirtualConsole();
@@ -90,7 +94,7 @@ window.fetch = async (path, opts = {}) => {
   }
   if (url.startsWith('/api/ai')) {
     calls.push({ kind: 'ai', prompt: body.prompt || '', maxTokens: body.maxTokens });
-    return ok({ text: AI_READING });
+    return ok({ text: AI_EMPTY ? AI_NOTHING : AI_READING });
   }
   if (url.startsWith('/api/content')) return ok({ data: {
     company: { legalName: 'Test Mfg' },
@@ -235,6 +239,27 @@ check('it lists every characteristic including the unplaced one',
 check('it carries what the drawing does not state, for clarification',
   /Heat treatment hardness is not stated/.test(dd));
 check('it carries the same draft warning', /Draft — read by AI, not yet verified/.test(dd));
+
+/* ---------- when the reading comes back empty ----------
+   The live deployment hit this: "Nothing could be read from this drawing." on a
+   .jpg, with no link to the file and nothing saying what to do. Almost always
+   the file is the problem — a photo of a screen, a faint scan, the wrong page —
+   and until the attachment was a link there was no way to check that from here. */
+{
+  AI_EMPTY = true;
+  click(window.document.querySelector('.rp-read[data-ref="RFQ-B001"]'));
+  await wait(450);
+  const empty = $('rp-list').innerHTML;
+  check('an empty reading says the file is the likely cause, not just "nothing"',
+    /found nothing it could quote from/.test(empty), empty.slice(0, 120));
+  check('…and names the things actually worth checking',
+    /photo of a screen/.test(empty) && /wrong\s*\n?\s*page/.test(empty.replace(/\s+/g, ' ')));
+  check('…and says a PDF or CAD file has to be converted first',
+    /converted to an image/.test(empty));
+  check('the attachment is a link, so the file itself can be opened and checked',
+    /<a href="\/api\/assets\?id=drw1"[^>]*target="_blank"/.test(empty), '');
+  AI_EMPTY = false;
+}
 
 check('no console errors while any of this ran', pageErrors.length === 0, pageErrors.join(' | '));
 

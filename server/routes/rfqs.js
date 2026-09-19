@@ -1,1 +1,19 @@
-// TEMP
+// RFQs: anyone can submit or look up their own by reference.
+import { sql, ensureTables, checkToken, cors, readBody } from '../server/_db.js';
+import { sendNotification } from './notify.js';
+import { triggerRufloRFQ } from '../services/ruflo.js';
+export const config={api:{bodyParser:{sizeLimit:'12mb'}}};
+export default async function handler(req,res){
+  cors(res);if(req.method==='OPTIONS')return res.status(200).end();
+  try{await ensureTables();const token=req.headers['x-auth-token'];
+    if(req.method==='GET'){const ref=(req.query.ref||'').trim().toUpperCase();if(ref){const rows=await sql`SELECT data FROM rfqs WHERE ref=${ref}`;if(!rows.length)return res.status(404).json({ok:false,error:'Not found'});const d=rows[0].data;return res.status(200).json({ok:true,rfq:{ref:d.ref,status:d.status,date:d.date,approvedAt:d.approvedAt||null}});}if(!(await checkToken(token)))return res.status(401).json({ok:false,error:'Not signed in.'});const limit=Math.min(2000,Math.max(1,parseInt(req.query.limit,10)||500)),offset=Math.max(0,parseInt(req.query.offset,10)||0);const rows=await sql`SELECT data FROM rfqs ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;return res.status(200).json({ok:true,rfqs:rows.map(r=>r.data)});}
+    if(req.method==='POST'){const body=readBody(req),r=body.rfq||{};if(!r.ref||!r.name||!r.email)return res.status(400).json({ok:false,error:'Name, email and reference are required.'});if(body.restore===true){if(!(await checkToken(token)))return res.status(401).json({ok:false,error:'Not signed in.'});await sql`INSERT INTO rfqs (ref,data) VALUES (${r.ref},${JSON.stringify(r)}::jsonb) ON CONFLICT (ref) DO UPDATE SET data=${JSON.stringify(r)}::jsonb`;return res.status(200).json({ok:true,ref:r.ref,restored:true});}
+      await sql`INSERT INTO rfqs (ref,data) VALUES (${r.ref},${JSON.stringify(r)}::jsonb) ON CONFLICT (ref) DO NOTHING`;
+      let rufloResult={enabled:false,skipped:true};try{rufloResult=await triggerRufloRFQ({ref:r.ref,name:r.name,company:r.company,partNo:r.partNo||r.part_no,fileName:r.fileName});}catch(e){rufloResult={enabled:true,ok:false,error:e.message};}
+      let notifyResult=[];try{notifyResult=await sendNotification('rfq_received',{ref:r.ref,name:r.name,company:r.company,email:r.email,phone:r.phone,message:r.message,file:r.fileName,pipelineUrl:body.pipelineUrl||''},body.notifyEmail,body.notifyWhatsapp);}catch(e){notifyResult=['notify error: '+e.message];}
+      if(body.acknowledge!==false){try{const ack=await sendNotification('rfq_acknowledge',{ref:r.ref,name:r.name,email:r.email,phone:r.phone,message:r.message,company:body.companyName||'',trackUrl:body.trackUrl||''});notifyResult=notifyResult.concat(ack.map(x=>'ack: '+x));}catch(e){notifyResult.push('ack error: '+e.message);}}
+      return res.status(200).json({ok:true,ref:r.ref,notify:notifyResult,ruflo:rufloResult});}
+    if(req.method==='PATCH'){if(!(await checkToken(token)))return res.status(401).json({ok:false,error:'Not signed in.'});const body=readBody(req),ref=String(body.ref||'').toUpperCase();if(body.remove){await sql`DELETE FROM rfqs WHERE ref=${ref}`;return res.status(200).json({ok:true,removed:ref});}if(body.removeAll){await sql`DELETE FROM rfqs`;return res.status(200).json({ok:true,removedAll:true});}const rows=await sql`SELECT data FROM rfqs WHERE ref=${ref}`;if(!rows.length)return res.status(404).json({ok:false,error:'Not found'});const merged=Object.assign({},rows[0].data,body.patch||{});await sql`UPDATE rfqs SET data=${JSON.stringify(merged)}::jsonb WHERE ref=${ref}`;let notifyResult=[];if(body.notifyCustomer){try{notifyResult=await sendNotification('quote_approved',{ref:merged.ref,quote:merged.quote,customer:{name:merged.name,email:merged.email,phone:merged.phone}},body.notifyEmail,body.notifyWhatsapp);}catch(e){notifyResult=['notify error: '+e.message];}}return res.status(200).json({ok:true,rfq:merged,notify:notifyResult});}
+    return res.status(405).json({error:'Method not allowed'});
+  }catch(e){console.log('RFQ ERROR:',e.message);return res.status(500).json({ok:false,error:e.message});}
+}

@@ -1,0 +1,25 @@
+<section id="agentic-control-tower-v2" class="panel">
+<style>
+#agentic-control-tower-v2{font-size:14px;color:var(--ink,#17243b)}
+#agentic-control-tower-v2 #aa-clean-root{margin:0!important;border:0!important;box-shadow:none!important;background:transparent!important}
+#agentic-control-tower-v2 .aa-fb-actions{display:none!important}
+#agentic-control-tower-v2 .aa-screen-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin:0 0 14px;padding:0 2px}
+#agentic-control-tower-v2 .aa-screen-kicker{font:700 10px var(--mono,monospace);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft)}
+#agentic-control-tower-v2 .aa-screen-head h3{margin:2px 0 0;font-family:var(--disp,inherit);font-size:21px;color:var(--navy)}
+#agentic-control-tower-v2 .aa-switch-link{border:1px solid var(--line);background:var(--paper,#f8fbfe);color:var(--navy);border-radius:8px;padding:9px 14px;font:600 12px var(--body,Arial);text-decoration:none;white-space:nowrap;flex:0 0 auto}
+#agentic-control-tower-v2 .aa-switch-link:hover{border-color:var(--gold);background:var(--sky-wash,#eef6fc)}
+</style>
+<div class="aa-screen-head">
+  <div><div class="aa-screen-kicker">Agentic AI</div><h3>Control Tower</h3></div>
+  <a class="aa-switch-link" href="#s=agentic_ai_more" data-agentic-link="more">Agentic AI · More →</a>
+</div>
+<div id="aa-clean-root-host"></div>
+<script>
+(function(){
+'use strict';
+var panel=document.getElementById('agentic-control-tower-v2');if(!panel||panel.dataset.execReady==='1')return;panel.dataset.execReady='1';
+function loadTowerScript(){if(window.__agenticTowerScriptLoaded)return;window.__agenticTowerScriptLoaded=true;var s=document.createElement('script');s.src='/agentic-ai-v2/ui/control-tower.js';s.async=true;document.head.appendChild(s);}
+loadTowerScript();
+})();
+</script>
+</section>

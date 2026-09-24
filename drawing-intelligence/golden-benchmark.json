@@ -1,0 +1,8 @@
+{
+  "name":"Ironvale Golden Benchmark v1",
+  "purpose":"Acceptance set for the isolated v143 engine before v142 retirement.",
+  "minimum_drawings":50,
+  "required_categories":["linear","diameter","radius","angle","chamfer","thread","GD&T","datum","surface finish","notes","special characteristics","rotated dimensions","sections","details","dense callouts","imperfect PDFs"],
+  "release_gate":{"zero_unresolved_auto_accept":False,"human_approval_required":True,"duplicate_balloon_count":0,"orphan_characteristic_count":0,"numbering_gaps":0},
+  "comparison":"v143 versus v142 on the same drawings; retain v142 until v143 meets agreed acceptance thresholds."
+}

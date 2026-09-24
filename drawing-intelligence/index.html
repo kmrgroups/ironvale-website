@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ironvale — Drawing Intelligence v143</title>
+<link rel="stylesheet" href="drawing-intelligence.css">
+</head>
+<body>
+<header><div><strong>IRONVALE</strong><span>Drawing Intelligence</span></div><span class="ver">v143 · Zero-Cost / Self-Hosted</span></header>
+<main>
+<section class="hero">
+  <div><h1>AI Drawing Ballooning</h1><p>Isolated next-generation engine. Existing v142 remains untouched as fallback.</p></div>
+  <div class="actions"><button id="demo">Load Demo</button><button id="validate">Validate</button><button id="number">Renumber</button></div>
+</section>
+<section class="grid">
+  <article class="panel"><h2>Drawing Analysis</h2><div class="drop" id="drop">Drop PDF / drawing image here<br><small>Demo mode uses structured evidence; local OCR/VLM adapters can be attached later.</small></div><div class="stats"><b id="count">0</b><span>Characteristics</span><b id="auto">0</b><span>Auto</span><b id="review">0</b><span>Review</span></div></article>
+  <article class="panel"><h2>Validation</h2><div id="status" class="status neutral">Waiting for drawing</div><ul id="issues"></ul></article>
+</section>
+<section class="panel"><div class="table-head"><h2>Characteristic Register</h2><span>One identity per characteristic</span></div>
+<table><thead><tr><th>Balloon</th><th>Type</th><th>Requirement</th><th>Page</th><th>Confidence</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></section>
+</main>
+<script type="module">
+import {makeCharacteristic,assignBalloonNumbers,validateCharacteristics,confidenceBand} from './engine.mjs';
+let data=[];
+const demo=[
+ {type:'diameter',dimension_text:'Ø23.8 +0/-0.2',page:1,source_bbox:{x:220,y:140,w:100,h:22},confidence:.996,validation_status:'verified'},
+ {type:'linear_dimension',dimension_text:'32 ±0.3',page:1,source_bbox:{x:420,y:180,w:80,h:22},confidence:.991,validation_status:'verified'},
+ {type:'thread',dimension_text:'M22×1.5-6g',page:1,source_bbox:{x:500,y:260,w:120,h:22},confidence:.982,validation_status:'verified'},
+ {type:'gdt',dimension_text:'0.25 A',page:1,source_bbox:{x:300,y:340,w:75,h:24},confidence:.941,validation_status:'review'},
+ {type:'surface_finish',dimension_text:'Ra 1.6',page:1,source_bbox:{x:650,y:380,w:60,h:22},confidence:.875,validation_status:'unresolved'}
+];
+function render(){
+ document.querySelector('#count').textContent=data.length;
+ document.querySelector('#auto').textContent=data.filter(x=>confidenceBand(x.confidence)==='AUTO').length;
+ document.querySelector('#review').textContent=data.filter(x=>confidenceBand(x.confidence)!=='AUTO').length;
+ document.querySelector('#rows').innerHTML=data.map(c=>`<tr><td><b>${c.balloon_number||'—'}</b></td><td>${c.type}</td><td>${c.dimension_text}</td><td>${c.page}</td><td>${(c.confidence*100).toFixed(1)}%</td><td><span class="pill ${confidenceBand(c.confidence).toLowerCase()}">${confidenceBand(c.confidence)}</span></td></tr>`).join('');
+}
+function validate(){
+ const r=validateCharacteristics(data);
+ const el=document.querySelector('#status'); el.className='status '+(r.ok?'ok':'warn'); el.textContent=r.ok?'Validation passed':'Review required';
+ document.querySelector('#issues').innerHTML=r.issues.map(x=>`<li>${x.type} ${x.id||x.balloon||''}</li>`).join('') || '<li>No validation issues.</li>';
+}
+document.querySelector('#demo').onclick=()=>{data=assignBalloonNumbers(demo.map(makeCharacteristic));render();validate()};
+document.querySelector('#number').onclick=()=>{data=assignBalloonNumbers(data);render();validate()};
+document.querySelector('#validate').onclick=validate;
+</script>
+</body></html>

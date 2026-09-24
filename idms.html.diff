@@ -1,0 +1,411 @@
+--- ironvale-website-main/idms.html	2026-09-23 07:04:15.000000000 +0000
++++ /home/claude/ironvale/ironvale-website-main/idms.html	2026-09-23 08:20:56.486557865 +0000
+@@ -4838,13 +4838,27 @@
+         </div>
+         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+           <button class="btn gold" id="pr-add">Add operation</button>
++          <button class="btn" id="pr-cancel-edit" style="display:none;">Cancel edit</button>
+           <button class="btn" id="pr-clear">Clear</button>
++          <button class="btn" id="pr-pull" style="margin-left:auto;">Pull from Costing Sheet</button>
+         </div>
+-        <div class="note" id="pr-msg" style="display:none;"></div>
++        <div class="note" id="rtg-msg" style="display:none;"></div>
++      </div>
++      <div class="card" id="pr-pull-card" style="display:none;">
++        <h4>Pull operations from the Costing Sheet</h4>
++        <div class="hint" style="margin-bottom:10px;">Reads the route already priced on a won enquiry
++          for this part and offers those operations here — Process #, Process Name, Machine, Setup
++          time and Cycle time — so they don't have to be re-typed. Choose which rows to bring across;
++          each lands as its own operation, marked <span class="badge sample">AI proposed</span> until
++          someone checks it on Review Agent Work, the same as a route sent from the RFQ Pipeline.
++          An operation number already on this part is skipped, never overwritten.</div>
++        <div id="pr-pull-body"></div>
+       </div>
+       <div class="card">
+         <h4 id="pr-list-title">Routing</h4>
+-        <div id="pr-list"></div>
++        <div class="hint" id="pr-reorder-hint" style="display:none;margin-bottom:8px;">Use ▲ / ▼ to
++          change the sequence — it swaps the operation numbers of the two rows.</div>
++        <div id="rtg-list"></div>
+       </div>
+     </div>
+ 
+@@ -17199,34 +17213,47 @@
+     drawProcesses();
+   }
+ 
++  var prEditing = null; /* doc_id of the operation currently being edited, or null */
++
+   function drawProcesses(){
+     var partId = document.getElementById('pr-part').value;
+-    var host = document.getElementById('pr-list');
++    var host = document.getElementById('rtg-list');
+     var title = document.getElementById('pr-list-title');
++    var reorderHint = document.getElementById('pr-reorder-hint');
+     if (!partId){
+       title.textContent = 'Routing';
+       host.innerHTML = '<div class="empty"><b>Choose a part</b>Its operations appear here in order.</div>';
+       document.getElementById('pr-op').value = '';
++      reorderHint.style.display = 'none';
++      cancelEditOperation();
+       return;
+     }
+     var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
+     title.textContent = 'Routing for ' + (p.part_no||'') + ' — ' + (p.part_name||'');
+     var ops = opsFor(partId);
+-    /* the next operation number, stepping in tens */
+-    document.getElementById('pr-op').value = ops.length
+-      ? String(C.num((ops[ops.length-1].data||{}).opNo) + 10) : '10';
++    /* the next operation number, stepping in tens — but leave it alone while
++       a row is being edited, or the edit form would silently point at the
++       wrong operation number */
++    if (!prEditing)
++      document.getElementById('pr-op').value = ops.length
++        ? String(C.num((ops[ops.length-1].data||{}).opNo) + 10) : '10';
+     if (!ops.length){
+       host.innerHTML = '<div class="empty"><b>No operations yet</b>' +
+-        'Add the first one above. Nothing downstream — PFD, PFMEA, control plan — can be built ' +
+-        'until the routing exists.</div>';
++        'Add the first one above, or pull the route from a costing sheet. Nothing downstream — ' +
++        'PFD, PFMEA, control plan — can be built until the routing exists.</div>';
++      reorderHint.style.display = 'none';
+       return;
+     }
++    reorderHint.style.display = ops.length > 1 ? '' : 'none';
+     host.innerHTML = '<table class="t"><thead><tr><th class="c">Op</th><th>Operation</th>' +
+       '<th>Machine</th><th class="r">Setup</th><th class="r">Cycle</th><th class="c">Where</th>' +
+-      '<th class="c">Dims</th><th></th></tr></thead><tbody>' + ops.map(function(o){
++      '<th class="c">Dims</th><th class="c">Sequence</th><th></th></tr></thead><tbody>' +
++      ops.map(function(o, i){
+         var v = o.data || {};
+         var dims = dimensions.filter(function(x){ return (x.data||{}).processId === o.doc_id; }).length;
+-        return '<tr><td class="c"><b>'+esc(v.opNo)+'</b></td>'+
++        var editing = prEditing === o.doc_id;
++        return '<tr'+(editing?' style="background:var(--row-hi,rgba(255,215,0,.08));"':'')+'>'+
++          '<td class="c"><b>'+esc(v.opNo)+'</b></td>'+
+           '<td>'+esc(v.name||'—')+(v.aiProposed?' <span class="badge sample">AI proposed</span>'
+              :v.wasAiProposed?' <span class="badge series" title="AI proposed, checked by '+
+                esc(v.reviewedBy||'')+'">checked</span>':'')+
+@@ -17237,11 +17264,235 @@
+           '<td class="c">'+(v.where==='sub'?'<span class="badge sample">Sub-con</span>'
+                                             :'<span class="badge series">In house</span>')+'</td>'+
+           '<td class="c">'+(dims||'<span class="hint">none</span>')+'</td>'+
+-          '<td><button class="btn del pr-del" data-id="'+esc(o.doc_id)+'">Remove</button></td></tr>';
++          '<td class="c" style="white-space:nowrap;">'+
++            '<button class="btn pr-up" data-id="'+esc(o.doc_id)+'" title="Move earlier in the route"'+
++              (i===0?' disabled':'')+'>▲</button> '+
++            '<button class="btn pr-down" data-id="'+esc(o.doc_id)+'" title="Move later in the route"'+
++              (i===ops.length-1?' disabled':'')+'>▼</button></td>'+
++          '<td style="white-space:nowrap;">'+
++            '<button class="btn pr-edit" data-id="'+esc(o.doc_id)+'">Edit</button> '+
++            '<button class="btn del pr-del" data-id="'+esc(o.doc_id)+'">Remove</button></td></tr>';
+       }).join('') + '</tbody></table>';
+     host.querySelectorAll('.pr-del').forEach(function(b){
+       b.addEventListener('click', function(){ removeOperation(b.dataset.id); });
+     });
++    host.querySelectorAll('.pr-edit').forEach(function(b){
++      b.addEventListener('click', function(){ editOperation(b.dataset.id); });
++    });
++    host.querySelectorAll('.pr-up').forEach(function(b){
++      b.addEventListener('click', function(){ moveOperation(b.dataset.id, -1); });
++    });
++    host.querySelectorAll('.pr-down').forEach(function(b){
++      b.addEventListener('click', function(){ moveOperation(b.dataset.id, 1); });
++    });
++  }
++
++  /* ---- edit an existing operation, reusing the entry form above ---- */
++  function editOperation(docId){
++    var op = processes.filter(function(x){ return x.doc_id === docId; })[0];
++    if (!op) return;
++    var v = op.data || {};
++    prEditing = docId;
++    document.getElementById('pr-op').value = v.opNo != null ? String(v.opNo) : '';
++    document.getElementById('pr-name').value = v.name || '';
++    document.getElementById('pr-machine').value = v.machine || '';
++    document.getElementById('pr-setup').value = v.setupMin != null ? String(v.setupMin) : '';
++    document.getElementById('pr-cycle').value = v.cycleSec != null ? String(v.cycleSec) : '';
++    document.getElementById('pr-where').value = v.where === 'sub' ? 'sub' : 'in';
++    document.getElementById('pr-desc').value = v.description || '';
++    document.getElementById('pr-add').textContent = 'Save changes';
++    document.getElementById('pr-cancel-edit').style.display = '';
++    document.getElementById('rtg-msg').style.display = 'none';
++    drawProcesses();
++    document.getElementById('pr-name').focus();
++  }
++
++  function cancelEditOperation(){
++    prEditing = null;
++    document.getElementById('pr-add').textContent = 'Add operation';
++    document.getElementById('pr-cancel-edit').style.display = 'none';
++  }
++
++  /* ---- change the sequence: swap this operation's number with its
++     neighbour's. Order is driven entirely by opNo (see opsFor), so
++     swapping the numbers is the whole of "moving" a row. ---- */
++  async function moveOperation(docId, dir){
++    var partId = document.getElementById('pr-part').value;
++    var ops = opsFor(partId);
++    var i = -1;
++    for (var k = 0; k < ops.length; k++) if (ops[k].doc_id === docId) { i = k; break; }
++    var j = i + dir;
++    if (i < 0 || j < 0 || j >= ops.length) return;
++    var a = ops[i], b = ops[j];
++    var aData = Object.assign({}, a.data || {}), bData = Object.assign({}, b.data || {});
++    var aNo = aData.opNo, bNo = bData.opNo;
++    aData.opNo = bNo; bData.opNo = aNo;
++    try {
++      await C.idms.patchDoc({ docId: a.doc_id, patch: aData, reason: 'sequence changed' });
++      await C.idms.patchDoc({ docId: b.doc_id, patch: bData, reason: 'sequence changed' });
++      processes = await C.idms.docs('process');
++      drawProcesses();
++    } catch(e){ toast(e.message); }
++  }
++
++  /* ---- pull operations from a costed, matched enquiry ----
++     Same route the RFQ Pipeline already offers ("Send route & dimensions to
++     the part"), reachable here too so a routing can be built straight from
++     Process Master without a trip to the pipeline. Matching runs off the
++     part instead of the enquiry: an already-linked enquiry first
++     (routeSentTo / idmsParts), then the drawing number, then the part
++     number — the same fields rfqRouteToPart matches from the other side. */
++  var prPullCandidates = [];
++
++  async function pullFromCostingOpen(){
++    var partId = document.getElementById('pr-part').value;
++    var card = document.getElementById('pr-pull-card');
++    var body = document.getElementById('pr-pull-body');
++    if (!partId) { toast('Choose a part first.'); return; }
++    card.style.display = '';
++    body.innerHTML = '<div class="hint">Looking for a costed enquiry for this part…</div>';
++    var p = allParts.filter(function(x){ return x.part_id === partId; })[0] || {};
++    try {
++      var content = (await C.api('/api/content')).data || {};
++      rfqCfg = { costBase:content.costBase||{}, machines:content.machines||[],
++        labourGrades:content.labourGrades||[], materials:content.materials||[],
++        quoteCfg:content.quoteCfg||{}, company:content.company||{},
++        quoteSender:content.quoteSender||'Sales' };
++    } catch(e){ /* keep whatever machine list was already loaded, if any */ }
++    try { rfqRows = (await C.api('/api/rfqs')).rfqs || []; }
++    catch(e){ body.innerHTML = '<div class="hint">Could not read the RFQ Pipeline: '+esc(e.message)+'</div>'; return; }
++
++    var drg = String((p.data||{}).drawingNo || '').trim().toLowerCase();
++    var custNo = String((p.data||{}).custPartNo || '').trim().toLowerCase();
++    var partNo = String(p.part_no || '').trim().toLowerCase();
++
++    prPullCandidates = rfqRows.filter(function(r){
++      if (!r.costing || !(r.costing.operations||[]).length) return false;
++      if (r.routeSentTo === partId) return true;
++      if ((r.idmsParts||[]).some(function(ip){ return String(ip && (ip.partId||ip)) === partId; })) return true;
++      var dp = (r.extract||{}).part || {};
++      var rdrg = String(dp.drawingNumber||'').trim().toLowerCase();
++      var rno = String(dp.number||'').trim().toLowerCase();
++      return (!!drg && rdrg === drg) || (!!custNo && rno === custNo) || (!!partNo && rno === partNo);
++    });
++
++    if (!prPullCandidates.length){
++      body.innerHTML = '<div class="empty"><b>No costed enquiry found for this part</b>' +
++        'Nothing on the RFQ Pipeline is costed and matched to ' + esc(p.part_no||'this part') +
++        ' by drawing number or part number. Cost and win the enquiry first on the ' +
++        '<a data-goto="rfq_pipeline" style="cursor:pointer;color:var(--sky-deep);font-weight:600;">' +
++        'RFQ Pipeline</a>, or send its route across from there once it exists.</div>';
++      return;
++    }
++    pullRenderPicker();
++  }
++
++  function pullRenderPicker(){
++    var body = document.getElementById('pr-pull-body');
++    var pickerHtml = '';
++    if (prPullCandidates.length > 1){
++      pickerHtml = '<div class="row four"><div style="grid-column:span 3;">' +
++        '<label>Costed enquiry</label><select id="pr-pull-ref">' +
++        prPullCandidates.map(function(r){
++          var dp = (r.extract||{}).part || {};
++          return '<option value="'+esc(r.ref)+'">'+esc(r.ref)+' — '+
++            esc(dp.drawingNumber||dp.number||'no drawing no.')+' · '+
++            ((r.costing.operations||[]).length)+' operation(s)</option>';
++        }).join('') + '</select></div>' +
++        '<div style="align-self:end;"><button class="btn" id="pr-pull-load">Show operations</button></div></div>';
++    }
++    body.innerHTML = pickerHtml + '<div id="pr-pull-ops" style="margin-top:10px;"></div>';
++    if (prPullCandidates.length > 1){
++      document.getElementById('pr-pull-load').addEventListener('click', function(){
++        pullRenderOps(document.getElementById('pr-pull-ref').value);
++      });
++    } else {
++      pullRenderOps(prPullCandidates[0].ref);
++    }
++  }
++
++  function pullRenderOps(ref){
++    var host = document.getElementById('pr-pull-ops');
++    var r = prPullCandidates.filter(function(x){ return x.ref === ref; })[0];
++    if (!r){ host.innerHTML = ''; return; }
++    var partId = document.getElementById('pr-part').value;
++    var existing = opsFor(partId);
++    var ops = (r.costing.operations||[]).filter(function(o){ return String(o.process||'').trim(); });
++    if (!ops.length){
++      host.innerHTML = '<div class="hint">This enquiry’s costing sheet has no named operations.</div>';
++      return;
++    }
++    host.innerHTML = '<div class="scroll-x"><table class="t"><thead><tr>' +
++      '<th class="c"><input type="checkbox" id="pr-pull-all" checked></th>' +
++      '<th class="c">Process #</th><th>Process name</th><th>Machine</th>' +
++      '<th class="r">Setup</th><th class="r">Cycle</th></tr></thead><tbody>' +
++      ops.map(function(o, i){
++        var opNo = C.num(o.op) || ((i+1)*10);
++        var clash = existing.some(function(d){ return C.num((d.data||{}).opNo) === opNo; });
++        var mach = (rfqCfg.machines||[]).filter(function(m){ return m.id === o.machineId; })[0];
++        return '<tr><td class="c"><input type="checkbox" class="pr-pull-row" data-idx="'+i+'"'+
++          (clash ? ' disabled' : ' checked') + '></td>'+
++          '<td class="c">'+esc(opNo)+'</td>'+
++          '<td>'+esc(o.process||'')+(clash
++            ? ' <span class="hint">already on this part — skipped</span>' : '')+'</td>'+
++          '<td>'+esc(mach ? mach.name : '—')+'</td>'+
++          '<td class="r">'+(C.num(o.setupMin)?C.qty(o.setupMin)+' min':'—')+'</td>'+
++          '<td class="r">'+(C.num(o.cycleMin)?C.qty(Math.round(o.cycleMin*60))+' s':'—')+'</td></tr>';
++      }).join('') + '</tbody></table></div>' +
++      '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' +
++      '<button class="btn gold" id="pr-pull-import">Import selected</button>' +
++      '<button class="btn" id="pr-pull-cancel">Cancel</button></div>' +
++      '<div class="note" id="pr-pull-msg" style="display:none;"></div>';
++
++    document.getElementById('pr-pull-all').addEventListener('change', function(){
++      var checked = this.checked;
++      host.querySelectorAll('.pr-pull-row:not(:disabled)').forEach(function(cb){ cb.checked = checked; });
++    });
++    document.getElementById('pr-pull-cancel').addEventListener('click', function(){
++      document.getElementById('pr-pull-card').style.display = 'none';
++    });
++    document.getElementById('pr-pull-import').addEventListener('click', function(){
++      pullImportSelected(ref);
++    });
++  }
++
++  async function pullImportSelected(ref){
++    var r = prPullCandidates.filter(function(x){ return x.ref === ref; })[0];
++    if (!r) return;
++    var partId = document.getElementById('pr-part').value;
++    var host = document.getElementById('pr-pull-ops');
++    var msg = document.getElementById('pr-pull-msg');
++    var say = noteWriter(msg);
++    var ops = (r.costing.operations||[]).filter(function(o){ return String(o.process||'').trim(); });
++    var checks = host.querySelectorAll('.pr-pull-row:checked');
++    if (!checks.length) return say('Choose at least one operation to import.');
++    var btn = document.getElementById('pr-pull-import');
++    btn.disabled = true; btn.textContent = 'Importing…';
++    var existing = opsFor(partId);
++    var imported = 0, skipped = 0;
++    try {
++      for (var k = 0; k < checks.length; k++){
++        var idx = C.num(checks[k].dataset.idx);
++        var o = ops[idx]; if (!o) continue;
++        var opNo = C.num(o.op) || ((idx+1)*10);
++        if (existing.some(function(d){ return C.num((d.data||{}).opNo) === opNo; })){ skipped++; continue; }
++        var mach = (rfqCfg.machines||[]).filter(function(m){ return m.id === o.machineId; })[0];
++        await C.idms.saveDoc({ kind:'process', partId:partId, status:'Active',
++          docNo:String(opNo),
++          data:{ partId:partId, opNo:opNo, name:o.process, machine: mach ? mach.name : '',
++                 setupMin:C.num(o.setupMin), cycleSec:Math.round(C.num(o.cycleMin) * 60),
++                 where:'in', description:o.notes || '',
++                 aiProposed:true, fromRfq:r.ref }
++        }, 'operation pulled from costing sheet on ' + r.ref);
++        imported++;
++        existing = existing.concat([{ doc_id:'', data:{ opNo:opNo } }]);
++      }
++      processes = await C.idms.docs('process');
++      document.getElementById('pr-pull-card').style.display = 'none';
++      drawProcesses();
++      toast(imported + ' operation(s) imported' +
++        (skipped ? ', ' + skipped + ' skipped — that number is already on this part.' : '.'));
++    } catch(e){ say(esc(e.message)); btn.disabled = false; btn.textContent = 'Import selected'; }
+   }
+ 
+   async function removeOperation(docId){
+@@ -17260,6 +17511,7 @@
+     if (!why.trim()) { toast('State a reason — it goes on the record.'); return; }
+     try {
+       await C.idms.patchDoc({ docId: docId, remove: true, reason: why.trim() });
++      if (prEditing === docId) cancelEditOperation();
+       processes = await C.idms.docs('process');
+       drawProcesses();
+       toast('Operation removed');
+@@ -37324,14 +37576,26 @@
+   document.getElementById('fd-print').addEventListener('click', printPfd);
+ 
+   /* ---- routing wiring ---- */
+-  document.getElementById('pr-part').addEventListener('change', drawProcesses);
++  document.getElementById('pr-part').addEventListener('change', function(){
++    cancelEditOperation();
++    document.getElementById('pr-pull-card').style.display = 'none';
++    drawProcesses();
++  });
++  document.getElementById('pr-pull').addEventListener('click', pullFromCostingOpen);
+   document.getElementById('pr-clear').addEventListener('click', function(){
+     ['pr-name','pr-machine','pr-setup','pr-cycle','pr-desc'].forEach(function(id){
+       document.getElementById(id).value=''; });
+-    document.getElementById('pr-msg').style.display='none';
++    document.getElementById('rtg-msg').style.display='none';
++  });
++  document.getElementById('pr-cancel-edit').addEventListener('click', function(){
++    cancelEditOperation();
++    ['pr-name','pr-machine','pr-setup','pr-cycle','pr-desc'].forEach(function(id){
++      document.getElementById(id).value=''; });
++    document.getElementById('rtg-msg').style.display='none';
++    drawProcesses();
+   });
+   document.getElementById('pr-add').addEventListener('click', async function(){
+-    var msg = document.getElementById('pr-msg');
++    var msg = document.getElementById('rtg-msg');
+     var say = noteWriter(msg);
+     var g = fieldVal;
+     var partId = document.getElementById('pr-part').value;
+@@ -37341,21 +37605,38 @@
+     if (opNo <= 0) return say('The operation number must be greater than zero.');
+ 
+     /* two operations with the same number is an ambiguous route — the control
+-       plan and the shop paperwork would disagree about what runs when */
+-    var clash = opsFor(partId).filter(function(o){ return C.num((o.data||{}).opNo) === opNo; })[0];
++       plan and the shop paperwork would disagree about what runs when. When
++       editing, the operation being edited is allowed to keep its own number. */
++    var clash = opsFor(partId).filter(function(o){
++      return C.num((o.data||{}).opNo) === opNo && o.doc_id !== prEditing; })[0];
+     if (clash)
+       return say('Operation <b>'+opNo+'</b> already exists on this part ('+
+                  esc((clash.data||{}).name||'')+'). Give this one a different number.');
+ 
+     this.disabled = true;
++    var wasEditing = prEditing;
+     try {
+-      await C.idms.saveDoc({ kind:'process', partId: partId, status:'Active',
+-        docNo: String(opNo),
+-        data:{ partId: partId, opNo: opNo, name: g('pr-name'), machine: g('pr-machine'),
+-               setupMin: C.num(g('pr-setup')), cycleSec: C.num(g('pr-cycle')),
+-               where: document.getElementById('pr-where').value, description: g('pr-desc') }
+-      }, 'operation added to the routing');
+-      say('Operation <b>'+opNo+'</b> added.', true);
++      var data = { partId: partId, opNo: opNo, name: g('pr-name'), machine: g('pr-machine'),
++        setupMin: C.num(g('pr-setup')), cycleSec: C.num(g('pr-cycle')),
++        where: document.getElementById('pr-where').value, description: g('pr-desc') };
++      if (wasEditing){
++        var existing = processes.filter(function(x){ return x.doc_id === wasEditing; })[0] || {};
++        var prevData = existing.data || {};
++        /* keep the origin markers (AI proposed / reviewed) intact — editing a
++           value on screen is not the same event as an agent proposing it or
++           a reviewer accepting it, so those flags carry over unchanged */
++        ['aiProposed','wasAiProposed','reviewedBy','reviewedOn','fromRfq'].forEach(function(k){
++          if (prevData[k] !== undefined) data[k] = prevData[k];
++        });
++        await C.idms.patchDoc({ docId: wasEditing, patch: data, reason: 'operation edited on Process Master' });
++        say('Operation <b>'+opNo+'</b> updated.', true);
++      } else {
++        await C.idms.saveDoc({ kind:'process', partId: partId, status:'Active',
++          docNo: String(opNo), data: data
++        }, 'operation added to the routing');
++        say('Operation <b>'+opNo+'</b> added.', true);
++      }
++      cancelEditOperation();
+       ['pr-name','pr-machine','pr-setup','pr-cycle','pr-desc'].forEach(function(id){
+         document.getElementById(id).value=''; });
+       processes = await C.idms.docs('process');

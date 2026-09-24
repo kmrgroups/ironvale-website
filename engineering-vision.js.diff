@@ -1,0 +1,91 @@
+--- orig_extract/engineering-vision.js	2026-09-20 21:51:38.000000000 +0000
++++ ironvale_extracted/engineering-vision.js	2026-09-22 07:54:06.608236032 +0000
+@@ -15,22 +15,36 @@
+ (function(global){
+   'use strict';
+   var OCR_CDN = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+-  var workerPromise = null;
++  /* Two workers, not one. scan() below used to run its two preprocessing
++     passes (contrast + threshold) back-to-back on a single Tesseract worker —
++     a worker only ever processes one recognize() job at a time, so the second
++     pass always waited for the first to finish completely. Two independent
++     workers let the two passes run at the same time on separate cores, which
++     is most of where "AI reading the drawing" felt slow: wall-clock time was
++     the sum of both passes when it only needed to be the slower of the two. */
++  var workerPromises = [null, null];
+ 
++  var scriptPromise = null;
+   function loadScript(src){
+-    return new Promise(function(resolve, reject){
++    // Shared across both worker slots so requesting two workers at once
++    // (scan() below does exactly that) injects the CDN <script> tag once,
++    // not twice.
++    if (scriptPromise) return scriptPromise;
++    scriptPromise = new Promise(function(resolve, reject){
+       var s = document.createElement('script');
+       s.src = src;
+       s.async = true;
+       s.onload = function(){ resolve(); };
+-      s.onerror = function(){ reject(new Error('Advanced OCR library could not be loaded.')); };
++      s.onerror = function(){ scriptPromise = null; reject(new Error('Advanced OCR library could not be loaded.')); };
+       document.head.appendChild(s);
+     });
++    return scriptPromise;
+   }
+ 
+-  async function worker(){
+-    if (workerPromise) return workerPromise;
+-    workerPromise = (async function(){
++  async function worker(slot){
++    var i = slot || 0;
++    if (workerPromises[i]) return workerPromises[i];
++    workerPromises[i] = (async function(){
+       if (!global.Tesseract) await loadScript(OCR_CDN);
+       if (!global.Tesseract || !global.Tesseract.createWorker)
+         throw new Error('Advanced OCR library is unavailable.');
+@@ -40,8 +54,8 @@
+         logger:function(){}
+       });
+       return w;
+-    })().catch(function(e){ workerPromise = null; throw e; });
+-    return workerPromise;
++    })().catch(function(e){ workerPromises[i] = null; throw e; });
++    return workerPromises[i];
+   }
+ 
+   function dataUrlToImage(dataUrl){
+@@ -59,9 +73,15 @@
+   }
+ 
+   function preprocess(img, mode){
+-    var maxEdge = 3600;
+-    var s = Math.min(1.8, maxEdge / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+-    if (s < 1) s = 1;
++    /* OCR does not need the full 3600px edge the AI vision model gets (that
++       size exists for the model to read fine dimension text, not for
++       Tesseract). Tesseract's cost scales with pixel count, so feeding it a
++       needlessly large canvas — and, as this used to do, upscaling a smaller
++       source image by up to 1.8x for no gain in legible detail — was pure
++       wasted time. Cap at 2200px and never enlarge past the source. */
++    var maxEdge = 2200;
++    var s = Math.min(1, maxEdge / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
++    if (!isFinite(s) || s <= 0) s = 1;
+     var w = Math.max(1, Math.round((img.naturalWidth || img.width) * s));
+     var h = Math.max(1, Math.round((img.naturalHeight || img.height) * s));
+     var c = document.createElement('canvas'); c.width=w; c.height=h;
+@@ -272,9 +292,12 @@
+     var url=attachmentDataUrl(att); if(!url) throw new Error('No image attachment available for OCR.');
+     var img=await dataUrlToImage(url);
+     var p1=preprocess(img,'contrast'), p2=preprocess(img,'threshold');
+-    var w=await worker();
+-    var r1=await w.recognize(p1.canvas.toDataURL('image/png'));
+-    var r2=await w.recognize(p2.canvas.toDataURL('image/png'));
++    // Two workers, run together — see the note on workerPromises above.
++    var w1p=worker(0), w2p=worker(1);
++    var r1p = w1p.then(function(w){ return w.recognize(p1.canvas.toDataURL('image/png')); });
++    var r2p = w2p.then(function(w){ return w.recognize(p2.canvas.toDataURL('image/png')); });
++    var r1r2 = await Promise.all([r1p, r2p]);
++    var r1 = r1r2[0], r2 = r1r2[1];
+     var words=ocrWords(r1,img.width,img.height,p1.scale).concat(ocrWords(r2,img.width,img.height,p2.scale));
+     /* De-duplicate OCR words from the two preprocessing passes. */
+     var uniq=[];

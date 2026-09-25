@@ -476,6 +476,18 @@ input[data-locked], select[data-locked], textarea[data-locked] { background: var
 .conn-details { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
 .conn-details summary { cursor: pointer; font-weight: 600; font-size: 13px; }
 
+/* ---------- deployment guide ---------- */
+.dstep .dnum { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--brass); color: var(--brass); display: grid; place-items: center; font: 600 13px var(--mono); flex: none; margin-top: 2px; }
+.dstep.done .dnum { background: var(--brass); color: #fff; }
+.dstep.done { border-color: color-mix(in srgb, var(--ok) 35%, var(--line)); }
+.dbody { max-width: none; }
+.dbody ol, .dbody ul { padding-left: 20px; }
+.dbody li { margin: 4px 0; }
+.dbody a { color: var(--focus); font-weight: 500; }
+.codebox { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 8px 0 10px; }
+.codebar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; background: var(--surface-2); border-bottom: 1px solid var(--line); font: 600 11.5px var(--mono); color: var(--muted); flex-wrap: wrap; }
+.codebox pre { margin: 0; padding: 12px; max-height: 260px; overflow: auto; font: 11.5px/1.5 var(--mono); background: var(--surface); color: var(--text); white-space: pre; }
+
 </style>
 <script>
 /* ======================================================================
@@ -502,7 +514,9 @@ window.CAPACITY_CLOUD_CONFIG = { url: "https://gjwdgpmgcfozyzxckqsu.supabase.co"
 <nav class="bnav" id="bnav" aria-label="Main"></nav>
 <noscript><p style="padding:20px">Please enable JavaScript to use the Capacity Planner.</p></noscript>
 <script>
-window.SEED_DATA = {"version": 4, "year": 2026, "month": 8, "scenario": "standard", "settings": {"companyName": "Elixir Engineering Pvt. Ltd.", "subtitle": "Manufacturing Capacity Plan & Machine Loading", "logo": "", "oee": 80, "hoursPerDay": 22, "daysPerMonth": 25, "weeklyOff": [0], "holidays": [], "warnPct": 90, "transferLagHours": 2, "lotSize": 100, "levelTargetPct": 100, "levelAnyMachine": true}, "machines": [{"code": "AR Engineering-1", "cell": "AR Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "AR Engineering-2", "cell": "AR Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "AR Engineering-3", "cell": "AR Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "Crest Auto-1", "cell": "Crest Auto", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "Crest Auto-2", "cell": "Crest Auto", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "Elixir-1", "cell": "Elixir", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "Elixir-2", "cell": "Elixir", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "Elixir-3", "cell": "Elixir", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "Elixir-4", "cell": "Elixir", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "SN Engineering-1", "cell": "SN Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "SN Engineering-2", "cell": "SN Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "SN Engineering-3", "cell": "SN Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "TN Engineering", "cell": "TN Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}], "operations": [{"id": 1, "partNo": "M-MI-045", "partName": "Cam Shaft washer", "process": "Roughing", "machine": "AR Engineering-1", "cycleTime": 40.0, "alternates": []}, {"id": 2, "partNo": "M-MI-045", "partName": "Cam Shaft washer", "process": "Finsh Turning", "machine": "AR Engineering-2", "cycleTime": 20.0, "alternates": []}, {"id": 3, "partNo": "M-MI-042", "partName": "Retainer", "process": "Roughing", "machine": "AR Engineering-3", "cycleTime": 55.0, "alternates": []}, {"id": 4, "partNo": "M-MI-042", "partName": "Retainer", "process": "Finsh Turning", "machine": "Crest Auto-1", "cycleTime": 20.0, "alternates": []}, {"id": 5, "partNo": "M-MI-043", "partName": "Retainer", "process": "Roughing", "machine": "Crest Auto-2", "cycleTime": 50.0, "alternates": []}, {"id": 6, "partNo": "M-MI-043", "partName": "Retainer", "process": "Finsh Turning", "machine": "Elixir-1", "cycleTime": 20.0, "alternates": []}, {"id": 7, "partNo": "M-MI-303", "partName": "Spacer Wheel BRG Front - NE110560", "process": "1st Operation", "machine": "Elixir-2", "cycleTime": 300.0, "alternates": []}, {"id": 8, "partNo": "M-MI-303", "partName": "Spacer Wheel BRG Front - NE110560", "process": "2nd Operation", "machine": "Elixir-1", "cycleTime": 120.0, "alternates": []}, {"id": 9, "partNo": "M-MI-304", "partName": "Spacer Wheel BRG Rear - NE110640", "process": "1st Operation", "machine": "Elixir-3", "cycleTime": 360.0, "alternates": []}, {"id": 10, "partNo": "M-MI-304", "partName": "Spacer Wheel BRG Rear - NE110640", "process": "2nd Operation", "machine": "SN Engineering-1", "cycleTime": 180.0, "alternates": []}, {"id": 11, "partNo": "M-MI-305", "partName": "Spacer RR Axle - NE110740", "process": "Roughing A side", "machine": "SN Engineering-2", "cycleTime": 30.0, "alternates": []}, {"id": 12, "partNo": "M-MI-305", "partName": "Spacer RR Axle - NE110740", "process": "Roughing B side", "machine": "SN Engineering-3", "cycleTime": 25.0, "alternates": []}, {"id": 13, "partNo": "M-MI-305", "partName": "Spacer RR Axle - NE110740", "process": "Finsh Turning A side", "machine": "TN Engineering", "cycleTime": 50.0, "alternates": []}, {"id": 14, "partNo": "M-MI-305", "partName": "Spacer RR Axle - NE110740", "process": "Finsh Turning B side", "machine": "AR Engineering-1", "cycleTime": 15.0, "alternates": []}, {"id": 15, "partNo": "M-MI-306", "partName": "Sleeve Float Control - NE090110", "process": "1st Operation", "machine": "AR Engineering-2", "cycleTime": 80.0, "alternates": []}, {"id": 16, "partNo": "M-MI-306", "partName": "Sleeve Float Control - NE090110", "process": "2nd Operation", "machine": "AR Engineering-3", "cycleTime": 24.0, "alternates": []}, {"id": 17, "partNo": "M-MI-527", "partName": "SLEEVE SWINGARM", "process": "1st Operation", "machine": "Crest Auto-1", "cycleTime": 260.0, "alternates": []}, {"id": 18, "partNo": "M-MI-527", "partName": "SLEEVE SWINGARM", "process": "2nd Operation", "machine": "Crest Auto-2", "cycleTime": 110.0, "alternates": []}, {"id": 19, "partNo": "M-MI-528", "partName": "ECCENTRIC SPACER", "process": "1st Operation", "machine": "Elixir-1", "cycleTime": 480.0, "alternates": []}, {"id": 20, "partNo": "M-MI-528", "partName": "ECCENTRIC SPACER", "process": "2nd Operation", "machine": "Elixir-1", "cycleTime": 240.0, "alternates": []}, {"id": 21, "partNo": "M-MI-536", "partName": "SPACER 12", "process": "1st Operation", "machine": "Elixir-4", "cycleTime": 49.0, "alternates": []}, {"id": 22, "partNo": "M-MI-536", "partName": "SPACER 12", "process": "2nd Operation", "machine": "Elixir-4", "cycleTime": 21.0, "alternates": []}, {"id": 23, "partNo": "M-MI-537", "partName": "SPACER 18", "process": "1st Operation", "machine": "SN Engineering-1", "cycleTime": 50.0, "alternates": []}, {"id": 24, "partNo": "M-MI-537", "partName": "SPACER 18", "process": "2nd Operation", "machine": "SN Engineering-2", "cycleTime": 20.0, "alternates": []}, {"id": 25, "partNo": "M-MI-540", "partName": "PIN 8X10 CRANKCASE", "process": "1st Operation", "machine": "SN Engineering-3", "cycleTime": 36.0, "alternates": []}, {"id": 26, "partNo": "M-MI-540", "partName": "PIN 8X10 CRANKCASE", "process": "2nd Operation", "machine": "TN Engineering", "cycleTime": 15.0, "alternates": []}, {"id": 27, "partNo": "M-MI-541", "partName": "SPACER REAR", "process": "1st Operation", "machine": "AR Engineering-1", "cycleTime": 46.0, "alternates": []}, {"id": 28, "partNo": "M-MI-541", "partName": "SPACER REAR", "process": "2nd Operation", "machine": "AR Engineering-2", "cycleTime": 21.0, "alternates": []}, {"id": 29, "partNo": "M-MI-546", "partName": "SPACER FRONT", "process": "1st Operation", "machine": "AR Engineering-3", "cycleTime": 220.0, "alternates": []}, {"id": 30, "partNo": "M-MI-546", "partName": "SPACER FRONT", "process": "2nd Operation", "machine": "Crest Auto-1", "cycleTime": 96.0, "alternates": []}, {"id": 31, "partNo": "M-MI-548", "partName": "CUP WASHER 101 93", "process": "1st Operation", "machine": "Crest Auto-2", "cycleTime": 97.0, "alternates": []}, {"id": 32, "partNo": "M-MI-548", "partName": "CUP WASHER 101 93", "process": "2nd Operation", "machine": "Elixir-1", "cycleTime": 22.0, "alternates": []}, {"id": 33, "partNo": "M-MI-549", "partName": "CUP WASHER 60 00", "process": "1st Operation", "machine": "Elixir-4", "cycleTime": 80.0, "alternates": []}, {"id": 34, "partNo": "M-MI-549", "partName": "CUP WASHER 60 01", "process": "2nd Operation", "machine": "Elixir-4", "cycleTime": 46.0, "alternates": []}, {"id": 35, "partNo": "M-MI-551", "partName": "CUP WASHER 53 31 ZNK TOP HAT", "process": "1st Operation", "machine": "Elixir-4", "cycleTime": 45.0, "alternates": []}, {"id": 36, "partNo": "M-MI-551", "partName": "CUP WASHER 53 31 ZNK TOP HAT", "process": "2nd Operation", "machine": "SN Engineering-1", "cycleTime": 24.0, "alternates": []}, {"id": 37, "partNo": "M-MI-552", "partName": "CUP WASHER 65 95", "process": "1st Operation", "machine": "SN Engineering-2", "cycleTime": 112.0, "alternates": []}, {"id": 38, "partNo": "M-MI-552", "partName": "CUP WASHER 65 95", "process": "2nd Operation", "machine": "SN Engineering-3", "cycleTime": 81.0, "alternates": []}, {"id": 39, "partNo": "M-MI-553", "partName": "CUP WASHER 55 190", "process": "1st Operation", "machine": "TN Engineering", "cycleTime": 114.0, "alternates": []}, {"id": 40, "partNo": "M-MI-553", "partName": "CUP WASHER 55 190", "process": "2nd Operation", "machine": "AR Engineering-1", "cycleTime": 41.0, "alternates": []}, {"id": 41, "partNo": "M-MI-554", "partName": "BRKT EXHAUST MTG TOP HAT", "process": "1st Operation", "machine": "AR Engineering-2", "cycleTime": 136.0, "alternates": []}, {"id": 42, "partNo": "M-MI-554", "partName": "BRKT EXHAUST MTG TOP HAT", "process": "2nd Operation", "machine": "AR Engineering-3", "cycleTime": 72.0, "alternates": []}, {"id": 43, "partNo": "M-MI-555", "partName": "CUP WASHER 64 46", "process": "1st Operation", "machine": "Crest Auto-1", "cycleTime": 52.0, "alternates": []}, {"id": 44, "partNo": "M-MI-555", "partName": "CUP WASHER 64 46", "process": "2nd Operation", "machine": "Crest Auto-2", "cycleTime": 23.0, "alternates": []}, {"id": 45, "partNo": "M-MI-556", "partName": "CUP WASHER 106 54", "process": "1st Operation", "machine": "Elixir-4", "cycleTime": 127.0, "alternates": []}, {"id": 46, "partNo": "M-MI-556", "partName": "CUP WASHER 106 54", "process": "2nd Operation", "machine": "Elixir-4", "cycleTime": 25.0, "alternates": []}, {"id": 47, "partNo": "M-MI-561", "partName": "DOWEL PIN 13X14", "process": "1st Operation", "machine": "Elixir-4", "cycleTime": 98.0, "alternates": []}, {"id": 48, "partNo": "M-MI-561", "partName": "DOWEL PIN 13X14", "process": "2nd Operation", "machine": "Elixir-4", "cycleTime": 48.0, "alternates": []}, {"id": 49, "partNo": "M-MI-598", "partName": "CLEVIS PIN FOOTPEG", "process": "1st Operation", "machine": "SN Engineering-1", "cycleTime": 81.0, "alternates": []}, {"id": 50, "partNo": "M-MI-598", "partName": "CLEVIS PIN FOOTPEG", "process": "2nd Operation", "machine": "SN Engineering-2", "cycleTime": 20.0, "alternates": []}, {"id": 51, "partNo": "M-MI-599", "partName": "SPACER SWINGARM", "process": "1st Operation", "machine": "SN Engineering-3", "cycleTime": 156.0, "alternates": []}, {"id": 52, "partNo": "M-MI-599", "partName": "SPACER SWINGARM", "process": "2nd Operation", "machine": "TN Engineering", "cycleTime": 156.0, "alternates": []}, {"id": 53, "partNo": "M-MI-600", "partName": "CUP WASHER 61 33 ZNK TOP HAT", "process": "1st Operation", "machine": "AR Engineering-1", "cycleTime": 35.0, "alternates": []}, {"id": 54, "partNo": "M-MI-600", "partName": "CUP WASHER 61 33 ZNK TOP HAT", "process": "2nd Operation", "machine": "AR Engineering-2", "cycleTime": 24.0, "alternates": []}, {"id": 55, "partNo": "M-MI-601", "partName": "CUP WASHER 55 25 ZNK TOP HAT", "process": "1st Operation", "machine": "AR Engineering-3", "cycleTime": 39.0, "alternates": []}, {"id": 56, "partNo": "M-MI-601", "partName": "CUP WASHER 55 25 ZNK TOP HAT", "process": "2nd Operation", "machine": "Crest Auto-1", "cycleTime": 26.0, "alternates": []}, {"id": 57, "partNo": "M-MI-627", "partName": "CUP WASHER 65 105 STRAP", "process": "1st Operation", "machine": "Crest Auto-2", "cycleTime": 96.0, "alternates": []}, {"id": 58, "partNo": "M-MI-627", "partName": "CUP WASHER 65 105 STRAP", "process": "2nd Operation", "machine": "Elixir-1", "cycleTime": 26.0, "alternates": []}, {"id": 59, "partNo": "M-MI-632", "partName": "PLUG 16 BLANK", "process": "1st Operation", "machine": "Elixir-2", "cycleTime": 126.0, "alternates": []}, {"id": 60, "partNo": "M-MI-632", "partName": "PLUG 16 BLANK", "process": "2nd Operation", "machine": "Elixir-3", "cycleTime": 24.0, "alternates": []}, {"id": 61, "partNo": "M-MI-630", "partName": "CUP WASHER 45 25", "process": "1st Operation", "machine": "Elixir-4", "cycleTime": 42.0, "alternates": []}, {"id": 62, "partNo": "M-MI-630", "partName": "CUP WASHER 45 25", "process": "2nd Operation", "machine": "SN Engineering-1", "cycleTime": 29.0, "alternates": []}], "plans": {"2026-09": {"parts": {"M-MI-045": {"qty": 28000.0, "due": "2026-09-22"}, "M-MI-042": {"qty": 6000.0, "due": "2026-09-14"}, "M-MI-043": {"qty": 24000.0, "due": "2026-09-24"}, "M-MI-303": {"qty": 7000.0, "due": "2026-09-28"}, "M-MI-304": {"qty": 6000.0, "due": "2026-09-28"}, "M-MI-305": {"qty": 10000.0, "due": "2026-09-18"}, "M-MI-306": {"qty": 10000.0, "due": "2026-09-20"}, "M-MI-527": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-528": {"qty": 500.0, "due": "2026-09-12"}, "M-MI-536": {"qty": 500.0, "due": "2026-09-10"}, "M-MI-537": {"qty": 2500.0, "due": "2026-09-15"}, "M-MI-540": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-541": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-546": {"qty": 2000.0, "due": "2026-09-19"}, "M-MI-548": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-549": {"qty": 3000.0, "due": "2026-09-16"}, "M-MI-551": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-552": {"qty": 5000.0, "due": "2026-09-21"}, "M-MI-553": {"qty": 10000.0, "due": "2026-09-25"}, "M-MI-554": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-555": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-556": {"qty": 1000.0, "due": "2026-09-14"}, "M-MI-561": {"qty": 4000.0, "due": "2026-09-23"}, "M-MI-598": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-599": {"qty": 1500.0, "due": "2026-09-17"}, "M-MI-600": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-601": {"qty": 3000.0, "due": "2026-09-15"}, "M-MI-627": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-632": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-630": {"qty": 0.0, "due": "2026-09-25"}}, "machines": {"AR Engineering-1": {"availDays": 25.0, "remarks": "Can be manage with Sunday"}, "AR Engineering-2": {"availDays": 25.0, "remarks": ""}, "AR Engineering-3": {"availDays": 25.0, "remarks": ""}, "Crest Auto-1": {"availDays": 25.0, "remarks": ""}, "Crest Auto-2": {"availDays": 25.0, "remarks": ""}, "Elixir-1": {"availDays": 25.0, "remarks": "Can be manage with Sunday"}, "Elixir-2": {"availDays": 25.0, "remarks": ""}, "Elixir-3": {"availDays": 25.0, "remarks": ""}, "Elixir-4": {"availDays": 25.0, "remarks": ""}, "SN Engineering-1": {"availDays": 25.0, "remarks": ""}, "SN Engineering-2": {"availDays": 25.0, "remarks": ""}, "SN Engineering-3": {"availDays": 25.0, "remarks": ""}, "TN Engineering": {"availDays": 25.0, "remarks": "Can be manage with Sunday"}}, "splits": {}}}};
+window.SEED_DATA = {"version": 4, "year": 2026, "month": 8, "scenario": "standard", "settings": {"companyName": "Sample Company (demo data)", "subtitle": "Capacity Plan & Machine Loading", "logo": "", "oee": 80, "hoursPerDay": 22, "daysPerMonth": 25, "weeklyOff": [0], "holidays": [], "warnPct": 90, "transferLagHours": 2, "lotSize": 100, "levelTargetPct": 100, "levelAnyMachine": true}, "machines": [{"code": "AR Engineering-1", "cell": "AR Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "AR Engineering-2", "cell": "AR Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "AR Engineering-3", "cell": "AR Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "Crest Auto-1", "cell": "Crest Auto", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "Crest Auto-2", "cell": "Crest Auto", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "In-house-1", "cell": "In-house", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "In-house-2", "cell": "In-house", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "In-house-3", "cell": "In-house", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "In-house-4", "cell": "In-house", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "SN Engineering-1", "cell": "SN Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "SN Engineering-2", "cell": "SN Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "SN Engineering-3", "cell": "SN Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}, {"code": "TN Engineering", "cell": "TN Engineering", "availDays": null, "hoursPerDay": null, "remarks": "", "active": true}], "operations": [{"id": 1, "partNo": "M-MI-045", "partName": "Cam Shaft washer", "process": "Roughing", "machine": "AR Engineering-1", "cycleTime": 40.0, "alternates": []}, {"id": 2, "partNo": "M-MI-045", "partName": "Cam Shaft washer", "process": "Finsh Turning", "machine": "AR Engineering-2", "cycleTime": 20.0, "alternates": []}, {"id": 3, "partNo": "M-MI-042", "partName": "Retainer", "process": "Roughing", "machine": "AR Engineering-3", "cycleTime": 55.0, "alternates": []}, {"id": 4, "partNo": "M-MI-042", "partName": "Retainer", "process": "Finsh Turning", "machine": "Crest Auto-1", "cycleTime": 20.0, "alternates": []}, {"id": 5, "partNo": "M-MI-043", "partName": "Retainer", "process": "Roughing", "machine": "Crest Auto-2", "cycleTime": 50.0, "alternates": []}, {"id": 6, "partNo": "M-MI-043", "partName": "Retainer", "process": "Finsh Turning", "machine": "In-house-1", "cycleTime": 20.0, "alternates": []}, {"id": 7, "partNo": "M-MI-303", "partName": "Spacer Wheel BRG Front - NE110560", "process": "1st Operation", "machine": "In-house-2", "cycleTime": 300.0, "alternates": []}, {"id": 8, "partNo": "M-MI-303", "partName": "Spacer Wheel BRG Front - NE110560", "process": "2nd Operation", "machine": "In-house-1", "cycleTime": 120.0, "alternates": []}, {"id": 9, "partNo": "M-MI-304", "partName": "Spacer Wheel BRG Rear - NE110640", "process": "1st Operation", "machine": "In-house-3", "cycleTime": 360.0, "alternates": []}, {"id": 10, "partNo": "M-MI-304", "partName": "Spacer Wheel BRG Rear - NE110640", "process": "2nd Operation", "machine": "SN Engineering-1", "cycleTime": 180.0, "alternates": []}, {"id": 11, "partNo": "M-MI-305", "partName": "Spacer RR Axle - NE110740", "process": "Roughing A side", "machine": "SN Engineering-2", "cycleTime": 30.0, "alternates": []}, {"id": 12, "partNo": "M-MI-305", "partName": "Spacer RR Axle - NE110740", "process": "Roughing B side", "machine": "SN Engineering-3", "cycleTime": 25.0, "alternates": []}, {"id": 13, "partNo": "M-MI-305", "partName": "Spacer RR Axle - NE110740", "process": "Finsh Turning A side", "machine": "TN Engineering", "cycleTime": 50.0, "alternates": []}, {"id": 14, "partNo": "M-MI-305", "partName": "Spacer RR Axle - NE110740", "process": "Finsh Turning B side", "machine": "AR Engineering-1", "cycleTime": 15.0, "alternates": []}, {"id": 15, "partNo": "M-MI-306", "partName": "Sleeve Float Control - NE090110", "process": "1st Operation", "machine": "AR Engineering-2", "cycleTime": 80.0, "alternates": []}, {"id": 16, "partNo": "M-MI-306", "partName": "Sleeve Float Control - NE090110", "process": "2nd Operation", "machine": "AR Engineering-3", "cycleTime": 24.0, "alternates": []}, {"id": 17, "partNo": "M-MI-527", "partName": "SLEEVE SWINGARM", "process": "1st Operation", "machine": "Crest Auto-1", "cycleTime": 260.0, "alternates": []}, {"id": 18, "partNo": "M-MI-527", "partName": "SLEEVE SWINGARM", "process": "2nd Operation", "machine": "Crest Auto-2", "cycleTime": 110.0, "alternates": []}, {"id": 19, "partNo": "M-MI-528", "partName": "ECCENTRIC SPACER", "process": "1st Operation", "machine": "In-house-1", "cycleTime": 480.0, "alternates": []}, {"id": 20, "partNo": "M-MI-528", "partName": "ECCENTRIC SPACER", "process": "2nd Operation", "machine": "In-house-1", "cycleTime": 240.0, "alternates": []}, {"id": 21, "partNo": "M-MI-536", "partName": "SPACER 12", "process": "1st Operation", "machine": "In-house-4", "cycleTime": 49.0, "alternates": []}, {"id": 22, "partNo": "M-MI-536", "partName": "SPACER 12", "process": "2nd Operation", "machine": "In-house-4", "cycleTime": 21.0, "alternates": []}, {"id": 23, "partNo": "M-MI-537", "partName": "SPACER 18", "process": "1st Operation", "machine": "SN Engineering-1", "cycleTime": 50.0, "alternates": []}, {"id": 24, "partNo": "M-MI-537", "partName": "SPACER 18", "process": "2nd Operation", "machine": "SN Engineering-2", "cycleTime": 20.0, "alternates": []}, {"id": 25, "partNo": "M-MI-540", "partName": "PIN 8X10 CRANKCASE", "process": "1st Operation", "machine": "SN Engineering-3", "cycleTime": 36.0, "alternates": []}, {"id": 26, "partNo": "M-MI-540", "partName": "PIN 8X10 CRANKCASE", "process": "2nd Operation", "machine": "TN Engineering", "cycleTime": 15.0, "alternates": []}, {"id": 27, "partNo": "M-MI-541", "partName": "SPACER REAR", "process": "1st Operation", "machine": "AR Engineering-1", "cycleTime": 46.0, "alternates": []}, {"id": 28, "partNo": "M-MI-541", "partName": "SPACER REAR", "process": "2nd Operation", "machine": "AR Engineering-2", "cycleTime": 21.0, "alternates": []}, {"id": 29, "partNo": "M-MI-546", "partName": "SPACER FRONT", "process": "1st Operation", "machine": "AR Engineering-3", "cycleTime": 220.0, "alternates": []}, {"id": 30, "partNo": "M-MI-546", "partName": "SPACER FRONT", "process": "2nd Operation", "machine": "Crest Auto-1", "cycleTime": 96.0, "alternates": []}, {"id": 31, "partNo": "M-MI-548", "partName": "CUP WASHER 101 93", "process": "1st Operation", "machine": "Crest Auto-2", "cycleTime": 97.0, "alternates": []}, {"id": 32, "partNo": "M-MI-548", "partName": "CUP WASHER 101 93", "process": "2nd Operation", "machine": "In-house-1", "cycleTime": 22.0, "alternates": []}, {"id": 33, "partNo": "M-MI-549", "partName": "CUP WASHER 60 00", "process": "1st Operation", "machine": "In-house-4", "cycleTime": 80.0, "alternates": []}, {"id": 34, "partNo": "M-MI-549", "partName": "CUP WASHER 60 01", "process": "2nd Operation", "machine": "In-house-4", "cycleTime": 46.0, "alternates": []}, {"id": 35, "partNo": "M-MI-551", "partName": "CUP WASHER 53 31 ZNK TOP HAT", "process": "1st Operation", "machine": "In-house-4", "cycleTime": 45.0, "alternates": []}, {"id": 36, "partNo": "M-MI-551", "partName": "CUP WASHER 53 31 ZNK TOP HAT", "process": "2nd Operation", "machine": "SN Engineering-1", "cycleTime": 24.0, "alternates": []}, {"id": 37, "partNo": "M-MI-552", "partName": "CUP WASHER 65 95", "process": "1st Operation", "machine": "SN Engineering-2", "cycleTime": 112.0, "alternates": []}, {"id": 38, "partNo": "M-MI-552", "partName": "CUP WASHER 65 95", "process": "2nd Operation", "machine": "SN Engineering-3", "cycleTime": 81.0, "alternates": []}, {"id": 39, "partNo": "M-MI-553", "partName": "CUP WASHER 55 190", "process": "1st Operation", "machine": "TN Engineering", "cycleTime": 114.0, "alternates": []}, {"id": 40, "partNo": "M-MI-553", "partName": "CUP WASHER 55 190", "process": "2nd Operation", "machine": "AR Engineering-1", "cycleTime": 41.0, "alternates": []}, {"id": 41, "partNo": "M-MI-554", "partName": "BRKT EXHAUST MTG TOP HAT", "process": "1st Operation", "machine": "AR Engineering-2", "cycleTime": 136.0, "alternates": []}, {"id": 42, "partNo": "M-MI-554", "partName": "BRKT EXHAUST MTG TOP HAT", "process": "2nd Operation", "machine": "AR Engineering-3", "cycleTime": 72.0, "alternates": []}, {"id": 43, "partNo": "M-MI-555", "partName": "CUP WASHER 64 46", "process": "1st Operation", "machine": "Crest Auto-1", "cycleTime": 52.0, "alternates": []}, {"id": 44, "partNo": "M-MI-555", "partName": "CUP WASHER 64 46", "process": "2nd Operation", "machine": "Crest Auto-2", "cycleTime": 23.0, "alternates": []}, {"id": 45, "partNo": "M-MI-556", "partName": "CUP WASHER 106 54", "process": "1st Operation", "machine": "In-house-4", "cycleTime": 127.0, "alternates": []}, {"id": 46, "partNo": "M-MI-556", "partName": "CUP WASHER 106 54", "process": "2nd Operation", "machine": "In-house-4", "cycleTime": 25.0, "alternates": []}, {"id": 47, "partNo": "M-MI-561", "partName": "DOWEL PIN 13X14", "process": "1st Operation", "machine": "In-house-4", "cycleTime": 98.0, "alternates": []}, {"id": 48, "partNo": "M-MI-561", "partName": "DOWEL PIN 13X14", "process": "2nd Operation", "machine": "In-house-4", "cycleTime": 48.0, "alternates": []}, {"id": 49, "partNo": "M-MI-598", "partName": "CLEVIS PIN FOOTPEG", "process": "1st Operation", "machine": "SN Engineering-1", "cycleTime": 81.0, "alternates": []}, {"id": 50, "partNo": "M-MI-598", "partName": "CLEVIS PIN FOOTPEG", "process": "2nd Operation", "machine": "SN Engineering-2", "cycleTime": 20.0, "alternates": []}, {"id": 51, "partNo": "M-MI-599", "partName": "SPACER SWINGARM", "process": "1st Operation", "machine": "SN Engineering-3", "cycleTime": 156.0, "alternates": []}, {"id": 52, "partNo": "M-MI-599", "partName": "SPACER SWINGARM", "process": "2nd Operation", "machine": "TN Engineering", "cycleTime": 156.0, "alternates": []}, {"id": 53, "partNo": "M-MI-600", "partName": "CUP WASHER 61 33 ZNK TOP HAT", "process": "1st Operation", "machine": "AR Engineering-1", "cycleTime": 35.0, "alternates": []}, {"id": 54, "partNo": "M-MI-600", "partName": "CUP WASHER 61 33 ZNK TOP HAT", "process": "2nd Operation", "machine": "AR Engineering-2", "cycleTime": 24.0, "alternates": []}, {"id": 55, "partNo": "M-MI-601", "partName": "CUP WASHER 55 25 ZNK TOP HAT", "process": "1st Operation", "machine": "AR Engineering-3", "cycleTime": 39.0, "alternates": []}, {"id": 56, "partNo": "M-MI-601", "partName": "CUP WASHER 55 25 ZNK TOP HAT", "process": "2nd Operation", "machine": "Crest Auto-1", "cycleTime": 26.0, "alternates": []}, {"id": 57, "partNo": "M-MI-627", "partName": "CUP WASHER 65 105 STRAP", "process": "1st Operation", "machine": "Crest Auto-2", "cycleTime": 96.0, "alternates": []}, {"id": 58, "partNo": "M-MI-627", "partName": "CUP WASHER 65 105 STRAP", "process": "2nd Operation", "machine": "In-house-1", "cycleTime": 26.0, "alternates": []}, {"id": 59, "partNo": "M-MI-632", "partName": "PLUG 16 BLANK", "process": "1st Operation", "machine": "In-house-2", "cycleTime": 126.0, "alternates": []}, {"id": 60, "partNo": "M-MI-632", "partName": "PLUG 16 BLANK", "process": "2nd Operation", "machine": "In-house-3", "cycleTime": 24.0, "alternates": []}, {"id": 61, "partNo": "M-MI-630", "partName": "CUP WASHER 45 25", "process": "1st Operation", "machine": "In-house-4", "cycleTime": 42.0, "alternates": []}, {"id": 62, "partNo": "M-MI-630", "partName": "CUP WASHER 45 25", "process": "2nd Operation", "machine": "SN Engineering-1", "cycleTime": 29.0, "alternates": []}], "plans": {"2026-09": {"parts": {"M-MI-045": {"qty": 28000.0, "due": "2026-09-22"}, "M-MI-042": {"qty": 6000.0, "due": "2026-09-14"}, "M-MI-043": {"qty": 24000.0, "due": "2026-09-24"}, "M-MI-303": {"qty": 7000.0, "due": "2026-09-28"}, "M-MI-304": {"qty": 6000.0, "due": "2026-09-28"}, "M-MI-305": {"qty": 10000.0, "due": "2026-09-18"}, "M-MI-306": {"qty": 10000.0, "due": "2026-09-20"}, "M-MI-527": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-528": {"qty": 500.0, "due": "2026-09-12"}, "M-MI-536": {"qty": 500.0, "due": "2026-09-10"}, "M-MI-537": {"qty": 2500.0, "due": "2026-09-15"}, "M-MI-540": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-541": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-546": {"qty": 2000.0, "due": "2026-09-19"}, "M-MI-548": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-549": {"qty": 3000.0, "due": "2026-09-16"}, "M-MI-551": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-552": {"qty": 5000.0, "due": "2026-09-21"}, "M-MI-553": {"qty": 10000.0, "due": "2026-09-25"}, "M-MI-554": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-555": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-556": {"qty": 1000.0, "due": "2026-09-14"}, "M-MI-561": {"qty": 4000.0, "due": "2026-09-23"}, "M-MI-598": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-599": {"qty": 1500.0, "due": "2026-09-17"}, "M-MI-600": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-601": {"qty": 3000.0, "due": "2026-09-15"}, "M-MI-627": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-632": {"qty": 0.0, "due": "2026-09-25"}, "M-MI-630": {"qty": 0.0, "due": "2026-09-25"}}, "machines": {"AR Engineering-1": {"availDays": 25.0, "remarks": "Can be manage with Sunday"}, "AR Engineering-2": {"availDays": 25.0, "remarks": ""}, "AR Engineering-3": {"availDays": 25.0, "remarks": ""}, "Crest Auto-1": {"availDays": 25.0, "remarks": ""}, "Crest Auto-2": {"availDays": 25.0, "remarks": ""}, "In-house-1": {"availDays": 25.0, "remarks": "Can be manage with Sunday"}, "In-house-2": {"availDays": 25.0, "remarks": ""}, "In-house-3": {"availDays": 25.0, "remarks": ""}, "In-house-4": {"availDays": 25.0, "remarks": ""}, "SN Engineering-1": {"availDays": 25.0, "remarks": ""}, "SN Engineering-2": {"availDays": 25.0, "remarks": ""}, "SN Engineering-3": {"availDays": 25.0, "remarks": ""}, "TN Engineering": {"availDays": 25.0, "remarks": "Can be manage with Sunday"}}, "splits": {}}}};
+
+window.DEPLOY_ASSETS = {"sql": "-- =====================================================================\n--  Capacity Planner \u2014 Supabase (free plan) database setup  \u00b7 v4.1\n--  Multi-user access with roles:  admin \u00b7 editor \u00b7 viewer\n--\n--  HOW TO RUN: Supabase dashboard \u203a SQL Editor \u203a New query \u203a paste ALL of\n--  this file \u203a change the e-mail on the LAST line to your own \u203a Run.\n--  Safe to run again (it only adds what is missing).\n-- =====================================================================\n\n-- 1. Shared plan: one row per workspace (plant). The whole plan is one JSON document.\ncreate table if not exists public.workspaces (\n  id          text primary key,\n  data        jsonb not null,\n  updated_at  timestamptz not null default now(),\n  updated_by  text\n);\n\n-- 2. Users who may open the planner, and their role\ncreate table if not exists public.members (\n  email        text primary key check (email = lower(email)),\n  role         text not null default 'viewer' check (role in ('admin', 'editor', 'viewer')),\n  display_name text,\n  created_at   timestamptz not null default now(),\n  created_by   text\n);\n-- upgrade from the first version of this script ('planner' role)\nalter table public.members drop constraint if exists members_role_check;\nupdate public.members set role = 'editor' where role = 'planner';\nalter table public.members add constraint members_role_check check (role in ('admin', 'editor', 'viewer'));\nalter table public.members add column if not exists display_name text;\nalter table public.members add column if not exists created_at timestamptz not null default now();\nalter table public.members add column if not exists created_by text;\n\n-- 3. Every save is kept here (audit trail + restore)\ncreate table if not exists public.workspace_history (\n  id           bigserial primary key,\n  workspace_id text,\n  data         jsonb,\n  saved_at     timestamptz default now(),\n  saved_by     text\n);\n\n-- 4. Helper: the signed-in user's role (null = no access)\ncreate or replace function public.my_role() returns text\nlanguage sql stable security definer set search_path = public as $$\n  select role from public.members where email = lower(auth.jwt() ->> 'email')\n$$;\ngrant execute on function public.my_role() to authenticated;\n\n-- 5. Timestamps and history\ncreate or replace function public.touch_updated_at() returns trigger\nlanguage plpgsql as $$ begin new.updated_at := now(); return new; end $$;\ndrop trigger if exists trg_touch on public.workspaces;\ncreate trigger trg_touch before insert or update on public.workspaces\nfor each row execute function public.touch_updated_at();\n\ncreate or replace function public.keep_history() returns trigger\nlanguage plpgsql security definer set search_path = public as $$\nbegin\n  insert into public.workspace_history(workspace_id, data, saved_by) values (old.id, old.data, old.updated_by);\n  -- keep the latest 300 versions per workspace\n  delete from public.workspace_history\n   where workspace_id = old.id\n     and id not in (select id from public.workspace_history where workspace_id = old.id order by id desc limit 300);\n  return new;\nend $$;\ndrop trigger if exists trg_history on public.workspaces;\ncreate trigger trg_history before update on public.workspaces\nfor each row execute function public.keep_history();\n\n-- 6. Never allow the last admin to be removed or demoted\ncreate or replace function public.protect_last_admin() returns trigger\nlanguage plpgsql as $$\nbegin\n  if (tg_op = 'DELETE' and old.role = 'admin') or (tg_op = 'UPDATE' and old.role = 'admin' and new.role <> 'admin') then\n    if (select count(*) from public.members where role = 'admin' and email <> old.email) = 0 then\n      raise exception 'At least one admin must remain.';\n    end if;\n  end if;\n  return coalesce(new, old);\nend $$;\ndrop trigger if exists trg_last_admin on public.members;\ncreate trigger trg_last_admin before update or delete on public.members\nfor each row execute function public.protect_last_admin();\n\n-- 7. Row Level Security \u2014 the database itself enforces the roles\nalter table public.workspaces        enable row level security;\nalter table public.members           enable row level security;\nalter table public.workspace_history enable row level security;\n\ndrop policy if exists ws_read   on public.workspaces;\ndrop policy if exists ws_write  on public.workspaces;\ndrop policy if exists ws_update on public.workspaces;\ndrop policy if exists mem_self  on public.members;\ndrop policy if exists mem_read  on public.members;\ndrop policy if exists hist_read on public.workspace_history;\n\n-- anyone listed (admin, editor, viewer) can read the plan\ncreate policy ws_read on public.workspaces for select to authenticated\n  using (public.my_role() is not null);\n-- only admins and editors can save\ncreate policy ws_write on public.workspaces for insert to authenticated\n  with check (public.my_role() in ('admin', 'editor'));\ncreate policy ws_update on public.workspaces for update to authenticated\n  using (public.my_role() in ('admin', 'editor'))\n  with check (public.my_role() in ('admin', 'editor'));\n-- a user sees their own membership; admins see everyone\ncreate policy mem_read on public.members for select to authenticated\n  using (email = lower(auth.jwt() ->> 'email') or public.my_role() = 'admin');\n-- only admins can read the version history\ncreate policy hist_read on public.workspace_history for select to authenticated\n  using (public.my_role() = 'admin');\n-- (members are added / changed only through the \"admin-users\" Edge Function)\n\n-- 8. FIRST ADMIN \u2014 change this e-mail to your own, then Run\ninsert into public.members(email, role, display_name, created_by)\nvalues (lower('admin@yourcompany.com'), 'admin', 'Administrator', 'setup')\non conflict (email) do update set role = 'admin';\n", "fn": "// FILE: admin-users-function.txt  (TypeScript code for the Supabase Edge Function \"admin-users\" \u2014 copy ALL of it into the Supabase editor)\n// =====================================================================\n//  Capacity Planner \u2014 \"admin-users\" Supabase Edge Function  \u00b7 v4.1\n//  Lets an ADMIN add users, change roles, reset passwords and remove users\n//  from inside the planner. No e-mail service is needed.\n//\n//  Deploy: Supabase dashboard \u203a Edge Functions \u203a Deploy a new function \u203a\n//          Via Editor \u203a name it exactly  admin-users  \u203a replace all code\n//          with this file \u203a Deploy function.\n// =====================================================================\n\nconst CORS = {\n  'Access-Control-Allow-Origin': '*',\n  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',\n  'Access-Control-Allow-Methods': 'POST, OPTIONS',\n};\nconst BASE = Deno.env.get('SUPABASE_URL') ?? '';\n\n// Service key: legacy service_role JWT if present, otherwise the new secret key\nfunction serviceKey(): string {\n  const legacy = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');\n  if (legacy) return legacy;\n  try {\n    const keys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}');\n    return keys.default ?? Object.values(keys)[0] ?? '';\n  } catch { return ''; }\n}\nconst SK = serviceKey();\nconst svcHeaders = (extra: Record<string, string> = {}) => {\n  const h: Record<string, string> = { apikey: SK, 'Content-Type': 'application/json', ...extra };\n  if (SK.split('.').length === 3) h.Authorization = `Bearer ${SK}`;   // legacy JWT key\n  return h;\n};\n\nconst json = (body: unknown, status = 200) =>\n  new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });\nclass Fail extends Error { constructor(msg: string, public status = 400) { super(msg); } }\n\nasync function call(path: string, init: RequestInit = {}) {\n  const res = await fetch(BASE + path, { ...init, headers: svcHeaders((init.headers ?? {}) as Record<string, string>) });\n  const txt = await res.text();\n  let body: any = null; try { body = txt ? JSON.parse(txt) : null; } catch { body = txt; }\n  if (!res.ok) throw new Fail(body?.msg ?? body?.message ?? body?.error_description ?? body?.error ?? `Error ${res.status}`, res.status >= 500 ? 500 : 400);\n  return body;\n}\nasync function allAuthUsers(): Promise<any[]> {\n  const out: any[] = [];\n  for (let page = 1; page < 50; page++) {\n    const b = await call(`/auth/v1/admin/users?page=${page}&per_page=200`);\n    const list = b?.users ?? [];\n    out.push(...list);\n    if (list.length < 200) break;\n  }\n  return out;\n}\nconst ROLES = ['admin', 'editor', 'viewer'];\nconst clean = (e: unknown) => String(e ?? '').trim().toLowerCase();\n\nDeno.serve(async (req) => {\n  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });\n  try {\n    if (!BASE || !SK) throw new Fail('Function is missing its Supabase keys.', 500);\n\n    // 1. Who is calling? (verify their session with Supabase Auth)\n    const me = await fetch(`${BASE}/auth/v1/user`, {\n      headers: { apikey: req.headers.get('apikey') ?? SK, Authorization: req.headers.get('Authorization') ?? '' },\n    });\n    if (!me.ok) throw new Fail('Please sign in again.', 401);\n    const caller = clean((await me.json()).email);\n\n    // 2. Only admins may continue\n    const mine = await call(`/rest/v1/members?email=eq.${encodeURIComponent(caller)}&select=role`);\n    if (mine?.[0]?.role !== 'admin') throw new Fail('Only an admin can manage users.', 403);\n\n    const body = await req.json().catch(() => ({}));\n    const action = body.action;\n\n    if (action === 'list') {\n      const [members, users] = await Promise.all([call('/rest/v1/members?select=*&order=email'), allAuthUsers()]);\n      const byEmail = new Map(users.map((u: any) => [clean(u.email), u]));\n      return json({\n        users: members.map((m: any) => {\n          const u: any = byEmail.get(m.email);\n          return { email: m.email, role: m.role, name: m.display_name, createdAt: m.created_at, createdBy: m.created_by,\n                   hasLogin: Boolean(u), lastSignIn: u?.last_sign_in_at ?? null };\n        }),\n      });\n    }\n\n    const email = clean(body.email);\n    if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) throw new Fail('Enter a valid e-mail address.');\n\n    if (action === 'create') {\n      const role = ROLES.includes(body.role) ? body.role : 'viewer';\n      if (!body.password || String(body.password).length < 8) throw new Fail('The password must have at least 8 characters.');\n      const users = await allAuthUsers();\n      const existing = users.find((u: any) => clean(u.email) === email);\n      if (existing) {\n        await call(`/auth/v1/admin/users/${existing.id}`, { method: 'PUT', body: JSON.stringify({ password: body.password, email_confirm: true }) });\n      } else {\n        await call('/auth/v1/admin/users', { method: 'POST', body: JSON.stringify({ email, password: body.password, email_confirm: true, user_metadata: { name: body.name ?? '' } }) });\n      }\n      await call('/rest/v1/members?on_conflict=email', {\n        method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' },\n        body: JSON.stringify({ email, role, display_name: body.name ?? null, created_by: caller }),\n      });\n      return json({ ok: true });\n    }\n\n    if (action === 'setRole') {\n      if (!ROLES.includes(body.role)) throw new Fail('Unknown role.');\n      await call(`/rest/v1/members?email=eq.${encodeURIComponent(email)}`, { method: 'PATCH', body: JSON.stringify({ role: body.role, ...(body.name !== undefined ? { display_name: body.name } : {}) }) });\n      return json({ ok: true });\n    }\n\n    if (action === 'resetPassword') {\n      if (!body.password || String(body.password).length < 8) throw new Fail('The password must have at least 8 characters.');\n      const u = (await allAuthUsers()).find((x: any) => clean(x.email) === email);\n      if (!u) throw new Fail('This user has no login yet.');\n      await call(`/auth/v1/admin/users/${u.id}`, { method: 'PUT', body: JSON.stringify({ password: body.password }) });\n      return json({ ok: true });\n    }\n\n    if (action === 'remove') {\n      if (email === caller) throw new Fail('You cannot remove yourself.');\n      await call(`/rest/v1/members?email=eq.${encodeURIComponent(email)}`, { method: 'DELETE' });   // last-admin guard runs in the database\n      const u = (await allAuthUsers()).find((x: any) => clean(x.email) === email);\n      if (u) await call(`/auth/v1/admin/users/${u.id}`, { method: 'DELETE' });\n      return json({ ok: true });\n    }\n\n    throw new Fail('Unknown action.');\n  } catch (e) {\n    const status = e instanceof Fail ? e.status : 500;\n    return json({ error: (e as Error).message }, status);\n  }\n});\n"};
 
 /* ==========================================================================
    CAPACITY ENGINE  —  pure functions, no DOM.  Mirrors capacity.xlsx exactly:
@@ -1035,7 +1049,6 @@ window.SEED_DATA = {"version": 4, "year": 2026, "month": 8, "scenario": "standar
   };
   const K_CFG = 'cp4_cloud_cfg', K_SES = 'cp4_cloud_session';
 
-  function atobSafe(k) { try { return atob(String(k).split('.')[1] || ''); } catch (e) { return ''; } }
   const Cloud = {
     // Where the connection comes from, in order:
     //   1. values typed in the page itself (CAPACITY_CLOUD_CONFIG)       — optional, for experts
@@ -1046,8 +1059,9 @@ window.SEED_DATA = {"version": 4, "year": 2026, "month": 8, "scenario": "standar
       const fix = u => clean(u).replace(/\/(rest|auth|functions)\/v1.*$/, '').replace(/\/+$/, '');
       const pre = root.CAPACITY_CLOUD_CONFIG || {}, saved = LS.get(K_CFG) || {}, site = root.CAPACITY_SITE_CONFIG || {};
       let src = null, source = '';
-      if (clean(pre.url) && clean(pre.anonKey)) { src = { url: pre.url, key: pre.anonKey, workspace: pre.workspace }; source = 'page'; }
-      else if (clean(saved.url) && clean(saved.key)) { src = saved; source = 'browser'; }
+      // An admin's choice in Settings (saved in this browser) wins, so the connection can always be changed on screen
+      if (clean(saved.url) && clean(saved.key)) { src = saved; source = 'browser'; }
+      else if (clean(pre.url) && clean(pre.anonKey)) { src = { url: pre.url, key: pre.anonKey, workspace: pre.workspace }; source = 'page'; }
       else if (clean(site.url) && clean(site.anonKey || site.key)) { src = { url: site.url, key: site.anonKey || site.key, workspace: site.workspace }; source = 'site'; }
       src = src || {};
       return { url: fix(src.url), key: clean(src.key), workspace: clean(src.workspace) || 'main', source,
@@ -1100,7 +1114,7 @@ window.SEED_DATA = {"version": 4, "year": 2026, "month": 8, "scenario": "standar
       const c = cfg || this.config();
       if (!c.url || !c.key) return 'Enter both the Project URL and the Publishable key.';
       if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(c.url) && !/^https?:\/\/localhost/.test(c.url)) return `The Project URL "${c.url}" does not look right. It should be like https://abcdefgh.supabase.co`;
-      if (/^sb_secret_/.test(c.key) || /service_role/.test(atobSafe(c.key))) return 'A SECRET key was pasted. Use the Publishable (or anon public) key instead, and replace the secret key in Supabase because it is now exposed.';
+      if (/^sb_secret_/.test(c.key)) return 'A SECRET key was pasted. Use the Publishable (or anon public) key instead, and replace the secret key in Supabase because it is now exposed.';
       try {
         const r = await fetch(c.url + '/auth/v1/settings', { headers: { apikey: c.key } });
         if (r.status === 401 || r.status === 403) return 'The Publishable key does not belong to this Supabase project. Copy it again from Project Settings › API Keys of the same project as the URL.';
@@ -1232,9 +1246,8 @@ const PAGES = [
   { id: 'workout', group: 'Analyse', label: 'Capacity Workout', title: 'Capacity Workout', desc: 'Operation-level calculation — same as the Excel “Capacity-workout” sheet.' },
   { id: 'schedule', group: 'Analyse', label: 'Loading Schedule', title: 'Machine Loading Schedule', desc: 'Day-by-day machine loading against customer due dates.' },
   { id: 'balance', group: 'Analyse', label: 'Load Balancer', title: 'Load Balancer', desc: 'Move or split work from overloaded machines to machines with spare days.' },
-  { id: 'masters', group: 'Setup', label: 'Masters', title: 'Machines & Routings', desc: 'One-time setup: machines, parts, operations and cycle times.' },
-  { id: 'users', group: 'Setup', label: 'Users & Access', title: 'Users & Access', desc: 'Who can open the planner and what each person may change.' },
-  { id: 'settings', group: 'Setup', label: 'Settings', title: 'Settings', desc: 'Company, plant standards, calendar, cloud sync and data backup.' },
+  { id: 'masters', group: 'Setup', label: 'Masters', title: 'Machines & Routings', desc: 'Machines, parts, operations, cycle times, plant standards and working calendar.' },
+  { id: 'settings', group: 'Setup', label: 'Settings', title: 'Settings', desc: 'Company, cloud connection, users & access, and data backup. Admins only.' },
   { id: 'help', group: 'Setup', label: 'Help & Formulas', title: 'Help & Formulas', desc: 'How the planner works, step by step, and every formula it uses.' }
 ];
 
@@ -1274,10 +1287,10 @@ function normalise(s) {
   return s;
 }
 
-// Converts the earlier v3 JSON (Client_Delivery_Package_KMR) to this format
+// Converts JSON files from the earlier v3 planner to this format
 function convertV3(d) {
   const clean = x => String(x || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
-  const y = d.year || 2026, m = typeof d.month === 'number' ? d.month : 8;
+  const y = d.year || new Date().getFullYear(), m = typeof d.month === 'number' ? d.month : new Date().getMonth();
   const key = E.periodKey(y, m), last = E.daysInMonth(y, m);
   const b = d.branding || {};
   const s = {
@@ -1326,8 +1339,8 @@ function commit(opts) {
    Cloud mode: admin > editor > viewer, enforced by the database (RLS) and mirrored in the UI. */
 const ROLE_RANK = { viewer: 1, editor: 2, admin: 3 };
 const ROLE_INFO = {
-  admin: { label: 'Admin', text: 'Everything, plus users, company settings, calendar and restoring old versions.' },
-  editor: { label: 'Editor', text: 'Enter monthly plans, change available days and remarks, edit machines and routings, apply load balancing.' },
+  admin: { label: 'Admin', text: 'Everything an editor can do, plus Settings: users, company name and logo, cloud connection, backups and restoring old versions.' },
+  editor: { label: 'Editor', text: 'Enter monthly plans, change available days and remarks, edit machines, routings, plant standards and working calendar, apply load balancing.' },
   viewer: { label: 'Viewer', text: 'Sees every screen and can export Excel/PDF. Cannot change anything.' }
 };
 function cloudActive() { return Cloud.configured() && Cloud.signedIn() && Boolean(cloud.role); }
@@ -1363,9 +1376,10 @@ async function cloudBoot() {
     if (!cloud.role) { showGate('noaccess'); setSync('err', 'No access'); return; }
     const r = await Cloud.load();
     if (r && r.data) { adoptRemote(r.data); cloud.stamp = r.updated_at; setSync('on', 'Synced · ' + timeAgo(r.updated_at)); }
-    else if (can('editor')) { cloud.savedHash = null; await cloudSave(true); }
+    else if (can('editor')) { cloud.savedHash = null; cloud.firstPublish = true; }
     else { setSync('err', 'No shared plan published yet'); }
     hideGate(); render(); startPoll();
+    if (cloud.firstPublish) { cloud.firstPublish = false; firstPublishModal(); }
   } catch (e) {
     setSync('err', e.message);
     if (/sign in again/i.test(e.message)) showGate('signin', e.message);
@@ -1412,6 +1426,18 @@ function conflictModal(remote) {
   });
 }
 
+function firstPublishModal() {
+  const n = state.machines.length, o = state.operations.length;
+  modal({
+    title: 'Start this company’s shared plan', dismissible: false, cancel: 'Decide later',
+    body: `<p>The cloud database is empty. How do you want to start?</p><p class="small muted"><b>Start empty</b> is right for a new customer: you then enter the company name, machines and routings. <b>Use the data on this device</b> uploads what this browser shows now (${n} machines, ${o} operations).</p>`,
+    buttons: [
+      { label: 'Use the data on this device', act: async () => { await cloudSave(true); toast('Shared plan created'); render(); } },
+      { label: 'Start empty', cls: 'primary', act: async () => { state = blankState(); LS.set(K_STATE, state); await cloudSave(true); ui.page = 'settings'; ui.settingsTab = 'general'; render(); toast('Empty company ready. Enter the company name, then add machines in Masters.'); } }
+    ]
+  });
+}
+
 /* ---------- sign-in gate (cloud mode) ---------- */
 /* ---------- small shared pieces ---------- */
 // Password box with a show / hide eye button
@@ -1429,6 +1455,18 @@ function connectionFormHtml() {
     <div id="cnInfo"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="connTest">${icon('check')}Test connection</button><button class="btn primary" data-act="connSave">${icon('cloud')}Save & connect</button><button class="btn" data-act="connDownload">${icon('download')}Download site file</button>${c.source === 'browser' ? `<button class="btn ghost" data-act="connReset">Forget on this browser</button>` : ''}</div>
     <p class="small muted">“Save & connect” connects this browser straight away. To connect <b>everyone</b> automatically, click “Download site file” and upload <code>capacity-config.json</code> once to GitHub, in the same folder as the planner page. Later updates of the planner page then never need these values again.</p>`;
+}
+
+function firstPublishModal() {
+  const n = state.machines.length, o = state.operations.length;
+  modal({
+    title: 'Start this company’s shared plan', dismissible: false, cancel: 'Decide later',
+    body: `<p>The cloud database is empty. How do you want to start?</p><p class="small muted"><b>Start empty</b> is right for a new customer: you then enter the company name, machines and routings. <b>Use the data on this device</b> uploads what this browser shows now (${n} machines, ${o} operations).</p>`,
+    buttons: [
+      { label: 'Use the data on this device', act: async () => { await cloudSave(true); toast('Shared plan created'); render(); } },
+      { label: 'Start empty', cls: 'primary', act: async () => { state = blankState(); LS.set(K_STATE, state); await cloudSave(true); ui.page = 'settings'; ui.settingsTab = 'general'; render(); toast('Empty company ready. Enter the company name, then add machines in Masters.'); } }
+    ]
+  });
 }
 
 /* ---------- sign-in gate (cloud mode) ---------- */
@@ -1465,7 +1503,7 @@ function showGate(kind, msg, okMsg) {
         ${pwField('gPass', 'Password', 'current-password', 'required')}
         <button class="btn primary" type="submit" style="height:40px">Sign in</button>
       </form>
-      <div class="gate-actions" style="justify-content:space-between"><button class="btn ghost sm" data-act="gateForgot">Forgot password?</button><button class="btn ghost sm" data-act="gateConn">${icon('settings')}Connection</button></div>`;
+      <div class="gate-actions"><button class="btn ghost sm" data-act="gateForgot">Forgot password?</button></div>`;
   }
   g.innerHTML = `<div class="gate-card"><div class="gate-brand"><div class="logo">${logo}</div><div><div class="gate-co">${h(s.companyName || 'Capacity Planner')}</div><div class="small muted">${h(s.subtitle || 'Capacity Planner')}</div></div></div><h1>${h(title)}</h1>${body}<p class="small muted gate-foot">Powered by KMR Group of Companies<br><span style="font-size:10.5px">Cloud: ${h((c.url || 'not connected').replace(/^https?:\/\//, ''))}</span></p></div>`;
   g.hidden = false;
@@ -1482,7 +1520,7 @@ function showGate(kind, msg, okMsg) {
       catch (e) {
         let m = e.message;
         if (/invalid login credentials/i.test(m)) m = 'E-mail or password is not correct. Use “Forgot password?” below, or ask your administrator to reset it.';
-        else if (/email not confirmed/i.test(m)) m = 'This user is not confirmed yet. Ask your administrator to add you again from Users & Access.';
+        else if (/email not confirmed/i.test(m)) m = 'This user is not confirmed yet. Ask your administrator to add you again from Settings.';
         else { const d = await Cloud.diagnose(); if (d) m = d; }
         showGate('signin', m);
       }
@@ -1536,7 +1574,7 @@ function tickResend() {
 }
 function resetMailError(m) {
   if (/rate limit|too many|seconds/i.test(m)) return 'Too many requests. Please wait a minute and try again.';
-  if (/not authorized|smtp|sending|mail/i.test(m)) return 'Password e-mails are not set up yet. Ask your administrator to reset your password in Users & Access.';
+  if (/not authorized|smtp|sending|mail/i.test(m)) return 'Password e-mails are not set up yet. Ask your administrator to reset your password in Settings.';
   return m;
 }
 function hideGate() { const g = $('#gate'); if (g) g.hidden = true; document.body.classList.remove('gated'); }
@@ -1602,6 +1640,7 @@ function render(keepFocus) {
   if (!ui.selMachine || !model.machines.find(m => m.code === ui.selMachine)) {
     const worst = model.machines.slice().sort((a, b) => a.balDays - b.balDays)[0]; ui.selMachine = worst ? worst.code : null;
   }
+  if (!pageAllowed(ui.page)) ui.page = 'overview';
   renderShell();
   const page = PAGES.find(p => p.id === ui.page) || PAGES[0];
   $('#view').innerHTML = (window.Pages[page.id] || (() => ''))();
@@ -1619,7 +1658,7 @@ function renderShell() {
   const crit = (model.totals.counts.critical || 0) + (model.totals.counts.sunday || 0);
   const lateN = model.totals.lateOps;
   let group = '';
-  const nav = PAGES.map(p => {
+  const nav = visiblePages().map(p => {
     let g = '';
     if (p.group !== group) { group = p.group; g = `<div class="nav-group">${h(group)}</div>`; }
     const badge = p.id === 'capacity' && crit ? `<span class="badge" title="${crit} machines over capacity">${crit}</span>` : (p.id === 'schedule' && lateN ? `<span class="badge" title="${lateN} late operations">${lateN}</span>` : '');
@@ -1660,16 +1699,16 @@ function renderShell() {
 }
 
 /* ---------- lock controls the signed-in role may not use ---------- */
-const EDITOR_ACTS = ['pastePlan', 'importXlsx', 'copyPrev', 'clearQty', 'applyLevel', 'clearSplits', 'addMachine', 'delMachine', 'addOp', 'delOp', 'opUp', 'alternates', 'pasteRoutings'];
-const ADMIN_ACTS = ['uploadLogo', 'removeLogo', 'addHoliday', 'delHoliday', 'importJson', 'resetAll', 'connSave', 'connReset', 'connDownload'];
-const EDITOR_SETTINGS = ['levelTargetPct', 'lotSize', 'levelAnyMachine'];
+const EDITOR_ACTS = ['addHoliday', 'delHoliday', 'pastePlan', 'importXlsx', 'copyPrev', 'clearQty', 'applyLevel', 'clearSplits', 'addMachine', 'delMachine', 'addOp', 'delOp', 'opUp', 'alternates', 'pasteRoutings'];
+const ADMIN_ACTS = ['uploadLogo', 'removeLogo', 'importJson', 'resetAll', 'blankStart', 'connSave', 'connReset', 'connDownload'];
+const EDITOR_SETTINGS = ['levelTargetPct', 'lotSize', 'levelAnyMachine', 'oee', 'hoursPerDay', 'daysPerMonth', 'warnPct', 'transferLagHours'];
 function actNeeds(act) { return ADMIN_ACTS.includes(act) ? 'admin' : EDITOR_ACTS.includes(act) ? 'editor' : null; }
 function fieldNeeds(el) {
   const d = el.dataset;
   if (d.qty || d.due || d.avail || d.remark || d.mfield || d.ofield) return 'editor';
   if (d.setting) return EDITOR_SETTINGS.includes(d.setting) ? 'editor' : 'admin';
   if (d.settingBool) return EDITOR_SETTINGS.includes(d.settingBool) ? 'editor' : 'admin';
-  if (d.weekoff !== undefined || el.id === 'hDate' || el.id === 'hName') return 'admin';
+  if (d.weekoff !== undefined || el.id === 'hDate' || el.id === 'hName') return 'editor';
   return null;
 }
 function applyPermissions() {
@@ -1728,7 +1767,11 @@ function applyTheme() {
   const t = LS.get(K_THEME) || 'system';
   if (t === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
 }
-function go(page) { ui.page = page; LS.set(K_UI, { page }); render(); window.scrollTo(0, 0); closeModal(); }
+function pageAllowed(id) { return id !== 'settings' || can('admin'); }
+function visiblePages() { return PAGES.filter(p => pageAllowed(p.id)); }
+function go(page) {
+  if (page === 'users') { page = 'settings'; }
+  if (!pageAllowed(page)) { toast('Settings are available to admins only.'); page = 'overview'; } ui.page = page; LS.set(K_UI, { page }); render(); window.scrollTo(0, 0); closeModal(); }
 
 /* ==========================================================================
    PAGES — each returns HTML for #view. Uses globals from app-core.js
@@ -1751,6 +1794,7 @@ const scaleMax = () => Math.max(30, ...model.machines.map(m => Math.max(m.reqDay
 
 /* ---------------------------------------------------------------- OVERVIEW */
 Pages.overview = () => {
+  if (!state.machines.length) return `${note('warn', 'info', '<b>No machines yet.</b> Start in <b>Masters</b>: add machines, then parts and routings, and set the plant standards. Or import a capacity workbook from <b>Monthly Plan › Import .xlsx</b>.')}<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-nav="masters">Open Masters ${icon('arrow')}</button><button class="btn" data-nav="plan">Open Monthly Plan</button></div>`;
   const t = model.totals, c = t.counts;
   const overN = (c.critical || 0) + (c.sunday || 0);
   const plan = planOf();
@@ -2041,7 +2085,7 @@ Pages.plan = () => {
 Pages.masters = () => {
   const tab = ui.mastersTab;
   const issues = dataIssues();
-  const tabs = `<div class="subtabs" role="tablist"><button data-mtab="machines" class="${tab === 'machines' ? 'on' : ''}">Machines (${state.machines.length})</button><button data-mtab="routings" class="${tab === 'routings' ? 'on' : ''}">Parts & routings (${state.operations.length})</button><button data-mtab="check" class="${tab === 'check' ? 'on' : ''}">Data check${issues.length ? ` (${issues.length})` : ''}</button></div>`;
+  const tabs = `<div class="subtabs" role="tablist"><button data-mtab="machines" class="${tab === 'machines' ? 'on' : ''}">Machines (${state.machines.length})</button><button data-mtab="routings" class="${tab === 'routings' ? 'on' : ''}">Parts & routings (${state.operations.length})</button><button data-mtab="standards" class="${tab === 'standards' ? 'on' : ''}">Plant standards & calendar</button><button data-mtab="check" class="${tab === 'check' ? 'on' : ''}">Data check${issues.length ? ` (${issues.length})` : ''}</button></div>`;
   let body = '';
   if (tab === 'machines') {
     const s = state.settings;
@@ -2070,6 +2114,8 @@ Pages.masters = () => {
       <td class="r num">${o.cycleTime > 0 ? fmt(3600 / o.cycleTime * oee, 1) : '–'}</td>
       <td><button class="btn sm" data-act="alternates" data-id="${o.id}">${o.alternates && o.alternates.length ? h(o.alternates.join(', ')) : 'None'}</button></td>
       <td class="r" style="white-space:nowrap"><button class="btn sm ghost" data-act="opUp" data-id="${o.id}" aria-label="Move up">▲</button><button class="btn sm ghost" data-act="delOp" data-id="${o.id}" aria-label="Delete">${icon('trash')}</button></td></tr>`).join('')}</tbody></table></div>`;
+  } else if (tab === 'standards') {
+    body = `<div class="card-h"><div><h2>Plant standards & working calendar</h2><div class="sub">Used by every capacity calculation. ${can('editor') ? 'Editors and admins can change these.' : 'View only.'}</div></div></div>${standardsTab()}`;
   } else {
     body = `<div class="card-h"><div><h2>Data check</h2><div class="sub">Automatic checks on master data that can distort the plan.</div></div></div><div class="card-b">${issues.length ? issues.map(i => note(i.level === 'crit' ? 'crit' : 'warn', 'alert', h(i.text))).join('<div style="height:8px"></div>') : note('ok', 'check', 'No problems found in machines and routings.')}</div>`;
   }
@@ -2094,23 +2140,12 @@ function dataIssues() {
   return out;
 }
 
-/* ---------------------------------------------------------------- SETTINGS */
-Pages.settings = () => {
-  const s = state.settings, c = Cloud.config(), theme = LS.get(K_THEME) || 'system';
+/* ---------------------------------------------------------------- PLANT STANDARDS & CALENDAR (Masters tab) */
+function standardsTab() {
+  const s = state.settings;
   const dows = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const hol = (s.holidays || []).slice().sort();
-  const session = Cloud.session() || {};
-  return `
-  <div class="grid-2e">
-    <section class="card"><div class="card-h"><div><h2>Company & branding</h2><div class="sub">Shown in the sidebar, reports and Excel exports.</div></div></div>
-      <div class="card-b" style="display:flex;flex-direction:column;gap:14px">
-        <div class="form-grid"><div class="field"><label for="sName">Company name</label><input class="inp" id="sName" data-setting="companyName" value="${h(s.companyName)}"></div>
-        <div class="field"><label for="sSub">Plant / division</label><input class="inp" id="sSub" data-setting="subtitle" value="${h(s.subtitle)}"></div></div>
-        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div class="logo" style="width:56px;height:56px;border-color:var(--line)">${s.logo ? `<img src="${h(s.logo)}" alt="Company logo">` : h((s.companyName || 'C').slice(0, 2).toUpperCase())}</div>
-          <button class="btn" data-act="uploadLogo">${icon('upload')}Upload logo</button>${s.logo ? '<button class="btn ghost" data-act="removeLogo">Remove</button>' : ''}<span class="small muted">PNG, JPG or SVG</span></div>
-        <div class="field"><label>Appearance</label><div class="seg"><button data-theme-set="system" class="${theme === 'system' ? 'on' : ''}">System</button><button data-theme-set="light" class="${theme === 'light' ? 'on' : ''}">Light</button><button data-theme-set="dark" class="${theme === 'dark' ? 'on' : ''}">Dark</button></div></div>
-      </div></section>
-
+  return `<div class="grid-2e" style="padding:4px 20px 20px">
     <section class="card"><div class="card-h"><div><h2>Plant standards</h2><div class="sub">The Excel sheet had these fixed inside formulas (80%, 22 h, 25 days).</div></div></div>
       <div class="card-b"><div class="form-grid">
         <div class="field"><label for="sOee">OEE (%)</label><input class="inp num" type="number" min="1" max="100" id="sOee" data-setting="oee" value="${s.oee}"><span class="hint">PPH = 3600 ÷ CT × OEE</span></div>
@@ -2127,28 +2162,26 @@ Pages.settings = () => {
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${hol.map(d => `<span class="tag">${fmtDateLong(d)}${s.holidayNames && s.holidayNames[d] ? ' · ' + h(s.holidayNames[d]) : ''} <button class="btn sm ghost" style="height:18px;padding:0 3px" data-act="delHoliday" data-d="${d}" aria-label="Remove">×</button></span>`).join('') || '<span class="small muted">No holidays added.</span>'}</div></div>
       </div></section>
 
-    <section class="card"><div class="card-h"><div><h2>${cloudActive() ? 'My account & cloud' : 'Cloud connection'}</h2><div class="sub">One shared plan for everyone, on phone, tablet and PC (Supabase free plan).</div></div></div>
-      <div class="card-b" style="display:flex;flex-direction:column;gap:12px">
-        ${cloudActive() ? `<div class="note ok">${icon('check')}<div>Signed in as <b>${h(session.email)}</b> · <b>${h(roleLabel())}</b>. ${h(cloud.msg)}<br><span class="small muted">${h(ROLE_INFO[cloud.role].text)}</span></div></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="syncNow">Sync now</button><button class="btn" data-act="changePassword">${icon('lock')}Change my password</button>${can('admin') ? `<button class="btn" data-nav="users">${icon('users')}Manage users</button>` : ''}<button class="btn danger" data-act="signOut">${icon('logout')}Sign out</button></div>
-          ${can('admin') ? `<details class="conn-details"><summary>Cloud connection settings</summary><div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">${connectionFormHtml()}</div></details>` : ''}`
-        : `<p class="small muted">Not connected — data is saved in this browser only. Enter your Supabase details to share one plan with your team (see SETUP_GUIDE, steps 1–5).</p>${connectionFormHtml()}`}
-      </div></section>
-  </div>
+  </div>`;
+}
 
-  <section class="card"><div class="card-h"><div><h2>Data & backup</h2><div class="sub">Move data between PCs, keep monthly backups, or start again.</div></div></div>
-    <div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="exportJson">${icon('download')}Download backup (.json)</button><button class="btn" data-act="importJson">${icon('upload')}Restore from backup</button><button class="btn" data-act="importXlsx">${icon('excel')}Import Excel workbook</button><button class="btn danger" data-act="resetAll">Reset to sample data</button></div></section>`;
+/* ---------------------------------------------------------------- SETTINGS (admin only) */
+Pages.settings = () => {
+  const tab = ui.settingsTab || 'general';
+  const tabs = `<section class="card"><div class="subtabs" role="tablist" style="border-bottom:0"><button data-stab="general" class="${tab === 'general' ? 'on' : ''}">General</button><button data-stab="deploy" class="${tab === 'deploy' ? 'on' : ''}">Deployment guide · new customer</button></div></section>`;
+  if (tab === 'deploy') return tabs + deployGuide();
+  return tabs + settingsGeneral();
 };
-
-/* ---------------------------------------------------------------- USERS */
-Pages.users = () => {
+function settingsGeneral() {
+  const s = state.settings, theme = LS.get(K_THEME) || 'system';
   const roles = `<section class="card"><div class="card-h"><div><h2>Roles</h2><div class="sub">Enforced by the cloud database, not only by the screens</div></div></div>
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Role</th><th>Can do</th></tr></thead><tbody>
     ${['admin', 'editor', 'viewer'].map(r => `<tr><td><span class="tag brass">${ROLE_INFO[r].label}</span></td><td>${h(ROLE_INFO[r].text)}</td></tr>`).join('')}</tbody></table></div></section>`;
-  if (!cloudActive()) return `${note('warn', 'cloud', `<b>User access needs the shared cloud plan.</b> Right now the planner saves to this browser only, so anyone who opens it here has full access. Follow “Option 3” in SETUP_GUIDE to connect Supabase, then manage users on this screen.`)}
-    <div><button class="btn primary" data-nav="settings">Open cloud settings ${icon('arrow')}</button></div>${roles}`;
-  if (!can('admin')) return `${note('', 'lock', `You are signed in as <b>${h(roleLabel())}</b>. Only an admin can add users or change roles.`)}${roles}`;
-  if (ui.users === undefined && !ui.usersLoading) setTimeout(loadUsers, 0);
+  let usersBlock;
+  if (!cloudActive()) {
+    usersBlock = `<section class="card"><div class="card-h"><div><h2>Users & access</h2><div class="sub">Who can open the planner and what each person may change</div></div></div><div class="card-b">${note('warn', 'cloud', '<b>Users need the cloud connection.</b> Until the planner is connected above, it saves to this browser only and anyone who opens it here has full access.')}</div></section><div class="grid-2e">${roles}</div>`;
+  } else {
+    if (ui.users === undefined && !ui.usersLoading) setTimeout(loadUsers, 0);
   const list = ui.users || [];
   const me = (Cloud.session() || {}).email;
   const counts = list.reduce((a, u) => (a[u.role] = (a[u.role] || 0) + 1, a), {});
@@ -2157,7 +2190,7 @@ Pages.users = () => {
       <td>${u.hasLogin ? (u.lastSignIn ? h(timeAgo(u.lastSignIn)) : '<span class="muted">Never signed in</span>') : '<span class="pill sunday">No login</span>'}</td>
       <td class="small muted">${u.createdBy ? h(u.createdBy) : ''}</td>
       <td class="r" style="white-space:nowrap"><button class="btn sm" data-act="resetUserPw" data-email="${h(u.email)}">${u.hasLogin ? 'Reset password' : 'Create login'}</button> ${u.email === me ? '' : `<button class="btn sm ghost" data-act="removeUser" data-email="${h(u.email)}" aria-label="Remove ${h(u.email)}">${icon('trash')}</button>`}</td></tr>`).join('');
-  return `
+    usersBlock = `
   <section class="card"><div class="card-h"><div><h2>People with access</h2><div class="sub">${list.length} user${list.length === 1 ? '' : 's'} · ${['admin', 'editor', 'viewer'].map(r => `${counts[r] || 0} ${ROLE_INFO[r].label.toLowerCase()}${(counts[r] || 0) === 1 ? '' : 's'}`).join(' · ')}</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="reloadUsers">Refresh</button><button class="btn primary" data-act="addUser">${icon('plus')}Add user</button></div></div>
     ${ui.usersErr ? `<div class="card-b">${note('crit', 'alert', h(ui.usersErr))}</div>` : ''}
@@ -2167,7 +2200,30 @@ Pages.users = () => {
   <section class="card"><div class="card-h"><div><h2>Version history</h2><div class="sub">Every save is kept. Restore an earlier plan if a change was a mistake.</div></div><button class="btn sm" data-act="loadHistory">${ui.hist ? 'Refresh' : 'Show versions'}</button></div>
     ${ui.hist ? (ui.hist.length ? `<div class="tbl-wrap" id="tw-hist"><table class="tbl"><thead><tr><th class="stick">Replaced at</th><th>Saved by</th><th></th></tr></thead><tbody>${ui.hist.map(v => `<tr><td class="stick">${h(new Date(v.saved_at).toLocaleString())}</td><td>${h(v.saved_by || '')}</td><td class="r"><button class="btn sm" data-act="restoreVersion" data-id="${v.id}">Restore</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="card-b muted">No earlier versions yet.</div>') : '<div class="card-b small muted">The list loads on request.</div>'}
   </section></div>`;
-};
+  }
+  return `
+  <div class="grid-2e">
+    <section class="card"><div class="card-h"><div><h2>Company & branding</h2><div class="sub">Shown in the sidebar, sign-in screen, reports and Excel exports.</div></div></div>
+      <div class="card-b" style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-grid"><div class="field"><label for="sName">Company name</label><input class="inp" id="sName" data-setting="companyName" value="${h(s.companyName)}"></div>
+        <div class="field"><label for="sSub">Plant / division</label><input class="inp" id="sSub" data-setting="subtitle" value="${h(s.subtitle)}"></div></div>
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div class="logo" style="width:56px;height:56px;border-color:var(--line)">${s.logo ? `<img src="${h(s.logo)}" alt="Company logo">` : h((s.companyName || 'C').slice(0, 2).toUpperCase())}</div>
+          <button class="btn" data-act="uploadLogo">${icon('upload')}Upload logo</button>${s.logo ? '<button class="btn ghost" data-act="removeLogo">Remove</button>' : ''}<span class="small muted">PNG, JPG or SVG</span></div>
+        <div class="field"><label>Appearance</label><div class="seg"><button data-theme-set="system" class="${theme === 'system' ? 'on' : ''}">System</button><button data-theme-set="light" class="${theme === 'light' ? 'on' : ''}">Light</button><button data-theme-set="dark" class="${theme === 'dark' ? 'on' : ''}">Dark</button></div></div>
+      </div></section>
+
+    <section class="card"><div class="card-h"><div><h2>Cloud connection</h2><div class="sub">One shared plan for everyone, on phone, tablet and PC (Supabase free plan).</div></div>${cloudActive() ? `<button class="btn sm" data-act="syncNow">Sync now</button>` : ''}</div>
+      <div class="card-b" style="display:flex;flex-direction:column;gap:12px">
+        ${cloudActive() ? `<div class="note ok">${icon('check')}<div>Connected and signed in as <b>${h((Cloud.session() || {}).email)}</b> (${h(roleLabel())}). ${h(cloud.msg)}</div></div>` : `<p class="small muted">Not connected — data is saved in this browser only.</p>`}
+        ${connectionFormHtml()}
+      </div></section>
+  </div>
+
+  ${usersBlock}
+
+  <section class="card"><div class="card-h"><div><h2>Data & backup</h2><div class="sub">Move data between PCs, keep monthly backups, or start again.</div></div></div>
+    <div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="exportJson">${icon('download')}Download backup (.json)</button><button class="btn" data-act="importJson">${icon('upload')}Restore from backup</button><button class="btn" data-act="importXlsx">${icon('excel')}Import Excel workbook</button><button class="btn" data-act="blankStart">${icon('plus')}Start a new company (empty)</button><button class="btn danger" data-act="resetAll">Reset to sample data</button></div></section>`;
+}
 
 /* ---------------------------------------------------------------- HELP */
 Pages.help = () => `
@@ -2217,7 +2273,7 @@ function setPeriod(y, m) { state.year = y; state.month = m; commit(); }
 
 /* ---------- click delegation ---------- */
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-nav],[data-act],[data-scn],[data-cell],[data-mach],[data-go],[data-mtab],[data-theme-set],[data-weekoff]');
+  const t = ev.target.closest('[data-nav],[data-act],[data-scn],[data-cell],[data-mach],[data-go],[data-mtab],[data-stab],[data-theme-set],[data-weekoff]');
   if (!t) return;
   if (t.matches('input,select')) return;
   if (ev.target.closest('input,select,textarea') && !t.dataset.act) return;
@@ -2233,9 +2289,10 @@ document.addEventListener('click', ev => {
     if (k === 'masters') { ui.mastersTab = v; return go('masters'); }
   }
   if (d.mtab) { ui.mastersTab = d.mtab; return render(); }
+  if (d.stab) { ui.settingsTab = d.stab; render(); return window.scrollTo(0, 0); }
   if (d.themeSet) { LS.set(K_THEME, d.themeSet); applyTheme(); return render(); }
   if (d.weekoff) {
-    if (!can('admin')) return toast('Only an admin can change the calendar.');
+    if (!can('editor')) return toast('You have view-only access.');
     const i = Number(d.weekoff), w = new Set(state.settings.weeklyOff || []);
     w.has(i) ? w.delete(i) : w.add(i); state.settings.weeklyOff = [...w].sort(); return commit();
   }
@@ -2309,7 +2366,7 @@ const Actions = {
   prevMonth() { const m = state.month === 0 ? 11 : state.month - 1; setPeriod(state.month === 0 ? state.year - 1 : state.year, m); },
   nextMonth() { const m = state.month === 11 ? 0 : state.month + 1; setPeriod(state.month === 11 ? state.year + 1 : state.year, m); },
   moreMenu() {
-    const items = PAGES.filter(p => !['overview', 'plan', 'capacity', 'schedule'].includes(p.id));
+    const items = visiblePages().filter(p => !['overview', 'plan', 'capacity', 'schedule'].includes(p.id));
     modal({ title: 'More', body: `<div style="display:flex;flex-direction:column;gap:6px">${items.map(p => `<button class="btn" style="justify-content:flex-start;height:44px" data-nav="${p.id}">${icon(p.id)}${h(p.label)}</button>`).join('')}${cloudActive() ? `<button class="btn" style="justify-content:flex-start;height:44px" data-act="changePassword">${icon('lock')}Change my password</button><button class="btn danger" style="justify-content:flex-start;height:44px" data-act="signOut">${icon('logout')}Sign out · ${h((Cloud.session() || {}).email)}</button>` : ''}</div>`, buttons: [], cancel: 'Close' });
   },
   exportMenu() {
@@ -2338,7 +2395,7 @@ const Actions = {
     }));
   },
   importXlsx() { pickFile('.xlsx', importWorkbook); },
-  resetAll() { confirmBox('Reset to sample data?', 'All machines, routings and monthly plans in this browser will be replaced with the September 2026 sample. Download a backup first if you need it.', 'Reset', () => { state = defaultState(); normalise(state); commit(); toast('Sample data restored'); }, true); },
+  resetAll() { confirmBox('Reset to sample data?', 'All machines, routings and monthly plans will be replaced with the built-in sample plan (13 machines, 62 operations). Download a backup first if you need it.', 'Reset', () => { state = defaultState(); normalise(state); commit(); toast('Sample data restored'); }, true); },
   uploadLogo() {
     pickFile('image/*', f => {
       const r = new FileReader();
@@ -2370,7 +2427,8 @@ const Actions = {
   pastePlan() {
     modal({
       title: 'Paste quantities from Excel',
-      body: `<p>Copy columns from Excel and paste below: <b>Part #</b>, <b>Quantity</b> and optionally <b>Due date</b> (e.g. 22-09-2026, 2026-09-22 or just 22).</p><textarea class="inp" id="pasteBox" placeholder="M-MI-045&#9;28000&#9;22-09-2026&#10;M-MI-042&#9;6000&#9;14"></textarea><div id="pasteInfo" class="small muted"></div>`,
+      body: (() => { const mm = E.pad(state.month + 1), yy = state.year, p1 = (state.operations[0] || {}).partNo || 'PART-001', p2 = (state.operations.find(o => o.partNo !== p1) || {}).partNo || 'PART-002';
+        return `<p>Copy columns from Excel and paste below: <b>Part #</b>, <b>Quantity</b> and optionally <b>Due date</b> (e.g. 22-${mm}-${yy}, ${yy}-${mm}-22 or just 22).</p><textarea class="inp" id="pasteBox" placeholder="${h(p1)}&#9;5000&#9;22-${mm}-${yy}&#10;${h(p2)}&#9;2000&#9;15"></textarea><div id="pasteInfo" class="small muted"></div>`; })(),
       buttons: [{ label: 'Apply', cls: 'primary', act: () => {
         const res = parsePlanPaste($('#pasteBox').value);
         if (!res.rows.length) { $('#pasteInfo').textContent = 'No rows recognised. Check that the first column is the Part #.'; return true; }
@@ -2393,7 +2451,7 @@ const Actions = {
   },
   addMachine() {
     modal({
-      title: 'Add machine', body: `<div class="form-grid"><div class="field"><label for="nmCode">Machine code</label><input class="inp" id="nmCode" placeholder="e.g. Elixir-5"></div><div class="field"><label for="nmCell">Cell / vendor</label><input class="inp" id="nmCell" placeholder="e.g. Elixir"></div></div>`,
+      title: 'Add machine', body: `<div class="form-grid"><div class="field"><label for="nmCode">Machine code</label><input class="inp" id="nmCode" placeholder="e.g. VMC-05"></div><div class="field"><label for="nmCell">Cell / vendor</label><input class="inp" id="nmCell" placeholder="e.g. Machine shop A"></div></div>`,
       buttons: [{ label: 'Add machine', cls: 'primary', act: () => {
         const code = $('#nmCode').value.trim(); if (!code) { toast('Enter a machine code.'); return true; }
         if (state.machines.some(m => m.code === code)) { toast(`${code} already exists.`); return true; }
@@ -2494,7 +2552,7 @@ const Actions = {
   accountMenu() {
     const ses = Cloud.session() || {};
     modal({ title: 'My account', body: `<div class="acct-card"><span class="acct">${h((ses.email || '?').slice(0, 2).toUpperCase())}</span><div><b>${h(ses.email)}</b><div class="small muted">${h(roleLabel())} · ${h(ROLE_INFO[cloud.role] ? ROLE_INFO[cloud.role].text : '')}</div></div></div>
-      <div style="display:flex;flex-direction:column;gap:8px"><button class="btn" style="justify-content:flex-start;height:42px" data-act="changePassword">${icon('lock')}Change my password</button>${can('admin') ? `<button class="btn" style="justify-content:flex-start;height:42px" data-nav="users">${icon('users')}Users & Access</button>` : ''}<button class="btn danger" style="justify-content:flex-start;height:42px" data-act="signOut">${icon('logout')}Sign out</button></div>`, buttons: [], cancel: 'Close' });
+      <div style="display:flex;flex-direction:column;gap:8px"><button class="btn" style="justify-content:flex-start;height:42px" data-act="changePassword">${icon('lock')}Change my password</button>${can('admin') ? `<button class="btn" style="justify-content:flex-start;height:42px" data-nav="settings">${icon('settings')}Settings & users</button>` : ''}<button class="btn danger" style="justify-content:flex-start;height:42px" data-act="signOut">${icon('logout')}Sign out</button></div>`, buttons: [], cancel: 'Close' });
   },
   async connTest() {
     const cfg = readConnForm(); connInfo('busy', 'Testing…');
@@ -2523,7 +2581,7 @@ const Actions = {
     const pw = genPassword();
     modal({ title: 'Add user', body: `<div class="form-grid"><div class="field"><label for="nuName">Name</label><input class="inp" id="nuName" placeholder="e.g. Ravi Kumar" autocomplete="off"></div><div class="field"><label for="nuEmail">E-mail (their login)</label><input class="inp" id="nuEmail" type="email" autocomplete="off"></div></div>
         <div class="field"><label for="nuRole">Role</label><select class="inp" id="nuRole">${['viewer', 'editor', 'admin'].map(r => `<option value="${r}">${ROLE_INFO[r].label} — ${h(ROLE_INFO[r].text)}</option>`).join('')}</select></div>
-        <div class="field"><label for="nuPw">Temporary password</label><div class="pwd-box"><input class="inp" id="nuPw" value="${pw}" autocomplete="new-password" spellcheck="false"><button class="btn" type="button" data-act="regenPw">New</button></div><span class="hint">Share it with the user; they can change it under Settings › Change my password.</span></div><div id="nuInfo" class="small" style="color:var(--crit)"></div>`,
+        <div class="field"><label for="nuPw">Temporary password</label><div class="pwd-box"><input class="inp" id="nuPw" value="${pw}" autocomplete="new-password" spellcheck="false"><button class="btn" type="button" data-act="regenPw">New</button></div><span class="hint">Share it with the user; they can change it under My account (top right) › Change my password.</span></div><div id="nuInfo" class="small" style="color:var(--crit)"></div>`,
       buttons: [{ label: 'Add user', cls: 'primary', act: async w => {
         const email = $('#nuEmail').value.trim().toLowerCase(), name = $('#nuName').value.trim(), role = $('#nuRole').value, password = $('#nuPw').value;
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $('#nuInfo').textContent = 'Enter a valid e-mail address.'; return true; }
@@ -2612,11 +2670,11 @@ function connInfo(kind, text) {
 /* ---------- users (admin) ---------- */
 async function loadUsers() {
   ui.usersLoading = true; ui.usersErr = '';
-  if (ui.page === 'users') render();
+  if (ui.page === 'settings') render();
   try { const r = await Cloud.admin('list'); ui.users = r.users || []; }
   catch (e) { ui.usersErr = e.message; ui.users = ui.users || []; }
   ui.usersLoading = false;
-  if (ui.page === 'users') render();
+  if (ui.page === 'settings') render();
 }
 async function setUserRole(email, el) {
   const role = el.value;
@@ -2630,7 +2688,7 @@ function genPassword() {
 }
 function credentialsModal(email, password, role, title) {
   const site = location.protocol.startsWith('http') ? location.origin + location.pathname.replace(/index\.html$/, '') : '(your planner web address)';
-  const text = `Capacity Planner — ${state.settings.companyName}\nAddress:  ${site}\nE-mail:   ${email}\nPassword: ${password}\nRole:     ${ROLE_INFO[role] ? ROLE_INFO[role].label : role}\nPlease change your password after the first sign-in (Settings › Change my password).`;
+  const text = `Capacity Planner — ${state.settings.companyName}\nAddress:  ${site}\nE-mail:   ${email}\nPassword: ${password}\nRole:     ${ROLE_INFO[role] ? ROLE_INFO[role].label : role}\nPlease change your password after the first sign-in (My account (top right) › Change my password).`;
   modal({ title, body: `<p>Send these details to the user. The password is not shown again.</p><div class="cred" id="credText">${h(text)}</div>`,
     buttons: [{ label: 'Copy details', cls: 'primary', act: async () => { try { await navigator.clipboard.writeText(text); toast('Copied'); } catch (e) { const r = document.createRange(); r.selectNodeContents($('#credText')); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Press Ctrl+C to copy'); } return true; } }], cancel: 'Done' });
 }
@@ -2772,6 +2830,196 @@ function printReport() {
 window.addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTimeout(() => { if (window.PageAfter[ui.page]) window.PageAfter[ui.page](); }, 150); });
 window.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.classList && ev.target.classList.contains('cell-inp') && ev.target.tagName === 'INPUT') { ev.target.blur(); } });
 
+
+/* ==========================================================================
+   DEPLOYMENT GUIDE — Settings › Deployment guide
+   Step-by-step set-up of the planner for any customer. Everything is built
+   from the current connection and page address; no customer data is fixed.
+   ========================================================================== */
+'use strict';
+
+function projectRef() {
+  const m = /^https:\/\/([a-z0-9-]+)\.supabase\.(co|in)$/i.exec(Cloud.config().url || '');
+  return m ? m[1] : '_';            // "_" lets Supabase ask which project to open
+}
+const sbLink = path => `https://supabase.com/dashboard/project/${projectRef()}/${path}`;
+const extLink = (url, text) => `<a href="${h(url)}" target="_blank" rel="noopener">${h(text)} ↗</a>`;
+function plannerAddress() {
+  return /^https?:/.test(location.protocol) ? location.origin + location.pathname : '';
+}
+function pageFileName() {
+  const f = (location.pathname.split('/').pop() || '').trim();
+  return /\.html?$/i.test(f) ? f : 'capacity.html';
+}
+function deploySql() {
+  const email = ((ui.deployEmail || '').trim() || 'admin@yourcompany.com').toLowerCase().replace(/'/g, '');
+  return (window.DEPLOY_ASSETS.sql || '').replace(/admin@yourcompany\.com/g, email);
+}
+function manifestText() {
+  const s = state.settings, page = pageFileName();
+  return JSON.stringify({
+    name: `${s.companyName || 'Capacity'} Planner`, short_name: 'Capacity', id: page, start_url: page, scope: './',
+    display: 'standalone', background_color: '#F3F5F8', theme_color: '#0E2240',
+    icons: [{ src: 'capacity-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }]
+  }, null, 2);
+}
+const EMAIL_TEMPLATE = `<h2>Password reset</h2>
+<p>Your code for the Capacity Planner is:</p>
+<p style="font-size:28px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+<p>It expires in 1 hour. If you did not ask for this, ignore this e-mail.</p>`;
+
+function codeBlock(id, text, dl) {
+  return `<div class="codebox"><div class="codebar"><span>${h(dl ? dl.name : '')}</span><span style="display:flex;gap:6px"><button class="btn sm" data-act="copyBlock" data-target="${id}">${icon('copy')}Copy</button>${dl && dl.asset ? `<button class="btn sm" data-act="dlAsset" data-asset="${dl.asset}">${icon('download')}Download</button>` : ''}</span></div><pre id="${id}">${h(text)}</pre></div>`;
+}
+function step(n, title, time, body) {
+  const done = (ui.deployDone || {})[n];
+  return `<section class="card dstep ${done ? 'done' : ''}" id="dstep-${n}"><div class="card-h"><div style="display:flex;gap:12px;align-items:flex-start"><span class="dnum">${done ? '✓' : n}</span><div><h2>${h(title)}</h2><div class="sub">${h(time)}</div></div></div>
+    <label class="chk small"><input type="checkbox" data-dstep="${n}" ${done ? 'checked' : ''}> Done</label></div><div class="card-b prose dbody">${body}</div></section>`;
+}
+
+function deployGuide() {
+  const c = Cloud.config(), addr = plannerAddress(), page = pageFileName(), ref = projectRef();
+  const connected = Boolean(c.url && c.key);
+  return `
+  <section class="card"><div class="card-b prose" style="padding-top:18px">
+    <p><b>Use this guide to set up the planner for a new customer or plant.</b> Each customer gets their own free database and their own users. The planner page itself holds no customer data. The company name, logo, machines, plans and users all live in that customer's database.</p>
+    <p>You need: a free <b>Supabase</b> account (${extLink('https://supabase.com', 'supabase.com')}), and a place to host one web page — the customer's website on <b>GitHub + Vercel</b>, or <b>Netlify</b>. Allow about 30–40 minutes. Tick <b>Done</b> on each step as you go; the ticks are kept in this browser only.</p>
+    ${connected ? note('', 'info', `Links below open the Supabase project this planner is connected to now (<b>${h(ref)}</b>). For a new customer, create their project in step 1 first; the links then work from that customer's planner.`) : ''}
+  </div></section>
+
+  ${step(1, 'Create the customer’s Supabase project', 'About 5 minutes · free', `
+    <ol><li>Open ${extLink('https://supabase.com/dashboard/new', 'Supabase › New project')} and sign in (a GitHub or Google account works).</li>
+    <li><b>Name:</b> e.g. <code>customer-capacity</code>. <b>Database password:</b> click <i>Generate</i> and store it safely; the planner never needs it.</li>
+    <li><b>Region:</b> the one closest to the customer (for India: <i>South Asia (Mumbai)</i>).</li>
+    <li>Click <b>Create new project</b> and wait about 2 minutes.</li></ol>`)}
+
+  ${step(2, 'Create the database tables and roles', 'About 3 minutes', `
+    <ol><li>Type the e-mail of the customer’s first <b>admin</b>. It is inserted into the script below.<div class="field" style="max-width:360px;margin-top:6px"><input class="inp" id="dgEmail" type="email" placeholder="admin@customer.com" value="${h(ui.deployEmail || '')}" autocomplete="off"></div></li>
+    <li>Open ${extLink(sbLink('sql/new'), 'SQL Editor › New query')}, paste the script and click <b>Run</b>. It should say <i>Success. No rows returned</i>.</li></ol>
+    ${codeBlock('dgSql', deploySql(), { name: 'supabase_setup.sql', asset: 'sql' })}
+    <p class="small muted">The script is safe to run again. It creates the shared plan table, the user list with roles (admin / editor / viewer), version history, and the security rules that enforce the roles.</p>`)}
+
+  ${step(3, 'Create the admin login', 'About 2 minutes', `
+    <ol><li>Open ${extLink(sbLink('auth/users'), 'Authentication › Users')} › <b>Add user › Create new user</b>.</li>
+    <li>Use the <b>same e-mail</b> as in step 2 and a strong password. Tick <b>Auto Confirm User</b> and click <b>Create user</b>.</li>
+    <li>Open ${extLink(sbLink('auth/providers'), 'Authentication › Sign In / Providers')} and turn <b>off</b> <i>Allow new users to sign up</i>. From then on only an admin can create accounts, from inside the planner.</li></ol>`)}
+
+  ${step(4, 'Add the user-management function', 'About 5 minutes', `
+    <ol><li>Open ${extLink(sbLink('functions'), 'Edge Functions')} › <b>Deploy a new function › Via Editor</b>.</li>
+    <li>At the <b>bottom</b> of the editor, the <b>Function name</b> box holds a random name. Replace it with exactly <code>admin-users</code>.</li>
+    <li>Delete the sample code, paste the code below, and click <b>Deploy function</b>.</li>
+    <li>Open the function › <b>Details</b> and turn <b>off</b> <i>Verify JWT with legacy secret</i> (or <i>Enforce JWT verification</i>), then save. This is safe: the function checks the user and their admin role itself.</li></ol>
+    ${codeBlock('dgFn', window.DEPLOY_ASSETS.fn || '', { name: 'admin-users function', asset: 'fn' })}
+    <p class="small muted">Check: the function list shows <code>admin-users</code>, and its address ends in <code>/functions/v1/admin-users</code>.</p>`)}
+
+  ${step(5, 'Connect the planner to the database', 'About 3 minutes', `
+    <ol><li>Open ${extLink(sbLink('settings/api-keys'), 'Project Settings › API Keys')} (or the green <b>Connect</b> button). Copy the <b>Project URL</b> and the <b>Publishable key</b> (<code>sb_publishable_…</code>, or <i>anon public</i> on older projects). Never use the <i>secret</i> or <i>service_role</i> key.</li>
+    <li>Open the planner page for this customer. On your PC you can double-click <code>${h(page)}</code>; it opens without sign-in.</li>
+    <li>Go to <b>Settings › General › Cloud connection</b>, paste both values and click <b>Test connection</b>.</li>
+    <li>Click <b>Download site file</b>. This saves <code>capacity-config.json</code>, which connects every device automatically once it is hosted next to the page.</li></ol>
+    ${connected ? note('ok', 'check', `This browser is connected to <b>${h(c.url.replace(/^https?:\/\//, ''))}</b>.`) : note('warn', 'alert', 'This browser is not connected yet.')}`)}
+
+  ${step(6, 'Put the planner online', 'About 5 minutes · free', `
+    <p>Upload these files <b>together, into the same folder</b>:</p>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>File</th><th>What it is</th><th></th></tr></thead><tbody>
+      <tr><td><code>${h(page)}</code></td><td>The planner page. The same file works for every customer.</td><td class="small muted">From the <b>website</b> folder of the delivery package</td></tr>
+      <tr><td><code>capacity-config.json</code></td><td>This customer’s connection (step 5)</td><td class="r"><button class="btn sm" data-act="dlAsset" data-asset="config">${icon('download')}Download</button></td></tr>
+      <tr><td><code>capacity.webmanifest</code></td><td>“Install app” on phones and PCs, with the company name</td><td class="r"><button class="btn sm" data-act="dlAsset" data-asset="manifest">${icon('download')}Download</button></td></tr>
+      <tr><td><code>capacity-icon.svg</code></td><td>App icon</td><td class="small muted">From the <b>website</b> folder of the delivery package</td></tr>
+    </tbody></table></div>
+    <p><b>Option A — the customer’s website on GitHub + Vercel</b> (e.g. <code>www.customer.com/${h(page)}</code>):</p>
+    <ol><li>Open the website’s repository on ${extLink('https://github.com', 'GitHub')} › <b>Add file › Upload files</b>, drag in the four files, and click <b>Commit changes</b>.</li>
+    <li>${extLink('https://vercel.com/dashboard', 'Vercel')} publishes it automatically in about a minute. For a new site, use ${extLink('https://vercel.com/new', 'Vercel › New project')} and import the repository.</li></ol>
+    <p><b>Option B — Netlify, no website needed:</b> sign in at ${extLink('https://app.netlify.com', 'Netlify')}, then drag a folder with the four files onto ${extLink('https://app.netlify.com/drop', 'Netlify Drop')}. You get an address like <code>customer-capacity.netlify.app</code>.</p>
+    <p class="small muted">Never upload the SQL script or the function code to the website.</p>`)}
+
+  ${step(7, 'First sign-in and company set-up', 'About 10 minutes', `
+    <ol><li>Open the planner address${addr ? ` (this one is <code>${h(addr)}</code>)` : ''} and sign in with the admin login from step 3.</li>
+    <li>The shared plan is empty the first time. Choose <b>Start empty</b> for a new customer.</li>
+    <li><b>Settings › General:</b> company name, plant name and logo. The logo also becomes the browser-tab icon.</li>
+    <li><b>Masters:</b> add machines, then parts and routings. You can use <b>Monthly Plan › Import .xlsx</b> with a workbook laid out like <i>capacity.xlsx</i>, or <b>Paste from Excel</b>. Then set <b>Plant standards & calendar</b>: OEE, hours per day, days per month, weekly off and holidays.</li>
+    <li><b>Monthly Plan:</b> enter quantities and due dates, then review <b>Capacity Plan</b>.</li></ol>`)}
+
+  ${step(8, 'Add the customer’s users', '1 minute per person', `
+    <ol><li><b>Settings › General › Users & access › Add user</b>. Enter name and e-mail, choose <b>Editor</b> or <b>Viewer</b>, and keep or type a temporary password.</li>
+    <li>Click <b>Copy details</b> and send them to the person (WhatsApp or e-mail). They can change the password under the round initials button › <b>Change my password</b>.</li>
+    <li>Test once: sign in as a viewer in a private window; inputs are locked and Settings is hidden.</li></ol>`)}
+
+  ${step(9, 'Optional: “Forgot password?” by e-mail code', 'About 10 minutes · free', `
+    <p>Supabase’s built-in e-mail only reaches the project’s own team, so connect a mail account once. Gmail example:</p>
+    <ol><li>On the sending Gmail account, turn on ${extLink('https://myaccount.google.com/signinoptions/twosv', '2-Step Verification')}, then create an ${extLink('https://myaccount.google.com/apppasswords', 'App password')} named <i>Supabase</i> and copy the 16 letters.</li>
+    <li>Open ${extLink(sbLink('auth/smtp'), 'Authentication › Emails › SMTP Settings')}, enable custom SMTP and enter: host <code>smtp.gmail.com</code>, port <code>465</code>, username and sender = the Gmail address, password = the app password, sender name e.g. <i>${h(state.settings.companyName || 'Company')} Capacity Planner</i>.</li>
+    <li>Open ${extLink(sbLink('auth/templates'), 'Authentication › Emails › Templates › Reset password')}. Set the subject to <i>Your password reset code</i> and replace the body with:</li></ol>
+    ${codeBlock('dgMail', EMAIL_TEMPLATE, { name: 'Reset password e-mail' })}
+    <p>Test: sign out › <b>Forgot password?</b>. The default limit is 30 e-mails per hour (${extLink(sbLink('auth/rate-limits'), 'Rate Limits')}).</p>`)}
+
+  ${step(10, 'Hand-over checklist', 'Before you give the address to the customer', `
+    <ul><li>The sign-in box shows the customer’s company name and <i>Cloud: …supabase.co</i> at the bottom.</li>
+    <li>Admin, editor and viewer logins all work; the viewer cannot change anything.</li>
+    <li>A change made on one device appears on another within about 20 seconds.</li>
+    <li><b>Export › Excel workbook</b> opens in Excel with working formulas.</li>
+    <li>The customer knows: a free Supabase project pauses after 7 days without use. Open the ${extLink(sbLink(''), 'Supabase dashboard')} and click <b>Restore project</b> if that happens; no data is lost.</li>
+    <li>Take a first backup: <b>Settings › Data & backup › Download backup</b>.</li></ul>`)}
+
+  <section class="card"><div class="card-h"><div><h2>Troubleshooting</h2><div class="sub">The sign-in screen and Settings name the exact problem</div></div></div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Message</th><th>Fix</th></tr></thead><tbody>
+    <tr><td>E-mail or password is not correct</td><td>The login must exist in ${extLink(sbLink('auth/users'), 'Authentication › Users')} of <b>this</b> project, created with <i>Auto Confirm User</i>. Your supabase.com account is not a planner login.</td></tr>
+    <tr><td>… has no access to this planner yet</td><td>The e-mail is not in the user list. An admin adds it in Settings › Users & access, or re-run step 2 with that e-mail.</td></tr>
+    <tr><td>Publishable key does not belong to this project</td><td>Copy the key again from ${extLink(sbLink('settings/api-keys'), 'API Keys')} and save it in Settings › Cloud connection.</td></tr>
+    <tr><td>The user-management function “admin-users” did not answer</td><td>Step 4: the name must be exactly <code>admin-users</code> and JWT verification must be off.</td></tr>
+    <tr><td>Password e-mails are not set up yet</td><td>Do step 9, or reset the password in Settings › Users & access.</td></tr>
+    <tr><td>Nothing loads, red dot in the side bar</td><td>The project may be paused: restore it in the ${extLink(sbLink(''), 'Supabase dashboard')}.</td></tr>
+    </tbody></table></div></section>
+
+  <section class="card"><div class="card-h"><div><h2>Updating the planner later</h2></div></div><div class="card-b prose">
+    <p>Replace only the planner page (<code>${h(page)}</code>) in the same place. <code>capacity-config.json</code> and the data in Supabase stay as they are, so nothing needs to be entered again. Ask users to press <b>Ctrl+F5</b> once.</p></div></section>`;
+}
+
+/* ---------- actions used by the guide ---------- */
+Object.assign(Actions, {
+  async copyBlock(t) {
+    const el = document.getElementById(t.dataset.target); if (!el) return;
+    try { await navigator.clipboard.writeText(el.textContent); toast('Copied'); }
+    catch (e) { const r = document.createRange(); r.selectNodeContents(el); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Press Ctrl+C to copy'); }
+  },
+  async dlAsset(t) {
+    const a = t.dataset.asset, txt = (name, body, type) => download(name, new Blob([body], { type: type || 'text/plain' }));
+    if (a === 'sql') return txt('supabase_setup.sql', deploySql());
+    if (a === 'fn') return txt('admin-users-function.txt', window.DEPLOY_ASSETS.fn || '');
+    if (a === 'manifest') return txt('capacity.webmanifest', manifestText(), 'application/manifest+json');
+    if (a === 'config') {
+      const c = Cloud.config();
+      if (!c.url || !c.key) return toast('Connect first in Settings › General › Cloud connection.');
+      return txt('capacity-config.json', JSON.stringify({ url: c.url, anonKey: c.key, workspace: c.workspace }, null, 2), 'application/json');
+    }
+  },
+  blankStart() {
+    confirmBox('Start a new company (empty)?', 'All company details, machines, routings and monthly plans will be removed so you can set up a new company from scratch. Plant standards keep their default values. Download a backup first if you may need the current data.', 'Start empty', () => {
+      state = blankState(); commit(); ui.mastersTab = 'machines'; go('settings'); toast('Empty company ready. Enter the company name, then add machines in Masters.');
+    }, true);
+  }
+});
+
+function blankState() {
+  const d = defaultState();
+  return normalise({
+    version: 4, year: new Date().getFullYear(), month: new Date().getMonth(), scenario: 'standard',
+    settings: Object.assign({}, d.settings, { companyName: 'Your Company Name', subtitle: 'Capacity Plan & Machine Loading', logo: '', holidays: [], holidayNames: {} }),
+    machines: [], operations: [], plans: {}
+  });
+}
+
+document.addEventListener('input', ev => {
+  if (ev.target.id === 'dgEmail') { ui.deployEmail = ev.target.value; const pre = $('#dgSql'); if (pre) pre.textContent = deploySql(); }
+});
+document.addEventListener('change', ev => {
+  const n = ev.target.dataset && ev.target.dataset.dstep;
+  if (n) { ui.deployDone = Object.assign({}, ui.deployDone, { [n]: ev.target.checked }); LS.set('cp4_deploy_done', ui.deployDone); render(true); }
+});
+ui.deployDone = LS.get('cp4_deploy_done') || {};
+
+/* ---------- boot (runs last) ---------- */
+'use strict';
 (function boot() {
   applyTheme();
   state = loadLocal();

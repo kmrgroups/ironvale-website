@@ -463,7 +463,7 @@ input[data-locked], select[data-locked], textarea[data-locked] { background: var
    user of this site is connected automatically. Leave empty to let each
    user enter it under Settings › Cloud sync.
    ====================================================================== */
-window.CAPACITY_CLOUD_CONFIG = { url: "https://gjwdgpmgcfozyzxckqsu.supabase.co", anonKey: "https://gjwdgpmgcfozyzxckqsu.supabase.co", workspace: "main" };
+window.CAPACITY_CLOUD_CONFIG = { url: "https://gjwdgpmgcfozyzxckqsu.supabase.co", anonKey: "sb_publishable_5yiWEiHkEKBq5qsVGaejzQ_udMz12bp", workspace: "main" };
 </script>
 </head>
 <body>
@@ -1014,15 +1014,19 @@ window.SEED_DATA = {"version": 4, "year": 2026, "month": 8, "scenario": "standar
   };
   const K_CFG = 'cp4_cloud_cfg', K_SES = 'cp4_cloud_session';
 
+  function atobSafe(k) { try { return atob(String(k).split('.')[1] || ''); } catch (e) { return ''; } }
   const Cloud = {
     config() {
       const pre = root.CAPACITY_CLOUD_CONFIG || {};
       const saved = LS.get(K_CFG) || {};
-      return {
-        url: (saved.url || pre.url || '').replace(/\/+$/, ''),
-        key: saved.key || pre.anonKey || '',
-        workspace: saved.workspace || pre.workspace || 'main',
-        preconfigured: Boolean(pre.url && pre.anonKey)
+      const clean = v => String(v || '').replace(/\s+/g, '');          // pasted values often carry spaces / line breaks
+      const preUrl = clean(pre.url), preKey = clean(pre.anonKey);
+      const preconfigured = Boolean(preUrl && preKey);
+      return {                                                            // values in the page always win over values saved in the browser
+        url: (preconfigured ? preUrl : clean(saved.url)).replace(/\/(rest|auth)\/v1.*$/, '').replace(/\/+$/, ''),
+        key: preconfigured ? preKey : clean(saved.key),
+        workspace: clean(saved.workspace || pre.workspace) || 'main',
+        preconfigured
       };
     },
     saveConfig(cfg) { LS.set(K_CFG, { url: cfg.url, key: cfg.key, workspace: cfg.workspace || 'main' }); },
@@ -1055,6 +1059,18 @@ window.SEED_DATA = {"version": 4, "year": 2026, "month": 8, "scenario": "standar
       return body;
     },
 
+    // Checks the URL and key without signing in; returns '' when fine, else a plain-language problem
+    async diagnose() {
+      const c = this.config();
+      if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(c.url) && !/^https?:\/\/localhost/.test(c.url)) return `The Project URL "${c.url}" does not look right. It should be like https://abcdefgh.supabase.co`;
+      if (/^sb_secret_/.test(c.key) || /service_role/.test(atobSafe(c.key))) return 'A SECRET key was pasted. Use the Publishable (or anon public) key instead, and replace the secret key in Supabase because it is now exposed.';
+      try {
+        const r = await fetch(c.url + '/auth/v1/settings', { headers: { apikey: c.key } });
+        if (r.status === 401 || r.status === 403) return 'The Publishable key does not belong to this Supabase project. Copy it again from Project Settings › API Keys of the same project as the URL.';
+        if (!r.ok) return 'Supabase answered with error ' + r.status + '. The project may be paused: open the Supabase dashboard and restore it.';
+      } catch (e) { return 'Cannot reach ' + c.url + '. Check the Project URL, or the project may be paused.'; }
+      return '';
+    },
     async signIn(email, password) {
       const b = await this._fetch('/auth/v1/token?grant_type=password', { method: 'POST', anon: true, body: JSON.stringify({ email, password }) });
       LS.set(K_SES, { access_token: b.access_token, refresh_token: b.refresh_token, email: (b.user && b.user.email) || email });
@@ -1286,7 +1302,7 @@ function syncPillHtml() {
 }
 async function cloudBoot() {
   if (!Cloud.configured()) { cloud.role = null; hideGate(); setSync('local'); return; }
-  if (!Cloud.signedIn()) { cloud.role = null; showGate('signin'); setSync('local'); return; }
+  if (!Cloud.signedIn()) { cloud.role = null; showGate('signin'); setSync('local'); Cloud.diagnose().then(d => { if (d && !Cloud.signedIn()) showGate('signin', d); }); return; }
   try {
     showGate('loading');
     setSync('busy', 'Connecting…');
@@ -1362,7 +1378,7 @@ function showGate(kind, msg) {
       </form>
       <p class="small muted">Accounts are created by your administrator. Forgot your password? Ask your administrator to reset it.</p>
       ${!c.preconfigured ? `<button class="btn ghost sm" data-act="forgetCloud">Disconnect cloud and work on this device only</button>` : ''}`;
-  g.innerHTML = `<div class="gate-card"><div class="gate-brand"><div class="logo">${logo}</div><div><div class="gate-co">${h(s.companyName || 'Capacity Planner')}</div><div class="small muted">${h(s.subtitle || 'Capacity Planner')}</div></div></div><h1>Sign in</h1>${body}<p class="small muted gate-foot">Powered by KMR Group of Companies</p></div>`;
+  g.innerHTML = `<div class="gate-card"><div class="gate-brand"><div class="logo">${logo}</div><div><div class="gate-co">${h(s.companyName || 'Capacity Planner')}</div><div class="small muted">${h(s.subtitle || 'Capacity Planner')}</div></div></div><h1>Sign in</h1>${body}<p class="small muted gate-foot">Powered by KMR Group of Companies<br><span style="font-size:10.5px">Cloud: ${h((c.url || '').replace(/^https?:\/\//, ''))}</span></p></div>`;
   g.hidden = false;
   document.body.classList.add('gated');
   const f = $('#gateForm');
@@ -1372,7 +1388,13 @@ function showGate(kind, msg) {
       const email = $('#gEmail').value.trim(), pass = $('#gPass').value; ui.lastEmail = email;
       const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Signing in…';
       try { await Cloud.signIn(email, pass); await cloudBoot(); }
-      catch (e) { showGate('signin', /invalid/i.test(e.message) ? 'E-mail or password is not correct.' : e.message); }
+      catch (e) {
+        let msg = e.message;
+        if (/invalid login credentials/i.test(msg)) msg = 'E-mail or password is not correct. This must be a user created in Supabase › Authentication › Users of this project (not your supabase.com account), with “Auto Confirm User” ticked.';
+        else if (/email not confirmed/i.test(msg)) msg = 'This user is not confirmed yet. In Supabase › Authentication › Users, delete the user and add it again with “Auto Confirm User” ticked.';
+        else { const d = await Cloud.diagnose(); if (d) msg = d; }
+        showGate('signin', msg);
+      }
     });
     ($('#gEmail').value ? $('#gPass') : $('#gEmail')).focus();
   }

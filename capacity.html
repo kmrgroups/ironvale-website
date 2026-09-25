@@ -455,6 +455,27 @@ input[data-locked], select[data-locked], textarea[data-locked] { background: var
 .pwd-box .inp { font-family: var(--mono); }
 .cred { font: 13px/1.7 var(--mono); background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; word-break: break-all; }
 
+/* ---------- account, sign out, password eye ---------- */
+.side-out { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 10px; margin: 6px 0 10px; border-radius: 7px; border: 1px solid rgba(255,255,255,.14); color: #E3E9F2; font-size: 12.5px; }
+.side-out:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.3); }
+.side-out:focus-visible { outline: 2px solid var(--brass); }
+.side-out svg { width: 16px; height: 16px; }
+@media (max-width: 1180px) { .side-out { justify-content: center; padding: 9px 0; } }
+.acct { all: unset; box-sizing: border-box; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--brass); color: #fff; font: 600 12px/1 var(--sans); letter-spacing: .03em; flex: none; }
+.acct:hover { filter: brightness(1.08); }
+.acct:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pw-wrap { position: relative; }
+.pw-wrap .inp { padding-right: 42px; }
+.pw-wrap .eye { all: unset; cursor: pointer; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 32px; height: 30px; display: grid; place-items: center; color: var(--muted); border-radius: 6px; }
+.pw-wrap .eye:hover { color: var(--text); background: var(--surface-2); }
+.pw-wrap .eye:focus-visible { outline: 2px solid var(--focus); }
+.pw-wrap .eye svg { width: 18px; height: 18px; }
+.inp.otp { font: 600 20px/1 var(--mono); letter-spacing: .35em; text-align: center; height: 46px; }
+.acct-card { display: flex; gap: 12px; align-items: center; padding: 4px 0 8px; }
+.acct-card .acct { width: 44px; height: 44px; font-size: 15px; cursor: default; }
+.conn-details { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+.conn-details summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+
 </style>
 <script>
 /* ======================================================================
@@ -1016,20 +1037,32 @@ window.SEED_DATA = {"version": 4, "year": 2026, "month": 8, "scenario": "standar
 
   function atobSafe(k) { try { return atob(String(k).split('.')[1] || ''); } catch (e) { return ''; } }
   const Cloud = {
+    // Where the connection comes from, in order:
+    //   1. values typed in the page itself (CAPACITY_CLOUD_CONFIG)       — optional, for experts
+    //   2. values saved in THIS browser from Settings › Cloud connection  — per device
+    //   3. the site file capacity-config.json next to the page             — once for everyone
     config() {
-      const pre = root.CAPACITY_CLOUD_CONFIG || {};
-      const saved = LS.get(K_CFG) || {};
       const clean = v => String(v || '').replace(/\s+/g, '');          // pasted values often carry spaces / line breaks
-      const preUrl = clean(pre.url), preKey = clean(pre.anonKey);
-      const preconfigured = Boolean(preUrl && preKey);
-      return {                                                            // values in the page always win over values saved in the browser
-        url: (preconfigured ? preUrl : clean(saved.url)).replace(/\/(rest|auth)\/v1.*$/, '').replace(/\/+$/, ''),
-        key: preconfigured ? preKey : clean(saved.key),
-        workspace: clean(saved.workspace || pre.workspace) || 'main',
-        preconfigured
-      };
+      const fix = u => clean(u).replace(/\/(rest|auth|functions)\/v1.*$/, '').replace(/\/+$/, '');
+      const pre = root.CAPACITY_CLOUD_CONFIG || {}, saved = LS.get(K_CFG) || {}, site = root.CAPACITY_SITE_CONFIG || {};
+      let src = null, source = '';
+      if (clean(pre.url) && clean(pre.anonKey)) { src = { url: pre.url, key: pre.anonKey, workspace: pre.workspace }; source = 'page'; }
+      else if (clean(saved.url) && clean(saved.key)) { src = saved; source = 'browser'; }
+      else if (clean(site.url) && clean(site.anonKey || site.key)) { src = { url: site.url, key: site.anonKey || site.key, workspace: site.workspace }; source = 'site'; }
+      src = src || {};
+      return { url: fix(src.url), key: clean(src.key), workspace: clean(src.workspace) || 'main', source,
+               preconfigured: source === 'page' || source === 'site', hasSiteFile: Boolean(clean(site.url)) };
+    },
+    // Reads capacity-config.json from the same folder as the page (ignored when opened from a PC folder)
+    async loadSiteConfig() {
+      if (!/^https?:/.test(location.protocol)) return;
+      try {
+        const r = await fetch('capacity-config.json?v=' + Date.now(), { cache: 'no-store' });
+        if (r.ok) { const j = await r.json(); if (j && j.url) root.CAPACITY_SITE_CONFIG = j; }
+      } catch (e) { /* no site file — fine */ }
     },
     saveConfig(cfg) { LS.set(K_CFG, { url: cfg.url, key: cfg.key, workspace: cfg.workspace || 'main' }); },
+    clearBrowserConfig() { LS.del(K_CFG); },
     clearConfig() { LS.del(K_CFG); LS.del(K_SES); },
     configured() { const c = this.config(); return Boolean(c.url && c.key); },
     session() { return LS.get(K_SES); },
@@ -1063,8 +1096,9 @@ window.SEED_DATA = {"version": 4, "year": 2026, "month": 8, "scenario": "standar
     },
 
     // Checks the URL and key without signing in; returns '' when fine, else a plain-language problem
-    async diagnose() {
-      const c = this.config();
+    async diagnose(cfg) {
+      const c = cfg || this.config();
+      if (!c.url || !c.key) return 'Enter both the Project URL and the Publishable key.';
       if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(c.url) && !/^https?:\/\/localhost/.test(c.url)) return `The Project URL "${c.url}" does not look right. It should be like https://abcdefgh.supabase.co`;
       if (/^sb_secret_/.test(c.key) || /service_role/.test(atobSafe(c.key))) return 'A SECRET key was pasted. Use the Publishable (or anon public) key instead, and replace the secret key in Supabase because it is now exposed.';
       try {
@@ -1078,6 +1112,19 @@ window.SEED_DATA = {"version": 4, "year": 2026, "month": 8, "scenario": "standar
       const b = await this._fetch('/auth/v1/token?grant_type=password', { method: 'POST', anon: true, body: JSON.stringify({ email, password }) });
       LS.set(K_SES, { access_token: b.access_token, refresh_token: b.refresh_token, email: (b.user && b.user.email) || email });
       return this.session();
+    },
+    // Forgot password: Supabase e-mails a one-time code (needs e-mail set up in Supabase — see guide)
+    async sendResetCode(email) {
+      await this._fetch('/auth/v1/recover', { method: 'POST', anon: true, body: JSON.stringify({ email }) });
+    },
+    async verifyResetCode(email, token) {
+      let b, lastErr;
+      for (const type of ['recovery', 'email']) {
+        try { b = await this._fetch('/auth/v1/verify', { method: 'POST', anon: true, _retried: true, body: JSON.stringify({ type, email, token }) }); break; }
+        catch (e) { lastErr = e; }
+      }
+      if (!b || !b.access_token) throw lastErr || new Error('The code is not valid.');
+      LS.set(K_SES, { access_token: b.access_token, refresh_token: b.refresh_token, email: (b.user && b.user.email) || email });
     },
     async refresh() {
       const s = this.session(); if (!s) throw new Error('Please sign in again.');
@@ -1158,6 +1205,9 @@ const ICONS = {
   settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
   users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
   lock: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4',
+  eye: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  eyeOff: 'M17.9 17.9A10.1 10.1 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.2 3.2M14.1 14.1a3 3 0 1 1-4.2-4.2M1 1l22 22',
+  logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
   help: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01',
   more: 'M5 12h.01M12 12h.01M19 12h.01',
   download: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3',
@@ -1363,44 +1413,131 @@ function conflictModal(remote) {
 }
 
 /* ---------- sign-in gate (cloud mode) ---------- */
-function showGate(kind, msg) {
+/* ---------- small shared pieces ---------- */
+// Password box with a show / hide eye button
+function pwField(id, label, auto, extra) {
+  return `<div class="field"><label for="${id}">${h(label)}</label><div class="pw-wrap"><input class="inp" id="${id}" type="password" autocomplete="${auto || 'current-password'}" ${extra || ''}><button type="button" class="eye" data-act="togglePw" data-for="${id}" aria-label="Show password" title="Show password">${icon('eye')}</button></div></div>`;
+}
+// Cloud connection form (Settings and the sign-in screen use the same one)
+function connectionFormHtml() {
+  const c = Cloud.config();
+  const src = { page: 'written inside the page', browser: 'saved in this browser', site: 'from the site file capacity-config.json', '': 'not connected' }[c.source];
+  return `<div class="small muted">Current connection: <b>${h(src)}</b>${c.url ? ` · ${h(c.url.replace(/^https?:\/\//, ''))}` : ''}</div>
+    <div class="form-grid"><div class="field"><label for="cnUrl">Project URL</label><input class="inp" id="cnUrl" value="${h(c.url)}" placeholder="https://abcdefgh.supabase.co" autocomplete="off" spellcheck="false"><span class="hint">Supabase › Connect, or Project Settings › API Keys</span></div>
+    <div class="field"><label for="cnKey">Publishable key</label><input class="inp" id="cnKey" value="${h(c.key)}" placeholder="sb_publishable_… or eyJhbGci…" autocomplete="off" spellcheck="false"><span class="hint">Never the secret / service_role key</span></div>
+    <div class="field"><label for="cnWs">Workspace</label><input class="inp" id="cnWs" value="${h(c.workspace)}" autocomplete="off"><span class="hint">Leave as <b>main</b> unless you run several plants</span></div></div>
+    <div id="cnInfo"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="connTest">${icon('check')}Test connection</button><button class="btn primary" data-act="connSave">${icon('cloud')}Save & connect</button><button class="btn" data-act="connDownload">${icon('download')}Download site file</button>${c.source === 'browser' ? `<button class="btn ghost" data-act="connReset">Forget on this browser</button>` : ''}</div>
+    <p class="small muted">“Save & connect” connects this browser straight away. To connect <b>everyone</b> automatically, click “Download site file” and upload <code>capacity-config.json</code> once to GitHub, in the same folder as the planner page. Later updates of the planner page then never need these values again.</p>`;
+}
+
+/* ---------- sign-in gate (cloud mode) ---------- */
+let resendTimer = null;
+function showGate(kind, msg, okMsg) {
   let g = $('#gate');
   if (!g) { g = document.createElement('div'); g.id = 'gate'; g.className = 'gate'; document.body.appendChild(g); }
   const s = state ? state.settings : {}, c = Cloud.config(), ses = Cloud.session();
   const initials = (s.companyName || 'C').split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const logo = s.logo ? `<img src="${h(s.logo)}" alt="">` : h(initials);
-  let body = '';
+  const err = msg ? `<div class="note crit">${icon('alert')}<div>${h(msg)}</div></div>` : '';
+  const ok = okMsg ? `<div class="note ok">${icon('check')}<div>${h(okMsg)}</div></div>` : '';
+  let title = 'Sign in', body = '';
   if (kind === 'loading') body = `<p class="muted">Loading the shared plan…</p>`;
   else if (kind === 'noaccess') body = `<div class="note warn">${icon('alert')}<div><b>${h(ses && ses.email)}</b> has signed in, but has no access to this planner yet. Ask your administrator to add you.</div></div><div class="gate-actions"><button class="btn" data-act="gateRetry">Try again</button><button class="btn ghost" data-act="signOut">Sign out</button></div>`;
-  else if (kind === 'error') body = `<div class="note crit">${icon('alert')}<div>${h(msg)}</div></div><div class="gate-actions"><button class="btn primary" data-act="gateRetry">Try again</button><button class="btn ghost" data-act="signOut">Sign out</button></div>`;
-  else body = `${msg ? `<div class="note crit">${icon('alert')}<div>${h(msg)}</div></div>` : ''}
-      <form id="gateForm" class="gate-form" autocomplete="on">
+  else if (kind === 'error') body = `${err}<div class="gate-actions"><button class="btn primary" data-act="gateRetry">Try again</button><button class="btn ghost" data-act="signOut">Sign out</button></div>`;
+  else if (kind === 'forgot') {
+    title = 'Forgot password';
+    body = `${err}<p class="small muted">Enter your e-mail. We will send you a one-time code to set a new password.</p>
+      <form id="gateForgot" class="gate-form"><div class="field"><label for="gfEmail">E-mail</label><input class="inp" id="gfEmail" type="email" autocomplete="username" required value="${h(ui.lastEmail || '')}"></div>
+      <button class="btn primary" type="submit" style="height:40px">Send code</button></form>
+      <button class="btn ghost sm" data-act="gateBack">← Back to sign in</button>`;
+  } else if (kind === 'otp') {
+    title = 'Set a new password';
+    body = `${err}${ok}<form id="gateOtp" class="gate-form">
+      <div class="field"><label for="goCode">Code from the e-mail</label><input class="inp otp" id="goCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required placeholder="••••••"></div>
+      ${pwField('goPw1', 'New password', 'new-password', 'minlength="8" required')}
+      ${pwField('goPw2', 'Repeat new password', 'new-password', 'required')}
+      <button class="btn primary" type="submit" style="height:40px">Save password & sign in</button></form>
+      <div class="gate-actions"><button class="btn sm" data-act="gateResend" id="gateResend">Send a new code</button><button class="btn ghost sm" data-act="gateBack">← Back to sign in</button></div>`;
+  } else {
+    body = `${err}${ok}<form id="gateForm" class="gate-form" autocomplete="on">
         <div class="field"><label for="gEmail">E-mail</label><input class="inp" id="gEmail" type="email" autocomplete="username" required value="${h(ui.lastEmail || '')}"></div>
-        <div class="field"><label for="gPass">Password</label><input class="inp" id="gPass" type="password" autocomplete="current-password" required></div>
+        ${pwField('gPass', 'Password', 'current-password', 'required')}
         <button class="btn primary" type="submit" style="height:40px">Sign in</button>
       </form>
-      <p class="small muted">Accounts are created by your administrator. Forgot your password? Ask your administrator to reset it.</p>
-      ${!c.preconfigured ? `<button class="btn ghost sm" data-act="forgetCloud">Disconnect cloud and work on this device only</button>` : ''}`;
-  g.innerHTML = `<div class="gate-card"><div class="gate-brand"><div class="logo">${logo}</div><div><div class="gate-co">${h(s.companyName || 'Capacity Planner')}</div><div class="small muted">${h(s.subtitle || 'Capacity Planner')}</div></div></div><h1>Sign in</h1>${body}<p class="small muted gate-foot">Powered by KMR Group of Companies<br><span style="font-size:10.5px">Cloud: ${h((c.url || '').replace(/^https?:\/\//, ''))}</span></p></div>`;
+      <div class="gate-actions" style="justify-content:space-between"><button class="btn ghost sm" data-act="gateForgot">Forgot password?</button><button class="btn ghost sm" data-act="gateConn">${icon('settings')}Connection</button></div>`;
+  }
+  g.innerHTML = `<div class="gate-card"><div class="gate-brand"><div class="logo">${logo}</div><div><div class="gate-co">${h(s.companyName || 'Capacity Planner')}</div><div class="small muted">${h(s.subtitle || 'Capacity Planner')}</div></div></div><h1>${h(title)}</h1>${body}<p class="small muted gate-foot">Powered by KMR Group of Companies<br><span style="font-size:10.5px">Cloud: ${h((c.url || 'not connected').replace(/^https?:\/\//, ''))}</span></p></div>`;
   g.hidden = false;
   document.body.classList.add('gated');
+  gateKind = kind;
+
   const f = $('#gateForm');
   if (f) {
     f.addEventListener('submit', async ev => {
       ev.preventDefault();
       const email = $('#gEmail').value.trim(), pass = $('#gPass').value; ui.lastEmail = email;
-      const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Signing in…';
+      const btn = f.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Signing in…';
       try { await Cloud.signIn(email, pass); await cloudBoot(); }
       catch (e) {
-        let msg = e.message;
-        if (/invalid login credentials/i.test(msg)) msg = 'E-mail or password is not correct. This must be a user created in Supabase › Authentication › Users of this project (not your supabase.com account), with “Auto Confirm User” ticked.';
-        else if (/email not confirmed/i.test(msg)) msg = 'This user is not confirmed yet. In Supabase › Authentication › Users, delete the user and add it again with “Auto Confirm User” ticked.';
-        else { const d = await Cloud.diagnose(); if (d) msg = d; }
-        showGate('signin', msg);
+        let m = e.message;
+        if (/invalid login credentials/i.test(m)) m = 'E-mail or password is not correct. Use “Forgot password?” below, or ask your administrator to reset it.';
+        else if (/email not confirmed/i.test(m)) m = 'This user is not confirmed yet. Ask your administrator to add you again from Users & Access.';
+        else { const d = await Cloud.diagnose(); if (d) m = d; }
+        showGate('signin', m);
       }
     });
     ($('#gEmail').value ? $('#gPass') : $('#gEmail')).focus();
   }
+  const fg = $('#gateForgot');
+  if (fg) {
+    fg.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const email = $('#gfEmail').value.trim().toLowerCase(); ui.lastEmail = email;
+      const btn = fg.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Sending…';
+      try { await Cloud.sendResetCode(email); ui.resetEmail = email; ui.resetSentAt = Date.now(); showGate('otp', '', `If ${email} has an account, a code is on its way. Check your inbox and spam folder.`); }
+      catch (e) { showGate('forgot', resetMailError(e.message)); }
+    });
+    $('#gfEmail').focus();
+  }
+  const fo = $('#gateOtp');
+  if (fo) {
+    fo.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const code = $('#goCode').value.replace(/\D/g, ''), a = $('#goPw1').value, b = $('#goPw2').value;
+      if (code.length < 6) return showGate('otp', 'Enter the code from the e-mail (6 or more digits).');
+      if (a.length < 8) return showGate('otp', 'The new password needs at least 8 characters.');
+      if (a !== b) return showGate('otp', 'The two passwords are different.');
+      const btn = fo.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        await Cloud.verifyResetCode(ui.resetEmail, code);
+        await Cloud.changePassword(a);
+        toast('Password changed. You are signed in.');
+        await cloudBoot();
+      } catch (e) {
+        Cloud.signOut();
+        showGate('otp', /expired|invalid|not found/i.test(e.message) ? 'The code is wrong or has expired. Check it, or send a new code.' : e.message);
+      }
+    });
+    $('#goCode').focus();
+    tickResend();
+  }
+}
+let gateKind = '';
+function tickResend() {
+  clearInterval(resendTimer);
+  const upd = () => {
+    const b = $('#gateResend'); if (!b) return clearInterval(resendTimer);
+    const left = Math.ceil(60 - (Date.now() - (ui.resetSentAt || 0)) / 1000);
+    b.disabled = left > 0; b.textContent = left > 0 ? `Send a new code (${left}s)` : 'Send a new code';
+    if (left <= 0) clearInterval(resendTimer);
+  };
+  upd(); resendTimer = setInterval(upd, 1000);
+}
+function resetMailError(m) {
+  if (/rate limit|too many|seconds/i.test(m)) return 'Too many requests. Please wait a minute and try again.';
+  if (/not authorized|smtp|sending|mail/i.test(m)) return 'Password e-mails are not set up yet. Ask your administrator to reset your password in Users & Access.';
+  return m;
 }
 function hideGate() { const g = $('#gate'); if (g) g.hidden = true; document.body.classList.remove('gated'); }
 
@@ -1491,7 +1628,7 @@ function renderShell() {
   $('#side').innerHTML = `
     <div class="brand"><div class="logo">${logo}</div><div class="brand-text"><div class="brand-name">${h(s.companyName)}</div><div class="brand-sub">${h(s.subtitle || 'Capacity Planner')}</div></div></div>
     <nav class="nav" aria-label="Main">${nav}</nav>
-    <div class="side-foot">${cloudActive() ? `<div class="me-line hide-rail" title="${h((Cloud.session() || {}).email)}">${h((Cloud.session() || {}).email)}<span class="role-chip">${h(roleLabel())}</span></div>` : ''}<div class="sync-pill hide-rail" id="syncPill">${syncPillHtml()}</div><div class="hide-rail">Powered by <a href="https://www.kmr-groups.com" target="_blank" rel="noopener">KMR Group of Companies</a></div></div>`;
+    <div class="side-foot">${cloudActive() ? `<div class="me-line hide-rail" title="${h((Cloud.session() || {}).email)}">${h((Cloud.session() || {}).email)}<span class="role-chip">${h(roleLabel())}</span></div>` : ''}<div class="sync-pill hide-rail" id="syncPill">${syncPillHtml()}</div>${cloudActive() ? `<button class="side-out" data-act="signOut" title="Sign out">${icon('logout')}<span class="lbl-t">Sign out</span></button>` : ''}<div class="hide-rail">Powered by <a href="https://www.kmr-groups.com" target="_blank" rel="noopener">KMR Group of Companies</a></div></div>`;
 
   const y = state.year, years = []; for (let i = y - 3; i <= y + 4; i++) years.push(i);
   const sc = state.scenario, sun = model.sundaysAvailable;
@@ -1510,6 +1647,7 @@ function renderShell() {
         <button data-scn="levelled" class="${sc === 'levelled' ? 'on' : ''}" title="Preview with Auto-Level moves applied">Levelled</button>
       </div>
       <button class="btn primary" data-act="exportMenu">${icon('download')}<span class="hide-sm">Export</span></button>
+      ${cloudActive() ? `<button class="acct" data-act="accountMenu" title="${h((Cloud.session() || {}).email)} · ${h(roleLabel())}" aria-label="My account">${h(((Cloud.session() || {}).email || '?').slice(0, 2).toUpperCase())}</button>` : ''}
     </div></div>`;
 
   const mob = ['overview', 'plan', 'capacity', 'schedule'];
@@ -1523,7 +1661,7 @@ function renderShell() {
 
 /* ---------- lock controls the signed-in role may not use ---------- */
 const EDITOR_ACTS = ['pastePlan', 'importXlsx', 'copyPrev', 'clearQty', 'applyLevel', 'clearSplits', 'addMachine', 'delMachine', 'addOp', 'delOp', 'opUp', 'alternates', 'pasteRoutings'];
-const ADMIN_ACTS = ['uploadLogo', 'removeLogo', 'addHoliday', 'delHoliday', 'importJson', 'resetAll'];
+const ADMIN_ACTS = ['uploadLogo', 'removeLogo', 'addHoliday', 'delHoliday', 'importJson', 'resetAll', 'connSave', 'connReset', 'connDownload'];
 const EDITOR_SETTINGS = ['levelTargetPct', 'lotSize', 'levelAnyMachine'];
 function actNeeds(act) { return ADMIN_ACTS.includes(act) ? 'admin' : EDITOR_ACTS.includes(act) ? 'editor' : null; }
 function fieldNeeds(el) {
@@ -1989,16 +2127,12 @@ Pages.settings = () => {
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${hol.map(d => `<span class="tag">${fmtDateLong(d)}${s.holidayNames && s.holidayNames[d] ? ' · ' + h(s.holidayNames[d]) : ''} <button class="btn sm ghost" style="height:18px;padding:0 3px" data-act="delHoliday" data-d="${d}" aria-label="Remove">×</button></span>`).join('') || '<span class="small muted">No holidays added.</span>'}</div></div>
       </div></section>
 
-    <section class="card"><div class="card-h"><div><h2>Cloud sync & my account</h2><div class="sub">One shared plan for everyone, on phone, tablet and PC (Supabase free plan).</div></div></div>
+    <section class="card"><div class="card-h"><div><h2>${cloudActive() ? 'My account & cloud' : 'Cloud connection'}</h2><div class="sub">One shared plan for everyone, on phone, tablet and PC (Supabase free plan).</div></div></div>
       <div class="card-b" style="display:flex;flex-direction:column;gap:12px">
         ${cloudActive() ? `<div class="note ok">${icon('check')}<div>Signed in as <b>${h(session.email)}</b> · <b>${h(roleLabel())}</b>. ${h(cloud.msg)}<br><span class="small muted">${h(ROLE_INFO[cloud.role].text)}</span></div></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="syncNow">Sync now</button><button class="btn" data-act="changePassword">${icon('lock')}Change my password</button>${can('admin') ? `<button class="btn" data-nav="users">${icon('users')}Manage users</button>` : ''}<button class="btn ghost" data-act="signOut">Sign out</button></div>`
-        : c.preconfigured ? note('', 'cloud', 'This site is connected to the shared cloud plan.')
-        : `<p class="small muted">Not connected — data is saved in this browser only. To share one plan with your team, follow “Option 3” in SETUP_GUIDE, then enter the details below.</p>
-          <div class="form-grid"><div class="field"><label for="cUrl">Project URL</label><input class="inp" id="cUrl" value="${h(c.url)}" placeholder="https://xxxx.supabase.co"></div><div class="field"><label for="cKey">Publishable (anon) key</label><input class="inp" id="cKey" value="${h(c.key)}" placeholder="sb_publishable_… or eyJhbGciOi…"></div></div>
-          <div class="form-grid"><div class="field"><label for="cWs">Workspace</label><input class="inp" id="cWs" value="${h(c.workspace)}"><span class="hint">One workspace per plant</span></div></div>
-          <div class="form-grid"><div class="field"><label for="cEmail">E-mail</label><input class="inp" id="cEmail" type="email" autocomplete="username"></div><div class="field"><label for="cPass">Password</label><input class="inp" id="cPass" type="password" autocomplete="current-password"></div></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="signIn">${icon('cloud')}Connect & sign in</button></div>`}
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="syncNow">Sync now</button><button class="btn" data-act="changePassword">${icon('lock')}Change my password</button>${can('admin') ? `<button class="btn" data-nav="users">${icon('users')}Manage users</button>` : ''}<button class="btn danger" data-act="signOut">${icon('logout')}Sign out</button></div>
+          ${can('admin') ? `<details class="conn-details"><summary>Cloud connection settings</summary><div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">${connectionFormHtml()}</div></details>` : ''}`
+        : `<p class="small muted">Not connected — data is saved in this browser only. Enter your Supabase details to share one plan with your team (see SETUP_GUIDE, steps 1–5).</p>${connectionFormHtml()}`}
       </div></section>
   </div>
 
@@ -2176,7 +2310,7 @@ const Actions = {
   nextMonth() { const m = state.month === 11 ? 0 : state.month + 1; setPeriod(state.month === 11 ? state.year + 1 : state.year, m); },
   moreMenu() {
     const items = PAGES.filter(p => !['overview', 'plan', 'capacity', 'schedule'].includes(p.id));
-    modal({ title: 'More', body: `<div style="display:flex;flex-direction:column;gap:6px">${items.map(p => `<button class="btn" style="justify-content:flex-start;height:44px" data-nav="${p.id}">${icon(p.id)}${h(p.label)}</button>`).join('')}</div>`, buttons: [], cancel: 'Close' });
+    modal({ title: 'More', body: `<div style="display:flex;flex-direction:column;gap:6px">${items.map(p => `<button class="btn" style="justify-content:flex-start;height:44px" data-nav="${p.id}">${icon(p.id)}${h(p.label)}</button>`).join('')}${cloudActive() ? `<button class="btn" style="justify-content:flex-start;height:44px" data-act="changePassword">${icon('lock')}Change my password</button><button class="btn danger" style="justify-content:flex-start;height:44px" data-act="signOut">${icon('logout')}Sign out · ${h((Cloud.session() || {}).email)}</button>` : ''}</div>`, buttons: [], cancel: 'Close' });
   },
   exportMenu() {
     modal({
@@ -2334,13 +2468,55 @@ const Actions = {
   async syncNow() { if (can('editor') && cloud.dirty) await cloudSave(); else await pullIfChanged(true); render(); toast('Up to date'); },
   forgetCloud() { Cloud.clearConfig(); cloud.role = null; clearInterval(cloud.poll); hideGate(); setSync('local'); render(); toast('Working on this device only'); },
   changePassword() {
-    modal({ title: 'Change my password', body: `<div class="field"><label for="npw1">New password</label><input class="inp" id="npw1" type="password" autocomplete="new-password" minlength="8"></div><div class="field"><label for="npw2">Repeat new password</label><input class="inp" id="npw2" type="password" autocomplete="new-password"></div><div id="npwInfo" class="small muted">At least 8 characters.</div>`,
+    modal({ title: 'Change my password', body: `${pwField('npw1', 'New password', 'new-password', 'minlength="8"')}${pwField('npw2', 'Repeat new password', 'new-password')}<div id="npwInfo" class="small muted">At least 8 characters.</div>`,
       buttons: [{ label: 'Change password', cls: 'primary', act: async () => {
         const a = $('#npw1').value, b = $('#npw2').value;
         if (a.length < 8) { $('#npwInfo').textContent = 'Use at least 8 characters.'; return true; }
         if (a !== b) { $('#npwInfo').textContent = 'The two passwords are different.'; return true; }
         try { await Cloud.changePassword(a); toast('Password changed'); } catch (e) { $('#npwInfo').textContent = e.message; return true; }
       } }] });
+  },
+  togglePw(t) {
+    const i = document.getElementById(t.dataset.for); if (!i) return;
+    const show = i.type === 'password'; i.type = show ? 'text' : 'password';
+    t.innerHTML = icon(show ? 'eyeOff' : 'eye'); t.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); t.title = t.getAttribute('aria-label');
+    i.focus();
+  },
+  gateForgot() { const e = $('#gEmail'); if (e && e.value) ui.lastEmail = e.value.trim(); showGate('forgot'); },
+  gateBack() { showGate('signin'); },
+  async gateResend() {
+    try { await Cloud.sendResetCode(ui.resetEmail); ui.resetSentAt = Date.now(); showGate('otp', '', 'A new code has been sent.'); }
+    catch (e) { showGate('otp', resetMailError(e.message)); }
+  },
+  gateConn() {
+    modal({ title: 'Cloud connection', body: connectionFormHtml(), buttons: [], cancel: 'Close' });
+  },
+  accountMenu() {
+    const ses = Cloud.session() || {};
+    modal({ title: 'My account', body: `<div class="acct-card"><span class="acct">${h((ses.email || '?').slice(0, 2).toUpperCase())}</span><div><b>${h(ses.email)}</b><div class="small muted">${h(roleLabel())} · ${h(ROLE_INFO[cloud.role] ? ROLE_INFO[cloud.role].text : '')}</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><button class="btn" style="justify-content:flex-start;height:42px" data-act="changePassword">${icon('lock')}Change my password</button>${can('admin') ? `<button class="btn" style="justify-content:flex-start;height:42px" data-nav="users">${icon('users')}Users & Access</button>` : ''}<button class="btn danger" style="justify-content:flex-start;height:42px" data-act="signOut">${icon('logout')}Sign out</button></div>`, buttons: [], cancel: 'Close' });
+  },
+  async connTest() {
+    const cfg = readConnForm(); connInfo('busy', 'Testing…');
+    const d = await Cloud.diagnose(cfg);
+    connInfo(d ? 'crit' : 'ok', d || `Connection works: ${cfg.url.replace(/^https?:\/\//, '')} answered and the key is valid.`);
+  },
+  async connSave() {
+    const cfg = readConnForm(); connInfo('busy', 'Checking…');
+    const d = await Cloud.diagnose(cfg); if (d) return connInfo('crit', d);
+    const before = Cloud.config().url;
+    Cloud.saveConfig(cfg);
+    if (before !== cfg.url) Cloud.signOut();
+    closeModal(); toast('Connection saved on this browser'); cloud.role = null; await cloudBoot(); render();
+  },
+  async connDownload() {
+    const cfg = readConnForm();
+    const d = await Cloud.diagnose(cfg); if (d) return connInfo('crit', d);
+    download('capacity-config.json', new Blob([JSON.stringify({ url: cfg.url, anonKey: cfg.key, workspace: cfg.workspace }, null, 2)], { type: 'application/json' }));
+    connInfo('ok', 'Downloaded capacity-config.json. Upload it once to GitHub, in the same folder as capacity.html, and commit. Everyone is then connected automatically.');
+  },
+  connReset() {
+    Cloud.clearBrowserConfig(); Cloud.signOut(); closeModal(); cloud.role = null; toast('Browser connection removed'); cloudBoot(); render();
   },
   reloadUsers() { loadUsers(); },
   addUser() {
@@ -2421,6 +2597,16 @@ function applyRoutingRows(rows, replace) {
     if (r.qty != null && !isNaN(r.qty)) { const pp = p.parts[clean(r.partNo)] = p.parts[clean(r.partNo)] || {}; pp.qty = r.qty; if (!pp.due) pp.due = model.monthEnd; }
   });
   commit();
+}
+
+/* ---------- cloud connection form ---------- */
+function readConnForm() {
+  const clean = v => String(v || '').replace(/\s+/g, '');
+  return { url: clean($('#cnUrl').value).replace(/\/(rest|auth|functions)\/v1.*$/, '').replace(/\/+$/, ''), key: clean($('#cnKey').value), workspace: clean($('#cnWs').value) || 'main' };
+}
+function connInfo(kind, text) {
+  const el = $('#cnInfo'); if (!el) return toast(text);
+  el.innerHTML = kind === 'busy' ? `<p class="small muted">${h(text)}</p>` : note(kind === 'ok' ? 'ok' : 'crit', kind === 'ok' ? 'check' : 'alert', h(text));
 }
 
 /* ---------- users (admin) ---------- */
@@ -2593,7 +2779,7 @@ window.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.c
   const u = LS.get(K_UI); if (u && u.page && PAGES.some(p => p.id === u.page)) ui.page = u.page;
   const hash = (location.hash || '').replace('#', ''); if (PAGES.some(p => p.id === hash)) ui.page = hash;
   render();
-  cloudBoot();
+  Cloud.loadSiteConfig().then(() => { cloudBoot(); render(); });
 })();
 
 </script>

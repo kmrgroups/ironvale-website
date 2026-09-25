@@ -10,8 +10,8 @@
    Leave both empty to run in offline mode (nothing is saved).
    ===================================================================== */
 window.BI_CONFIG = {
-  supabaseUrl:     "https://gjwdgpmgcfozyzxckqsu.supabase.co",   // e.g. "https://abcdefghijkl.supabase.co"
-  supabaseAnonKey: "sb_publishable_5yiWEiHkEKBq5qsVGaejzQ_udMz12bp",   // e.g. "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  supabaseUrl:     "https://owuxnzonixpwooimaizm.supabase.co",   // e.g. "https://abcdefghijkl.supabase.co"
+  supabaseAnonKey: "sb_publishable_Lo4P1cqPXDotnAzArPq-UA_HXyio04I",   // e.g. "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
   appName:    "Balloon Inspector",   // shown in the header and browser tab
   engineBase: "balloon/engines/"      // where the DWG/STEP/OCR engine files live

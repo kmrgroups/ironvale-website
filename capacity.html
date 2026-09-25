@@ -1043,7 +1043,10 @@ window.SEED_DATA = {"version": 4, "year": 2026, "month": 8, "scenario": "standar
       if (s && s.access_token && !opt.anon) headers.Authorization = 'Bearer ' + s.access_token;
       let res;
       try { res = await fetch(c.url + path, Object.assign({}, opt, { headers })); }
-      catch (e) { throw new Error('Cannot reach the cloud server. Check your internet connection.'); }
+      catch (e) {
+        if (path.startsWith('/functions/')) throw new Error('The user-management function "admin-users" did not answer. In Supabase › Edge Functions check that (1) a function named exactly admin-users is deployed and (2) its "Verify JWT" setting is turned OFF.');
+        throw new Error('Cannot reach the cloud server. Check your internet connection.');
+      }
       if (res.status === 401 && !opt._retried && s && s.refresh_token) {
         await this.refresh();
         return this._fetch(path, Object.assign({}, opt, { _retried: true }));
@@ -1418,15 +1421,20 @@ function modal(o) {
   const wrap = document.createElement('div'); wrap.className = 'scrim'; wrap.id = 'scrim';
   wrap.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="modal-h"><h2 id="mTitle">${h(o.title)}</h2></div><div class="modal-b">${o.body}</div><div class="modal-f">${(o.buttons || []).map((b, i) => `<button class="btn ${b.cls || ''}" data-mb="${i}">${h(b.label)}</button>`).join('')}<button class="btn ghost" data-mb="x">${h(o.cancel || 'Cancel')}</button></div></div>`;
   document.body.appendChild(wrap);
+  // Close on the dark background only for simple dialogs, and only when the whole click
+  // (press AND release) happened on the background — never while typing or selecting text in a form.
+  const hasForm = Boolean(wrap.querySelector('.modal-b input, .modal-b select, .modal-b textarea'));
+  let downOnScrim = false;
+  wrap.addEventListener('mousedown', ev => { downOnScrim = ev.target === wrap; });
   wrap.addEventListener('click', async ev => {
-    if (ev.target === wrap) return closeModal();
+    if (ev.target === wrap) { if (downOnScrim && !hasForm && o.dismissible !== false) closeModal(); downOnScrim = false; return; }
     const b = ev.target.closest('[data-mb]'); if (!b) return;
     if (b.dataset.mb === 'x') return closeModal();
     const btn = o.buttons[Number(b.dataset.mb)];
     const keep = btn.act ? await btn.act(wrap) : false;
     if (keep !== true) closeModal();
   });
-  wrap.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeModal(); });
+  wrap.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !hasForm) closeModal(); });
   const f = wrap.querySelector('input,select,textarea,button.primary,button'); if (f) f.focus();
   if (o.onOpen) o.onOpen(wrap);
 }
@@ -2337,9 +2345,9 @@ const Actions = {
   reloadUsers() { loadUsers(); },
   addUser() {
     const pw = genPassword();
-    modal({ title: 'Add user', body: `<div class="form-grid"><div class="field"><label for="nuName">Name</label><input class="inp" id="nuName" placeholder="e.g. Ravi Kumar"></div><div class="field"><label for="nuEmail">E-mail (their login)</label><input class="inp" id="nuEmail" type="email"></div></div>
+    modal({ title: 'Add user', body: `<div class="form-grid"><div class="field"><label for="nuName">Name</label><input class="inp" id="nuName" placeholder="e.g. Ravi Kumar" autocomplete="off"></div><div class="field"><label for="nuEmail">E-mail (their login)</label><input class="inp" id="nuEmail" type="email" autocomplete="off"></div></div>
         <div class="field"><label for="nuRole">Role</label><select class="inp" id="nuRole">${['viewer', 'editor', 'admin'].map(r => `<option value="${r}">${ROLE_INFO[r].label} — ${h(ROLE_INFO[r].text)}</option>`).join('')}</select></div>
-        <div class="field"><label for="nuPw">Temporary password</label><div class="pwd-box"><input class="inp" id="nuPw" value="${pw}"><button class="btn" type="button" data-act="regenPw">New</button></div><span class="hint">Share it with the user; they can change it under Settings › Change my password.</span></div><div id="nuInfo" class="small" style="color:var(--crit)"></div>`,
+        <div class="field"><label for="nuPw">Temporary password</label><div class="pwd-box"><input class="inp" id="nuPw" value="${pw}" autocomplete="new-password" spellcheck="false"><button class="btn" type="button" data-act="regenPw">New</button></div><span class="hint">Share it with the user; they can change it under Settings › Change my password.</span></div><div id="nuInfo" class="small" style="color:var(--crit)"></div>`,
       buttons: [{ label: 'Add user', cls: 'primary', act: async w => {
         const email = $('#nuEmail').value.trim().toLowerCase(), name = $('#nuName').value.trim(), role = $('#nuRole').value, password = $('#nuPw').value;
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $('#nuInfo').textContent = 'Enter a valid e-mail address.'; return true; }
@@ -2354,7 +2362,7 @@ const Actions = {
   regenPw() { const i = $('#nuPw') || $('#rpPw'); if (i) i.value = genPassword(); },
   resetUserPw(t) {
     const email = t.dataset.email;
-    modal({ title: `New password for ${email}`, body: `<div class="field"><label for="rpPw">New temporary password</label><div class="pwd-box"><input class="inp" id="rpPw" value="${genPassword()}"><button class="btn" type="button" data-act="regenPw">New</button></div></div><div id="rpInfo" class="small" style="color:var(--crit)"></div>`,
+    modal({ title: `New password for ${email}`, body: `<div class="field"><label for="rpPw">New temporary password</label><div class="pwd-box"><input class="inp" id="rpPw" value="${genPassword()}" autocomplete="new-password" spellcheck="false"><button class="btn" type="button" data-act="regenPw">New</button></div></div><div id="rpInfo" class="small" style="color:var(--crit)"></div>`,
       buttons: [{ label: 'Set password', cls: 'primary', act: async () => {
         const password = $('#rpPw').value; if (password.length < 8) { $('#rpInfo').textContent = 'At least 8 characters.'; return true; }
         const u = (ui.users || []).find(x => x.email === email) || {};

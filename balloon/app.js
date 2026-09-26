@@ -631,7 +631,7 @@ async function convertDwg(buf){
   if(!convertersAllowed()) throw new Error("The DWG converter can't run in this viewer. Free fix: open the file in ODA File Converter or LibreCAD, save as DXF, and open that here.");
   try{
     if(!dwgMod){ busy("Loading the DWG converter (first time only)"); await tick();
-      dwgMod=await createLibreDwgModule({wasmBinary:await gunzipEl("wasm-dwg"), locateFile:f=>f, print:()=>{}, printErr:()=>{}}); }
+      const wb=await gunzipEl("wasm-dwg"); dwgMod=await createLibreDwgModule({wasmBinary:wb, locateFile:f=>f, print:()=>{}, printErr:()=>{}}); }
     busy("Converting DWG to DXF"); await tick();
     const M=dwgMod; M.FS.writeFile("in.dwg",new Uint8Array(buf));
     const code=M.dwg_write_dxf("in.dwg","out.dxf");
@@ -648,7 +648,7 @@ async function convertDwg(buf){
 async function convertStep(buf,name){
   if(!convertersAllowed()) throw new Error("The STEP converter can't run in this viewer. Free fix: open the model in FreeCAD, make a TechDraw page, and export it as PDF or DXF.");
   if(!occtMod){ busy("Loading the STEP converter (first time only)"); await tick();
-    occtMod=await occtimportjs({wasmBinary:await gunzipEl("wasm-step"), locateFile:f=>f, print:()=>{}, printErr:()=>{}}); }
+    const wb=await gunzipEl("wasm-step"); occtMod=await occtimportjs({wasmBinary:wb, locateFile:f=>f, print:()=>{}, printErr:()=>{}}); }
   busy("Reading the 3D model"); await tick();
   const r=occtMod.ReadStepFile(new Uint8Array(buf),{linearUnit:"millimeter",linearDeflectionType:"bounding_box_ratio",linearDeflection:0.002,angularDeflection:0.3});
   if(!r||!r.success||!r.meshes||!r.meshes.length) throw new Error("no solid geometry found in this STEP file");
@@ -934,7 +934,7 @@ async function getOcr(){
   if(!ocrLoading) ocrLoading=(async()=>{
     if(!convertersAllowed()) throw new Error("the text scanner can't run in this viewer");
     busy("Starting the free text scanner (first time only)"); await tick();
-    const M=await TesseractCore({wasmBinary:await gunzipEl("wasm-ocr"),locateFile:f=>f,print:()=>{},printErr:()=>{}});
+    const wb=await gunzipEl("wasm-ocr"); const M=await TesseractCore({wasmBinary:wb,locateFile:f=>f,print:()=>{},printErr:()=>{}});
     M.FS.writeFile("/eng.traineddata", await gunzipEl("ocr-eng"));
     const api=new M.TessBaseAPI(); if(api.Init("/","eng")!==0) throw new Error("text scanner didn't start");
     api.SetVariable("user_defined_dpi","300"); api.SetVariable("preserve_interword_spaces","1");

@@ -4,7 +4,7 @@
 const S = {
   sheets: [], cur: 0, items: [], sel: null, mode: "pan", nextId: 1,
   header: { partNo:"", partName:"", drawingNo:"", rev:"", customer:"", material:"", inspector:"", date:new Date().toISOString().slice(0,10) },
-  set: { gen:"m", grid:"iso", cols:8, rows:6, size:1, tiles:4 },
+  set: { gen:"m", grid:"iso", cols:8, rows:6, size:1, tiles:4, clean:1 },
   view: { scale:1, ox:0, oy:0 },
   fileName: ""
 };
@@ -262,7 +262,7 @@ function renderAll(){
   $("bRenum").disabled=!S.items.length; $("bPDF").disabled=!has; $("bCSV").disabled=!S.items.length;
   $("bAI").disabled=!has; $("bAI").style.opacity=(sample&&imgLimits)?"":"0.55";
   $("bText").disabled=!has;
-  $("bAI").title=!has?"Open a drawing first":(!sample||!imgLimits)?"AI reading isn't available in this view":"Extract characteristics with AI (uses your Claude plan)";
+  $("bAI").title=!has?"Open a drawing first":(!sample||!imgLimits)?"AI reading isn't available in this view":"Read every dimension with AI and place the balloons";
   renderSheets(); renderTable(); draw();
 }
 
@@ -273,11 +273,44 @@ function canvasFromImage(img){
   const c=document.createElement("canvas"); c.width=Math.round(img.naturalWidth*k); c.height=Math.round(img.naturalHeight*k);
   const x=c.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,c.width,c.height); x.drawImage(img,0,0,c.width,c.height); return c;
 }
+/* Photo / scan clean-up: evens out lighting, removes grey paper and shadows,
+   and turns the picture into crisp black lines on white – like a CAD-printed PDF –
+   so the text scanner and the AI read it far more reliably. */
+function cleanScan(src){
+  const up=Math.max(1,Math.min(2400/Math.max(src.width,src.height), MAXPX/Math.max(src.width,src.height)));
+  const W=Math.round(src.width*up), H=Math.round(src.height*up);
+  const c=document.createElement("canvas"); c.width=W; c.height=H;
+  const g=c.getContext("2d",{willReadFrequently:true}); g.imageSmoothingQuality="high"; g.drawImage(src,0,0,W,H);
+  // background (paper) brightness: small copy -> brightest of neighbours (skips ink) -> smooth back up
+  const bw=Math.max(8,Math.round(W/48)), bh=Math.max(8,Math.round(H/48));
+  const b=document.createElement("canvas"); b.width=bw; b.height=bh; const bg=b.getContext("2d",{willReadFrequently:true});
+  bg.imageSmoothingQuality="high"; bg.drawImage(c,0,0,bw,bh);
+  const bi=bg.getImageData(0,0,bw,bh), bd=bi.data, L=new Float32Array(bw*bh);
+  for(let i=0;i<bw*bh;i++) L[i]=0.299*bd[i*4]+0.587*bd[i*4+1]+0.114*bd[i*4+2];
+  for(let y=0;y<bh;y++) for(let x=0;x<bw;x++){ let m=0; for(let dy=-2;dy<=2;dy++) for(let dx=-2;dx<=2;dx++){ const yy=Math.min(bh-1,Math.max(0,y+dy)), xx=Math.min(bw-1,Math.max(0,x+dx)); if(L[yy*bw+xx]>m) m=L[yy*bw+xx]; }
+    const i=(y*bw+x)*4; bd[i]=bd[i+1]=bd[i+2]=Math.max(40,m); bd[i+3]=255; }
+  bg.putImageData(bi,0,0);
+  const B=document.createElement("canvas"); B.width=W; B.height=H; const Bg=B.getContext("2d",{willReadFrequently:true});
+  Bg.imageSmoothingQuality="high"; Bg.drawImage(b,0,0,W,H); const back=Bg.getImageData(0,0,W,H).data;
+  const img=g.getImageData(0,0,W,H), d=img.data, N=W*H, n=new Float32Array(N), hist=new Uint32Array(256);
+  for(let p=0,i=0;p<N;p++,i+=4){ const v=(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2])/back[i]; n[p]=v; hist[Math.max(0,Math.min(255,Math.round(v*200)))]++; }
+  let acc=0, ink=0; const lim=N*0.004; for(let k=0;k<256;k++){ acc+=hist[k]; if(acc>=lim){ ink=k/200; break; } }
+  ink=Math.min(ink,0.55); const white=0.86;
+  for(let p=0,i=0;p<N;p++,i+=4){ let v=(n[p]-ink)/(white-ink); v=v<0?0:v>1?1:v; v=v>0.9?1:Math.pow(v,1.6); const o=Math.round(v*255); d[i]=d[i+1]=d[i+2]=o; d[i+3]=255; }
+  g.putImageData(img,0,0); return c;
+}
+/* Images and scanned PDFs have no readable text inside, so read them straight away:
+   with AI when it is switched on, otherwise with the free text scanner. */
+async function autoRead(){
+  if(S.items.length||!S.sheets.length) return;
+  if(sample&&imgLimits){ const r=await runAI(true); if(r!=="failed") return; }
+  await ocrAll();
+}
 async function loadFile(file,opts={}){
   const name=file.name, ext=name.split(".").pop().toLowerCase();
   busy("Opening "+name);
   try{
-    let sheets=[];
+    let sheets=[], doClean=false, isScan=false;
     if(ext==="pdf"||file.type==="application/pdf"){
       if(!window.pdfjsLib) throw new Error("PDF reader didn't load");
       pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -301,10 +334,13 @@ async function loadFile(file,opts={}){
     } else if(ext==="step"||ext==="stp"){
       const res=await convertStep(await file.arrayBuffer(), name.replace(/\.[^.]+$/,"")); sheets=[res.sheet]; S._dxfItems=res.items;
     } else if(file.type.startsWith("image/")||["png","jpg","jpeg"].includes(ext)){
-      const url=URL.createObjectURL(file); const img=new Image(); img.src=url; await img.decode(); sheets=[{canvas:canvasFromImage(img)}]; URL.revokeObjectURL(url);
-      sheets[0].w=sheets[0].canvas.width; sheets[0].h=sheets[0].canvas.height;
+      const url=URL.createObjectURL(file); const img=new Image(); img.src=url; await img.decode(); URL.revokeObjectURL(url);
+      doClean = opts.restore ? !!opts.restore.clean : !!+S.set.clean;
+      let cv0=canvasFromImage(img);
+      if(doClean){ busy("Cleaning up the image into a crisp drawing"); await tick(); try{ cv0=cleanScan(cv0); }catch(e){ console.warn(e); doClean=false; } }
+      sheets=[{canvas:cv0,scan:true}]; sheets[0].w=cv0.width; sheets[0].h=cv0.height; isScan=true;
     } else { throw new Error("Unsupported file type ."+ext); }
-    S.sheets=sheets; S.cur=0; S.items=[]; S.sel=null; S.fileName=name.replace(/\.[^.]+$/,""); S.originalFile=file;
+    S.sheets=sheets; S.cur=0; S.items=[]; S.sel=null; S.fileName=name.replace(/\.[^.]+$/,""); S.originalFile=file; S.cleaned=doClean;
     if(opts.restore){ S.cadItems=S._dxfItems||null; S._dxfItems=null; applySnapshot(opts.restore); renderAll(); requestAnimationFrame(()=>{resize();fit();}); return; }
     if(!opts.keepHeader){ S.header=Object.assign({},S.header,{partNo:"",partName:"",drawingNo:"",rev:"",customer:"",material:""}); }
     if(!S.header.drawingNo) S.header.drawingNo=S.fileName; syncHeader();
@@ -314,8 +350,9 @@ async function loadFile(file,opts={}){
       renumber();
       toast(ext==="step"||ext==="stp" ? `Converted the 3D model into front, top, left and isometric views with overall sizes. Add balloons for the features you need to inspect.` : `Read ${S.items.length} characteristics directly from the CAD data${ext==="dwg"?" (converted from DWG)":""}. Check them, then export.`,7000); }
     else if(S.sheets.some(s=>s.text&&s.text.length>5)){ const n=findTextItems(); if(n) toast(`Found ${n} characteristics in the PDF text at no cost${S._clsCount?`, ${S._clsCount} marked SC/CC`:""}. Check each row against the drawing.`,7000); else toast("No dimension text found in this PDF. Tap “Find dimensions” to read it with the free text scanner (OCR)."); }
-    else toast("Drawing open. Tap “Find dimensions” to scan it for free (OCR), or place balloons with “Add balloon” — each new balloon reads the text under it.",8000);
+    else isScan=true;
     renderAll(); requestAnimationFrame(()=>{resize();fit();});
+    if(isScan && !S.readonly) setTimeout(autoRead,350);
   }catch(err){ console.error(err); toast("Couldn't open this file: "+(err.message||err)); }
   finally{ busy(null); }
 }
@@ -994,10 +1031,10 @@ function cropBlob(sh,[x0,y0,x1,y1]){
   c.getContext("2d").drawImage(sh.canvas,x0,y0,w,h,0,0,c.width,c.height);
   return new Promise(res=>c.toBlob(b=>res({blob:b,w:c.width,h:c.height}),"image/png"));
 }
-async function runAI(){
+async function runAI(auto){
   if(!sample){ toast("AI reading isn't available here: this viewer didn't give the page access to Claude. Use “Find dimensions” (free) instead.",7000); return; }
   if(!imgLimits){ toast("AI reading isn't available here: this viewer can't send images to Claude. Use “Find dimensions” (free) instead.",7000); return; }
-  if(S.items.length && !confirm("Replace the current balloons with a fresh AI read of the drawing?")) return;
+  if(!auto && S.items.length && !confirm("Replace the current balloons with a fresh AI read of the drawing?")) return;
   aiCtl=new AbortController(); const found=[]; let tb=null;
   const n=+S.set.tiles, total=S.sheets.length*(n===4?4:1); let done=0;
   try{
@@ -1019,11 +1056,12 @@ async function runAI(){
     }
   }catch(e){
     busy(null);
-    if(e&&e.code==="cancelled"){ toast("Stopped. Nothing was changed."); return; }
-    if(e&&e.code==="not_granted"){ toast("AI reading needs your permission. You can still add balloons by hand."); return; }
-    if(e&&e.code==="rate_limited"){ toast("Too many requests right now. Wait a minute, then try again."); return; }
-    if(e&&e.code==="invalid_json"){ toast("The AI answer couldn't be read as a table. Try again, or switch AI detail to “Whole sheet”."); return; }
-    toast("AI reading failed: "+(e&&(e.message||e.code)||e)); return;
+    if(e&&e.code==="cancelled"){ toast("Stopped. Nothing was changed."); return "cancelled"; }
+    const why = e&&e.code==="not_granted" ? "AI reading needs your permission."
+      : e&&e.code==="rate_limited" ? "Too many AI requests right now – wait a minute, then try again."
+      : e&&e.code==="invalid_json" ? "The AI answer couldn't be read as a table – try again, or set AI detail to “Whole sheet”."
+      : "AI reading failed: "+(e&&(e.message||e.code)||e);
+    toast(auto ? why+" Using the free text scanner instead." : why, 8000); return "failed";
   }
   busy(null);
   // dedupe overlapping tile results
@@ -1044,7 +1082,8 @@ async function runAI(){
   if(tb){ for(const k of ["partNo","partName","drawingNo","rev","material","customer"]) if(tb[k]&&!S.header[k]||(k==="drawingNo"&&tb[k]&&S.header[k]===S.fileName)) S.header[k]=String(tb[k]); syncHeader(); }
   S.sel=null; renumber();
   const low=S.items.filter(i=>i.conf!=null&&i.conf<0.7).length;
-  toast(`Found ${S.items.length} characteristics${low?`; ${low} marked “to check”`:""}. Review each row against the drawing before exporting.`,7000);
+  toast(`AI found ${S.items.length} characteristics and placed the balloons${low?`; ${low} marked “to check”`:""}. Review each row against the drawing before exporting.`,8000);
+  return "ok";
 }
 $("bAI").onclick=runAI;
 $("busyStop").onclick=()=>aiCtl&&aiCtl.abort();
@@ -1062,6 +1101,7 @@ $("sCols").onchange=e=>{S.set.cols=Math.max(1,Math.min(24,+e.target.value||8)); 
 $("sRows").onchange=e=>{S.set.rows=Math.max(1,Math.min(20,+e.target.value||6)); setSum(); renderTable();};
 $("sSize").onchange=e=>{S.set.size=+e.target.value; draw();};
 $("sTiles").onchange=e=>{S.set.tiles=+e.target.value;};
+$("sClean").onchange=e=>{S.set.clean=+e.target.value; toast("Applies to the next photo or scan you open.");};
 
 /* ---------- export ---------- */
 function pdfSafe(s){ return translit(String(s??"")).split("").map(c=>GDT[c]?GDT[c]:c).join("").replace(/⌀/g,"Ø").replace(/[−–—]/g,"-").replace(/µ/g,"u").replace(/[^\x20-\x7E\xA0-\xFF]/g,"?"); }
@@ -1174,16 +1214,18 @@ document.querySelectorAll(".phead details").forEach(d=>d.addEventListener("toggl
 document.addEventListener("pointerdown",e=>{ if(!e.target.closest(".phead details")) document.querySelectorAll(".phead details[open]").forEach(d=>d.open=false); });
 
 /* ---------- API used by the hosted (cloud) version ---------- */
-function getSnapshot(){ return {v:1,fileName:S.fileName,header:{...S.header},set:{...S.set},
+function getSnapshot(){ return {v:1,clean:!!S.cleaned,fileName:S.fileName,header:{...S.header},set:{...S.set},
   items:S.items.map(({id,sheet,ax,ay,bx,by,type,text,nominal,upper,lower,unit,gdt,datum,cls,actual,conf,gen,instr,source,en,ex,autoInstr})=>({id,sheet,ax,ay,bx,by,type,text,nominal,upper,lower,unit,gdt,datum,cls,actual,conf,gen,instr,source,en,ex,autoInstr}))}; }
 function applySnapshot(p){
   S.header=Object.assign({},S.header,p.header||{}); Object.assign(S.set,p.set||{});
-  $("sGen").value=S.set.gen; $("sGrid").value=S.set.grid; $("sCols").value=S.set.cols; $("sRows").value=S.set.rows; $("sSize").value=String(S.set.size); $("sTiles").value=String(S.set.tiles);
+  $("sGen").value=S.set.gen; $("sGrid").value=S.set.grid; $("sCols").value=S.set.cols; $("sRows").value=S.set.rows; $("sSize").value=String(S.set.size); $("sTiles").value=String(S.set.tiles); $("sClean").value=String(S.set.clean??1);
   S.items=(p.items||[]).filter(i=>i.sheet<S.sheets.length).map(i=>({...i})); S.nextId=Math.max(1,...S.items.map(i=>i.id+1)); S.sel=null;
   syncHeader(); setSum(); applyLanguage();
 }
 function setReadonly(on){ S.readonly=!!on; document.body.classList.toggle("readonly",!!on); renderAll(); }
-window.BI={S,loadFile,renderAll,syncHeader,toast,busy,getSnapshot,applySnapshot,setReadonly,fit,resize,exportPDF};
+/* the website's cloud layer plugs its own AI reader in here (see cloud.js) */
+function useAI(provider){ sample=provider||null; imgLimits=provider?{images:true}:null; $("bAI").hidden=!provider&&!window.claude; renderAll(); }
+window.BI={S,loadFile,renderAll,syncHeader,toast,busy,getSnapshot,applySnapshot,setReadonly,fit,resize,exportPDF,useAI};
 
 /* ---------- runtime ---------- */
 if(!window.claude) $("bAI").hidden=true;

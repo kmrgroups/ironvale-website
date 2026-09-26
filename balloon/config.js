@@ -14,5 +14,6 @@ window.BI_CONFIG = {
   supabaseAnonKey: "sb_publishable_Lo4P1cqPXDotnAzArPq-UA_HXyio04I",   // e.g. "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
   appName:    "Balloon Inspector",   // shown in the header and browser tab
-  engineBase: "balloon/engines/"      // where the DWG/STEP/OCR engine files live
+  engineBase: "balloon/engines/",     // where the DWG/STEP/OCR engine files live
+  aiFunction: "bi-ai-read"            // Supabase Edge Function that reads photos/scans with AI ("" = off)
 };
